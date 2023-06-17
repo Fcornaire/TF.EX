@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net472</TargetFramework>
+		<LangVersion>11</LangVersion>
+		<ImplicitUsings>enable</ImplicitUsings>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\TF.EX.Domain\TF.EX.Domain.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Reference Include="FNA">
+			<HintPath>..\..\libs\FNA.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="TowerFall">
+			<HintPath>..\..\libs\TowerFall.exe</HintPath>
+			<Private>False</Private>
+		</Reference>
+	</ItemGroup>
+
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+		<Exec Command="xcopy /y &quot;$(TargetPath)&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\TowerFall\Mods\TF.EX&quot;" />
+	</Target>
+
+</Project>

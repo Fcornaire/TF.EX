@@ -1,0 +1,29 @@
+{
+  "name": "TF.EX",
+  "version": "0.1.0",
+  "author": "DShad",
+  "description": "A Netplay (Rollback netcode) + replay mod for Towerfall",
+  "dll": "TF.EX.Core.dll",
+  "dependencies": [
+    "Microsoft.Bcl.AsyncInterfaces.dll",
+    "Microsoft.Extensions.Caching.Abstractions.dll",
+    "Microsoft.Extensions.Caching.Memory.dll",
+    "Microsoft.Extensions.DependencyInjection.Abstractions.dll",
+    "Microsoft.Extensions.DependencyInjection.dll",
+    "Microsoft.Extensions.Logging.Abstractions.dll",
+    "Microsoft.Extensions.Options.dll",
+    "Microsoft.Extensions.Primitives.dll",
+    "System.Buffers.dll",
+    "System.Memory.dll",
+    "System.Numerics.Vectors.dll",
+    "System.Runtime.CompilerServices.Unsafe.dll",
+    "System.Text.Encodings.Web.dll",
+    "System.Text.Json.dll",
+    "System.Threading.Tasks.Extensions.dll",
+    "System.ValueTuple.dll",
+    "TF.EX.Common.dll",
+    "TF.EX.Domain.dll",
+    "TF.EX.Patchs.dll",
+    "TF.EX.TowerFallExtensions.dll"
+  ]
+}

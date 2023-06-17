@@ -1,0 +1,16 @@
+name = "atlas"
+output_path = "../"
+output_type = "Json"
+template_path = ["template.xml"]
+folders = [
+    "gamemodes",
+    "variants"
+]
+
+[image_options]
+output_extension = "Png"
+max_size = 4096
+show_extension = false
+
+[features]
+nine_patch = false
