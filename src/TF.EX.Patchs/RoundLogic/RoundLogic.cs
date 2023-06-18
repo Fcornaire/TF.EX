@@ -207,6 +207,8 @@ namespace TF.EX.Patchs.RoundLogic
                 _netplayManager.Init(); //TODO: Proper init lifecycle
                 _replayService.Initialize();
 
+                TowerFall.TFGame.ConsoleEnabled = false;
+
                 TFGamePatch.HasExported = false;
             }
         }

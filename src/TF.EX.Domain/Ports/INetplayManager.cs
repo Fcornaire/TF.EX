@@ -75,5 +75,12 @@ namespace TF.EX.Domain.Ports
         void SetPlayersIndex(int playerDraw);
         void EnableReplayMode();
         void DisableReplayMode();
+        bool HasSetMode();
+        void SetTestMode(int checkDistance);
+        void SetLocalMode(string addr, PlayerDraw draw);
+
+        void SetServerMode(string roomUrl);
+        void ResetMode();
+        void SetReplayMode();
     }
 }

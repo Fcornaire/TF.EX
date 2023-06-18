@@ -31,6 +31,7 @@ namespace TF.EX.Patchs.Scene
             On.TowerFall.MainMenu.Update += MainMenu_Update;
             On.TowerFall.MainMenu.InitOptions += MainMenu_InitOptions;
             On.TowerFall.MainMenu.Render += MainMenu_Render;
+            On.TowerFall.MainMenu.ctor += MainMenu_ctor;
         }
 
         public void Unload()
@@ -38,6 +39,14 @@ namespace TF.EX.Patchs.Scene
             On.TowerFall.MainMenu.Update -= MainMenu_Update;
             On.TowerFall.MainMenu.InitOptions -= MainMenu_InitOptions;
             On.TowerFall.MainMenu.Render -= MainMenu_Render;
+            On.TowerFall.MainMenu.ctor -= MainMenu_ctor;
+        }
+
+        private void MainMenu_ctor(On.TowerFall.MainMenu.orig_ctor orig, MainMenu self, MainMenu.MenuState state)
+        {
+            orig(self, state);
+
+            TowerFall.TFGame.ConsoleEnabled = true;
         }
 
         private void MainMenu_Render(On.TowerFall.MainMenu.orig_Render orig, TowerFall.MainMenu self)

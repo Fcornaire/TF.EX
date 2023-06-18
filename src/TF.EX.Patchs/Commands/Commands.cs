@@ -115,10 +115,17 @@ namespace TF.EX.Patchs.Commands
 
         public bool ShouldInterceptCommand()
         {
-            var dynMainMenu = DynamicData.For(Monocle.Engine.Instance.Scene as TowerFall.MainMenu);
-            var state = dynMainMenu.Get<TowerFall.MainMenu.MenuState>("state");
+            try
+            {
+                var dynMainMenu = DynamicData.For(TowerFall.TFGame.Instance.Scene as TowerFall.MainMenu);
+                var state = dynMainMenu.Get<TowerFall.MainMenu.MenuState>("state");
 
-            return state == TowerFall.MainMenu.MenuState.Rollcall && _stateMachine.IsWaitingForUserAction();
+                return state == TowerFall.MainMenu.MenuState.Rollcall && _stateMachine.IsWaitingForUserAction();
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         private bool IsWaitingForUserActionOnOptionName(Monocle.Commands commands)

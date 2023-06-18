@@ -52,26 +52,7 @@ namespace TF.EX.Domain.Services
             _framesAhead = 0;
             _gameContext = gameContext;
 
-            string[] arguments = Environment.GetCommandLineArgs();
-
-            _netplayMode = NetplayMode.Normal;
-            if (arguments.Length >= 2)
-            {
-                if (arguments[1].Equals("test"))
-                {
-                    _netplayMode = NetplayMode.Simulation;
-                }
-
-                if (arguments[1].Equals("test-local"))
-                {
-                    _netplayMode = NetplayMode.Test;
-                }
-
-                if (arguments[1].Equals("replay"))
-                {
-                    _netplayMode = NetplayMode.Replay;
-                }
-            }
+            _netplayMode = NetplayMode.Uninitialized;
 
             LoadConfig();
 
@@ -83,12 +64,6 @@ namespace TF.EX.Domain.Services
             if (!_isInit)
             {
                 _isDisconnected = false;
-
-
-                if (_netplayMode == NetplayMode.Simulation)
-                {
-                    GGRSConfig.Netplay.Server = null;
-                }
 
                 using (var handle = new SafeBytes<GGRSConfig>(GGRSConfig, false))
                 {
@@ -384,7 +359,7 @@ namespace TF.EX.Domain.Services
 
         public bool IsTestMode()
         {
-            return _netplayMode == NetplayMode.Test || _netplayMode == NetplayMode.Simulation;
+            return _netplayMode == NetplayMode.Test || _netplayMode == NetplayMode.Local;
         }
 
         public bool IsRollbackFrame()
@@ -621,6 +596,39 @@ namespace TF.EX.Domain.Services
         public void DisableReplayMode()
         {
             _netplayMode = NetplayMode.Unknown;
+        }
+
+        public bool HasSetMode()
+        {
+            return _netplayMode != NetplayMode.Uninitialized;
+        }
+
+        public void SetTestMode(int checkDistance)
+        {
+            _netplayMode = NetplayMode.Test;
+            GGRSConfig = GGRSConfig.DefaultTest(checkDistance);
+        }
+
+        public void SetLocalMode(string addr, PlayerDraw draw)
+        {
+            _netplayMode = NetplayMode.Local;
+            GGRSConfig = GGRSConfig.DefaultLocal(addr, draw);
+        }
+
+        public void SetReplayMode()
+        {
+            _netplayMode = NetplayMode.Replay;
+        }
+
+        public void SetServerMode(string roomUrl)
+        {
+            _netplayMode = NetplayMode.Server;
+            GGRSConfig = GGRSConfig.DefaultServer(roomUrl);
+        }
+
+        public void ResetMode()
+        {
+            _netplayMode = NetplayMode.Uninitialized;
         }
     }
 }
