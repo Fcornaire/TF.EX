@@ -81,7 +81,7 @@ namespace TF.EX.Patchs.PlayerInput
 
             (_, var mode) = ServiceCollections.ResolveStateMachineService();
 
-            if (!mode.IsNetplay())
+            if (!mode.IsNetplay() && _netplayManager.GetNetplayMode() == Domain.Models.NetplayMode.Uninitialized)
             {
                 return orig(self);
             }

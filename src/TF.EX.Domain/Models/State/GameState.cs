@@ -14,9 +14,15 @@ namespace TF.EX.Domain.Models.State
         public List<Pickup> Pickups { get; set; } = new List<Pickup>();
         public List<Lantern> Lanterns { get; set; } = new List<Lantern>();
         public List<Chain> Chains { get; set; } = new List<Chain>();
-        public Session Session { get; set; }
-        public Orb.Orb Orb { get; set; }
-        public Rng Rng { get; set; }
+        public Session Session { get; set; } = new Session
+        {
+            RoundEndCounter = Constants.INITIAL_END_COUNTER,
+            IsEnding = false,
+            Miasma = Miasma.Default(),
+            RoundStarted = false
+        };
+        public Orb.Orb Orb { get; set; } = new Orb.Orb();
+        public Rng Rng { get; set; } = new Rng(-1);
         public Dictionary<int, double> GamePlayerLayerActualDepthLookup { get; set; } = new Dictionary<int, double>();
 
         public HUD.HUD Hud { get; set; } = new HUD.HUD();

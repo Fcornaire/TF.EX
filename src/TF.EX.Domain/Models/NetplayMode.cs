@@ -2,10 +2,11 @@
 {
     public enum NetplayMode : int
     {
-        Normal,
-        Simulation,
+        Uninitialized,
+        Local,
         Test,
         Replay,
+        Server,
         Unknown
     }
 }

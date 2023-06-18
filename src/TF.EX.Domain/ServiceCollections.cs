@@ -31,7 +31,6 @@ namespace TF.EX.Domain
             ServiceCollection.AddSingleton<IGameContext, GameContext>();
             ServiceCollection.AddSingleton<INetplayManager, NetplayManager>();
             ServiceCollection.AddSingleton<IMatchmakingService, MatchmakingService>();
-            ServiceCollection.AddSingleton<ITFActionService, TFActionService>();
             ServiceCollection.AddTransient<INetplayStateMachine, DefaultNetplayStateMachine>();
             ServiceCollection.AddSingleton<INetplayStateMachine, Netplay1V1QuickPlayStateMachine>();
             ServiceCollection.AddSingleton<INetplayStateMachine, Netplay1V1DirectStateMachine>();

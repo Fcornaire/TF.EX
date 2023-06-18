@@ -1,5 +1,4 @@
-﻿using TF.EX.Domain;
-using TF.EX.Domain.Ports;
+﻿using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
 
 namespace TF.EX.Patchs
@@ -76,8 +75,8 @@ namespace TF.EX.Patchs
             orig(self);
 
             var session = _sessionService.GetSession();
+            session.RoundStarted = true;
             _sessionService.SaveSession(session);
-            var matchMakingService = ServiceCollections.ResolveMatchmakingService();
         }
 
         private void Session_ctor(On.TowerFall.Session.orig_ctor orig, TowerFall.Session self, TowerFall.MatchSettings settings)
