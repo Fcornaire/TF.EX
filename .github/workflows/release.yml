@@ -19,6 +19,27 @@ jobs:
       uses: actions/setup-dotnet@v3
       with:
         dotnet-version: 6.0.x
+    - name: Check if Config exists
+      id: check-config
+      run: |
+          if [[ -f ./src/TF.EX.Domain/Config.cs ]]; then
+            echo "File exists"
+            echo "::set-output name=config-existing::true"
+          else
+            echo "File does not exist"
+            echo "::set-output name=config-existing::false"
+          fi
+    - name: Replace Config file
+      if: steps.check-file.outputs.config-existing == 'true'
+      run: |
+          echo 'namespace TF.EX.Domain
+          {
+              public static class Config
+              {
+                  public static readonly string SERVER = "'"${{ secrets.SERVER_URL }}"'";
+              }
+          }' > ./src/TF.EX.Domain/Config.cs
+          echo "Existing Config file replaced"
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
