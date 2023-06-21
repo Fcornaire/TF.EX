@@ -9,12 +9,14 @@ namespace TF.EX.Patchs.Layer
     internal class LayerPatch : IHookable
     {
         private readonly INetplayManager _netplayManager;
+        private readonly ISessionService _sessionService;
         private readonly IHUDService _hudService;
 
-        public LayerPatch(INetplayManager netplayManager, IHUDService hudService)
+        public LayerPatch(INetplayManager netplayManager, IHUDService hudService, ISessionService sessionService)
         {
             _netplayManager = netplayManager;
             _hudService = hudService;
+            _sessionService = sessionService;
         }
 
         public void Load()
@@ -39,6 +41,13 @@ namespace TF.EX.Patchs.Layer
                 {
                     VersusStart = new Domain.Models.State.HUD.VersusStart()
                 });
+            }
+
+            if (entity is Miasma)
+            {
+                var session = _sessionService.GetSession();
+                session.Miasma.CoroutineTimer = 0;
+                _sessionService.SaveSession(session);
             }
         }
 

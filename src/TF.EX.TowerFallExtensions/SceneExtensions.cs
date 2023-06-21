@@ -64,6 +64,7 @@ namespace TF.EX.TowerFallExtensions
             {
                 Sounds.sfx_multiStartLevel.Stop();
                 scene.Layers.FirstOrDefault(layer => layer.Value.Index == versusStart.LayerIndex).Value.Entities.Remove(versusStart);
+                versusStart.Removed();
             }
         }
 
@@ -285,6 +286,7 @@ namespace TF.EX.TowerFallExtensions
         }
 
 
+        //TODO: refacto to use generic method
         public static void RemoveMiasma(this Scene scene)
         {
             var gameplay = scene.GetGameplayLayer();
@@ -294,6 +296,7 @@ namespace TF.EX.TowerFallExtensions
             if (entity != null)
             {
                 gameplay.Entities.Remove(entity);
+                entity.Removed();
             }
         }
 
