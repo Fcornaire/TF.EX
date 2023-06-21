@@ -31,21 +31,11 @@ jobs:
         type: 'zip'
         filename: 'pre-release.zip'
         path: './publish'
-        exclusions: '*.git* Mono*'
+        exclusions: '*.git* MonoMod.* Mono.*'
     - name: Upload Release
       uses: ncipollo/release-action@v1.12.0
       with:
         artifacts: "pre-release.zip"
+        generateReleaseNotes: true
+        prerelease: true
         token: ${{ secrets.GITHUB_TOKEN }}
-    
-        
-    
-    #- name: Create Release
-    #  uses: "marvinpinto/action-automatic-releases@latest"
-    #  with:
-    #      repo_token: "${{ secrets.GITHUB_TOKEN }}"
-    #      automatic_release_tag: "latest"
-    #      prerelease: true
-    #      files: |
-    #        LICENSE
-    #        /home/runner/work/tf.ex/tf.ex/publish/*.dll
