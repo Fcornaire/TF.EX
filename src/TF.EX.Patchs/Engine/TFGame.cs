@@ -129,7 +129,7 @@ namespace TF.EX.Patchs.Engine
                         {
                             Accumulator = Accumulator.Subtract(TimeSpan.FromSeconds(fpsDelta));
 
-                            if (_netplayManager.IsSynchronized() || _netplayManager.GetNetplayMode().Equals(NetplayMode.Test))
+                            if (CanRunFrames(self.Scene) && (_netplayManager.IsSynchronized() || _netplayManager.GetNetplayMode().Equals(NetplayMode.Test)))
                             {
                                 var canAdvance = NetplayLogic(self.Scene as TowerFall.Level);
 
