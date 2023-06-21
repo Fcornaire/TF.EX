@@ -26,7 +26,7 @@ jobs:
     - name: Publish
       run: dotnet publish --no-restore --configuration Release --output ./TF.EX
     - name: Download ggrs-ffi lib
-    - uses: robinraju/release-downloader@v1.8
+      uses: robinraju/release-downloader@v1.8
       with:
         repository: "Fcornaire/ggrs-ffi"
         latest: true
