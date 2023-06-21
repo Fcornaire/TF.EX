@@ -16,7 +16,7 @@
 			<Private>False</Private>
 		</Reference>
 		<Reference Include="TowerFall">
-			<HintPath>..\..\libs\TowerFall.exe</HintPath>
+			<HintPath>..\..\libs\TowerFall-publicized.exe</HintPath>
 			<Private>False</Private>
 		</Reference>
 	</ItemGroup>
