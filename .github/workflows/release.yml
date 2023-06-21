@@ -29,6 +29,7 @@ jobs:
       uses: robinraju/release-downloader@v1.8
       with:
         repository: "Fcornaire/ggrs-ffi"
+        token: ${{ secrets.MY_TOKEN }}
         latest: true
         out-file-path: "TF.EX"
         fileName: "ggrs_ffi.dll"
