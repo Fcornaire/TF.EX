@@ -28,7 +28,7 @@ namespace TF.EX.Patchs.Entity.LevelEntity
             var dynPickup = DynamicData.For(self);
             dynPickup.Add("TargetPosition", targetPosition);
 
-            //ProperlySetTween(self, targetPosition);
+            ProperlySetTween(self, targetPosition);
         }
 
         private void ProperlySetTween(TowerFall.Pickup self, Vector2 targetPosition)
@@ -47,7 +47,7 @@ namespace TF.EX.Patchs.Entity.LevelEntity
 
         private void RemoveLastTween(TowerFall.Pickup self)
         {
-            foreach (var compo in self.Components)
+            foreach (var compo in self.Components.ToList())
             {
                 if (compo is Tween)
                 {

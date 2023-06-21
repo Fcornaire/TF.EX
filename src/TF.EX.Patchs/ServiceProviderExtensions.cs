@@ -41,7 +41,6 @@ namespace TF.EX.Patchs
             serviceCollection.AddSingleton<IHookable, LavaPatch>();
             serviceCollection.AddSingleton<IHookable, LavaControlPatch>();
             serviceCollection.AddSingleton<IHookable, PickupPatch>();
-            serviceCollection.AddSingleton<IHookable, ShieldPickupPatch>();
             serviceCollection.AddSingleton<IHookable, TreasureSpawnerPatch>();
             serviceCollection.AddSingleton<IHookable, ArrowPatch>();
             serviceCollection.AddSingleton<IHookable, CoroutinePatch>();
@@ -57,7 +56,6 @@ namespace TF.EX.Patchs
             serviceCollection.AddSingleton<IHookable, PauseMenuPatch>();
             serviceCollection.AddSingleton<IHookable, SessionPatch>();
             serviceCollection.AddSingleton<IHookable, VersusLevelSystemPatch>();
-            serviceCollection.AddSingleton<IHookable, MiasmaPatch>();
             serviceCollection.AddSingleton<IHookable, VersusStartPatch>();
             serviceCollection.AddTransient<IStateful<TowerFall.Chain, Chain>, ChainPatch>();
             serviceCollection.AddTransient<IStateful<TowerFall.Lantern, Lantern>, LanternPatch>();

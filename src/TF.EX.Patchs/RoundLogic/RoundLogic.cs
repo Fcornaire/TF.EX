@@ -173,8 +173,11 @@ namespace TF.EX.Patchs.RoundLogic
 
         private void RoundLogic_OnUpdate(On.TowerFall.RoundLogic.orig_OnUpdate orig, TowerFall.RoundLogic self)
         {
-            var session = _sessionService.GetSession();
-            LoadState(self, session);
+            if (_netplayManager.IsInit())
+            {
+                var session = _sessionService.GetSession();
+                LoadState(self, session);
+            }
 
             orig(self);
 
@@ -183,15 +186,14 @@ namespace TF.EX.Patchs.RoundLogic
 
             if (_netplayManager.HaveFramesToReSimulate() && self.Session.CurrentLevel.GetMiasma() == null && miasma != null)
             {
-                self.Session.CurrentLevel.UpdateEntityLists(); //Update to have miasma Added into the gameplay layer
-
-                if (_netplayManager.IsRollbackFrame()) //But since we might be in the first RBF (the line above won't do anything since nothing is created/dropped on the firs RBF)
+                if (_netplayManager.IsRollbackFrame()) //We might be in the first RBF
                 {
                     var dynMiasma = DynamicData.For(miasma);
                     dynMiasma.Set("Scene", self.Session.CurrentLevel);
 
-                    miasma.Added();
                     self.Session.CurrentLevel.GetGameplayLayer().Entities.Add(miasma); //We manually add/tag the miasma
+                    miasma.Added();
+                    dynMiasma.Set("actualDepth", Constants.MIASMA_CUSTOM_DEPTH); //Setting the custom depth for sorting layer later
                 }
             }
         }
@@ -213,6 +215,8 @@ namespace TF.EX.Patchs.RoundLogic
             }
         }
 
+
+        //TODO: Move to level LoadState method
         private void LoadState(TowerFall.RoundLogic self, TF.EX.Domain.Models.State.Session toLoad)
         {
             var dynamicRounlogic = DynamicData.For(self);
@@ -225,7 +229,7 @@ namespace TF.EX.Patchs.RoundLogic
             }
 
 
-            if (miasmaCounter.Value > 0 || _sessionService.GetSession().Miasma.State == TF.EX.Domain.Models.State.MiasmaState.Uninitialized)
+            if (miasmaCounter.Value > 0)
             {
                 dynamicRounlogic.Set("miasma", null);
             }

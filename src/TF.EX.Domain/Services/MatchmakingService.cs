@@ -427,16 +427,16 @@ namespace TF.EX.Domain.Services
         public async Task CloseAsync()
         {
             await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, null, CancellationToken.None);
-            //MatchboxClientFFI.disconnect();
+            MatchboxClientFFI.disconnect();
 
             cancellationTokenSource.Cancel();
             cancellationTokenSource = new CancellationTokenSource();
             cancellationToken = cancellationTokenSource.Token;
             _webSocket = new ClientWebSocket();
 
-            //cancellationTokenSourceLobby.Cancel();
-            //cancellationTokenSourceLobby = new CancellationTokenSource();
-            //cancellationTokenLobby = cancellationTokenSourceLobby.Token;
+            cancellationTokenSourceLobby.Cancel();
+            cancellationTokenSourceLobby = new CancellationTokenSource();
+            cancellationTokenLobby = cancellationTokenSourceLobby.Token;
 
             Reset();
         }

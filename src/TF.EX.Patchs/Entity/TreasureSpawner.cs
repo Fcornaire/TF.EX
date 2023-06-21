@@ -29,11 +29,14 @@ namespace TF.EX.Patchs.Entity
             var res = orig(self, chestPositions, new List<Vector2>()); //TODO: re enable big chests
             Calc.CalcPatch.ShouldRegisterRng = false;
 
-            // if (res.Count > 0) //Useful for test only
-            // {
-            //     foreach (var c in res.ToArray())
-            //         (c as TreasureChestHook).PublicPickups[0] = Pickups.DarkOrb;
-            // }
+            //if (res.Count > 0) //Useful for test only
+            //{
+            //    foreach (var c in res.ToArray())
+            //    {
+            //        var dynPickup = DynamicData.For(c);
+            //        dynPickup.Set("pickups", new List<TowerFall.Pickups> { TowerFall.Pickups.Shield });
+            //    }
+            //}
 
             return res;
         }

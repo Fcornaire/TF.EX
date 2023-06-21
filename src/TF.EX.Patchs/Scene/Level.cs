@@ -172,7 +172,9 @@ namespace TF.EX.Patchs.Scene
             if (entity[GameTags.Player] != null)
             {
                 var players = entity[GameTags.Player];
-                foreach (TowerFall.Player player in players.ToArray())
+                players.Sort(CompareDepth); //making sure we use the same order for the game state
+
+                foreach (TowerFall.Player player in players)
                 {
                     playersState.Add(_playerPatch.GetState(player));
                 }
@@ -183,7 +185,7 @@ namespace TF.EX.Patchs.Scene
             var playerCorpsesState = new List<TF.EX.Domain.Models.State.PlayerCorpse>();
             if (entity[GameTags.Corpse] != null && entity[GameTags.Corpse].Count > 0)
             {
-                var gamePlayerCorpses = entity[GameTags.Corpse].ToArray();
+                var gamePlayerCorpses = entity[GameTags.Corpse];
                 foreach (TowerFall.PlayerCorpse playerCorpse in gamePlayerCorpses)
                 {
                     var pc = _playerCorpsePatch.GetState(playerCorpse);
@@ -252,27 +254,11 @@ namespace TF.EX.Patchs.Scene
                 var miasmaCounter = dynRoundLogic.Get<Counter>("miasmaCounter");
                 var counter = DynamicData.For(miasmaCounter).Get<float>("counter");
 
-                var miasma = entity.GetMiasma();
-                var miasmaTentacleSineWave = 0.0f;
-                var miasmaSineWave = 0.0f;
-                if (miasma != null)
-                {
-                    var dynMiasma = DynamicData.For(miasma);
-                    var miasmaTentacle = dynMiasma.Get<SineWave>("tentaclesSine");
-                    miasmaTentacleSineWave = miasmaTentacle.Counter;
-                    var miasmaSine = dynMiasma.Get<SineWave>("sine");
-                    miasmaSineWave = miasmaSine.Counter;
-                }
-
                 var stateSession = _sessionService.GetSession();
                 stateSession.RoundStarted = roundStarted;
                 stateSession.RoundEndCounter = endCounter;
                 stateSession.IsEnding = isEnding;
                 stateSession.Miasma.Counter = counter;
-                stateSession.Miasma.Percent = miasma != null ? miasma.Percent : Constants.DEFAULT_MIASMA_PERCENT;
-                stateSession.Miasma.IsCollidable = miasma != null ? miasma.Collidable : false;
-                stateSession.Miasma.SineCounter = miasmaSineWave;
-                stateSession.Miasma.SineTentaclesWaveCounter = miasmaTentacleSineWave;
                 var session = new Domain.Models.State.Session
                 {
                     IsEnding = stateSession.IsEnding,
@@ -281,10 +267,7 @@ namespace TF.EX.Patchs.Scene
                     Miasma = new Domain.Models.State.Miasma
                     {
                         Counter = stateSession.Miasma.Counter,
-                        Percent = stateSession.Miasma.Percent,
-                        IsCollidable = stateSession.Miasma.IsCollidable,
-                        SineCounter = stateSession.Miasma.SineCounter,
-                        SineTentaclesWaveCounter = stateSession.Miasma.SineTentaclesWaveCounter
+                        CoroutineTimer = stateSession.Miasma.CoroutineTimer
                     }
                 };
 
@@ -429,7 +412,18 @@ namespace TF.EX.Patchs.Scene
             }
 
             //Session load
-            var session = gameState.Session;
+            var session = new TF.EX.Domain.Models.State.Session
+            {
+                IsEnding = gameState.Session.IsEnding,
+                RoundStarted = gameState.Session.RoundStarted,
+                RoundEndCounter = gameState.Session.RoundEndCounter,
+                Miasma = new Domain.Models.State.Miasma
+                {
+                    CoroutineTimer = gameState.Session.Miasma.CoroutineTimer,
+                    Counter = gameState.Session.Miasma.Counter,
+                }
+            };
+
             _sessionService.SaveSession(session);
 
             var dynRoundLogic = DynamicData.For(level.Session.RoundLogic);
@@ -437,23 +431,29 @@ namespace TF.EX.Patchs.Scene
 
             (level as TowerFall.Level).Session.CurrentLevel.Ending = session.IsEnding;
 
-            if (session.Miasma.Counter > 0)
-            {
-                var miasma = level.GetMiasma();
-                if (miasma != null)
-                {
-                    level.GetGameplayLayer().Entities.Remove(miasma);
-                    miasma.Removed();
-                }
-            }
+            level.RemoveMiasma();
 
-            if (session.Miasma.State != MiasmaState.Uninitialized && session.Miasma.Counter <= 0)
+            if (gameState.Session.Miasma.CoroutineTimer > 0)
             {
-                var miasma = (level as TowerFall.Level).GetMiasma();
+                var sess = _sessionService.GetSession();
+                sess.Miasma.CoroutineTimer = 0;
+                _sessionService.SaveSession(sess);
 
-                if (miasma != null)
+                var miasma = new TowerFall.Miasma(TowerFall.Miasma.Modes.Versus);
+                var dynMiasma = DynamicData.For(miasma);
+                dynMiasma.Set("Scene", level);
+                dynMiasma.Set("Level", level);
+                dynMiasma.Set("actualDepth", gameState.Session.Miasma.ActualDepth);
+
+                level.GetGameplayLayer().Entities.Add(miasma);
+                miasma.Added();
+
+                var dynamicRounlogic = DynamicData.For(level.Session.RoundLogic);
+                dynamicRounlogic.Set("miasma", miasma);
+
+                for (int i = 0; i < gameState.Session.Miasma.CoroutineTimer; i++)
                 {
-                    MiasmaPatch.LoadState(miasma, session.Miasma);
+                    miasma.Update();
                 }
             }
 
@@ -561,11 +561,9 @@ namespace TF.EX.Patchs.Scene
                 level.Layers.FirstOrDefault(l => l.Value.Index == versusStart.LayerIndex).Value.Entities.Add(versusStart);
                 versusStart.Added();
 
-                var coroutine = versusStart.Components.FirstOrDefault(c => c is Monocle.Coroutine);
-
                 for (int i = 0; i < gameState.Hud.VersusStart.CoroutineState; i++)
                 {
-                    coroutine.Update();
+                    versusStart.Update();
                 }
             }
 
