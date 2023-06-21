@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
+using TF.EX.Common;
 using TF.EX.Domain.Context;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Ports;
@@ -27,6 +28,8 @@ namespace TF.EX.Domain
             ServiceCollection = new ServiceCollection();
 
             ServiceCollection.AddMemoryCache();
+
+            ServiceCollection.AddSingleton<IAutoUpdater, AutoUpdater>();
 
             ServiceCollection.AddSingleton<IGameContext, GameContext>();
             ServiceCollection.AddSingleton<INetplayManager, NetplayManager>();

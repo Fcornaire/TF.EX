@@ -11,6 +11,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<Reference Include="System.Net.Http" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<Reference Include="MMHOOK_TowerFall">
 			<HintPath>..\..\libs\MMHOOK_TowerFall.dll</HintPath>
 			<Private>False</Private>

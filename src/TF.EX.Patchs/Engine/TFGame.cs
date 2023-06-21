@@ -1,8 +1,10 @@
-﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Xna.Framework;
 using Monocle;
 using MonoMod.Utils;
 using System.Reflection;
 using System.Windows.Forms;
+using TF.EX.Common;
 using TF.EX.Domain;
 using TF.EX.Domain.Externals;
 using TF.EX.Domain.Models;
@@ -10,6 +12,7 @@ using TF.EX.Domain.Models.State;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
 using TF.EX.TowerFallExtensions;
+using TF.EX.TowerFallExtensions.Scene;
 using TowerFall;
 
 namespace TF.EX.Patchs.Engine
@@ -20,6 +23,7 @@ namespace TF.EX.Patchs.Engine
         public static InputRenderer[] ReplayInputRenderers = new InputRenderer[4];
 
         private bool IsFirstUpdate = true;
+        private bool _shouldShowUpdateDialog = true;
 
         private readonly INetplayManager _netplayManager;
         private readonly IInputService _inputService;
@@ -42,12 +46,28 @@ namespace TF.EX.Patchs.Engine
         public void Load()
         {
             On.TowerFall.TFGame.Update += TFGameUpdate_Patch;
-
+            On.TowerFall.TFGame.Load += TFGame_Load;
         }
+
+
 
         public void Unload()
         {
             On.TowerFall.TFGame.Update -= TFGameUpdate_Patch;
+            On.TowerFall.TFGame.Load -= TFGame_Load;
+        }
+
+        private void TFGame_Load(On.TowerFall.TFGame.orig_Load orig)
+        {
+            orig();
+
+            Task.Run(() => AutoUpdateIfNeeded()).GetAwaiter().GetResult();
+        }
+
+        private async Task AutoUpdateIfNeeded()
+        {
+            var autoUpdate = ServiceCollections.ServiceProvider.GetRequiredService<IAutoUpdater>();
+            await autoUpdate.CheckForUpdate();
         }
 
         static void OnProcessExit(object sender, EventArgs e)
@@ -55,6 +75,12 @@ namespace TF.EX.Patchs.Engine
             if (ServiceCollections.ResolveNetplayManager().IsInit() && !TFGamePatch.HasExported)
             {
                 ServiceCollections.ResolveReplayService().Export();
+            }
+
+            var autoUpdater = ServiceCollections.ServiceProvider.GetRequiredService<IAutoUpdater>();
+            if (autoUpdater.IsUpdateAvailable())
+            {
+                autoUpdater.Update();
             }
         }
 
@@ -77,6 +103,18 @@ namespace TF.EX.Patchs.Engine
                 Accumulator = TimeSpan.Zero;
 
                 AppDomain.CurrentDomain.ProcessExit += new EventHandler(OnProcessExit);
+            }
+
+            if (self.Scene is TowerFall.MainMenu && (self.Scene as TowerFall.MainMenu).State == TowerFall.MainMenu.MenuState.Main && _shouldShowUpdateDialog)
+            {
+                _shouldShowUpdateDialog = false;
+
+                if (ServiceCollections.ServiceProvider.GetRequiredService<IAutoUpdater>().IsUpdateAvailable())
+                {
+                    var dialog = new Dialog("TF EX Update", "A TF EX mod update is available \n \nPlease close and restart the game", new Vector2(160f, 120f), () => { Environment.Exit(0); }, new Dictionary<string, Action>());
+                    var dynLayer = DynamicData.For((TFGame.Instance.Scene as TowerFall.MainMenu).GetMainLayer());
+                    dynLayer.Invoke("Add", dialog, false);
+                }
             }
 
             var gameLoaded = dynTFGame.Get<bool>("GameLoaded");

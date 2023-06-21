@@ -14,7 +14,8 @@
 
 	<ItemGroup>
 	  <ProjectReference Include="..\TF.EX.Domain\TF.EX.Domain.csproj" />
-	  <ProjectReference Include="..\TF.EX.TowerFallExtensions\TF.EX.TowerFallExtensions.csproj" />
+		<ProjectReference Include="..\TF.EX.Common\TF.EX.Common.csproj" />
+		<ProjectReference Include="..\TF.EX.TowerFallExtensions\TF.EX.TowerFallExtensions.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
