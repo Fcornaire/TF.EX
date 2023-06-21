@@ -25,6 +25,13 @@ jobs:
       run: dotnet build --no-restore --configuration Release
     - name: Publish
       run: dotnet publish --no-restore --configuration Release --output ./TF.EX
+    - name: Download ggrs-ffi lib
+    - uses: robinraju/release-downloader@v1.8
+      with:
+        repository: "Fcornaire/ggrs-ffi"
+        latest: true
+        out-file-path: "TF.EX"
+        fileName: "ggrs_ffi.dll"
     - name: Archive Release
       uses: thedoctor0/zip-release@0.7.1
       with:
