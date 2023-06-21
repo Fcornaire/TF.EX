@@ -40,7 +40,6 @@ jobs:
               }
           }' > ./src/TF.EX.Domain/Config.cs
           echo "Existing Config file replaced"
-          cat ./src/TF.EX.Domain/Config.cs
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
