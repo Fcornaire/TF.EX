@@ -47,9 +47,9 @@
     <ProjectReference Include="..\TF.EX.TowerFallExtensions\TF.EX.TowerFallExtensions.csproj" />
   </ItemGroup>
 
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="xcopy /y &quot;$(TargetPath)&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\TowerFall\Mods\TF.EX&quot;" />
-	<Exec Command="xcopy /y &quot;meta.json&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\TowerFall\Mods\TF.EX&quot;" />
-  </Target>
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Debug'">
+		<Exec Command="xcopy /y &quot;$(TargetPath)&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\TowerFall\Mods\TF.EX&quot;" />
+		<Exec Command="xcopy /y &quot;meta.json&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\TowerFall\Mods\TF.EX&quot;" />
+	</Target>
 
 </Project>
