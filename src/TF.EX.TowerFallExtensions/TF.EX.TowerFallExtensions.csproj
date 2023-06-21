@@ -22,7 +22,7 @@
 		</Reference>
 	</ItemGroup>
 
-	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Debug'">
 		<Exec Command="xcopy /y &quot;$(TargetPath)&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\TowerFall\Mods\TF.EX&quot;" />
 	</Target>
 
