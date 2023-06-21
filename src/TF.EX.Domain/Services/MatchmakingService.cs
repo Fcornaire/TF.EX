@@ -14,7 +14,7 @@ namespace TF.EX.Domain.Services
 {
     public class MatchmakingService : IMatchmakingService
     {
-        private const string SERVER_URL = "ws://192.168.1.14:3000";
+        private readonly string SERVER_URL = Config.SERVER;
         private string MATCHMAKING_URL => $"{SERVER_URL}/ws";
         private string ROOM_URL => $"{SERVER_URL}/room";
 
