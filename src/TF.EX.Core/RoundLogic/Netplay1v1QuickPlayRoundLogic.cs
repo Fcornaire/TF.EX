@@ -1,5 +1,8 @@
 ﻿using Microsoft.Xna.Framework;
 using Monocle;
+using TF.EX.Domain;
+using TF.EX.Domain.Ports;
+using TF.EX.Domain.Ports.TF;
 using TowerFall;
 
 namespace TF.EX.Core.RoundLogic
@@ -13,9 +16,14 @@ namespace TF.EX.Core.RoundLogic
 
         private bool wasFinalKill;
 
+        private readonly INetplayManager _netplayManager;
+        private readonly IInputService _inputInputService;
+
         public Netplay1v1QuickPlayRoundLogic(Session session, bool canHaveMiasma) : base(session, true)
         {
             roundEndCounter = new RoundEndCounter(session);
+            _netplayManager = ServiceCollections.ResolveNetplayManager();
+            _inputInputService = ServiceCollections.ResolveInputService();
         }
 
         public static RoundLogicInfo Create()
@@ -59,7 +67,23 @@ namespace TF.EX.Core.RoundLogic
             done = true;
             if (base.Session.CurrentLevel.Players.Count == 1)
             {
-                AddScore(base.Session.CurrentLevel.Player.PlayerIndex, 1);
+                var playerIndex = base.Session.CurrentLevel.Player.PlayerIndex;
+
+                if (_netplayManager.ShouldSwapPlayer())
+                {
+                    if (playerIndex == 0)
+                    {
+                        AddScore(_inputInputService.GetLocalPlayerInputIndex(), 1);
+                    }
+                    else
+                    {
+                        AddScore(_inputInputService.GetRemotePlayerInputIndex(), 1);
+                    }
+                }
+                else
+                {
+                    AddScore(base.Session.CurrentLevel.Player.PlayerIndex, 1);
+                }
             }
 
             InsertCrownEvent();
@@ -87,6 +111,18 @@ namespace TF.EX.Core.RoundLogic
                     {
                         num = item.PlayerIndex;
                         break;
+                    }
+                }
+
+                if (_netplayManager.ShouldSwapPlayer())
+                {
+                    if (num == 0)
+                    {
+                        num = _inputInputService.GetLocalPlayerInputIndex();
+                    }
+                    else
+                    {
+                        num = _inputInputService.GetRemotePlayerInputIndex();
                     }
                 }
 
