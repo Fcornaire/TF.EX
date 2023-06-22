@@ -32,18 +32,18 @@ namespace TF.EX.Patchs
 
         private void OrbLogic_DoDarkOrb(On.TowerFall.OrbLogic.orig_DoDarkOrb orig, TowerFall.OrbLogic self)
         {
-            CalcPatch.ShouldRegisterRng = true;
+            CalcPatch.RegisterRng();
             orig(self);
-            CalcPatch.ShouldRegisterRng = false;
+            CalcPatch.UnregisterRng();
 
             Save(self);
         }
 
         private void OrbLogic_DoTimeOrb(On.TowerFall.OrbLogic.orig_DoTimeOrb orig, TowerFall.OrbLogic self, bool delay)
         {
-            CalcPatch.ShouldRegisterRng = true;
+            CalcPatch.RegisterRng();
             orig(self, delay);
-            CalcPatch.ShouldRegisterRng = false;
+            CalcPatch.UnregisterRng();
 
             Save(self);
         }
@@ -63,9 +63,9 @@ namespace TF.EX.Patchs
 
         private void OrbLogic_Update(On.TowerFall.OrbLogic.orig_Update orig, TowerFall.OrbLogic self)
         {
-            CalcPatch.ShouldRegisterRng = true;
+            CalcPatch.RegisterRng();
             orig(self);
-            CalcPatch.ShouldRegisterRng = false;
+            CalcPatch.UnregisterRng();
 
             Save(self);
         }
