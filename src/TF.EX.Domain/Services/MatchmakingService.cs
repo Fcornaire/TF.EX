@@ -88,6 +88,7 @@ namespace TF.EX.Domain.Services
                 catch (Exception ex)
                 {
                     Console.WriteLine("Listenning message : " + ex.Message);
+                    Reset();
                 }
             }, cancellationToken);
 
@@ -261,18 +262,21 @@ namespace TF.EX.Domain.Services
             if (message.Contains("AcceptQuickPlayResponse"))
             {
                 var matchResponse = JsonConvert.DeserializeObject<AcceptQuickPlayResponseMessage>(message);
+
                 if (matchResponse.AcceptQuickPlayResponse.Success)
                 {
                     _hasMatched = true;
                     _rngService.SetSeed(matchResponse.AcceptQuickPlayResponse.Seed);
                     _netplayManager.UpdatePlayer2Name(matchResponse.AcceptQuickPlayResponse.OpponentName);
+                    _hasAcceptedOpponentInQuickPlay = true;
                 }
                 else
                 {
-                    throw new InvalidOperationException("Accepting  opponent on quick play failed");
+                    Console.WriteLine("Accepting opponent on quick play failed. (Probably a decline)");
+                    _hasFoundOpponentForQuickPlay = false;
+                    _OpponentDeclined = true;
+                    _ping = 0;
                 }
-
-                _hasAcceptedOpponentInQuickPlay = true;
             }
 
             if (message.Contains("DeniedQuickPlay"))
@@ -280,6 +284,7 @@ namespace TF.EX.Domain.Services
                 MatchboxClientFFI.disconnect();
                 _hasFoundOpponentForQuickPlay = false;
                 _OpponentDeclined = true;
+                _ping = 0;
             }
 
             if (message.Contains("TotalAvailablePlayersInQuickPlayQueue"))
@@ -313,12 +318,18 @@ namespace TF.EX.Domain.Services
                                 HandleLobbyMessage(data);
                             }
                         }
-                        await Task.Delay(100);
+                        await Task.Delay(10);
                     }
                 }
                 catch (Exception e)
                 {
                     Console.WriteLine($"Exception lobby msg : {e}");
+                    MatchboxClientFFI.disconnect();
+                    _OpponentDeclined = true;
+
+                    cancellationTokenSourceLobby.Cancel();
+                    cancellationTokenSourceLobby = new CancellationTokenSource();
+                    cancellationTokenLobby = cancellationTokenSourceLobby.Token;
                 }
             }, cancellationTokenLobby);
 
@@ -326,49 +337,77 @@ namespace TF.EX.Domain.Services
 
         private void HandleLobbyMessage(IEnumerable<PeerMessage> data)
         {
-            foreach (PeerMessage peerMessage in data)
+            try
             {
-                switch (peerMessage.Type)
+                foreach (PeerMessage peerMessage in data)
                 {
-                    case PeerMessageType.Ping:
-                        if (_opponentPeerId == null)
-                        {
+                    switch (peerMessage.Type)
+                    {
+                        case PeerMessageType.Ping:
+                            if (_opponentPeerId == null)
+                            {
+                                _opponentPeerId = peerMessage.PeerId;
+                            }
+                            MatchboxClientFFI.send_message(PeerMessageType.Pong.ToString(), peerMessage.PeerId.ToString());
+                            break;
+                        case PeerMessageType.Pong:
+                            if (_opponentPeerId == null)
+                            {
+                                _opponentPeerId = peerMessage.PeerId;
+                            }
+                            _stopwatch.Stop();
+                            _ping = (int)_stopwatch.ElapsedMilliseconds / 2;
+                            _stopwatch.Restart();
+                            MatchboxClientFFI.send_message(PeerMessageType.Ping.ToString(), peerMessage.PeerId.ToString());
+
+                            break;
+                        case PeerMessageType.Archer:
+                            var archerMessage = peerMessage.Message.Split(':')[1];
+
+                            var splitted = archerMessage.Split('-');
+
+                            Enum.TryParse(splitted[1], out ArcherData.ArcherTypes alt);
+
+                            var archer = int.Parse(splitted[0]);
+                            TFGame.Characters[1] = archer;
+                            TFGame.AltSelect[1] = alt;
+
+                            if (archer == TFGame.Characters[0])
+                            {
+                                if (TFGame.AltSelect[1] == ArcherData.ArcherTypes.Alt)
+                                {
+                                    TFGame.AltSelect[0] = ArcherData.ArcherTypes.Normal;
+                                }
+
+                                if (TFGame.AltSelect[1] == ArcherData.ArcherTypes.Normal)
+                                {
+                                    TFGame.AltSelect[0] = ArcherData.ArcherTypes.Alt;
+                                }
+                            }
+
+                            _hasOpponentChoosed = true;
+
+                            break;
+                        case PeerMessageType.Greetings:
                             _opponentPeerId = peerMessage.PeerId;
-                        }
-                        MatchboxClientFFI.send_message(PeerMessageType.Pong.ToString(), peerMessage.PeerId.ToString());
-                        break;
-                    case PeerMessageType.Pong:
-                        if (_opponentPeerId == null)
-                        {
-                            _opponentPeerId = peerMessage.PeerId;
-                        }
-                        _stopwatch.Stop();
-                        _ping = (int)_stopwatch.ElapsedMilliseconds / 2;
-                        _stopwatch.Restart();
-                        MatchboxClientFFI.send_message(PeerMessageType.Ping.ToString(), peerMessage.PeerId.ToString());
-
-                        break;
-                    case PeerMessageType.Archer:
-                        var archerMessage = peerMessage.Message.Split(':')[1];
-
-                        var splitted = archerMessage.Split('-');
-
-                        Enum.TryParse(splitted[1], out ArcherData.ArcherTypes alt);
-
-                        TFGame.Characters[1] = int.Parse(splitted[0]);
-                        TFGame.AltSelect[1] = alt;
-                        _hasOpponentChoosed = true;
-
-                        break;
-                    case PeerMessageType.Greetings:
-                        _opponentPeerId = peerMessage.PeerId;
-                        _stopwatch.Start();
-                        MatchboxClientFFI.send_message(PeerMessageType.Ping.ToString(), peerMessage.PeerId.ToString());
-                        break;
-                    default:
-                        Console.WriteLine($"Unknown message type {peerMessage.Type}");
-                        break;
+                            _stopwatch.Start();
+                            MatchboxClientFFI.send_message(PeerMessageType.Ping.ToString(), peerMessage.PeerId.ToString());
+                            break;
+                        default:
+                            Console.WriteLine($"Unknown message type {peerMessage.Type}");
+                            break;
+                    }
                 }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Exception when receiving lobby msg : {e}");
+                MatchboxClientFFI.disconnect();
+                _OpponentDeclined = true;
+
+                cancellationTokenSourceLobby.Cancel();
+                cancellationTokenSourceLobby = new CancellationTokenSource();
+                cancellationTokenLobby = cancellationTokenSourceLobby.Token;
             }
         }
 
@@ -479,6 +518,7 @@ namespace TF.EX.Domain.Services
             _OpponentDeclined = false;
             _hasRegisteredForQuickPlay = false;
             _isListening = false;
+            _ping = 0;
         }
 
         public int GetTotalAvailablePlayersInQuickPlayQueue()

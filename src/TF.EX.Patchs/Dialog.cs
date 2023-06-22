@@ -21,6 +21,7 @@ namespace TF.EX.Patchs
         private string dialogText;
         private bool _withAction => _actions.Any();
         private bool _noOrb = false;
+        private bool _isDisabled = false;
 
         private Func<string> _centerAction;
         private Dictionary<string, Action> _actions = new Dictionary<string, Action>();
@@ -135,7 +136,7 @@ namespace TF.EX.Patchs
                 {
                     confirmCounter.Update();
                 }
-                else if (MenuInput.Confirm)
+                else if (MenuInput.Confirm && !_isDisabled)
                 {
                     optionActions[optionIndex]();
                 }
@@ -194,6 +195,8 @@ namespace TF.EX.Patchs
                                 break;
                         }
                         Draw.OutlineTextCentered(TFGame.Font, pingStr, Position, color, 1.5f);
+
+                        _isDisabled = (latency == 0);
                     }
                     else
                     {
