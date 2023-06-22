@@ -19,7 +19,6 @@ namespace TF.EX.Patchs.Entity.MenuItem
         private TF.EX.Domain.Models.Modes _currentMode;
         private bool _isWaitingForOpponent = false;
         private Dialog _dialog = null;
-        private bool _canAdvance = false;
         private bool _hasError = false;
 
         public VersusBeginButtonPatch(IMatchmakingService matchmakingService, INetplayManager netplayManager)
@@ -197,9 +196,8 @@ namespace TF.EX.Patchs.Entity.MenuItem
                 CancelDialog();
             }
 
-            if (_isRegistering && _matchmakingService.HasAcceptedOpponentForQuickPlay() && !_canAdvance)
+            if (_isRegistering && _matchmakingService.HasAcceptedOpponentForQuickPlay())
             {
-                _canAdvance = true;
                 CancelDialog();
                 _isRegistering = false;
                 _isWaitingForPlayerChoice = false;

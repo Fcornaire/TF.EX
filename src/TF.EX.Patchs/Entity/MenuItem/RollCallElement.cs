@@ -134,6 +134,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
 
             portrait.SetCharacter(TFGame.Characters[playerIndex], archerType, 1);
             portrait.Join(unlock: false);
+            TFGame.Players[1] = true;
         }
     }
 
