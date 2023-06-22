@@ -36,9 +36,9 @@ namespace TF.EX.Patchs.Entity.LevelEntity
 
         private void LavaControl_Extend(On.TowerFall.LavaControl.orig_Extend orig, TowerFall.LavaControl self, int ownerIndex)
         {
-            CalcPatch.ShouldRegisterRng = true;
+            CalcPatch.RegisterRng();
             orig(self, ownerIndex);
-            CalcPatch.ShouldRegisterRng = false;
+            CalcPatch.UnregisterRng();
 
             Save(self);
         }
@@ -54,23 +54,26 @@ namespace TF.EX.Patchs.Entity.LevelEntity
 
             orig(self);
 
-            Save(self);
+            if (!self.MarkedForRemoval)
+            {
+                Save(self);
+            }
         }
 
         private void LavaControl_Added(On.TowerFall.LavaControl.orig_Added orig, TowerFall.LavaControl self)
         {
-            CalcPatch.ShouldRegisterRng = true;
+            CalcPatch.RegisterRng();
             orig(self);
-            CalcPatch.ShouldRegisterRng = false;
+            CalcPatch.UnregisterRng();
 
             Save(self);
         }
 
         private void LavaControl_ctor(On.TowerFall.LavaControl.orig_ctor orig, TowerFall.LavaControl self, TowerFall.LavaControl.LavaMode mode, int ownerIndex)
         {
-            CalcPatch.ShouldRegisterRng = true;
+            CalcPatch.RegisterRng();
             orig(self, mode, ownerIndex);
-            CalcPatch.ShouldRegisterRng = false;
+            CalcPatch.UnregisterRng();
         }
 
         public LavaControl GetState(TowerFall.LavaControl entity)

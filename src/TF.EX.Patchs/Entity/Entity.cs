@@ -1,4 +1,5 @@
-﻿using TF.EX.Domain.Ports;
+﻿using MonoMod.Utils;
+using TF.EX.Domain.Ports;
 
 namespace TF.EX.Patchs.Entity
 {
@@ -14,11 +15,24 @@ namespace TF.EX.Patchs.Entity
         public void Load()
         {
             On.Monocle.Entity.RemoveSelf += Entity_RemoveSelf;
+            On.Monocle.Entity.Removed += Entity_Removed;
         }
 
         public void Unload()
         {
             On.Monocle.Entity.RemoveSelf -= Entity_RemoveSelf;
+            On.Monocle.Entity.Removed -= Entity_Removed;
+        }
+
+        private void Entity_Removed(On.Monocle.Entity.orig_Removed orig, Monocle.Entity self)
+        {
+            if (self is TowerFall.Lava) //Hack !!
+            {
+                var dynLava = DynamicData.For(self);
+                dynLava.Set("Scene", TowerFall.TFGame.Instance.Scene); //TODO: Remove this hack, we should have a scene here, dunno why it's null
+            }
+
+            orig(self);
         }
 
         private void Entity_RemoveSelf(On.Monocle.Entity.orig_RemoveSelf orig, Monocle.Entity self)

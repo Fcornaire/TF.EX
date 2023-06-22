@@ -16,9 +16,9 @@ namespace TF.EX.Patchs.Component
 
         private void AddArrow_Patch(On.TowerFall.ArrowCushion.orig_AddArrow orig, TowerFall.ArrowCushion self, TowerFall.Arrow arrow, float moveIn, bool drawHead)
         {
-            CalcPatch.ShouldRegisterRng = true;
+            CalcPatch.RegisterRng();
             orig(self, arrow, moveIn, drawHead);
-            CalcPatch.ShouldRegisterRng = false;
+            CalcPatch.UnregisterRng();
         }
     }
 }

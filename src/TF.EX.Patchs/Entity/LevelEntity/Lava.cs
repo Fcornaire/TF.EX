@@ -2,6 +2,7 @@
 using MonoMod.Utils;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Ports.TF;
+using TF.EX.Patchs.Calc;
 using TF.EX.Patchs.Extensions;
 
 namespace TF.EX.Patchs.Entity.LevelEntity
@@ -19,11 +20,20 @@ namespace TF.EX.Patchs.Entity.LevelEntity
         public void Load()
         {
             On.TowerFall.Lava.Update += Lava_Update;
+            On.TowerFall.Lava.BubbleComplete += Lava_BubbleComplete;
         }
 
         public void Unload()
         {
             On.TowerFall.Lava.Update -= Lava_Update;
+            On.TowerFall.Lava.BubbleComplete -= Lava_BubbleComplete;
+        }
+
+        private void Lava_BubbleComplete(On.TowerFall.Lava.orig_BubbleComplete orig, TowerFall.Lava self, Sprite<int> bubble)
+        {
+            CalcPatch.IgnoreToRegisterRng();
+            orig(self, bubble);
+            CalcPatch.UnignoreToRegisterRng();
         }
 
         private void Lava_Update(On.TowerFall.Lava.orig_Update orig, TowerFall.Lava self)

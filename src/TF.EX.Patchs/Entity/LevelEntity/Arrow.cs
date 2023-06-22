@@ -61,9 +61,9 @@ namespace TF.EX.Patchs.Entity.LevelEntity
 
         private void Arrow_EnterFallMode(On.TowerFall.Arrow.orig_EnterFallMode orig, TowerFall.Arrow self, bool bounce, bool zeroX, bool sound)
         {
-            Calc.CalcPatch.ShouldRegisterRng = true;
+            Calc.CalcPatch.RegisterRng();
             orig(self, bounce, zeroX, sound);
-            Calc.CalcPatch.ShouldRegisterRng = false;
+            Calc.CalcPatch.UnregisterRng();
         }
 
         public Arrow GetState(TowerFall.Arrow entity)

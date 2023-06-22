@@ -10,13 +10,15 @@ namespace TF.EX.Patchs.Layer
     {
         private readonly INetplayManager _netplayManager;
         private readonly ISessionService _sessionService;
+        private readonly IOrbService _orbService;
         private readonly IHUDService _hudService;
 
-        public LayerPatch(INetplayManager netplayManager, IHUDService hudService, ISessionService sessionService)
+        public LayerPatch(INetplayManager netplayManager, IHUDService hudService, ISessionService sessionService, IOrbService orbService)
         {
             _netplayManager = netplayManager;
             _hudService = hudService;
             _sessionService = sessionService;
+            _orbService = orbService;
         }
 
         public void Load()
@@ -48,6 +50,13 @@ namespace TF.EX.Patchs.Layer
                 var session = _sessionService.GetSession();
                 session.Miasma.CoroutineTimer = 0;
                 _sessionService.SaveSession(session);
+            }
+
+            if (entity is LavaControl)
+            {
+                var orb = _orbService.GetOrb();
+                orb.Lava = TF.EX.Domain.Models.State.LevelEntity.LavaControl.Default;
+                _orbService.Save(orb);
             }
         }
 
