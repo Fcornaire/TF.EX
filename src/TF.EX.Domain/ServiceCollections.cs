@@ -93,6 +93,8 @@ namespace TF.EX.Domain
 
         public static IReplayService ResolveReplayService() { return ServiceProvider.GetRequiredService<IReplayService>(); }
 
+        public static IInputService ResolveInputService() { return ServiceProvider.GetRequiredService<IInputService>(); }
+
         public static (INetplayStateMachine, TF.EX.Domain.Models.Modes) ResolveStateMachineService()
         {
             var mode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();

@@ -148,25 +148,19 @@ namespace TF.EX.Patchs.RoundLogic
         {
             orig(self, scoreIndex, add);
 
-
             if ((_netplayManager.IsInit() || _netplayManager.IsTestMode()) && _netplayManager.ShouldSwapPlayer())
             {
-                self.Session.Scores[scoreIndex] -= add; //Recalculate score if netplay
-                self.ScoreGained[scoreIndex] -= add;
-                self.ScoreLost[scoreIndex] -= add;
+                var evt = self.Events.Find(e => e is TowerFall.GainPointEvent && (e as TowerFall.GainPointEvent).ScoreIndex == scoreIndex);
+                self.Events.Remove(evt);
 
                 if (scoreIndex == 0)
                 {
-                    self.Session.Scores[_inputInputService.GetLocalPlayerInputIndex()] += add;
-                    self.ScoreGained[_inputInputService.GetLocalPlayerInputIndex()] += add;
-                    self.ScoreLost[_inputInputService.GetLocalPlayerInputIndex()] += add;
+                    self.Events.Add(new TowerFall.GainPointEvent(_inputInputService.GetLocalPlayerInputIndex()));
                 }
 
                 if (scoreIndex == 1)
                 {
-                    self.Session.Scores[_inputInputService.GetRemotePlayerInputIndex()] += add;
-                    self.ScoreGained[_inputInputService.GetRemotePlayerInputIndex()] += add;
-                    self.ScoreLost[_inputInputService.GetRemotePlayerInputIndex()] += add;
+                    self.Events.Add(new TowerFall.GainPointEvent(_inputInputService.GetRemotePlayerInputIndex()));
                 }
             }
         }

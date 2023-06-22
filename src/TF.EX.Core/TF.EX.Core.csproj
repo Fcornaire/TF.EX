@@ -27,9 +27,14 @@
 		</Reference>
 		<Reference Include="System.Windows.Forms" />
 
-		<Reference Include="TowerFall">
+		<Reference Include="TowerFall" Condition=" '$(Configuration)' == 'Release'">
 			<HintPath>..\..\libs\TowerFall-publicized.exe</HintPath>
 		  <Private>False</Private>
+		</Reference>
+
+		<Reference Include="TowerFall" Condition=" '$(Configuration)' == 'Debug'">
+			<HintPath>..\..\libs\TowerFall.exe</HintPath>
+			<Private>False</Private>
 		</Reference>
   </ItemGroup>
 
