@@ -106,10 +106,10 @@ namespace TF.EX.Patchs.Scene
 
         private void Level_HandlePausing(On.TowerFall.Level.orig_HandlePausing orig, TowerFall.Level self)
         {
-            //if (_netplayManager.IsReplayMode())
-            //{
-            //    orig(self);
-            //}
+            if (_netplayManager.IsReplayMode())
+            {
+                orig(self);
+            }
         }
 
         private void UpdateLayersEntityList(TowerFall.Level level)
@@ -164,7 +164,13 @@ namespace TF.EX.Patchs.Scene
         {
             var gameState = new GameState();
 
+            gameState.IsLevelFrozen = entity.Frozen;
+
+            //EventLogs
+            gameState.EventLogs = entity.Session.RoundLogic.Events.ToModel();
+
             //Versus Start
+            //VersusRoundResults
             gameState.Hud = _hudService.Get();
 
             //Players save state
@@ -247,6 +253,8 @@ namespace TF.EX.Patchs.Scene
                 var roundEndCounter = dynLMRoundLogic.Get<RoundEndCounter>("roundEndCounter");
                 var endCounter = DynamicData.For(roundEndCounter).Get<float>("endCounter");
                 var roundStarted = entity.Session.RoundLogic.RoundStarted;
+                var done = dynLMRoundLogic.Get<bool>("done");
+                var roundIndex = entity.Session.RoundIndex;
 
                 var isEnding = entity.Session.CurrentLevel.Ending;
 
@@ -259,16 +267,21 @@ namespace TF.EX.Patchs.Scene
                 stateSession.RoundEndCounter = endCounter;
                 stateSession.IsEnding = isEnding;
                 stateSession.Miasma.Counter = counter;
+                stateSession.IsDone = done;
                 var session = new Domain.Models.State.Session
                 {
                     IsEnding = stateSession.IsEnding,
                     RoundEndCounter = stateSession.RoundEndCounter,
+                    IsDone = stateSession.IsDone,
+                    RoundIndex = stateSession.RoundIndex,
                     RoundStarted = stateSession.RoundStarted,
                     Miasma = new Domain.Models.State.Miasma
                     {
                         Counter = stateSession.Miasma.Counter,
                         CoroutineTimer = stateSession.Miasma.CoroutineTimer
-                    }
+                    },
+                    Scores = entity.Session.Scores.ToArray(),
+                    OldScores = entity.Session.OldScores.ToArray(),
                 };
 
                 _sessionService.SaveSession(stateSession);
@@ -348,6 +361,137 @@ namespace TF.EX.Patchs.Scene
 
             var dynScene = DynamicData.For(level as Monocle.Scene);
             dynScene.Set("FrameCounter", gameState.Frame);
+            level.EndScreenShake();
+
+            level.Frozen = gameState.IsLevelFrozen;
+
+            //Session load
+            var session = new TF.EX.Domain.Models.State.Session
+            {
+                IsEnding = gameState.Session.IsEnding,
+                RoundStarted = gameState.Session.RoundStarted,
+                RoundEndCounter = gameState.Session.RoundEndCounter,
+                RoundIndex = gameState.Session.RoundIndex,
+                IsDone = gameState.Session.IsDone,
+                Miasma = new Domain.Models.State.Miasma
+                {
+                    CoroutineTimer = gameState.Session.Miasma.CoroutineTimer,
+                    Counter = gameState.Session.Miasma.Counter,
+                },
+                Scores = gameState.Session.Scores.ToArray(),
+                OldScores = gameState.Session.OldScores.ToArray(),
+            };
+
+            _sessionService.SaveSession(session);
+
+            level.Session.Scores = session.Scores.ToArray();
+            level.Session.OldScores = session.OldScores.ToArray();
+
+            if (session.RoundIndex != level.Session.RoundIndex)
+            {
+                //TODO: Implement level loading ?
+                //var dynSession = DynamicData.For(level.Session);
+                //dynSession.Set("RoundIndex", session.RoundIndex);
+
+                //LevelLoaderXML loaderXML = new LevelLoaderXML(level.Session);
+
+                //var dynEngine = DynamicData.For(TFGame.Instance);
+                //dynEngine.Set("scene", loaderXML);
+
+                //while (!loaderXML.Finished)
+                //{
+                //    loaderXML.Update();
+                //}
+
+                //dynEngine.Set("scene", loaderXML.Level);
+                //level = loaderXML.Level;
+
+                //level.Begin();
+
+                //var dynNewSession = DynamicData.For(level.Session);
+                //dynNewSession.Set("RoundIndex", session.RoundIndex);
+            }
+
+            var dynRoundLogic = DynamicData.For(level.Session.RoundLogic);
+            dynRoundLogic.Set("RoundStarted", session.RoundStarted);
+            dynRoundLogic.Set("done", session.IsDone);
+
+            (level as TowerFall.Level).Session.CurrentLevel.Ending = session.IsEnding;
+
+            level.RemoveMiasma();
+
+            if (gameState.Session.Miasma.CoroutineTimer > 0)
+            {
+                var sess = _sessionService.GetSession();
+                sess.Miasma.CoroutineTimer = 0;
+                _sessionService.SaveSession(sess);
+
+                var miasma = new TowerFall.Miasma(TowerFall.Miasma.Modes.Versus);
+                var dynMiasma = DynamicData.For(miasma);
+                dynMiasma.Set("Scene", level);
+                dynMiasma.Set("Level", level);
+                dynMiasma.Set("actualDepth", gameState.Session.Miasma.ActualDepth);
+
+                level.GetGameplayLayer().Entities.Add(miasma);
+                miasma.Added();
+
+                var dynamicRounlogic = DynamicData.For(level.Session.RoundLogic);
+                dynamicRounlogic.Set("miasma", miasma);
+
+                for (int i = 0; i < gameState.Session.Miasma.CoroutineTimer; i++)
+                {
+                    miasma.Update();
+                }
+            }
+
+            //Event logs
+            dynRoundLogic.Set("Events", gameState.EventLogs.ToTFModel());
+
+            _hudService.Update(new Domain.Models.State.HUD.HUD());
+            //VersusRoundResults
+            level.Delete<VersusRoundResults>();
+            Sounds.sfx_multiCoinEarned.Stop();
+            level.Delete<HUDFade>();
+
+            if (gameState.Hud.VersusRoundResults.CoroutineState > 0)
+            {
+                var hudFade = new TowerFall.HUDFade();
+                var versusRoundResults = new TowerFall.VersusRoundResults(level.Session, gameState.EventLogs.ToTFModel());
+                var dynVersusRoundResults = DynamicData.For(versusRoundResults);
+                dynVersusRoundResults.Set("Scene", level);
+                dynVersusRoundResults.Set("Level", level);
+
+                var hudLayer = level.Layers.FirstOrDefault(l => l.Value.Index == hudFade.LayerIndex).Value;
+                hudLayer.Entities.Add(versusRoundResults);
+                hudLayer.Entities.Add(hudFade);
+                versusRoundResults.Added();
+                hudFade.Added();
+
+                for (int i = 0; i < gameState.Hud.VersusRoundResults.CoroutineState; i++)
+                {
+                    versusRoundResults.Update();
+                    hudFade.Update();
+                }
+            }
+
+            //VersusStart
+            level.ClearVersusStart();
+
+            if (gameState.Hud.VersusStart.CoroutineState > 0)
+            {
+                var versusStart = new TowerFall.VersusStart(level.Session);
+                var dynVersusStart = DynamicData.For(versusStart);
+                dynVersusStart.Set("Scene", level);
+                dynVersusStart.Set("Level", level);
+
+                level.Layers.FirstOrDefault(l => l.Value.Index == versusStart.LayerIndex).Value.Entities.Add(versusStart);
+                versusStart.Added();
+
+                for (int i = 0; i < gameState.Hud.VersusStart.CoroutineState; i++)
+                {
+                    versusStart.Update();
+                }
+            }
 
             //Players
             foreach (TF.EX.Domain.Models.State.Player toLoad in gameState.Players.ToArray())
@@ -411,51 +555,6 @@ namespace TF.EX.Patchs.Scene
                 level.GetGameplayLayer().Entities.Insert(0, cachedPlayerCorpse);
             }
 
-            //Session load
-            var session = new TF.EX.Domain.Models.State.Session
-            {
-                IsEnding = gameState.Session.IsEnding,
-                RoundStarted = gameState.Session.RoundStarted,
-                RoundEndCounter = gameState.Session.RoundEndCounter,
-                Miasma = new Domain.Models.State.Miasma
-                {
-                    CoroutineTimer = gameState.Session.Miasma.CoroutineTimer,
-                    Counter = gameState.Session.Miasma.Counter,
-                }
-            };
-
-            _sessionService.SaveSession(session);
-
-            var dynRoundLogic = DynamicData.For(level.Session.RoundLogic);
-            dynRoundLogic.Set("RoundStarted", session.RoundStarted);
-
-            (level as TowerFall.Level).Session.CurrentLevel.Ending = session.IsEnding;
-
-            level.RemoveMiasma();
-
-            if (gameState.Session.Miasma.CoroutineTimer > 0)
-            {
-                var sess = _sessionService.GetSession();
-                sess.Miasma.CoroutineTimer = 0;
-                _sessionService.SaveSession(sess);
-
-                var miasma = new TowerFall.Miasma(TowerFall.Miasma.Modes.Versus);
-                var dynMiasma = DynamicData.For(miasma);
-                dynMiasma.Set("Scene", level);
-                dynMiasma.Set("Level", level);
-                dynMiasma.Set("actualDepth", gameState.Session.Miasma.ActualDepth);
-
-                level.GetGameplayLayer().Entities.Add(miasma);
-                miasma.Added();
-
-                var dynamicRounlogic = DynamicData.For(level.Session.RoundLogic);
-                dynamicRounlogic.Set("miasma", miasma);
-
-                for (int i = 0; i < gameState.Session.Miasma.CoroutineTimer; i++)
-                {
-                    miasma.Update();
-                }
-            }
 
             //Chests load
             if (level != null && level[GameTags.TreasureChest] != null && level[GameTags.TreasureChest].Count > 0)
@@ -546,26 +645,7 @@ namespace TF.EX.Patchs.Scene
             rng.ResetRandom();
             _rngService.UpdateState(rng.Gen_type);
 
-            //VersusStart
 
-            level.ClearVersusStart();
-            _hudService.Update(new Domain.Models.State.HUD.HUD());
-
-            if (gameState.Hud.VersusStart.CoroutineState > 0)
-            {
-                var versusStart = new TowerFall.VersusStart(level.Session);
-                var dynVersusStart = DynamicData.For(versusStart);
-                dynVersusStart.Set("Scene", level);
-                dynVersusStart.Set("Level", level);
-
-                level.Layers.FirstOrDefault(l => l.Value.Index == versusStart.LayerIndex).Value.Entities.Add(versusStart);
-                versusStart.Added();
-
-                for (int i = 0; i < gameState.Hud.VersusStart.CoroutineState; i++)
-                {
-                    versusStart.Update();
-                }
-            }
 
             PostLoad(level, gameState);
 
@@ -599,7 +679,10 @@ namespace TF.EX.Patchs.Scene
             foreach (TF.EX.Domain.Models.State.Arrows.Arrow toLoad in gs.Arrows.ToArray())
             {
                 var arrow = this.GetEntityByDepth(self, toLoad.ActualDepth) as TowerFall.Arrow;
-                _arrowPatch.LoadCannotHit(arrow, toLoad.HasUnhittableEntity, toLoad.PlayerIndex);
+                if (arrow != null)
+                {
+                    _arrowPatch.LoadCannotHit(arrow, toLoad.HasUnhittableEntity, toLoad.PlayerIndex);
+                }
             }
         }
         private List<Background.BGElement> GetBGElements(TowerFall.Level level)

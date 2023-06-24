@@ -108,9 +108,10 @@ namespace TF.EX.Domain
         public static void ResetState()
         {
             var sessionService = ResolveSessionService();
+            var hudService = ServiceProvider.GetRequiredService<IHUDService>();
             PurgeCachedPickup();
             sessionService.Reset();
-
+            hudService.Update(new Domain.Models.State.HUD.HUD());
         }
 
         /// <summary>

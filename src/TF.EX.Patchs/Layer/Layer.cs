@@ -39,9 +39,14 @@ namespace TF.EX.Patchs.Layer
 
             if (entity is VersusStart)
             {
+                var hud = _hudService.Get();
                 _hudService.Update(new Domain.Models.State.HUD.HUD
                 {
-                    VersusStart = new Domain.Models.State.HUD.VersusStart()
+                    VersusStart = new Domain.Models.State.HUD.VersusStart(),
+                    VersusRoundResults = new Domain.Models.State.HUD.VersusRoundResults
+                    {
+                        CoroutineState = hud.VersusRoundResults.CoroutineState
+                    }
                 });
             }
 

@@ -327,6 +327,7 @@ namespace TF.EX.Domain.Context
             return new HUD
             {
                 VersusStart = _hudState.VersusStart,
+                VersusRoundResults = _hudState.VersusRoundResults,
             };
         }
 
@@ -335,6 +336,7 @@ namespace TF.EX.Domain.Context
             _hudState = new HUD
             {
                 VersusStart = toLoad.VersusStart,
+                VersusRoundResults = toLoad.VersusRoundResults,
             };
         }
     }

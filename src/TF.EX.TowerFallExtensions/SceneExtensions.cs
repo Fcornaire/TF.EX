@@ -63,10 +63,31 @@ namespace TF.EX.TowerFallExtensions
             if (versusStart != null)
             {
                 Sounds.sfx_multiStartLevel.Stop();
+                Sounds.sfx_trainingStartLevelStone.Stop();
+                Sounds.sfx_trainingStartLevelOut.Stop();
                 scene.Layers.FirstOrDefault(layer => layer.Value.Index == versusStart.LayerIndex).Value.Entities.Remove(versusStart);
                 versusStart.Removed();
             }
         }
+
+        public static void Delete<T>(this Scene scene) where T : Monocle.Entity
+        {
+            var entity = scene.Layers.SelectMany(layer => layer.Value.Entities)
+                .FirstOrDefault(ent => ent is T) as T;
+
+            if (entity != null)
+            {
+                scene.Layers.FirstOrDefault(layer => layer.Value.Index == entity.LayerIndex).Value.Entities.Remove(entity);
+                entity.Removed();
+            }
+        }
+
+        public static T Get<T>(this Scene scene) where T : Monocle.Entity
+        {
+            return scene.Layers.SelectMany(layer => layer.Value.Entities)
+                .FirstOrDefault(ent => ent is T) as T;
+        }
+
 
         public static Layer GetMenuLayer(this Scene scene)
         {
