@@ -57,6 +57,7 @@ namespace TF.EX.Patchs
             serviceCollection.AddSingleton<IHookable, SessionPatch>();
             serviceCollection.AddSingleton<IHookable, VersusLevelSystemPatch>();
             serviceCollection.AddSingleton<IHookable, VersusStartPatch>();
+            serviceCollection.AddSingleton<IHookable, ReplayRecorderPatch>();
             serviceCollection.AddTransient<IStateful<TowerFall.Chain, Chain>, ChainPatch>();
             serviceCollection.AddTransient<IStateful<TowerFall.Lantern, Lantern>, LanternPatch>();
             serviceCollection.AddTransient<IStateful<TowerFall.TreasureChest, Chest>, TreasureChestPatch>();

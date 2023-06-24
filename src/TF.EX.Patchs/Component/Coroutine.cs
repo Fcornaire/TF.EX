@@ -40,6 +40,14 @@ namespace TF.EX.Patchs.Component
                 _hudService.Update(hud);
             }
 
+            if (self.Entity is TowerFall.VersusRoundResults)
+            {
+                var hud = _hudService.Get();
+                hud.VersusRoundResults.CoroutineState += 1;
+
+                _hudService.Update(hud);
+            }
+
             orig(self);
         }
     }

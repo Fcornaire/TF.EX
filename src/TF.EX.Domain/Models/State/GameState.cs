@@ -19,13 +19,18 @@ namespace TF.EX.Domain.Models.State
             RoundEndCounter = Constants.INITIAL_END_COUNTER,
             IsEnding = false,
             Miasma = Miasma.Default(),
-            RoundStarted = false
+            RoundStarted = false,
+            IsDone = false
         };
         public Orb.Orb Orb { get; set; } = new Orb.Orb();
         public Rng Rng { get; set; } = new Rng(-1);
         public Dictionary<int, double> GamePlayerLayerActualDepthLookup { get; set; } = new Dictionary<int, double>();
 
         public HUD.HUD Hud { get; set; } = new HUD.HUD();
+
+        public EventLog.EventLog EventLogs { get; set; } = new EventLog.EventLog();
+
+        public bool IsLevelFrozen { get; set; } = false;
         public int Frame { get; set; }
     }
 }

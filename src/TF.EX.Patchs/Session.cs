@@ -20,6 +20,7 @@ namespace TF.EX.Patchs
         {
             On.TowerFall.Session.ctor += Session_ctor;
             On.TowerFall.Session.StartRound += Session_StartRound;
+            On.TowerFall.Session.CreateResults += Session_CreateResults;
             On.TowerFall.Session.GetOldScore += Session_GetOldScore;
             On.TowerFall.Session.GetWinner += Session_GetWinner;
         }
@@ -28,9 +29,23 @@ namespace TF.EX.Patchs
         {
             On.TowerFall.Session.ctor -= Session_ctor;
             On.TowerFall.Session.StartRound -= Session_StartRound;
+            On.TowerFall.Session.CreateResults -= Session_CreateResults;
             On.TowerFall.Session.GetOldScore -= Session_GetOldScore;
             On.TowerFall.Session.GetWinner -= Session_GetWinner;
         }
+
+
+        private void Session_CreateResults(On.TowerFall.Session.orig_CreateResults orig, TowerFall.Session self)
+        {
+            orig(self);
+
+            if (_netplayManager.IsInit() && _netplayManager.HaveFramesToReSimulate())
+            {
+                self.CurrentLevel.UpdateEntityLists();
+                self.CurrentLevel.Layers.FirstOrDefault(layer => layer.Value.Index == 3).Value.Update(); //Update to trigger coroutine
+            }
+        }
+
 
         private int Session_GetWinner(On.TowerFall.Session.orig_GetWinner orig, TowerFall.Session self)
         {
