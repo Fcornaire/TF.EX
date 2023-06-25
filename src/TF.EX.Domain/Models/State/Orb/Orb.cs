@@ -9,11 +9,11 @@ namespace TF.EX.Domain.Models.State.Orb
 
     public class Orb
     {
-        public Time Time { get; set; }
-        public Dark Dark { get; set; }
-        public LavaControl Lava { get; set; }
-        public Counter Space { get; set; }
-        public Counter Chaos { get; set; }
+        public Time Time { get; set; } = Time.Default;
+        public Dark Dark { get; set; } = Dark.Default;
+        public LavaControl Lava { get; set; } = LavaControl.Default;
+        public Counter Space { get; set; } = Counter.Default;
+        public Counter Chaos { get; set; } = Counter.Default;
 
         public static Orb Default => new Orb
         {

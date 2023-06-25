@@ -20,7 +20,6 @@ namespace TF.EX.Patchs.Engine
         public static bool HasExported = false;
         public static InputRenderer[] ReplayInputRenderers = new InputRenderer[4];
 
-        public bool HasStarted = false;
         private bool IsFirstUpdate = true;
 
         private readonly INetplayManager _netplayManager;
@@ -80,101 +79,93 @@ namespace TF.EX.Patchs.Engine
 
             var gameLoaded = dynTFGame.Get<bool>("GameLoaded");
 
-            if (!HasStarted)
-            {
-                LastUpdate = DateTime.Now;
-                Accumulator = TimeSpan.Zero;
-                HasStarted = self.Scene != null && self.Scene[GameTags.Player] != null && (self.Scene[GameTags.Player].Count > 0);
-            }
-
             if (_netplayManager.IsDisconnected() && !HasExported)
             {
                 _replayService.Export();
                 HasExported = true;
             }
 
+            if (!CanRunNetplayFrames(self.Scene))
+            {
+                if (!_netplayManager.IsInit())
+                {
+                    LastUpdate = DateTime.Now;
+                    Accumulator = TimeSpan.Zero;
+                }
+
+                orig(self, gameTime);
+                return;
+            }
+
             if (_netplayManager.IsReplayMode())
             {
-                if (gameLoaded && CanRunFrames(self.Scene) && !(self.Scene as Level).Paused)
+                if (gameLoaded && !(self.Scene as Level).Paused)
                 {
                     _replayService.RunFrame();
                 }
                 orig(self, gameTime);
+                return;
             }
-            else
+
+            if (_netplayManager.IsInit())
             {
-                if (_netplayManager.IsInit() && HasStarted && CanRunFrames(self.Scene))
+                if (!_netplayManager.GetNetplayMode().Equals(NetplayMode.Test))
                 {
-                    if (!_netplayManager.GetNetplayMode().Equals(NetplayMode.Test))
-                    {
-                        _netplayManager.Poll();
-                    }
-
-                    if (!_netplayManager.IsDisconnected())
-                    {
-                        //ArtificialSlow(); //Only useful to test choppy/freezing condition
-
-                        double fpsDelta = 1.0 / FPS;
-
-                        if (_netplayManager.IsFramesAhead())
-                        {
-                            fpsDelta *= SLOW_RATIO;
-                        }
-
-                        var delta = DateTime.Now - LastUpdate;
-                        Accumulator = Accumulator.Add(delta);
-                        LastUpdate = DateTime.Now;
-
-                        while (Accumulator.TotalSeconds > fpsDelta)
-                        {
-                            Accumulator = Accumulator.Subtract(TimeSpan.FromSeconds(fpsDelta));
-
-                            if (CanRunFrames(self.Scene) && (_netplayManager.IsSynchronized() || _netplayManager.GetNetplayMode().Equals(NetplayMode.Test)))
-                            {
-                                var canAdvance = NetplayLogic(self.Scene as TowerFall.Level);
-
-                                if (canAdvance)
-                                {
-                                    if (_netplayManager.CanAdvanceFrame())
-                                    {
-                                        _netplayManager.ConsumeNetplayRequest(); //We should had one last advance Frame request to consume
-                                    }
-
-                                    if (!_netplayManager.HaveRequestToHandle())
-                                    {
-                                        _netplayManager.UpdateFramesToReSimulate(0);
-                                    }
-
-                                    _netplayManager.AdvanceGameState();
-                                    var dynScene = DynamicData.For(self.Scene);
-                                    dynScene.Set("FrameCounter", GGRSFFI.netplay_current_frame());
-
-                                    orig(self, gameTime);
-                                }
-                            }
-                            else
-                            {
-                                //Console.WriteLine($"Level loader / not syncrhonized");
-                            }
-                        }
-                    }
+                    _netplayManager.Poll();
                 }
-                else
+
+                if (!_netplayManager.IsDisconnected())
                 {
-                    if (_netplayManager.IsInit())
+                    //ArtificialSlow(); //Only useful to test choppy/freezing condition
+
+                    double fpsDelta = 1.0 / FPS;
+
+                    if (_netplayManager.IsFramesAhead())
                     {
-                        _netplayManager.Poll();
+                        fpsDelta *= SLOW_RATIO;
                     }
-                    orig(self, gameTime);
+
+                    var delta = DateTime.Now - LastUpdate;
+                    Accumulator = Accumulator.Add(delta);
+                    LastUpdate = DateTime.Now;
+
+                    while (Accumulator.TotalSeconds > fpsDelta)
+                    {
+                        Accumulator = Accumulator.Subtract(TimeSpan.FromSeconds(fpsDelta));
+
+                        if (_netplayManager.IsSynchronized() || _netplayManager.GetNetplayMode().Equals(NetplayMode.Test))
+                        {
+                            var canAdvance = NetplayLogic(self.Scene as TowerFall.Level);
+
+                            if (canAdvance)
+                            {
+                                if (_netplayManager.CanAdvanceFrame())
+                                {
+                                    _netplayManager.ConsumeNetplayRequest(); //We should had one last advance Frame request to consume if no rollback
+                                }
+
+                                if (!_netplayManager.HaveRequestToHandle())
+                                {
+                                    _netplayManager.UpdateFramesToReSimulate(0);
+                                }
+
+                                _netplayManager.AdvanceGameState();
+                                var dynScene = DynamicData.For(self.Scene);
+                                dynScene.Set("FrameCounter", GGRSFFI.netplay_current_frame());
+
+                                orig(self, gameTime);
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Not syncrhonized {GGRSFFI.netplay_current_frame()}");
+                        }
+                    }
                 }
             }
         }
 
-        /// <summary>
-        /// We run Netplay logic only if we can actually move the player (aka not flashing and not frozen)
-        /// </summary>
-        /// <returns></returns>
-        public bool CanRunFrames(Monocle.Scene scene)
+        public bool CanRunNetplayFrames(Monocle.Scene scene)
         {
             return scene is TowerFall.Level;
         }
@@ -186,7 +177,6 @@ namespace TF.EX.Patchs.Engine
                 _levelPatch = ServiceCollections.ServiceProvider.GetLevelPatch();
             }
 
-            var canAdvance = true;
             if (!_netplayManager.HaveRequestToHandle())
             {
                 var playerInput = _inputService.GetPolledInput();
@@ -195,18 +185,37 @@ namespace TF.EX.Patchs.Engine
 
                 var status = _netplayManager.AdvanceFrame(input);
 
-                if (status.IsOk)
+                if (!status.IsOk)
                 {
-                    _inputService.ResetPolledInput();
-                    _netplayManager.UpdateNetplayRequests();
+                    return false;
                 }
-                else
-                {
-                    canAdvance = false;
-                }
+
+                _inputService.ResetPolledInput();
+                _netplayManager.UpdateNetplayRequests();
             }
 
-            while (_netplayManager.HaveRequestToHandle() && !_netplayManager.CanAdvanceFrame())
+            if (!_netplayManager.HaveRequestToHandle())
+            {
+                return false;
+            }
+
+            if (!_netplayManager.IsRollbackFrame())
+            {
+                var request = _netplayManager.ConsumeNetplayRequest();
+
+                if (!(request is NetplayRequest.SaveGameState))
+                {
+                    throw new InvalidOperationException("Should be a save game state request when nor rollback");
+                }
+
+                var gameState = LevelPatch._isLoaded ? _levelPatch.GetState(level) : new GameState();
+
+                _netplayManager.SaveGameState(gameState);
+                _replayService.AddRecord(gameState, _netplayManager.ShouldSwapPlayer());
+                return true;
+            }
+
+            while (_netplayManager.HaveRequestToHandle())
             {
                 var request = _netplayManager.ConsumeNetplayRequest();
 
@@ -236,7 +245,7 @@ namespace TF.EX.Patchs.Engine
                 }
             }
 
-            return canAdvance;
+            return false;
         }
 
         public static void SetupReplayInputRenderer()
