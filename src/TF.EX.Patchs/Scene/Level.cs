@@ -416,6 +416,12 @@ namespace TF.EX.Patchs.Scene
             dynRoundLogic.Set("RoundStarted", session.RoundStarted);
             dynRoundLogic.Set("done", session.IsDone);
 
+            if (_currentMode.IsNetplay() || _netplayManager.IsTestMode())
+            {
+                var endCounter = dynRoundLogic.Get<RoundEndCounter>("roundEndCounter");
+                DynamicData.For(endCounter).Set("endCounter", session.RoundEndCounter);
+            }
+
             (level as TowerFall.Level).Session.CurrentLevel.Ending = session.IsEnding;
 
             level.RemoveMiasma();

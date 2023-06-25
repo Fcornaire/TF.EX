@@ -47,7 +47,6 @@ namespace TF.EX.Patchs
             serviceCollection.AddSingleton<IHookable, EntityPatch>();
             serviceCollection.AddSingleton<IHookable, GameplayLayerPatch>();
             serviceCollection.AddSingleton<IHookable, InputRendererPatch>();
-            serviceCollection.AddSingleton<IHookable, LastManStandingRoundLogicPatch>();
             serviceCollection.AddSingleton<IHookable, LayerPatch>();
             serviceCollection.AddSingleton<IHookable, PlayerPatch>();
             serviceCollection.AddSingleton<IHookable, OrbLogicPatch>();
