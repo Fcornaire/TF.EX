@@ -3,7 +3,7 @@ using Monocle;
 using MonoMod.Utils;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Ports;
-using TF.EX.Patchs.Extensions;
+using TF.EX.TowerFallExtensions;
 using TowerFall;
 
 namespace TF.EX.Patchs.Component
@@ -41,7 +41,7 @@ namespace TF.EX.Patchs.Component
             var characterIndex = dynPlayerIndcator.Get<int>("characterIndex");
             var offset = dynPlayerIndcator.Get<Vector2>("offset");
             var entity = dynPlayerIndcator.Get<Monocle.Entity>("Entity");
-            var sine = dynPlayerIndcator.Get<SineWave>("sine");
+            var sine = dynPlayerIndcator.Get<Monocle.SineWave>("sine");
             var text = dynPlayerIndcator.Get<string>("text");
             var crown = dynPlayerIndcator.Get<bool>("crown");
 
@@ -72,7 +72,7 @@ namespace TF.EX.Patchs.Component
 
             if (_netplayManager.IsInit() || _netplayManager.IsReplayMode())
             {
-                var sine = dynPlayerIndcator.Get<SineWave>("sine");
+                var sine = dynPlayerIndcator.Get<Monocle.SineWave>("sine");
 
                 sine.UpdateAttributes(0.0f);
                 dynPlayerIndcator.Set("colorSwitch", false);

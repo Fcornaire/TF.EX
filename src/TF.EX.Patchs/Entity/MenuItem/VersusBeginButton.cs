@@ -3,6 +3,7 @@ using MonoMod.Utils;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Ports;
 using TF.EX.TowerFallExtensions;
+using TF.EX.TowerFallExtensions.Scene;
 using TowerFall;
 
 namespace TF.EX.Patchs.Entity.MenuItem
@@ -94,7 +95,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
 
         private void CancelDialog()
         {
-            TFGame.Instance.Scene.GetGameplayLayer().Remove((ent) => ent is Dialog);
+            (TFGame.Instance.Scene as MainMenu).GetMainLayer().Remove((ent) => ent is Dialog);
 
             _hasError = false;
         }
@@ -116,7 +117,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
 
         private void Add(Monocle.Entity entity)
         {
-            var dynLayer = DynamicData.For(TFGame.Instance.Scene.GetGameplayLayer());
+            var dynLayer = DynamicData.For((TFGame.Instance.Scene as MainMenu).GetMainLayer());
             dynLayer.Invoke("Add", entity, false);
         }
 

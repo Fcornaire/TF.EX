@@ -99,7 +99,7 @@ namespace TF.EX.Patchs.PlayerInput
 
         private InputState XGamepadInput_GetState(On.TowerFall.XGamepadInput.orig_GetState orig, XGamepadInput self)
         {
-            var level = TFGame.Instance.Scene as Level;
+            var level = TFGame.Instance.Scene as TowerFall.Level;
 
             if (level == null)
             {
@@ -148,16 +148,16 @@ namespace TF.EX.Patchs.PlayerInput
             var canStart = state_machine.CanStart();
             var isNetplayInit = netplayManager.IsInit();
             var isReplayMode = netplayManager.IsReplayMode();
-            var isPaused = TFGame.Instance.Scene is Level && (TFGame.Instance.Scene as Level).Paused;
+            var isPaused = TFGame.Instance.Scene is TowerFall.Level && (TFGame.Instance.Scene as TowerFall.Level).Paused;
 
             if (isPaused)
             {
                 return actualInput;
             }
 
-            if (TFGame.Instance.Scene is Level && (TFGame.Instance.Scene as TowerFall.Level).Session.GetWinner() != -1)
+            if (TFGame.Instance.Scene is TowerFall.Level && (TFGame.Instance.Scene as TowerFall.Level).Session.GetWinner() != -1)
             {
-                var dynMacthResults = DynamicData.For(TFGame.Instance.Scene.GetMatchResults());
+                var dynMacthResults = DynamicData.For((TFGame.Instance.Scene as TowerFall.Level).Get<VersusMatchResults>());
                 var isFinished = dynMacthResults.Get<bool>("finished");
 
                 if (isFinished)
@@ -219,16 +219,16 @@ namespace TF.EX.Patchs.PlayerInput
                 var init = state_machine.IsInitialized();
                 var canStart = state_machine.CanStart();
                 var isNetplayInit = netplayManager.IsInit();
-                var isPaused = TFGame.Instance.Scene is Level && (TFGame.Instance.Scene as Level).Paused;
+                var isPaused = TFGame.Instance.Scene is TowerFall.Level && (TFGame.Instance.Scene as TowerFall.Level).Paused;
 
                 if (isPaused)
                 {
                     return actualInput;
                 }
 
-                if (TFGame.Instance.Scene is Level && (TFGame.Instance.Scene as TowerFall.Level).Session.GetWinner() != -1)
+                if (TFGame.Instance.Scene is TowerFall.Level && (TFGame.Instance.Scene as TowerFall.Level).Session.GetWinner() != -1)
                 {
-                    var dynMacthResults = DynamicData.For(TFGame.Instance.Scene.GetMatchResults());
+                    var dynMacthResults = DynamicData.For((TFGame.Instance.Scene as TowerFall.Level).Get<VersusMatchResults>());
                     var isFinished = dynMacthResults.Get<bool>("finished");
 
                     if (isFinished)
@@ -283,7 +283,7 @@ namespace TF.EX.Patchs.PlayerInput
             var init = state_machine.IsInitialized();
             var canStart = state_machine.CanStart();
             var isNetplayInit = netplayManager.IsInit();
-            var isPaused = TFGame.Instance.Scene is Level && (TFGame.Instance.Scene as Level).Paused;
+            var isPaused = TFGame.Instance.Scene is TowerFall.Level && (TFGame.Instance.Scene as TowerFall.Level).Paused;
 
             if (isPaused)
             {

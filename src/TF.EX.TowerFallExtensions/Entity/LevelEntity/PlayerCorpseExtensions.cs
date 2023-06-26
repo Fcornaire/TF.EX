@@ -2,13 +2,12 @@
 using MonoMod.Utils;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models.State;
-using TF.EX.TowerFallExtensions;
 
-namespace TF.EX.Patchs.Entity.LevelEntity
+namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 {
-    public class PlayerCorpsePatch : IStateful<TowerFall.PlayerCorpse, PlayerCorpse>
+    public static class PlayerCorpseExtensions
     {
-        public PlayerCorpse GetState(TowerFall.PlayerCorpse entity)
+        public static PlayerCorpse GetState(this TowerFall.PlayerCorpse entity)
         {
 
             List<ArrowCushionData> arrowCushionData = new List<ArrowCushionData>();
@@ -60,7 +59,7 @@ namespace TF.EX.Patchs.Entity.LevelEntity
             };
         }
 
-        public void LoadState(PlayerCorpse toLoad, TowerFall.PlayerCorpse entity)
+        public static void LoadState(this TowerFall.PlayerCorpse entity, PlayerCorpse toLoad)
         {
             var dynPlayerCorpse = DynamicData.For(entity);
             dynPlayerCorpse.Set("Scene", TowerFall.TFGame.Instance.Scene);
@@ -103,10 +102,10 @@ namespace TF.EX.Patchs.Entity.LevelEntity
             }
         }
 
-        public Monocle.Entity GetEntityByDepth(double actualDepth)
+        public static Monocle.Entity GetEntityByDepth(double actualDepth)
         {
             Monocle.Entity entity = null;
-            foreach (Monocle.Entity ent in TowerFall.TFGame.Instance.Scene.GetGameplayLayer().Entities.ToArray())
+            foreach (Monocle.Entity ent in (TowerFall.TFGame.Instance.Scene as TowerFall.Level).GetGameplayLayer().Entities.ToArray())
             {
                 var dynEntity = DynamicData.For(ent);
                 var entActualDepth = dynEntity.Get<double>("actualDepth");

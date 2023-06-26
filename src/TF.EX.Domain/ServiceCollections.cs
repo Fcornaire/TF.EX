@@ -95,6 +95,11 @@ namespace TF.EX.Domain
 
         public static IInputService ResolveInputService() { return ServiceProvider.GetRequiredService<IInputService>(); }
 
+        public static IHUDService ResolveHUDService() { return ServiceProvider.GetRequiredService<IHUDService>(); }
+
+        public static IArrowService ResolveArrowService() { return ServiceProvider.GetRequiredService<IArrowService>(); }
+        public static IOrbService ResolveOrbService() { return ServiceProvider.GetRequiredService<IOrbService>(); }
+
         public static (INetplayStateMachine, TF.EX.Domain.Models.Modes) ResolveStateMachineService()
         {
             var mode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();

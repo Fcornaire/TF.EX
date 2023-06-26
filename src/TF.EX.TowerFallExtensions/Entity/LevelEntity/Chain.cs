@@ -4,11 +4,11 @@ using MonoMod.Utils;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models.State.LevelEntity;
 
-namespace TF.EX.Patchs.Entity.LevelEntity
+namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 {
-    public class ChainPatch : IStateful<TowerFall.Chain, Chain>
+    public static class ChainExtensions
     {
-        public Chain GetState(TowerFall.Chain chain)
+        public static Chain GetState(this TowerFall.Chain chain)
         {
             var dynChain = DynamicData.For(chain);
             var links = dynChain.Get<Image[]>("links");
@@ -35,7 +35,7 @@ namespace TF.EX.Patchs.Entity.LevelEntity
             };
         }
 
-        public void LoadState(Chain toLoad, TowerFall.Chain chain)
+        public static void LoadState(this TowerFall.Chain chain, Chain toLoad)
         {
             var dynChain = DynamicData.For(chain);
             var cannotHit = dynChain.Get<Counter>("cannotHitCounter");

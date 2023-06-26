@@ -1,13 +1,11 @@
 ﻿using Monocle;
-using MonoMod.Utils;
-using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Ports.TF;
 using TF.EX.Patchs.Calc;
-using TF.EX.Patchs.Extensions;
+using TF.EX.TowerFallExtensions.Entity.LevelEntity;
 
 namespace TF.EX.Patchs.Entity.LevelEntity
 {
-    public class LavaPatch : IHookable, IStateful<TowerFall.Lava, TF.EX.Domain.Models.State.LevelEntity.Lava>
+    public class LavaPatch : IHookable
     {
 
         private readonly IOrbService _orbService;
@@ -54,7 +52,7 @@ namespace TF.EX.Patchs.Entity.LevelEntity
         {
             var orb = _orbService.GetOrb();
 
-            var lava = GetState(self);
+            var lava = self.GetState();
 
             var shouldAdd = true;
 
@@ -89,35 +87,9 @@ namespace TF.EX.Patchs.Entity.LevelEntity
             {
                 if (lava.side == self.Side)
                 {
-                    LoadState(lava, self);
+                    self.LoadState(lava);
                 }
             }
-        }
-
-        public Domain.Models.State.LevelEntity.Lava GetState(TowerFall.Lava entity)
-        {
-            var dynLava = DynamicData.For(entity);
-            var sine = dynLava.Get<SineWave>("sine");
-
-            return new TF.EX.Domain.Models.State.LevelEntity.Lava
-            {
-                side = entity.Side,
-                is_collidable = entity.Collidable,
-                position = entity.Position.ToModel(),
-                percent = entity.Percent,
-                sine_counter = sine.Counter,
-            };
-        }
-
-        public void LoadState(Domain.Models.State.LevelEntity.Lava toLoad, TowerFall.Lava entity)
-        {
-            var dynLava = DynamicData.For(entity);
-            var sine = dynLava.Get<SineWave>("sine");
-
-            dynLava.Set("Collidable", toLoad.is_collidable);
-            dynLava.Set("Position", toLoad.position.ToTFVector());
-            dynLava.Set("Percent", toLoad.percent);
-            sine.UpdateAttributes(toLoad.sine_counter);
         }
     }
 }
