@@ -246,17 +246,20 @@ namespace TF.EX.Domain.Services
 
             if (message.Contains("QuickPlayPossibleMatch"))
             {
-                _OpponentDeclined = false;
-                var matchResponse = JsonConvert.DeserializeObject<QuickPlayPossibleMatchMessage>(message);
+                if (!_hasFoundOpponentForQuickPlay)
+                {
+                    _OpponentDeclined = false;
+                    var matchResponse = JsonConvert.DeserializeObject<QuickPlayPossibleMatchMessage>(message);
 
-                var roomUrl = $"{ROOM_URL}/{matchResponse.QuickPlayPossibleMatch.RoomId}";
-                var roomChatUrl = $"{ROOM_URL}/{matchResponse.QuickPlayPossibleMatch.RoomChatId}";
+                    var roomUrl = $"{ROOM_URL}/{matchResponse.QuickPlayPossibleMatch.RoomId}";
+                    var roomChatUrl = $"{ROOM_URL}/{matchResponse.QuickPlayPossibleMatch.RoomChatId}";
 
-                _netplayManager.SetRoom(roomUrl);
-                ConnectAndListenToLobby(roomChatUrl);
+                    _netplayManager.SetRoom(roomUrl);
+                    ConnectAndListenToLobby(roomChatUrl);
 
-                _netplayManager.UpdatePlayer2Name(matchResponse.QuickPlayPossibleMatch.OpponentName);
-                _hasFoundOpponentForQuickPlay = true;
+                    _netplayManager.UpdatePlayer2Name(matchResponse.QuickPlayPossibleMatch.OpponentName);
+                    _hasFoundOpponentForQuickPlay = true;
+                }
             }
 
             if (message.Contains("AcceptQuickPlayResponse"))
@@ -356,7 +359,7 @@ namespace TF.EX.Domain.Services
                                 _opponentPeerId = peerMessage.PeerId;
                             }
                             _stopwatch.Stop();
-                            _ping = (int)_stopwatch.ElapsedMilliseconds / 2;
+                            _ping = (int)_stopwatch.ElapsedMilliseconds;
                             _stopwatch.Restart();
                             MatchboxClientFFI.send_message(PeerMessageType.Ping.ToString(), peerMessage.PeerId.ToString());
 
