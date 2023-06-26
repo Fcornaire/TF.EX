@@ -3,17 +3,16 @@ using Monocle;
 using MonoMod.Utils;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models.State.LevelEntity.Chest;
-using TF.EX.TowerFallExtensions;
 using TowerFall;
 using static TowerFall.TreasureChest;
 
-namespace TF.EX.Patchs.Entity.LevelEntity
+namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 {
-    public class TreasureChestPatch : IStateful<TowerFall.TreasureChest, Chest>
+    public static class TreasureChestExtensions
     {
-        public Chest GetState(TreasureChest entity)
+        public static Chest GetState(this TreasureChest entity)
         {
-            var alarm = entity.GetAlarm();
+            var alarm = entity.GetComponent<Alarm>();
             var tween = entity.GetChestOpeningTween();
 
             var dynTreasureChest = DynamicData.For(entity);
@@ -41,7 +40,7 @@ namespace TF.EX.Patchs.Entity.LevelEntity
             };
         }
 
-        public void LoadState(Chest toLoad, TreasureChest entity)
+        public static void LoadState(this TreasureChest entity, Chest toLoad)
         {
             var dynTreasureChest = DynamicData.For(entity);
             dynTreasureChest.Set("Scene", TFGame.Instance.Scene);
@@ -69,8 +68,8 @@ namespace TF.EX.Patchs.Entity.LevelEntity
             var sprite = dynTreasureChest.Get<Sprite<int>>("sprite");
             sprite.Play(toLoad.CurrentAnimId);
 
-            RemoveAlarm(entity);
-            RemoveTween(entity);
+            entity.DeleteComponent<Alarm>();
+            entity.DeleteComponent<Tween>();
 
             if (entity.State == States.Appearing)
             {
@@ -129,27 +128,6 @@ namespace TF.EX.Patchs.Entity.LevelEntity
             if (entity.State == States.Opened)
             {
                 entity.Visible = true;
-            }
-        }
-
-
-        private void RemoveAlarm(TreasureChest entity)
-        {
-            var alarm = entity.GetAlarm();
-            if (alarm != null)
-            {
-                alarm.Removed();
-                entity.Components.Remove(alarm);
-            }
-        }
-
-        private void RemoveTween(TreasureChest entity)
-        {
-            var tween = entity.GetTween();
-            if (tween != null)
-            {
-                tween.Removed();
-                entity.Components.Remove(tween);
             }
         }
     }

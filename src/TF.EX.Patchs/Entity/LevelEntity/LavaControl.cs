@@ -1,13 +1,10 @@
-﻿using Monocle;
-using MonoMod.Utils;
-using TF.EX.Domain;
-using TF.EX.Domain.Models.State.LevelEntity;
-using TF.EX.Domain.Ports.TF;
+﻿using TF.EX.Domain.Ports.TF;
 using TF.EX.Patchs.Calc;
+using TF.EX.TowerFallExtensions.Entity.LevelEntity;
 
 namespace TF.EX.Patchs.Entity.LevelEntity
 {
-    public class LavaControlPatch : IHookable, IStateful<TowerFall.LavaControl, LavaControl>
+    public class LavaControlPatch : IHookable
     {
         private readonly IOrbService _orbService;
 
@@ -49,7 +46,7 @@ namespace TF.EX.Patchs.Entity.LevelEntity
 
             if (!lava.IsDefault())
             {
-                LoadState(lava, self);
+                self.LoadState(lava);
             }
 
             orig(self);
@@ -76,61 +73,11 @@ namespace TF.EX.Patchs.Entity.LevelEntity
             CalcPatch.UnregisterRng();
         }
 
-        public LavaControl GetState(TowerFall.LavaControl entity)
-        {
-            var dynLavaControl = DynamicData.For(entity);
-            var lavas = dynLavaControl.Get<TowerFall.Lava[]>("lavas");
-
-            var lavasToSave = new Lava[lavas.Length];
-
-            for (int i = 0; i < lavasToSave.Length; i++)
-            {
-                var currentLava = lavas[i];
-                var toSave = ServiceCollections.ServiceProvider.GetLavaPatch().GetState(currentLava);
-                lavasToSave[i] = toSave;
-            }
-
-            var mode = dynLavaControl.Get<TowerFall.LavaControl.LavaMode>("mode");
-            var ownerIndex = entity.OwnerIndex;
-            var targetCounter = dynLavaControl.Get<Counter>("targetCounter");
-            var target = entity.Target;
-
-            return new LavaControl
-            {
-                Mode = mode,
-                OwnerIndex = ownerIndex,
-                TargetCounter = targetCounter.Value,
-                Target = target,
-                Lavas = lavasToSave
-            };
-        }
-
-        public void LoadState(LavaControl toLoad, TowerFall.LavaControl entity)
-        {
-            var dynLavaControl = DynamicData.For(entity);
-            var counter = dynLavaControl.Get<Counter>("targetCounter");
-            var targetCounter = DynamicData.For(counter);
-            targetCounter.Set("counter", toLoad.TargetCounter);
-
-            entity.Target = toLoad.Target;
-
-            var lavas = new TowerFall.Lava[toLoad.Lavas.Length];
-
-            for (int i = 0; i < toLoad.Lavas.Length; i++)
-            {
-                var currentLava = toLoad.Lavas[i];
-                var lavaToLoad = new TowerFall.Lava(entity, currentLava.side);
-                ServiceCollections.ServiceProvider.GetLavaPatch().LoadState(currentLava, lavaToLoad);
-                lavas[i] = lavaToLoad;
-            }
-            dynLavaControl.Set("lavas", lavas);
-        }
-
         private void Save(TowerFall.LavaControl self)
         {
             var orb = _orbService.GetOrb();
 
-            orb.Lava = GetState(self);
+            orb.Lava = self.GetState();
 
             _orbService.Save(orb);
         }

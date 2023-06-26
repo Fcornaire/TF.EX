@@ -57,9 +57,9 @@ namespace TF.EX.Patchs.Scene
         {
             ServiceCollections.ResetState();
 
-            if (TFGame.Instance.Scene != null)
+            if (TFGame.Instance.Scene != null && TFGame.Instance.Scene is TowerFall.Level)
             {
-                TFGame.Instance.Scene.ResetState();
+                (TFGame.Instance.Scene as TowerFall.Level).ResetState();
             }
 
             if (session.RoundLogic is TowerFall.LastManStandingRoundLogic) //TODO: useful ?

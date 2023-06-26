@@ -1,11 +1,10 @@
-﻿using Monocle;
-using MonoMod.Utils;
+﻿using MonoMod.Utils;
 
-namespace TF.EX.Patchs.Extensions
+namespace TF.EX.TowerFallExtensions
 {
     public static class SineWaveExtensions
     {
-        public static void UpdateAttributes(this SineWave self, float counter)
+        public static void UpdateAttributes(this Monocle.SineWave self, float counter)
         {
             var dynSine = DynamicData.For(self);
 

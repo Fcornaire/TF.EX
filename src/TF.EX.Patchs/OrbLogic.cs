@@ -1,5 +1,4 @@
-﻿using Monocle;
-using MonoMod.Utils;
+﻿using MonoMod.Utils;
 using TF.EX.Domain.Ports.TF;
 using TF.EX.Patchs.Calc;
 
@@ -36,7 +35,7 @@ namespace TF.EX.Patchs
             orig(self);
             CalcPatch.UnregisterRng();
 
-            Save(self);
+            //Save(self);
         }
 
         private void OrbLogic_DoTimeOrb(On.TowerFall.OrbLogic.orig_DoTimeOrb orig, TowerFall.OrbLogic self, bool delay)
@@ -45,7 +44,7 @@ namespace TF.EX.Patchs
             orig(self, delay);
             CalcPatch.UnregisterRng();
 
-            Save(self);
+            //Save(self);
         }
 
         private void OrbLogic_DoLavaOrb(On.TowerFall.OrbLogic.orig_DoLavaOrb orig, TowerFall.OrbLogic self, int ownerIndex)
@@ -67,52 +66,12 @@ namespace TF.EX.Patchs
             orig(self);
             CalcPatch.UnregisterRng();
 
-            Save(self);
+            //Save(self);
         }
 
         private void Save(TowerFall.OrbLogic self)
         {
-            var orb = _orbService.GetOrb();
-            var dynOrb = DynamicData.For(self);
-            var slowTimeEndCounter = dynOrb.Get<Counter>("slowTimeEndCounter");
-            var slowTimeStartCounter = dynOrb.Get<Counter>("slowTimeStartCounter");
-            var gameRateEase = dynOrb.Get<bool>("gameRateEase");
-            var gameRateTarget = dynOrb.Get<float>("gameRateTarget");
-            var darknessStartCounter = dynOrb.Get<Counter>("darknessStartCounter");
-            var darknessEndCounter = dynOrb.Get<Counter>("darknessEndCounter");
-            var darkened = dynOrb.Get<bool>("darkened");
-            var oldDarkAlpha = dynOrb.Get<float>("oldDarkAlpha");
-
-            orb.Time.Counter.End = slowTimeEndCounter.Value;
-            orb.Time.Counter.Start = slowTimeStartCounter.Value;
-            orb.Time.GameRateEased = gameRateEase;
-            orb.Time.GameRateTarget = gameRateTarget;
-            orb.Dark.Counter.Start = darknessStartCounter.Value;
-            orb.Dark.Counter.End = darknessEndCounter.Value;
-            orb.Dark.IsDarkened = darkened;
-            orb.Dark.OldDarkAlpha = oldDarkAlpha;
-            orb.Dark.LightingTartgetAlpha = self.Level.LightingLayer.TargetAlpha;
-
-            _orbService.Save(orb);
-        }
-
-        public void LoadState(TowerFall.OrbLogic self, TF.EX.Domain.Models.State.Orb.Orb orb)
-        {
-            var dynOrb = DynamicData.For(self);
-
-            var slowTimeEndCounter = DynamicData.For(dynOrb.Get<Counter>("slowTimeEndCounter"));
-            slowTimeEndCounter.Set("counter", orb.Time.Counter.End);
-            var slowTimeStartCounter = DynamicData.For(dynOrb.Get<Counter>("slowTimeStartCounter"));
-            slowTimeStartCounter.Set("counter", orb.Time.Counter.Start);
-            dynOrb.Set("gameRateEase", orb.Time.GameRateEased);
-            dynOrb.Set("gameRateTarget", orb.Time.GameRateTarget);
-            var darknessStartCounter = DynamicData.For(dynOrb.Get<Counter>("darknessStartCounter"));
-            darknessStartCounter.Set("counter", orb.Dark.Counter.Start);
-            var darknessEndCounter = DynamicData.For(dynOrb.Get<Counter>("darknessEndCounter"));
-            darknessEndCounter.Set("counter", orb.Dark.Counter.End);
-            dynOrb.Set("darkened", orb.Dark.IsDarkened);
-            dynOrb.Set("oldDarkAlpha", orb.Dark.OldDarkAlpha);
-            self.Level.LightingLayer.TargetAlpha = orb.Dark.LightingTartgetAlpha;
+            //_orbService.Save(self.GetState());
         }
     }
 }

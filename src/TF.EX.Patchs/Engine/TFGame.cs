@@ -135,7 +135,7 @@ namespace TF.EX.Patchs.Engine
 
                         if (_netplayManager.IsSynchronized() || _netplayManager.GetNetplayMode().Equals(NetplayMode.Test))
                         {
-                            var canAdvance = NetplayLogic(self.Scene as TowerFall.Level);
+                            var canAdvance = NetplayLogic(self.Scene as Level);
 
                             if (canAdvance)
                             {
@@ -167,10 +167,10 @@ namespace TF.EX.Patchs.Engine
 
         public bool CanRunNetplayFrames(Monocle.Scene scene)
         {
-            return scene is TowerFall.Level;
+            return scene is Level;
         }
 
-        private bool NetplayLogic(TowerFall.Level level)
+        private bool NetplayLogic(Level level)
         {
             if (_levelPatch == null)
             {
@@ -208,7 +208,7 @@ namespace TF.EX.Patchs.Engine
                     throw new InvalidOperationException("Should be a save game state request when nor rollback");
                 }
 
-                var gameState = LevelPatch._isLoaded ? _levelPatch.GetState(level) : new GameState();
+                var gameState = level.GetState();
 
                 _netplayManager.SaveGameState(gameState);
                 _replayService.AddRecord(gameState, _netplayManager.ShouldSwapPlayer());
@@ -222,7 +222,7 @@ namespace TF.EX.Patchs.Engine
                 switch (request)
                 {
                     case NetplayRequest.SaveGameState:
-                        var gameState = LevelPatch._isLoaded ? _levelPatch.GetState(level) : new GameState();
+                        var gameState = level.GetState();
 
                         _netplayManager.SaveGameState(gameState);
                         _replayService.AddRecord(gameState, _netplayManager.ShouldSwapPlayer());
@@ -232,7 +232,7 @@ namespace TF.EX.Patchs.Engine
                         var gameStateToLoad = _netplayManager.LoadGameState();
 
                         _netplayManager.SetIsUpdating(true);
-                        _levelPatch.LoadState(gameStateToLoad, level);
+                        level.LoadState(gameStateToLoad);
                         _netplayManager.SetIsUpdating(false);
                         _replayService.RemovePredictedRecords(gameStateToLoad.Frame);
                         break;

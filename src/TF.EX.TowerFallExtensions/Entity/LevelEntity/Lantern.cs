@@ -3,12 +3,11 @@ using MonoMod.Utils;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models.State.LevelEntity;
 
-namespace TF.EX.Patchs.Entity.LevelEntity
+namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 {
-    public class LanternPatch : IStateful<TowerFall.Lantern, Lantern>
+    public static class LanternExtensions
     {
-
-        public Lantern GetState(TowerFall.Lantern entity)
+        public static Lantern GetState(this TowerFall.Lantern entity)
         {
             var dynLantern = DynamicData.For(entity);
             var actualDepth = dynLantern.Get<double>("actualDepth");
@@ -31,7 +30,7 @@ namespace TF.EX.Patchs.Entity.LevelEntity
             };
         }
 
-        public void LoadState(Lantern toLoad, TowerFall.Lantern entity)
+        public static void LoadState(this TowerFall.Lantern entity, Lantern toLoad)
         {
             var dynLantern = DynamicData.For(entity);
 
@@ -53,7 +52,7 @@ namespace TF.EX.Patchs.Entity.LevelEntity
             if (!falling)
             {
                 dynLantern.Invoke("CheckForChain");
-                ReTag(entity);
+                entity.ReTag();
             }
 
             dynLantern.Set("actualDepth", actualDepth);
@@ -68,7 +67,7 @@ namespace TF.EX.Patchs.Entity.LevelEntity
         /// <summary>
         /// Falling detag, tag are used to check for collision, so we re tag if not falling
         /// </summary>
-        private void ReTag(TowerFall.Lantern entity)
+        private static void ReTag(this TowerFall.Lantern entity)
         {
             if (!entity.Tags.Contains(Monocle.GameTags.Target))
             {

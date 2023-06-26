@@ -178,7 +178,7 @@ namespace TF.EX.Patchs.RoundLogic
             var dynamicRounlogic = DynamicData.For(self);
             var miasma = dynamicRounlogic.Get<TowerFall.Miasma>("miasma");
 
-            if (_netplayManager.HaveFramesToReSimulate() && self.Session.CurrentLevel.GetMiasma() == null && miasma != null)
+            if (_netplayManager.HaveFramesToReSimulate() && self.Session.CurrentLevel.Get<TowerFall.Miasma>() == null && miasma != null)
             {
                 if (_netplayManager.IsRollbackFrame()) //We might be in the first RBF
                 {
@@ -229,7 +229,7 @@ namespace TF.EX.Patchs.RoundLogic
             }
             else
             {
-                dynamicRounlogic.Set("miasma", self.Session.CurrentLevel.GetMiasma());
+                dynamicRounlogic.Set("miasma", self.Session.CurrentLevel.Get<TowerFall.Miasma>());
             }
         }
     }

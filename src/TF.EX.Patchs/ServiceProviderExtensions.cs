@@ -1,7 +1,4 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using TF.EX.Domain.Models.State;
-using TF.EX.Domain.Models.State.LevelEntity;
-using TF.EX.Domain.Models.State.LevelEntity.Chest;
 using TF.EX.Patchs.Calc;
 using TF.EX.Patchs.Commands;
 using TF.EX.Patchs.Component;
@@ -57,10 +54,6 @@ namespace TF.EX.Patchs
             serviceCollection.AddSingleton<IHookable, VersusLevelSystemPatch>();
             serviceCollection.AddSingleton<IHookable, VersusStartPatch>();
             serviceCollection.AddSingleton<IHookable, ReplayRecorderPatch>();
-            serviceCollection.AddTransient<IStateful<TowerFall.Chain, Chain>, ChainPatch>();
-            serviceCollection.AddTransient<IStateful<TowerFall.Lantern, Lantern>, LanternPatch>();
-            serviceCollection.AddTransient<IStateful<TowerFall.TreasureChest, Chest>, TreasureChestPatch>();
-            serviceCollection.AddTransient<IStateful<TowerFall.PlayerCorpse, PlayerCorpse>, PlayerCorpsePatch>();
         }
 
         public static LavaPatch GetLavaPatch(this IServiceProvider serviceProvider)
@@ -73,34 +66,14 @@ namespace TF.EX.Patchs
             return serviceProvider.GetServices<IHookable>().First(service => service is PlayerPatch) as PlayerPatch;
         }
 
-        public static IStateful<TowerFall.PlayerCorpse, PlayerCorpse> GetPlayerCorpsePatch(this IServiceProvider serviceProvider)
-        {
-            return serviceProvider.GetService<IStateful<TowerFall.PlayerCorpse, PlayerCorpse>>();
-        }
-
         public static ArrowPatch GetArrowPatch(this IServiceProvider serviceProvider)
         {
             return serviceProvider.GetServices<IHookable>().First(service => service is ArrowPatch) as ArrowPatch;
         }
 
-        public static IStateful<TowerFall.TreasureChest, Chest> GetTreasureChestPatch(this IServiceProvider serviceProvider)
-        {
-            return serviceProvider.GetService<IStateful<TowerFall.TreasureChest, Chest>>();
-        }
-
         public static PickupPatch GetPickupPatch(this IServiceProvider serviceProvider)
         {
             return serviceProvider.GetServices<IHookable>().First(service => service is PickupPatch) as PickupPatch;
-        }
-
-        public static IStateful<TowerFall.Lantern, Lantern> GetLanternPatch(this IServiceProvider serviceProvider)
-        {
-            return serviceProvider.GetService<IStateful<TowerFall.Lantern, Lantern>>();
-        }
-
-        public static IStateful<TowerFall.Chain, Chain> GetChainPatch(this IServiceProvider serviceProvider)
-        {
-            return serviceProvider.GetService<IStateful<TowerFall.Chain, Chain>>();
         }
 
         public static OrbLogicPatch GetOrbLogicPatch(this IServiceProvider serviceProvider)
