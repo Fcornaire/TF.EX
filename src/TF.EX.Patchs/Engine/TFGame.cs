@@ -9,7 +9,6 @@ using TF.EX.Domain.Models;
 using TF.EX.Domain.Models.State;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
-using TF.EX.Patchs.Scene;
 using TF.EX.TowerFallExtensions;
 using TowerFall;
 
@@ -25,7 +24,6 @@ namespace TF.EX.Patchs.Engine
         private readonly INetplayManager _netplayManager;
         private readonly IInputService _inputService;
         private readonly IReplayService _replayService;
-        private LevelPatch _levelPatch;
 
         private DateTime LastUpdate;
         private TimeSpan Accumulator;
@@ -172,11 +170,6 @@ namespace TF.EX.Patchs.Engine
 
         private bool NetplayLogic(Level level)
         {
-            if (_levelPatch == null)
-            {
-                _levelPatch = ServiceCollections.ServiceProvider.GetLevelPatch();
-            }
-
             if (!_netplayManager.HaveRequestToHandle())
             {
                 var playerInput = _inputService.GetPolledInput();
@@ -199,23 +192,7 @@ namespace TF.EX.Patchs.Engine
                 return false;
             }
 
-            if (!_netplayManager.IsRollbackFrame())
-            {
-                var request = _netplayManager.ConsumeNetplayRequest();
-
-                if (!(request is NetplayRequest.SaveGameState))
-                {
-                    throw new InvalidOperationException("Should be a save game state request when nor rollback");
-                }
-
-                var gameState = level.GetState();
-
-                _netplayManager.SaveGameState(gameState);
-                _replayService.AddRecord(gameState, _netplayManager.ShouldSwapPlayer());
-                return true;
-            }
-
-            while (_netplayManager.HaveRequestToHandle())
+            while (_netplayManager.HaveRequestToHandle() && !_netplayManager.CanAdvanceFrame())
             {
                 var request = _netplayManager.ConsumeNetplayRequest();
 
@@ -245,7 +222,7 @@ namespace TF.EX.Patchs.Engine
                 }
             }
 
-            return false;
+            return true;
         }
 
         public static void SetupReplayInputRenderer()
