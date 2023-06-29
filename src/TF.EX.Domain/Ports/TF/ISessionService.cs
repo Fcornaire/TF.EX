@@ -9,6 +9,5 @@ namespace TF.EX.Domain.Ports.TF
 
         Dictionary<int, double> GetGamePlayLayerActualDepthLookup();
         void SaveGamePlayLayerActualDepthLookup(Dictionary<int, double> toSave);
-        void Reset();
     }
 }

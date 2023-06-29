@@ -5,6 +5,7 @@ using TF.EX.Domain;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models.State;
 using TF.EX.Domain.Models.State.Arrows;
+using TF.EX.Domain.Models.State.LevelEntity.Chest;
 using TF.EX.TowerFallExtensions.Entity.LevelEntity;
 using TowerFall;
 
@@ -111,7 +112,7 @@ namespace TF.EX.TowerFallExtensions
         {
             level.DeleteAll<TowerFall.Arrow>();
             level.DeleteAll<TreasureChest>();
-            level.DeleteAll<Pickup>();
+            level.DeleteAll<TowerFall.Pickup>();
             level.DeleteAll<TowerFall.PlayerCorpse>();
         }
 
@@ -125,6 +126,18 @@ namespace TF.EX.TowerFallExtensions
             var sessionService = ServiceCollections.ResolveSessionService();
             var orbService = ServiceCollections.ResolveOrbService();
             var rngService = ServiceCollections.ResolveRngService();
+
+            //Levels
+            var dynLevelSystem = DynamicData.For(entity.Session.MatchSettings.LevelSystem);
+            var levels = dynLevelSystem.Get<List<string>>("levels");
+            var lastLevel = dynLevelSystem.Get<string>("lastLevel");
+            if (levels.Count > 0 && levels[0].Contains("00.oel"))
+            {
+                levels.RemoveAt(0);
+            }
+
+            gameState.RoundLevels.Nexts = levels.ToList();
+            gameState.RoundLevels.Last = lastLevel;
 
             gameState.IsLevelFrozen = entity.Frozen;
 
@@ -235,6 +248,7 @@ namespace TF.EX.TowerFallExtensions
                 stateSession.IsEnding = isEnding;
                 stateSession.Miasma.Counter = counter;
                 stateSession.IsDone = done;
+                stateSession.RoundIndex = roundIndex;
                 var session = new Domain.Models.State.Session
                 {
                     IsEnding = stateSession.IsEnding,
@@ -333,14 +347,11 @@ namespace TF.EX.TowerFallExtensions
             var orbService = ServiceCollections.ResolveOrbService();
             var rngService = ServiceCollections.ResolveRngService();
 
-            var dynGameplayLayer = DynamicData.For(level.GetGameplayLayer());
-            dynGameplayLayer.Set("actualDepthLookup", gameState.GamePlayerLayerActualDepthLookup);
-
-            var dynScene = DynamicData.For(level as Monocle.Scene);
-            dynScene.Set("FrameCounter", gameState.Frame);
-            level.EndScreenShake();
-
-            level.Frozen = gameState.IsLevelFrozen;
+            //Round levels load
+            var dynLevelSystem = DynamicData.For(level.Session.MatchSettings.LevelSystem);
+            var roundLevels = gameState.RoundLevels.Nexts.ToList();
+            dynLevelSystem.Set("levels", roundLevels);
+            dynLevelSystem.Set("lastLevel", gameState.RoundLevels.Last);
 
             //Session load
             var session = new TF.EX.Domain.Models.State.Session
@@ -366,28 +377,48 @@ namespace TF.EX.TowerFallExtensions
 
             if (session.RoundIndex != level.Session.RoundIndex)
             {
-                //TODO: Implement level loading ?
-                //var dynSession = DynamicData.For(level.Session);
-                //dynSession.Set("RoundIndex", session.RoundIndex);
+                roundLevels.Insert(0, gameState.RoundLevels.Last);
+                dynLevelSystem.Set("levels", roundLevels);
 
-                //LevelLoaderXML loaderXML = new LevelLoaderXML(level.Session);
+                var dynSession = DynamicData.For(level.Session);
+                dynSession.Set("RoundIndex", session.RoundIndex);
 
-                //var dynEngine = DynamicData.For(TFGame.Instance);
-                //dynEngine.Set("scene", loaderXML);
+                LevelLoaderXML loaderXML = new LevelLoaderXML(level.Session);
 
-                //while (!loaderXML.Finished)
-                //{
-                //    loaderXML.Update();
-                //}
+                var dynEngine = DynamicData.For(TFGame.Instance);
+                dynEngine.Set("scene", loaderXML);
 
-                //dynEngine.Set("scene", loaderXML.Level);
-                //level = loaderXML.Level;
+                while (!loaderXML.Finished)
+                {
+                    loaderXML.Update();
+                }
 
-                //level.Begin();
+                dynEngine.Set("scene", dynEngine.Get<Monocle.Scene>("nextScene"));
+                level = loaderXML.Level;
 
-                //var dynNewSession = DynamicData.For(level.Session);
-                //dynNewSession.Set("RoundIndex", session.RoundIndex);
+                if (level.Session.RoundIndex != 0)
+                {
+                    foreach (var chest in gameState.Chests)
+                    {
+                        var dummyChest = new TreasureChest(Vector2.Zero, TreasureChest.Types.AutoOpen, TreasureChest.AppearModes.Time, TowerFall.Pickups.Arrows);
+
+                        var dynChest = DynamicData.For(dummyChest);
+                        dynChest.Set("Scene", level);
+                        dummyChest.Added();
+
+                        level.GetGameplayLayer().Entities.Insert(0, dummyChest);
+                    }
+                }
             }
+
+            var dynGameplayLayer = DynamicData.For(level.GetGameplayLayer());
+            dynGameplayLayer.Set("actualDepthLookup", gameState.GamePlayerLayerActualDepthLookup);
+
+            var dynScene = DynamicData.For(level as Monocle.Scene);
+            dynScene.Set("FrameCounter", gameState.Frame);
+            level.EndScreenShake();
+
+            level.Frozen = gameState.IsLevelFrozen;
 
             var dynRoundLogic = DynamicData.For(level.Session.RoundLogic);
             dynRoundLogic.Set("RoundStarted", session.RoundStarted);
@@ -400,6 +431,10 @@ namespace TF.EX.TowerFallExtensions
             }
 
             level.Session.CurrentLevel.Ending = session.IsEnding;
+
+            var dynCounter = dynRoundLogic.Get<Counter>("miasmaCounter");
+            var dynamicMiasmaCounter = DynamicData.For(dynCounter);
+            dynamicMiasmaCounter.Set("counter", gameState.Session.Miasma.Counter);
 
             level.Delete<TowerFall.Miasma>();
 
@@ -503,6 +538,19 @@ namespace TF.EX.TowerFallExtensions
                 }
             }
 
+            //PlayerCorpses
+            level.DeleteAll<TowerFall.PlayerCorpse>();
+            var corpsesToLoad = gameState.PlayerCorpses.ToArray();
+
+            foreach (TF.EX.Domain.Models.State.PlayerCorpse toLoad in corpsesToLoad)
+            {
+                var cachedPlayerCorpse = ServiceCollections.GetCached<TowerFall.PlayerCorpse>(toLoad.ActualDepth);
+
+                cachedPlayerCorpse.LoadState(toLoad);
+
+                level.GetGameplayLayer().Entities.Insert(0, cachedPlayerCorpse);
+            }
+
             //Arrows
             if (level[GameTags.Arrow] != null)
             {
@@ -523,19 +571,6 @@ namespace TF.EX.TowerFallExtensions
 
                     level.GetGameplayLayer().Entities.Insert(0, arrow);
                 }
-            }
-
-            //PlayerCorpses
-            level.DeleteAll<TowerFall.PlayerCorpse>();
-            var corpsesToLoad = gameState.PlayerCorpses.ToArray();
-
-            foreach (TF.EX.Domain.Models.State.PlayerCorpse toLoad in corpsesToLoad)
-            {
-                var cachedPlayerCorpse = ServiceCollections.GetCached<TowerFall.PlayerCorpse>(toLoad.ActualDepth);
-
-                cachedPlayerCorpse.LoadState(toLoad);
-
-                level.GetGameplayLayer().Entities.Insert(0, cachedPlayerCorpse);
             }
 
 
@@ -560,6 +595,11 @@ namespace TF.EX.TowerFallExtensions
             foreach (var pickupToLoad in gameState.Pickups.ToArray())
             {
                 var cachedPickup = ServiceCollections.GetCached<TowerFall.Pickup>(pickupToLoad.ActualDepth);
+
+                if (cachedPickup == null)
+                {
+                    cachedPickup = TowerFall.Pickup.CreatePickup(pickupToLoad.Position.ToTFVector(), pickupToLoad.TargetPosition.ToTFVector(), pickupToLoad.Type.ToTFModel(), pickupToLoad.PlayerIndex);
+                }
 
                 cachedPickup.LoadState(pickupToLoad);
 
@@ -648,7 +688,7 @@ namespace TF.EX.TowerFallExtensions
         /// <para>From now, this is a hack about loading properly player death arrow and arrow cannot hit target</para>
         /// <para>Player need arrow loaded to set death arrow</para>
         /// <para>Arrow need player loaded to set cannot hit target</para>
-        /// <para>the hack is to let them load first normally and them finish the remaining piece (Death arrow + CannotHit)</para>
+        /// <para>the hack is to let them load first normally and them finish the remaining piece (Death arrow + CannotHit + PlayerCorpse)</para>
         /// </summary>
         private static void PostLoad(Level self, GameState gs)
         {
@@ -666,6 +706,12 @@ namespace TF.EX.TowerFallExtensions
                 {
                     arrow.LoadCannotHit(toLoad.HasUnhittableEntity, toLoad.PlayerIndex);
                 }
+            }
+
+            foreach (var playerCorpse in gs.PlayerCorpses.ToArray())
+            {
+                var gamePlayerCorpse = GetEntityByDepth(self, playerCorpse.ActualDepth) as TowerFall.PlayerCorpse;
+                gamePlayerCorpse.LoadArrowCushion(playerCorpse);
             }
         }
         private static List<Background.BGElement> GetBGElements(Level level)

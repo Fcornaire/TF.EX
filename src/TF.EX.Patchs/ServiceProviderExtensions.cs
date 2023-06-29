@@ -33,12 +33,14 @@ namespace TF.EX.Patchs
             serviceCollection.AddSingleton<IHookable, KeyboardInputPatch>();
             serviceCollection.AddSingleton<IHookable, XGamePadInputPatch>();
             serviceCollection.AddSingleton<IHookable, LevelTestRoundLogicPatch>();
+            serviceCollection.AddSingleton<IHookable, LastManStandingRoundLogicPatch>();
             serviceCollection.AddSingleton<IHookable, RoundLogicPatch>();
             serviceCollection.AddSingleton<IHookable, LevelPatch>();
             serviceCollection.AddSingleton<IHookable, LavaPatch>();
             serviceCollection.AddSingleton<IHookable, LavaControlPatch>();
             serviceCollection.AddSingleton<IHookable, PickupPatch>();
             serviceCollection.AddSingleton<IHookable, TreasureSpawnerPatch>();
+            serviceCollection.AddSingleton<IHookable, VersusRoundResultsPatch>();
             serviceCollection.AddSingleton<IHookable, ArrowPatch>();
             serviceCollection.AddSingleton<IHookable, CoroutinePatch>();
             serviceCollection.AddSingleton<IHookable, EntityPatch>();
@@ -54,6 +56,7 @@ namespace TF.EX.Patchs
             serviceCollection.AddSingleton<IHookable, VersusLevelSystemPatch>();
             serviceCollection.AddSingleton<IHookable, VersusStartPatch>();
             serviceCollection.AddSingleton<IHookable, ReplayRecorderPatch>();
+            serviceCollection.AddSingleton<IHookable, ChainPatch>();
         }
 
         public static LavaPatch GetLavaPatch(this IServiceProvider serviceProvider)

@@ -55,9 +55,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 
             dynPickup.Set("MarkedForRemoval", toLoad.MarkedForRemoval);
 
-            entity.Components.Remove(entity.GetComponent<Tween>());
-            //RemoveLastTween(entity);
-
+            entity.DeleteComponent<Tween>();
             entity.DeleteComponent<Alarm>();
 
             if (toLoad.TargetPositionTimer > 0)

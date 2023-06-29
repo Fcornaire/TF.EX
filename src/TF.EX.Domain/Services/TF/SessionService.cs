@@ -23,17 +23,6 @@ namespace TF.EX.Domain.Services.TF
             return _context.GetSession();
         }
 
-        public void Reset()
-        {
-            var sess = GetSession();
-            sess.RoundEndCounter = Constants.INITIAL_END_COUNTER;
-            sess.IsEnding = false;
-            sess.Miasma = Miasma.Default();
-            SaveSession(sess);
-
-            _context.ResetGamePlayLayerActualDepthLookup();
-        }
-
         public void SaveGamePlayLayerActualDepthLookup(Dictionary<int, double> toSave)
         {
             _context.SaveGamePlayerLayerActualDepthLookup(toSave);

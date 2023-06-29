@@ -216,11 +216,6 @@ namespace TF.EX.Patchs.RoundLogic
             var dynamicRounlogic = DynamicData.For(self);
             var miasmaCounter = dynamicRounlogic.Get<Counter>("miasmaCounter");
 
-            if (miasmaCounter.Value != Constants.DEFAULT_MIASMA_COUNTER && !_netplayManager.IsReplayMode()) //Prevent loading precedent frame and no replay mode
-            {
-                var dynamicMiasmaCounter = DynamicData.For(miasmaCounter);
-                dynamicMiasmaCounter.Set("counter", toLoad.Miasma.Counter);
-            }
 
 
             if (miasmaCounter.Value > 0)
