@@ -83,7 +83,7 @@ namespace TF.EX.Patchs.Engine
                 HasExported = true;
             }
 
-            if (!CanRunNetplayFrames(self.Scene))
+            if (!CanRunNetplayFrames(self.Scene) || (!_netplayManager.IsInit() && (self.Scene as Level).Session.RoundLogic is LastManStandingRoundLogic))
             {
                 if (!_netplayManager.IsInit())
                 {
@@ -195,6 +195,8 @@ namespace TF.EX.Patchs.Engine
             while (_netplayManager.HaveRequestToHandle() && !_netplayManager.CanAdvanceFrame())
             {
                 var request = _netplayManager.ConsumeNetplayRequest();
+
+                level = TFGame.Instance.Scene as Level; //We need to get the level again because it can be changed by Level Update (LevelLoader)
 
                 switch (request)
                 {

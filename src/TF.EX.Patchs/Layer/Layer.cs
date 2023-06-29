@@ -50,10 +50,25 @@ namespace TF.EX.Patchs.Layer
                 });
             }
 
+            if (entity is VersusRoundResults)
+            {
+                var hud = _hudService.Get();
+                _hudService.Update(new Domain.Models.State.HUD.HUD
+                {
+                    VersusStart = new Domain.Models.State.HUD.VersusStart
+                    {
+                        CoroutineState = hud.VersusStart.CoroutineState,
+                        TweenState = hud.VersusStart.TweenState
+                    },
+                    VersusRoundResults = new Domain.Models.State.HUD.VersusRoundResults()
+                });
+            }
+
+
             if (entity is Miasma)
             {
                 var session = _sessionService.GetSession();
-                session.Miasma.CoroutineTimer = 0;
+                session.Miasma = TF.EX.Domain.Models.State.Miasma.Default(); //FIX
                 _sessionService.SaveSession(session);
             }
 
@@ -69,7 +84,7 @@ namespace TF.EX.Patchs.Layer
         {
             if (self.IsGameplayLayer())
             {
-                if (_netplayManager.IsRollbackFrame()) //Remove entities from the precedent frame
+                if (_netplayManager.IsRollbackFrame() && !(TFGame.Instance.Scene is TowerFall.LevelLoaderXML)) //Remove entities from the precedent frame (but on a level only)
                 {
                     var dynLayer = DynamicData.For(self);
                     var toAdd = dynLayer.Get<List<Monocle.Entity>>("toAdd");

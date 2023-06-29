@@ -39,9 +39,12 @@ namespace TF.EX.Core.RoundLogic
 
         public override void OnLevelLoadFinish()
         {
-            base.OnLevelLoadFinish();
-            base.Session.CurrentLevel.Add(new VersusStart(base.Session));
-            base.Players = SpawnPlayersFFA();
+            if (!_netplayManager.HaveFramesToReSimulate()) //Prevent adding a VersusStart on a rollback frame
+            {
+                base.OnLevelLoadFinish();
+                base.Session.CurrentLevel.Add(new VersusStart(base.Session));
+                base.Players = SpawnPlayersFFA();
+            }
         }
 
         public override void OnRoundStart()

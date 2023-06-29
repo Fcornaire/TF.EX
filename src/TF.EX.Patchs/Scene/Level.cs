@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Monocle;
 using MonoMod.Utils;
+using System.Xml;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
 using TF.EX.TowerFallExtensions;
@@ -67,6 +68,21 @@ namespace TF.EX.Patchs.Scene
             if (_netplayManager.IsReplayMode())
             {
                 _netplayManager.UpdateFramesToReSimulate(0);
+            }
+
+            var dynEngine = DynamicData.For(TowerFall.TFGame.Instance);
+            var nextScene = dynEngine.Get<Monocle.Scene>("nextScene");
+            if (nextScene is LevelLoaderXML)
+            {
+                dynEngine.Set("scene", dynEngine.Get<Monocle.Scene>("nextScene"));
+                while (!(TFGame.Instance.Scene as LevelLoaderXML).Finished)
+                {
+                    TFGame.Instance.Scene.Update();
+                }
+
+                dynEngine.Set("scene", dynEngine.Get<Monocle.Scene>("nextScene"));
+                TowerFall.TFGame.Instance.Scene.Begin();
+                TowerFall.TFGame.Instance.Scene.Update();
             }
         }
 

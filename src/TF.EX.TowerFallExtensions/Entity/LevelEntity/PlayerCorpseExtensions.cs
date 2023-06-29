@@ -84,22 +84,6 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             dynArrowCushion.Set("rotation", toLoad.ArrowCushion.Rotation);
 
             entity.ArrowCushion.RemoveArrows();
-            foreach (var arrowData in toLoad.ArrowCushion.ArrowCushionDatas.ToArray())
-            {
-                var dynLevel = DynamicData.For(TowerFall.TFGame.Instance.Scene as TowerFall.Level);
-                var gameArrow = GetEntityByDepth(arrowData.ActualDepth) as TowerFall.Arrow;
-
-                if (gameArrow != null)
-                {
-                    var inGameArrowData = new TowerFall.ArrowCushion.ArrowData
-                    {
-                        Arrow = gameArrow,
-                        Offset = arrowData.Offset.ToTFVector(),
-                        Rotation = arrowData.Rotation
-                    };
-                    entity.ArrowCushion.ArrowDatas.Add(inGameArrowData);
-                }
-            }
         }
 
         public static Monocle.Entity GetEntityByDepth(double actualDepth)
@@ -117,6 +101,25 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             }
 
             return entity;
+        }
+
+        public static void LoadArrowCushion(this TowerFall.PlayerCorpse corpse, PlayerCorpse toLoad)
+        {
+            foreach (var arrowData in toLoad.ArrowCushion.ArrowCushionDatas.ToArray())
+            {
+                var gameArrow = GetEntityByDepth(arrowData.ActualDepth) as TowerFall.Arrow;
+
+                if (gameArrow != null)
+                {
+                    var inGameArrowData = new TowerFall.ArrowCushion.ArrowData
+                    {
+                        Arrow = gameArrow,
+                        Offset = arrowData.Offset.ToTFVector(),
+                        Rotation = arrowData.Rotation
+                    };
+                    corpse.ArrowCushion.ArrowDatas.Add(inGameArrowData);
+                }
+            }
         }
     }
 }

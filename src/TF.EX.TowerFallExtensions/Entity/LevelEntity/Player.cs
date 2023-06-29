@@ -143,7 +143,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             dynPlayer.Set("dodgeCooldown", toLoad.DodgeCooldown);
             dynPlayer.Set("aiming", toLoad.Aiming);
             dynPlayer.Set("canVarJump", toLoad.CanVarJump);
-            dynPlayer.Set("onGround", toLoad.IsOnGround);
+            dynPlayer.Set("OnGround", toLoad.IsOnGround);
             dynPlayer.Set("duckSlipCounter", toLoad.DuckSlipCounter);
 
             var dynStateMachine = DynamicData.For(stateMachine);

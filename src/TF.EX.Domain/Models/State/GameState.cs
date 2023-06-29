@@ -30,6 +30,8 @@ namespace TF.EX.Domain.Models.State
 
         public EventLog.EventLog EventLogs { get; set; } = new EventLog.EventLog();
 
+        public RoundLevels RoundLevels { get; set; } = new RoundLevels();
+
         public bool IsLevelFrozen { get; set; } = false;
         public int Frame { get; set; }
     }
