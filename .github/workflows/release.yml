@@ -52,7 +52,7 @@ jobs:
         repository: "Fcornaire/ggrs-ffi"
         token: ${{ secrets.REPO_AT }}
         latest: true
-        out-file-path: "TF.EX"
+        out-file-path: "TF.EX/Native"
         fileName: "ggrs_ffi.dll"
     - name: Download matchbox-client-ffi lib
       uses: robinraju/release-downloader@v1.8
@@ -60,7 +60,7 @@ jobs:
         repository: "Fcornaire/matchbox-client-ffi"
         token: ${{ secrets.REPO_AT }}
         latest: true
-        out-file-path: "TF.EX"
+        out-file-path: "TF.EX/Native"
         fileName: "matchbox_client_ffi.dll"
     - name: Archive Release
       uses: thedoctor0/zip-release@0.7.1
