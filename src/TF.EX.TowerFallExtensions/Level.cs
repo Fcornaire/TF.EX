@@ -141,6 +141,19 @@ namespace TF.EX.TowerFallExtensions
 
             gameState.IsLevelFrozen = entity.Frozen;
 
+            var dynRoundLogic = DynamicData.For(entity.Session.RoundLogic);
+            gameState.RoundLogic.WasFinalKill = dynRoundLogic.Get<bool>("wasFinalKill");
+            var dynLightingLayer = DynamicData.For(entity.LightingLayer);
+            var spotlights = dynLightingLayer.Get<LevelEntity[]>("spotlight");
+            if (spotlights != null)
+            {
+                foreach (var spotlight in spotlights)
+                {
+                    var dynLevelEntity = DynamicData.For(spotlight);
+                    gameState.RoundLogic.SpotlightDephts.Add(dynLevelEntity.Get<double>("actualDepth"));
+                }
+            }
+
             //EventLogs
             gameState.EventLogs = entity.Session.RoundLogic.Events.ToModel();
 
@@ -229,16 +242,14 @@ namespace TF.EX.TowerFallExtensions
             //Session save
             if (currentMode.IsNetplay() || netplayManager.IsTestMode())
             {
-                var dynLMRoundLogic = DynamicData.For(entity.Session.RoundLogic);
-                var roundEndCounter = dynLMRoundLogic.Get<RoundEndCounter>("roundEndCounter");
+                var roundEndCounter = dynRoundLogic.Get<RoundEndCounter>("roundEndCounter");
                 var endCounter = DynamicData.For(roundEndCounter).Get<float>("endCounter");
                 var roundStarted = entity.Session.RoundLogic.RoundStarted;
-                var done = dynLMRoundLogic.Get<bool>("done");
+                var done = dynRoundLogic.Get<bool>("done");
                 var roundIndex = entity.Session.RoundIndex;
 
                 var isEnding = entity.Session.CurrentLevel.Ending;
 
-                var dynRoundLogic = DynamicData.For(entity.Session.RoundLogic);
                 var miasmaCounter = dynRoundLogic.Get<Counter>("miasmaCounter");
                 var counter = DynamicData.For(miasmaCounter).Get<float>("counter");
 
@@ -549,6 +560,22 @@ namespace TF.EX.TowerFallExtensions
                 cachedPlayerCorpse.LoadState(toLoad);
 
                 level.GetGameplayLayer().Entities.Insert(0, cachedPlayerCorpse);
+            }
+
+            //RoundLogic Spotlights
+            dynRoundLogic.Set("wasFinalKill", gameState.RoundLogic.WasFinalKill);
+            var dynLightingLayer = DynamicData.For(level.LightingLayer);
+            dynLightingLayer.Set("spotlight", null);
+            List<LevelEntity> spotlight = new List<LevelEntity>();
+            foreach (var spotlightDepth in gameState.RoundLogic.SpotlightDephts)
+            {
+                var entity = GetEntityByDepth(level, spotlightDepth);
+                spotlight.Add(entity as LevelEntity);
+            }
+
+            if (spotlight.Count > 0)
+            {
+                dynLightingLayer.Set("spotlight", spotlight.ToArray());
             }
 
             //Arrows

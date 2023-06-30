@@ -33,6 +33,7 @@ namespace TF.EX.Domain.Models.State
         public RoundLevels RoundLevels { get; set; } = new RoundLevels();
 
         public bool IsLevelFrozen { get; set; } = false;
+        public RoundLogic RoundLogic { get; set; } = new RoundLogic();
         public int Frame { get; set; }
     }
 }
