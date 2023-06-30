@@ -62,7 +62,11 @@ namespace TF.EX.Patchs.Engine
         {
             var dynTFGame = DynamicData.For(self);
 
-            UpdateClipped(self.Commands);
+
+            if (self.Scene is TowerFall.MainMenu && (self.Scene as TowerFall.MainMenu).State == TowerFall.MainMenu.MenuState.PressStart)
+            {
+                UpdateClipped(self.Commands);
+            }
 
             if (IsFirstUpdate)
             {
