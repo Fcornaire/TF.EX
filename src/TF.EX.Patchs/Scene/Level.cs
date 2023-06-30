@@ -1,9 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Monocle;
 using MonoMod.Utils;
-using System.Xml;
 using TF.EX.Domain.Ports;
-using TF.EX.Domain.Ports.TF;
 using TF.EX.TowerFallExtensions;
 using TowerFall;
 
@@ -12,17 +10,12 @@ namespace TF.EX.Patchs.Scene
     public class LevelPatch : IHookable
     {
         private readonly INetplayManager _netplayManager;
-        private readonly IOrbService _orbService;
 
         private Random random = new Random();
 
-        public LevelPatch(
-            INetplayManager netplayManager,
-            IOrbService orbService
-            )
+        public LevelPatch(INetplayManager netplayManager)
         {
             _netplayManager = netplayManager;
-            _orbService = orbService;
         }
 
         public void Load()
