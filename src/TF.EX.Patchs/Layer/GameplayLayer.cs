@@ -64,22 +64,20 @@ namespace TF.EX.Patchs.Layer
                         _hasShowedDesynch = true;
                     }
                 }
-                else
+
+                if (_netplayManager.IsDisconnected())
                 {
-                    if (!_netplayManager.IsSynchronized())
+                    Draw.OutlineTextCentered(TFGame.Font, "DISCONNECTED", new Vector2(160f, 20f), Color.Red, 2f);
+                }
+                else if (!_netplayManager.IsSynchronized())
+                {
+                    if (_netplayManager.IsSynchronizing())
                     {
-                        if (_netplayManager.IsSynchronizing())
-                        {
-                            Draw.OutlineTextCentered(TFGame.Font, "SYNCHRONIZING", new Vector2(160f, 20f), Color.Green, 2f);
-                        }
-                        else if (_netplayManager.IsDisconnected())
-                        {
-                            Draw.OutlineTextCentered(TFGame.Font, "DISCONNECTED", new Vector2(160f, 20f), Color.Red, 2f);
-                        }
-                        else
-                        {
-                            Draw.OutlineTextCentered(TFGame.Font, "WAITING TO SYCNH", new Vector2(160f, 20f), Color.Yellow, 2f);
-                        }
+                        Draw.OutlineTextCentered(TFGame.Font, "SYNCHRONIZING", new Vector2(160f, 20f), Color.Green, 2f);
+                    }
+                    else
+                    {
+                        Draw.OutlineTextCentered(TFGame.Font, "TRYING TO SYCNH", new Vector2(160f, 20f), Color.Yellow, 2f);
                     }
                 }
             }

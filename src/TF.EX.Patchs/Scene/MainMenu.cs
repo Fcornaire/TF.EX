@@ -54,9 +54,18 @@ namespace TF.EX.Patchs.Scene
             orig(self);
 
             Draw.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, DepthStencilState.None, RasterizerState.CullNone);
-            if (TowerFall.MainMenu.VersusMatchSettings != null && self.State == TowerFall.MainMenu.MenuState.VersusOptions && _matchmakingService.IsConnectedToServer())
+
+
+            if (self.State == TowerFall.MainMenu.MenuState.VersusOptions)
             {
-                Draw.OutlineTextCentered(TFGame.Font, $"{_matchmakingService.GetTotalAvailablePlayersInQuickPlayQueue()} PLAYERS", new Vector2(35f, 8f), Color.Aqua, 1f);
+                (_, var mode) = ServiceCollections.ResolveStateMachineService();
+
+                if (TowerFall.MainMenu.VersusMatchSettings != null
+                && mode == Domain.Models.Modes.Netplay1v1QuickPlay
+                && _matchmakingService.IsConnectedToServer())
+                {
+                    Draw.OutlineTextCentered(TFGame.Font, $"{_matchmakingService.GetTotalAvailablePlayersInQuickPlayQueue()} PLAYERS", new Vector2(35f, 8f), Color.Aqua, 1f);
+                }
             }
 
             Draw.SpriteBatch.End();
