@@ -34,6 +34,7 @@ namespace TF.EX.Patchs.Entity.HUD
             if (!TFGamePatch.HasExported)
             {
                 _replayService.Export();
+                TFGamePatch.HasExported = true;
             }
 
             session.MatchSettings.RandomLevelSeed = _rngService.GetSeed();

@@ -150,6 +150,16 @@ namespace TF.EX.Patchs.PlayerInput
             var isReplayMode = netplayManager.IsReplayMode();
             var isPaused = TFGame.Instance.Scene is TowerFall.Level && (TFGame.Instance.Scene as TowerFall.Level).Paused;
 
+            if (TFGame.Instance.Scene is MapScene)
+            {
+                return true;
+            }
+
+            if (netplayManager.IsDisconnected())
+            {
+                return actualInput;
+            }
+
             if (isPaused)
             {
                 return actualInput;
@@ -184,11 +194,6 @@ namespace TF.EX.Patchs.PlayerInput
                         return false;
                     }
                 }
-            }
-
-            if (TFGame.Instance.Scene is MapScene)
-            {
-                return true;
             }
 
             if (isNetplayInit)

@@ -36,11 +36,21 @@ namespace TF.EX.Patchs.Entity
 
                 level.Session.MatchSettings.LevelSystem.Dispose();
                 _netplayManager.DisableReplayMode();
+
+                return;
             }
-            else
+
+            if (_netplayManager.IsDisconnected())
             {
-                orig(self);
+                _netplayManager.Reset();
+                TFGame.Players[0] = false;
+                TFGame.Players[1] = false;
+                TFGame.Characters[0] = 0;
+                TFGame.Characters[1] = 1;
             }
+
+            orig(self);
+
         }
     }
 }

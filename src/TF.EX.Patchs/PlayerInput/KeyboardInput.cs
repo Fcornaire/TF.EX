@@ -110,6 +110,11 @@ namespace TF.EX.Patchs.PlayerInput
             var canStart = state_machine.CanStart();
             var isNetplayInit = netplayManager.IsInit();
 
+            if (netplayManager.IsDisconnected())
+            {
+                return actualInput;
+            }
+
             if (TFGame.Instance.Scene is Level && (TFGame.Instance.Scene as TowerFall.Level).Session.GetWinner() != -1)
             {
                 return actualInput;

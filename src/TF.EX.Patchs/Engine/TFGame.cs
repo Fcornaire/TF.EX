@@ -165,6 +165,14 @@ namespace TF.EX.Patchs.Engine
                     }
                 }
             }
+            else
+            {
+                //TODO: Make it work with the menu
+                //if (_netplayManager.IsDisconnected())
+                //{
+                //    orig(self, gameTime);
+                //}
+            }
         }
 
         public bool CanRunNetplayFrames(Monocle.Scene scene)

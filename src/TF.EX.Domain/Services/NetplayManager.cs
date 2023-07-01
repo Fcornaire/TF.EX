@@ -487,11 +487,6 @@ namespace TF.EX.Domain.Services
                 _isSyncing = false;
                 _isUpdating = false;
                 _gameContext.ResetPlayersIndex();
-
-                //if (Engine.Instance.Scene != null)
-                //{
-                //    Engine.Instance.Scene.ResetState();
-                //}
             }
         }
 

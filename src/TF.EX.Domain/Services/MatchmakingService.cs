@@ -518,6 +518,7 @@ namespace TF.EX.Domain.Services
             _hasMatched = false;
             _hasFoundOpponentForQuickPlay = false;
             _hasAcceptedOpponentInQuickPlay = false;
+            _hasOpponentChoosed = false;
             _OpponentDeclined = false;
             _hasRegisteredForQuickPlay = false;
             _isListening = false;
