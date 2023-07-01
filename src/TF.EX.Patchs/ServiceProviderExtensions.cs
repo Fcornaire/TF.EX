@@ -58,6 +58,7 @@ namespace TF.EX.Patchs
             serviceCollection.AddSingleton<IHookable, ReplayRecorderPatch>();
             serviceCollection.AddSingleton<IHookable, ChainPatch>();
             serviceCollection.AddSingleton<IHookable, MatchSettingsPatch>();
+            serviceCollection.AddSingleton<IHookable, HUDPatch>();
         }
 
         public static LavaPatch GetLavaPatch(this IServiceProvider serviceProvider)

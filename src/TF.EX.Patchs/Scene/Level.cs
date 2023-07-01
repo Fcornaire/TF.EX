@@ -81,7 +81,7 @@ namespace TF.EX.Patchs.Scene
 
         private void Level_HandlePausing(On.TowerFall.Level.orig_HandlePausing orig, Level self)
         {
-            if (_netplayManager.IsReplayMode())
+            if (_netplayManager.IsReplayMode() || _netplayManager.IsDisconnected())
             {
                 orig(self);
             }
@@ -126,8 +126,7 @@ namespace TF.EX.Patchs.Scene
                         var counter = DynamicData.For(DynamicData.For(indicator).Get<Counter>("showCounter"));
                         counter.Set("counter", indicatorCounter);
 
-                        //dynPlayer.Set("Indicator", indicator);
-
+                        dynPlayer.Set("Indicator", indicator);
 
                         player.Add(indicator);
                     }
