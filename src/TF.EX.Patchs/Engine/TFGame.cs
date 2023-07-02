@@ -168,10 +168,10 @@ namespace TF.EX.Patchs.Engine
             else
             {
                 //TODO: Make it work with the menu
-                //if (_netplayManager.IsDisconnected())
-                //{
-                //    orig(self, gameTime);
-                //}
+                if (_netplayManager.IsDisconnected())
+                {
+                    orig(self, gameTime);
+                }
             }
         }
 
