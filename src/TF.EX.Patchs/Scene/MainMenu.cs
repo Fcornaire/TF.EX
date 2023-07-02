@@ -47,6 +47,7 @@ namespace TF.EX.Patchs.Scene
             orig(self, state);
 
             TowerFall.TFGame.ConsoleEnabled = true;
+            SaveData.Instance.Options.DevConsole = true;
         }
 
         private void MainMenu_Render(On.TowerFall.MainMenu.orig_Render orig, TowerFall.MainMenu self)
