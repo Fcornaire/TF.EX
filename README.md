@@ -30,6 +30,8 @@ Also, this is project is super WIP !
 
 # Usage
 
+This mod assume you are playing with One controller (and letting the keyboard on player 2)
+
 It fairly easy to use the mod:
 
 1. Download and install [FortRise](https://github.com/Terria-K/FortRise) if not already
@@ -37,6 +39,9 @@ It fairly easy to use the mod:
 3. Create a `Mods` directory at the root of your Towerfall install directory if not done already
 4. Extract the `TF.EX` zip into the precedent `Mods` folder.
 5. You are now ready and the mod should be referenced and loaded by FortRise
+
+You have the option to change your tag in the in game option.
+You can also change the input delay but leaving it 2 is a good start.
 
 You should also be able to see 2 new versus mode:
 
@@ -57,9 +62,13 @@ whith {replay_name} being something like "20-06-2023T22-17-46" (No file extensio
 
 # Troubleshooting
 
+I advise to not use this mod with mods that do other thing than cosmetics/skins.
+For eample [WiderSetMod](https://github.com/Terria-K/WiderSetMod) have been reported to break the mod
+I will try to investigate why it's happening but for now,only use the TF EX mod as standalone
+
 ## I can't find anyone / i can't accept a game in quickplay mode
 
-This is a bug with the server i believe, i'm already investigating it. Use Direct mode for now
+This is a bug with the server i believe, i'm already investigating it. Use Direct mode if QP not working
 
 ## There is a blank screen when i try to rematch
 
@@ -105,6 +114,7 @@ A LastManStanding game should be running in a GGRS [SyncTestSession](https://git
 As you can guess, this project is still WIP and missing a lot of feature:
 
 - [ ] Refacto (There is a lot of thing i want to refactor)
+- [ ] Less restrictive controller (make a Netplay controller)
 - [ ] Fix bugs (Main focus right now as i need more people to play, test and report behavior)
 - [ ] Support for all versus map
 - [ ] Support all items
