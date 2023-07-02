@@ -128,6 +128,8 @@ But since there is a ton of things to do, i advise either contact me directly or
 
 Distributed under the GPL-2.0 License. See `LICENSE` for more information.
 
+The netplay logo can be found at [Icones8](https://icones8.fr/)
+
 ## Contact
 
 Twitter : DShad - [@DShad66](https://twitter.com/DShad66)
