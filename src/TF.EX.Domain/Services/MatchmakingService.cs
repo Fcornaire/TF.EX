@@ -128,7 +128,7 @@ namespace TF.EX.Domain.Services
         private async Task SendRegisterMessage()
         {
             var registerMessage = new RegisterDirectMessage();
-            registerMessage.RegisterDirect.Name = _netplayManager.GetConfig().Name;
+            registerMessage.RegisterDirect.Name = _netplayManager.GetNetplayMeta().Name;
 
             var message = JsonConvert.SerializeObject(registerMessage);
             var segment = new ArraySegment<byte>(System.Text.Encoding.UTF8.GetBytes(message));
@@ -147,7 +147,7 @@ namespace TF.EX.Domain.Services
         private async Task SendRegisterQuickPlayMessage()
         {
             var registerMessage = new RegisterQuickPlayMessage();
-            registerMessage.Register.Name = _netplayManager.GetConfig().Name;
+            registerMessage.Register.Name = _netplayManager.GetNetplayMeta().Name;
 
             var message = JsonConvert.SerializeObject(registerMessage);
             var segment = new ArraySegment<byte>(System.Text.Encoding.UTF8.GetBytes(message));

@@ -98,14 +98,14 @@ namespace TF.EX.Patchs.Component
                 }
                 else
                 {
-                    text = _netplayManager.GetConfig().Name;
+                    text = _netplayManager.GetNetplayMeta().Name;
                 }
             }
             else
             {
                 if ((PlayerDraw)playerIndex == PlayerDraw.Player1)
                 {
-                    text = _netplayManager.GetConfig().Name;
+                    text = _netplayManager.GetNetplayMeta().Name;
                 }
                 else
                 {
