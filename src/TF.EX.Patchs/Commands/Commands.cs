@@ -69,9 +69,9 @@ namespace TF.EX.Patchs.Commands
                 else
                 {
                     var name = command.ToUpper();
-                    var config = _netplayManager.GetConfig();
+                    var config = _netplayManager.GetNetplayMeta();
                     config.Name = name.Substring(0, Math.Min(name.Length, 10));
-                    _netplayManager.UpdateConfig(config);
+                    _netplayManager.UpdateMeta(config);
                     _netplayManager.SaveConfig();
                 }
             }

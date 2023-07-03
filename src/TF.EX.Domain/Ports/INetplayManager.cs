@@ -61,8 +61,8 @@ namespace TF.EX.Domain.Ports
 
         bool IsSynchronizing();
         void Reset();
-        GGRSConfig GetConfig();
-        void UpdateConfig(GGRSConfig config);
+        NetplayMeta GetNetplayMeta();
+        void UpdateMeta(NetplayMeta config);
         void SaveConfig();
 
         string GetPlayer2Name();

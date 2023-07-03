@@ -87,25 +87,25 @@ namespace TF.EX.Patchs.Scene
 
         public void InputDelayRightCallback()
         {
-            var config = _netplayManager.GetConfig();
+            var config = _netplayManager.GetNetplayMeta();
             config.InputDelay--;
-            _netplayManager.UpdateConfig(config);
+            _netplayManager.UpdateMeta(config);
             _netplayManager.SaveConfig();
         }
 
         public void InputDelayLeftCallback()
         {
-            var config = _netplayManager.GetConfig();
+            var config = _netplayManager.GetNetplayMeta();
             config.InputDelay++;
-            _netplayManager.UpdateConfig(config);
+            _netplayManager.UpdateMeta(config);
             _netplayManager.SaveConfig();
         }
 
         private void MainMenu_Update(On.TowerFall.MainMenu.orig_Update orig, TowerFall.MainMenu self)
         {
-            if (_name != null && _name.State != _netplayManager.GetConfig().Name)
+            if (_name != null && _name.State != _netplayManager.GetNetplayMeta().Name)
             {
-                _name.State = _netplayManager.GetConfig().Name;
+                _name.State = _netplayManager.GetNetplayMeta().Name;
             }
 
             if (TowerFall.MainMenu.VersusMatchSettings != null && self.State == TowerFall.MainMenu.MenuState.VersusOptions)
@@ -129,15 +129,15 @@ namespace TF.EX.Patchs.Scene
         public static void InputDelayState(this OptionsButton optionsButton)
         {
             var netplayManager = ServiceCollections.ResolveNetplayManager();
-            optionsButton.State = netplayManager.GetConfig().InputDelay.ToString();
-            optionsButton.CanLeft = netplayManager.GetConfig().InputDelay > 1;
-            optionsButton.CanRight = netplayManager.GetConfig().InputDelay < 20;
+            optionsButton.State = netplayManager.GetNetplayMeta().InputDelay.ToString();
+            optionsButton.CanLeft = netplayManager.GetNetplayMeta().InputDelay > 1;
+            optionsButton.CanRight = netplayManager.GetNetplayMeta().InputDelay < 20;
         }
 
         public static void NameState(this OptionsButton optionsButton)
         {
             var netplayManager = ServiceCollections.ResolveNetplayManager();
-            optionsButton.State = netplayManager.GetConfig().Name.ToString();
+            optionsButton.State = netplayManager.GetNetplayMeta().Name.ToString();
         }
     }
 

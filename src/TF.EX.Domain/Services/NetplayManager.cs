@@ -37,6 +37,7 @@ namespace TF.EX.Domain.Services
         private string _player2Name = "PLAYER";
 
         public GGRSConfig GGRSConfig { get; internal set; }
+        public NetplayMeta NetplayMeta { get; internal set; }
 
         public NetplayManager(
             IInputService inputService,
@@ -64,6 +65,9 @@ namespace TF.EX.Domain.Services
             if (!_isInit)
             {
                 _isDisconnected = false;
+
+                GGRSConfig.Name = NetplayMeta.Name;
+                GGRSConfig.InputDelay = NetplayMeta.InputDelay;
 
                 using (var handle = new SafeBytes<GGRSConfig>(GGRSConfig, false))
                 {
@@ -490,59 +494,65 @@ namespace TF.EX.Domain.Services
             }
         }
 
-        public GGRSConfig GetConfig()
+        public NetplayMeta GetNetplayMeta()
         {
-            return GGRSConfig;
+            return NetplayMeta;
         }
 
-        public void UpdateConfig(GGRSConfig config)
+        public void UpdateMeta(NetplayMeta config)
         {
-            GGRSConfig = config;
+            NetplayMeta = config;
         }
 
         public void SaveConfig()
         {
-            var jsonToSave = JsonConvert.SerializeObject(GGRSConfig, Formatting.Indented);
-            File.WriteAllText($"{Directory.GetCurrentDirectory()}\\netplay_conf.json", jsonToSave);
+            var jsonToSave = JsonConvert.SerializeObject(NetplayMeta, Formatting.Indented);
+            File.WriteAllText($"{Directory.GetCurrentDirectory()}\\netplay_meta.json", jsonToSave);
         }
 
         private void LoadConfig()
         {
             try
             {
-                var json = File.ReadAllText("netplay_conf.json");
-                GGRSConfig = JsonConvert.DeserializeObject<GGRSConfig>(json);
-                if (GGRSConfig.InputDelay == 0)
+                string filePath = "netplay_conf.json"; //Removing old config file
+                if (File.Exists(filePath))
                 {
-                    GGRSConfig.InputDelay = 2;
+                    File.Delete(filePath);
+                }
+
+                GGRSConfig = new GGRSConfig
+                {
+                    Netplay = new NetplayConfig(),
+                };
+
+                var json = File.ReadAllText("netplay_meta.json");
+                NetplayMeta = JsonConvert.DeserializeObject<NetplayMeta>(json);
+                if (NetplayMeta.InputDelay == 0)
+                {
+                    NetplayMeta.InputDelay = 2;
                     SaveConfig();
                 }
 
-                if (string.IsNullOrEmpty(GGRSConfig.Name))
+                if (string.IsNullOrEmpty(NetplayMeta.Name))
                 {
-                    GGRSConfig.Name = "PLAYER";
+                    NetplayMeta.Name = "PLAYER";
                     SaveConfig();
                 }
 
-                if (GGRSConfig.Name.Length > 10)
+                if (NetplayMeta.Name.Length > 10)
                 {
-                    GGRSConfig.Name = GGRSConfig.Name.Substring(0, Math.Min(GGRSConfig.Name.Length, 10));
+                    NetplayMeta.Name = NetplayMeta.Name.Substring(0, Math.Min(NetplayMeta.Name.Length, 10));
                     SaveConfig();
                 }
 
-                GGRSConfig.Name = GGRSConfig.Name.ToUpper();
-                if (GGRSConfig.Netplay == null)
-                {
-                    GGRSConfig.Netplay = new NetplayConfig();
-                }
+                NetplayMeta.Name = NetplayMeta.Name.ToUpper();
             }
             catch (FileNotFoundException e)
             {
-                GGRSConfig = new GGRSConfig
+                NetplayMeta = new NetplayMeta
                 {
                     InputDelay = 2,
                     Name = "PLAYER",
-                    Netplay = new NetplayConfig(),
                 };
 
                 SaveConfig();
