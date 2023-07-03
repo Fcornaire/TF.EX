@@ -318,7 +318,7 @@ namespace TF.EX.TowerFallExtensions
             gameState.Chains = chainsState;
 
             //Background save
-            var bgElements = GetBGElements(entity).ToArray();
+            var bgElements = entity.GetBGElements().ToArray();
             List<BackgroundElement> bgs = new List<BackgroundElement>();
             for (int i = 0; i < bgElements.Length; i++)
             {
@@ -569,8 +569,11 @@ namespace TF.EX.TowerFallExtensions
             List<LevelEntity> spotlight = new List<LevelEntity>();
             foreach (var spotlightDepth in gameState.RoundLogic.SpotlightDephts)
             {
-                var entity = GetEntityByDepth(level, spotlightDepth);
-                spotlight.Add(entity as LevelEntity);
+                var entity = level.GetEntityByDepth(spotlightDepth);
+                if (entity != null)
+                {
+                    spotlight.Add(entity as LevelEntity);
+                }
             }
 
             if (spotlight.Count > 0)
@@ -660,7 +663,7 @@ namespace TF.EX.TowerFallExtensions
             //Lantern load
             foreach (TF.EX.Domain.Models.State.LevelEntity.Lantern toLoad in gameState.Lanterns.ToArray())
             {
-                var gameLantern = GetEntityByDepth(level, toLoad.ActualDepth) as Lantern;
+                var gameLantern = level.GetEntityByDepth(toLoad.ActualDepth) as Lantern;
 
                 if (gameLantern != null)
                 {
@@ -671,7 +674,7 @@ namespace TF.EX.TowerFallExtensions
             //Chain load
             foreach (TF.EX.Domain.Models.State.LevelEntity.Chain toLoad in gameState.Chains.ToArray())
             {
-                var gameChain = GetEntityByDepth(level, toLoad.ActualDepth) as Chain;
+                var gameChain = level.GetEntityByDepth(toLoad.ActualDepth) as Chain;
 
                 if (gameChain != null)
                 {
@@ -682,7 +685,7 @@ namespace TF.EX.TowerFallExtensions
             //Background load
             foreach (TF.EX.Domain.Models.State.BackgroundElement toLoad in gameState.BackgroundElements.ToArray())
             {
-                var gameBackground = GetBGElementByIndex(level, toLoad.index);
+                var gameBackground = level.GetBGElementByIndex(toLoad.index);
 
                 if (gameBackground != null && gameBackground is Background.ScrollLayer)
                 {
@@ -697,7 +700,7 @@ namespace TF.EX.TowerFallExtensions
 
 
 
-            PostLoad(level, gameState);
+            level.PostLoad(gameState);
 
             level.SortGamePlayLayer(CompareDepth);
         }
@@ -717,7 +720,7 @@ namespace TF.EX.TowerFallExtensions
         /// <para>Arrow need player loaded to set cannot hit target</para>
         /// <para>the hack is to let them load first normally and them finish the remaining piece (Death arrow + CannotHit + PlayerCorpse)</para>
         /// </summary>
-        private static void PostLoad(Level self, GameState gs)
+        private static void PostLoad(this Level self, GameState gs)
         {
             foreach (TF.EX.Domain.Models.State.Player toLoad in gs.Players.ToArray())
             {
@@ -728,7 +731,7 @@ namespace TF.EX.TowerFallExtensions
 
             foreach (TF.EX.Domain.Models.State.Arrows.Arrow toLoad in gs.Arrows.ToArray())
             {
-                var arrow = GetEntityByDepth(self, toLoad.ActualDepth) as TowerFall.Arrow;
+                var arrow = self.GetEntityByDepth(toLoad.ActualDepth) as TowerFall.Arrow;
                 if (arrow != null)
                 {
                     arrow.LoadCannotHit(toLoad.HasUnhittableEntity, toLoad.PlayerIndex);
@@ -737,19 +740,19 @@ namespace TF.EX.TowerFallExtensions
 
             foreach (var playerCorpse in gs.PlayerCorpses.ToArray())
             {
-                var gamePlayerCorpse = GetEntityByDepth(self, playerCorpse.ActualDepth) as TowerFall.PlayerCorpse;
+                var gamePlayerCorpse = self.GetEntityByDepth(playerCorpse.ActualDepth) as TowerFall.PlayerCorpse;
                 gamePlayerCorpse.LoadArrowCushion(playerCorpse);
             }
         }
-        private static List<Background.BGElement> GetBGElements(Level level)
+        private static List<Background.BGElement> GetBGElements(this Level level)
         {
             var dynBacground = DynamicData.For(level.Background);
             return dynBacground.Get<List<Background.BGElement>>("elements");
         }
 
-        private static Background.BGElement GetBGElementByIndex(Level level, int index) { return GetBGElements(level)[index]; }
+        private static Background.BGElement GetBGElementByIndex(this Level level, int index) { return GetBGElements(level)[index]; }
 
-        public static Monocle.Entity GetEntityByDepth(Level self, double actualDepth)
+        public static Monocle.Entity GetEntityByDepth(this Level self, double actualDepth)
         {
             Monocle.Entity entity = null;
             foreach (Monocle.Entity ent in self.GetGameplayLayer().Entities.ToArray())
