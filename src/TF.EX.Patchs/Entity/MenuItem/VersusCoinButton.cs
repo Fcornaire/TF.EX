@@ -1,4 +1,5 @@
-﻿using TF.EX.Domain.Extensions;
+﻿using MonoMod.Utils;
+using TF.EX.Domain.Extensions;
 
 namespace TF.EX.Patchs.Entity.MenuItem
 {
@@ -16,17 +17,17 @@ namespace TF.EX.Patchs.Entity.MenuItem
 
         private void VersusCoinButton_Update(On.TowerFall.VersusCoinButton.orig_Update orig, TowerFall.VersusCoinButton self)
         {
+            orig(self);
+
             var currentMode = TowerFall.MainMenu.VersusMatchSettings.Mode;
 
-            if (!currentMode.ToModel().IsNetplay())
+            if (currentMode.ToModel().IsNetplay() && TowerFall.MainMenu.VersusMatchSettings.MatchLength != TowerFall.MatchSettings.MatchLengths.Standard)
             {
-                orig(self); //Prevent changing on netplay mode
+                TowerFall.MainMenu.VersusMatchSettings.MatchLength = TowerFall.MatchSettings.MatchLengths.Standard; //Prevent changing on netplay mode
+                var dynVersusCoinButton = DynamicData.For(self);
+                dynVersusCoinButton.Invoke("UpdateSides");
+                TowerFall.Sounds.ui_invalid.Play();
             }
-            else
-            {
-                //TODO: ux
-            }
-
         }
     }
 }
