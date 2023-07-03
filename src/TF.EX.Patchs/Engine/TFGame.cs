@@ -28,6 +28,7 @@ namespace TF.EX.Patchs.Engine
         private readonly INetplayManager _netplayManager;
         private readonly IInputService _inputService;
         private readonly IReplayService _replayService;
+        private readonly IMatchmakingService _matchmakingService;
 
         private DateTime LastUpdate;
         private TimeSpan Accumulator;
@@ -36,11 +37,16 @@ namespace TF.EX.Patchs.Engine
         private const double SLOW_RATIO = 1.1;
         private readonly MethodInfo _mInputUpdate = typeof(MInput).GetMethod("Update", BindingFlags.NonPublic | BindingFlags.Static); //Minput Update is an internal static method...
 
-        public TFGamePatch(INetplayManager netplayManager, IInputService inputService, ISessionService sessionService, IReplayService replayService)
+        public TFGamePatch(
+            INetplayManager netplayManager,
+            IInputService inputService,
+            IReplayService replayService,
+            IMatchmakingService matchmakingService)
         {
             _netplayManager = netplayManager;
             _inputService = inputService;
             _replayService = replayService;
+            _matchmakingService = matchmakingService;
         }
 
         public void Load()
@@ -88,10 +94,9 @@ namespace TF.EX.Patchs.Engine
         {
             var dynTFGame = DynamicData.For(self);
 
-
-            if (self.Scene is TowerFall.MainMenu && (self.Scene as TowerFall.MainMenu).State == TowerFall.MainMenu.MenuState.PressStart)
+            if (self.Scene is TowerFall.MainMenu)
             {
-                UpdateClipped(self.Commands);
+                HandleMenuAction(self);
             }
 
             if (IsFirstUpdate)
@@ -103,18 +108,6 @@ namespace TF.EX.Patchs.Engine
                 Accumulator = TimeSpan.Zero;
 
                 AppDomain.CurrentDomain.ProcessExit += new EventHandler(OnProcessExit);
-            }
-
-            if (self.Scene is TowerFall.MainMenu && (self.Scene as TowerFall.MainMenu).State == TowerFall.MainMenu.MenuState.Main && _shouldShowUpdateDialog)
-            {
-                _shouldShowUpdateDialog = false;
-
-                if (ServiceCollections.ServiceProvider.GetRequiredService<IAutoUpdater>().IsUpdateAvailable())
-                {
-                    var dialog = new Dialog("TF EX Update", "A TF EX mod update is available \n \nPlease close and restart the game", new Vector2(160f, 120f), () => { Environment.Exit(0); }, new Dictionary<string, Action>());
-                    var dynLayer = DynamicData.For((TFGame.Instance.Scene as TowerFall.MainMenu).GetMainLayer());
-                    dynLayer.Invoke("Add", dialog, false);
-                }
             }
 
             var gameLoaded = dynTFGame.Get<bool>("GameLoaded");
@@ -210,6 +203,41 @@ namespace TF.EX.Patchs.Engine
                 {
                     orig(self, gameTime);
                 }
+            }
+        }
+
+        private void HandleMenuAction(TFGame self)
+        {
+            var scene = self.Scene as TowerFall.MainMenu;
+            switch (scene.State)
+            {
+                case TowerFall.MainMenu.MenuState.PressStart:
+                    UpdateClipped(self.Commands);
+                    break;
+                case TowerFall.MainMenu.MenuState.Main:
+                    if (_shouldShowUpdateDialog)
+                    {
+                        _shouldShowUpdateDialog = false;
+
+                        if (ServiceCollections.ServiceProvider.GetRequiredService<IAutoUpdater>().IsUpdateAvailable())
+                        {
+                            var dialog = new Dialog("TF EX Update", "A TF EX mod update is available \n \nPlease close and restart the game", new Vector2(160f, 120f), () => { Environment.Exit(0); }, new Dictionary<string, Action>());
+                            var dynLayer = DynamicData.For((TFGame.Instance.Scene as TowerFall.MainMenu).GetMainLayer());
+                            dynLayer.Invoke("Add", dialog, false);
+                        }
+                    }
+
+                    if (_matchmakingService.IsConnectedToServer())
+                    {
+                        _matchmakingService.DisconnectFromServer();
+                    }
+                    break;
+                case TowerFall.MainMenu.MenuState.VersusOptions:
+                    var dynCommands = DynamicData.For(self.Commands);
+                    dynCommands.Set("currentText", string.Empty);
+                    break;
+                default:
+                    break;
             }
         }
 
