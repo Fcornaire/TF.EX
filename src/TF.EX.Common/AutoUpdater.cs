@@ -148,7 +148,10 @@ namespace TF.EX.Common
                 var httpClient = new HttpClient();
                 var fileBytes = await httpClient.GetByteArrayAsync(downloadUrl);
 
-                Directory.Delete(DownloadPath, true);
+                if (Directory.Exists(DownloadPath))
+                {
+                    Directory.Delete(DownloadPath, true);
+                }
                 Directory.CreateDirectory(DownloadPath);
 
 
