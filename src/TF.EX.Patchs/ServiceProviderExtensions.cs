@@ -60,6 +60,7 @@ namespace TF.EX.Patchs
             serviceCollection.AddSingleton<IHookable, MatchSettingsPatch>();
             serviceCollection.AddSingleton<IHookable, HUDPatch>();
             serviceCollection.AddSingleton<IHookable, VersusCoinButtonPatch>();
+            serviceCollection.AddSingleton<IHookable, SaveDataPatch>();
         }
 
         public static LavaPatch GetLavaPatch(this IServiceProvider serviceProvider)

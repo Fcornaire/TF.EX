@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Monocle;
 using TF.EX.Domain;
 using TF.EX.Domain.Ports;
+using TF.EX.TowerFallExtensions;
 using TowerFall;
 
 namespace TF.EX.Patchs.Scene
@@ -47,7 +48,7 @@ namespace TF.EX.Patchs.Scene
             orig(self, state);
 
             TowerFall.TFGame.ConsoleEnabled = true;
-            SaveData.Instance.Options.DevConsole = true;
+            SaveData.Instance.WithNetplayOptions();
         }
 
         private void MainMenu_Render(On.TowerFall.MainMenu.orig_Render orig, TowerFall.MainMenu self)
