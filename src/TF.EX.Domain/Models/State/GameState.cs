@@ -37,6 +37,11 @@ namespace TF.EX.Domain.Models.State
         public RoundLogic RoundLogic { get; set; } = new RoundLogic();
 
         public IEnumerable<TowerFall.MatchStats> MatchStats { get; set; } = new List<TowerFall.MatchStats>();
+
+        public IEnumerable<SFX> SFXs { get; set; } = new List<SFX>();
+
+        public IEnumerable<JumpPad> JumpPads { get; set; } = Enumerable.Empty<JumpPad>();
+
         public int Frame { get; set; }
     }
 }

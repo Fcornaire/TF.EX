@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Monocle;
 using MonoMod.Utils;
+using System.Reflection;
 using TF.EX.Domain;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models.State;
@@ -36,16 +37,58 @@ namespace TF.EX.TowerFallExtensions
             return false;
         }
 
-        /// <summary>
-        /// This extension method removes sounds if the entity related to the sound is removed.
-        /// </summary>
-        /// <param name="scene"></param>
-        public static void AdjustSFX(this Level level) //TODO: find a way fast fordward the sound in a rollback frame (if possible)
+        public static List<T> GetFields<T>(this object instance)
         {
-            if (level.Get<VersusStart>() == null)
+            List<T> fieldList = new List<T>();
+
+            Type type = instance.GetType();
+            FieldInfo[] fields = type.GetFields(BindingFlags.Public | BindingFlags.Instance);
+
+            foreach (FieldInfo field in fields)
             {
-                Sounds.sfx_multiStartLevel.Stop();
+                if (typeof(T).IsAssignableFrom(field.FieldType))
+                {
+                    T fieldValue = (T)field.GetValue(instance);
+                    fieldList.Add(fieldValue);
+                }
             }
+
+            return fieldList;
+        }
+
+        public static T GetField<T>(this object instance, string propertyName)
+        {
+            Type type = instance.GetType();
+            FieldInfo[] fields = type.GetFields(BindingFlags.Public | BindingFlags.Instance);
+
+            foreach (FieldInfo field in fields)
+            {
+                if (typeof(T).IsAssignableFrom(field.FieldType) && field.Name.ToUpper() == propertyName.ToUpper())
+                {
+                    T fieldValue = (T)field.GetValue(instance);
+                    return fieldValue;
+                }
+            }
+
+            return default(T);
+        }
+
+        public static List<T> GetStaticFields<T>(Type type)
+        {
+            List<T> fieldsList = new List<T>();
+
+            FieldInfo[] fields = type.GetFields(BindingFlags.Public | BindingFlags.Static);
+
+            foreach (FieldInfo field in fields)
+            {
+                if (field.FieldType == typeof(T))
+                {
+                    T fieldValue = (T)field.GetValue(null);
+                    fieldsList.Add(fieldValue);
+                }
+            }
+
+            return fieldsList;
         }
 
         public static void Delete<T>(this Level level) where T : Monocle.Entity
@@ -128,6 +171,19 @@ namespace TF.EX.TowerFallExtensions
             var sessionService = ServiceCollections.ResolveSessionService();
             var orbService = ServiceCollections.ResolveOrbService();
             var rngService = ServiceCollections.ResolveRngService();
+            var sfxService = ServiceCollections.ResolveSFXService();
+
+            //JumpPads
+            var jumpPads = entity.GetAll<JumpPad>();
+            var gameStateJumpPads = new List<TF.EX.Domain.Models.State.LevelEntity.JumpPad>();
+            foreach (var jumpPad in jumpPads)
+            {
+                gameStateJumpPads.Add(jumpPad.GetState());
+            }
+            gameState.JumpPads = gameStateJumpPads;
+
+            //SFX
+            gameState.SFXs = sfxService.Get();
 
             //Levels
             var dynLevelSystem = DynamicData.For(entity.Session.MatchSettings.LevelSystem);
@@ -383,6 +439,28 @@ namespace TF.EX.TowerFallExtensions
             var sessionService = ServiceCollections.ResolveSessionService();
             var orbService = ServiceCollections.ResolveOrbService();
             var rngService = ServiceCollections.ResolveRngService();
+            var sfxService = ServiceCollections.ResolveSFXService();
+
+            sfxService.UpdateLastRollbackFrame(gameState.Frame);
+            sfxService.Load(gameState.SFXs);
+
+            //JumpPads load
+            var inGamejumpPads = level.GetAll<JumpPad>();
+
+            foreach (var jumpPad in gameState.JumpPads)
+            {
+                var jumpPadToLoad = inGamejumpPads.FirstOrDefault(jp =>
+                {
+                    var dynJp = DynamicData.For(jp);
+                    var actualDepth = dynJp.Get<double>("actualDepth");
+                    return actualDepth == jumpPad.ActualDepth;
+                });
+
+                if (jumpPadToLoad != null)
+                {
+                    jumpPadToLoad.LoadState(jumpPad);
+                }
+            }
 
             //Round levels load
             var dynLevelSystem = DynamicData.For(level.Session.MatchSettings.LevelSystem);

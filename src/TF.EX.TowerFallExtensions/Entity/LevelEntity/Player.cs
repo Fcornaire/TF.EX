@@ -61,6 +61,8 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 Wings = wings != null ? wingsSprite.GetState() : null
             };
 
+            var lastAimDirection = dynPlayer.Get<float>("lastAimDirection");
+
             return new TF.EX.Domain.Models.State.Player.Player
             {
                 MarkedForRemoval = entity.MarkedForRemoval,
@@ -106,6 +108,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 LastPlatformDepth = lastPlaformDepth,
                 Animations = playerAnimations,
                 Cling = entity.Cling,
+                LastAimDir = lastAimDirection,
             };
         }
 
@@ -263,8 +266,8 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 wingsSprite.LoadState(toLoad.Animations.Wings);
             }
 
-
             dynPlayer.Set("Cling", toLoad.Cling);
+            dynPlayer.Set("lastAimDirection", toLoad.LastAimDir);
         }
 
         public static void LoadDeathArrow(this TowerFall.Player self, double deathArrowActualDepth)

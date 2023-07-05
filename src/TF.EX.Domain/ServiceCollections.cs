@@ -38,6 +38,7 @@ namespace TF.EX.Domain
             ServiceCollection.AddSingleton<INetplayStateMachine, Netplay1V1QuickPlayStateMachine>();
             ServiceCollection.AddSingleton<INetplayStateMachine, Netplay1V1DirectStateMachine>();
             ServiceCollection.AddSingleton<IReplayService, ReplayService>();
+            ServiceCollection.AddSingleton<ISFXService, SFXService>();
 
             ServiceCollection.AddTransient<IInputService, InputService>();
             ServiceCollection.AddTransient<IArrowService, ArrowService>();
@@ -102,6 +103,9 @@ namespace TF.EX.Domain
 
         public static IArrowService ResolveArrowService() { return ServiceProvider.GetRequiredService<IArrowService>(); }
         public static IOrbService ResolveOrbService() { return ServiceProvider.GetRequiredService<IOrbService>(); }
+
+        public static ISFXService ResolveSFXService() { return ServiceProvider.GetRequiredService<ISFXService>(); }
+
 
         public static (INetplayStateMachine, TF.EX.Domain.Models.Modes) ResolveStateMachineService()
         {
