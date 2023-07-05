@@ -77,7 +77,7 @@ namespace TF.EX.Patchs.Layer
                     }
                     else
                     {
-                        Draw.OutlineTextCentered(TFGame.Font, "TRYING TO SYCNH", new Vector2(160f, 20f), Color.Yellow, 2f);
+                        Draw.OutlineTextCentered(TFGame.Font, "TRYING TO SYNC", new Vector2(160f, 20f), Color.Yellow, 2f);
                     }
                 }
             }
