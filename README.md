@@ -113,6 +113,7 @@ A LastManStanding game should be running in a GGRS [SyncTestSession](https://git
 
 As you can guess, this project is still WIP and missing a lot of feature:
 
+- [ ] Automatically bump the version (meta + tag)
 - [ ] Refacto (There is a lot of thing i want to refactor)
 - [ ] Less restrictive controller (make a Netplay controller)
 - [ ] Fix bugs (Main focus right now as i need more people to play, test and report behavior)
