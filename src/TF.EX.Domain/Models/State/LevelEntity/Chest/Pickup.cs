@@ -13,6 +13,8 @@
         public double ActualDepth { get; set; }
         public bool MarkedForRemoval { get; set; }
 
+        public Sprite<int> ShieldSprite { get; set; }
+
         public static Pickup Empty()
         {
             return new Pickup

@@ -1,5 +1,6 @@
 ﻿using TF.EX.Domain.Models.State;
 using TF.EX.Domain.Models.State.Arrows;
+using TF.EX.Domain.Models.State.Player;
 
 namespace TF.EX.Domain.Extensions
 {

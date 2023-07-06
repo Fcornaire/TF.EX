@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace TF.EX.Domain.Models.State
+namespace TF.EX.Domain.Models.State.Player
 {
 
     public enum PlayerStates : int

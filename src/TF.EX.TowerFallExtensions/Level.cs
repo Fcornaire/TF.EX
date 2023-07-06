@@ -5,8 +5,10 @@ using TF.EX.Domain;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models.State;
 using TF.EX.Domain.Models.State.Arrows;
+using TF.EX.Domain.Models.State.Layer;
 using TF.EX.Domain.Models.State.LevelEntity.Chest;
 using TF.EX.TowerFallExtensions.Entity.LevelEntity;
+using TF.EX.TowerFallExtensions.Layer;
 using TowerFall;
 
 namespace TF.EX.TowerFallExtensions
@@ -162,7 +164,7 @@ namespace TF.EX.TowerFallExtensions
             gameState.Hud = hudService.Get();
 
             //Players save state
-            var playersState = new List<TF.EX.Domain.Models.State.Player>();
+            var playersState = new List<Domain.Models.State.Player.Player>();
             if (entity[GameTags.Player] != null)
             {
                 var players = entity[GameTags.Player];
@@ -176,7 +178,7 @@ namespace TF.EX.TowerFallExtensions
             gameState.Players = playersState;
 
             //PlayerCorpse save
-            var playerCorpsesState = new List<TF.EX.Domain.Models.State.PlayerCorpse>();
+            var playerCorpsesState = new List<Domain.Models.State.Player.PlayerCorpse>();
             if (entity[GameTags.Corpse] != null && entity[GameTags.Corpse].Count > 0)
             {
                 var gamePlayerCorpses = entity[GameTags.Corpse];
@@ -318,18 +320,32 @@ namespace TF.EX.TowerFallExtensions
             gameState.Chains = chainsState;
 
             //Background save
-            var bgElements = entity.GetBGElements().ToArray();
+            var bgElements = entity.Background.GetBGElements().ToArray();
             List<BackgroundElement> bgs = new List<BackgroundElement>();
             for (int i = 0; i < bgElements.Length; i++)
             {
                 TowerFall.Background.BGElement bg = bgElements[i];
                 if (bg is TowerFall.Background.ScrollLayer)
                 {
-                    var bgModel = (bg as TowerFall.Background.ScrollLayer).ToModel(i);
+                    var bgModel = (bg as TowerFall.Background.ScrollLayer).GetState(i);
                     bgs.Add(bgModel);
                 }
             }
-            gameState.BackgroundElements = bgs;
+            gameState.Layer.BackgroundElements = bgs;
+
+            //Foreground save
+            var fgElements = entity.Foreground.GetBGElements().ToArray();
+            List<ForegroundElement> fgs = new List<ForegroundElement>();
+            for (int i = 0; i < fgElements.Length; i++)
+            {
+                TowerFall.Background.BGElement fg = fgElements[i];
+                if (fg is TowerFall.Background.WavyLayer)
+                {
+                    var fgModel = (fg as TowerFall.Background.WavyLayer).GetState(i);
+                    fgs.Add(fgModel);
+                }
+            }
+            gameState.Layer.ForegroundElements = fgs;
 
             entity.DeleteAll<TowerFall.Hat>(); //TODO: Remove and save hats
 
@@ -523,7 +539,7 @@ namespace TF.EX.TowerFallExtensions
             }
 
             //Players
-            foreach (TF.EX.Domain.Models.State.Player toLoad in gameState.Players.ToArray())
+            foreach (Domain.Models.State.Player.Player toLoad in gameState.Players.ToArray())
             {
                 var gamePlayer = level.GetPlayer(toLoad.Index);
                 if (gamePlayer != null)
@@ -553,7 +569,7 @@ namespace TF.EX.TowerFallExtensions
             level.DeleteAll<TowerFall.PlayerCorpse>();
             var corpsesToLoad = gameState.PlayerCorpses.ToArray();
 
-            foreach (TF.EX.Domain.Models.State.PlayerCorpse toLoad in corpsesToLoad)
+            foreach (Domain.Models.State.Player.PlayerCorpse toLoad in corpsesToLoad)
             {
                 var cachedPlayerCorpse = ServiceCollections.GetCached<TowerFall.PlayerCorpse>(toLoad.ActualDepth);
 
@@ -683,13 +699,25 @@ namespace TF.EX.TowerFallExtensions
             }
 
             //Background load
-            foreach (TF.EX.Domain.Models.State.BackgroundElement toLoad in gameState.BackgroundElements.ToArray())
+            foreach (BackgroundElement toLoad in gameState.Layer.BackgroundElements.ToArray())
             {
                 var gameBackground = level.GetBGElementByIndex(toLoad.index);
 
                 if (gameBackground != null && gameBackground is Background.ScrollLayer)
                 {
                     (gameBackground as Background.ScrollLayer).Image.Position = toLoad.Position.ToTFVector();
+                }
+            }
+
+            //Foreground load
+            foreach (ForegroundElement toLoad in gameState.Layer.ForegroundElements.ToArray())
+            {
+                var gameForeground = level.GetFGElementByIndex(toLoad.index);
+
+                if (gameForeground != null && gameForeground is Background.WavyLayer)
+                {
+                    var dynForegroundElement = DynamicData.For(gameForeground);
+                    dynForegroundElement.Set("counter", toLoad.counter);
                 }
             }
 
@@ -722,7 +750,7 @@ namespace TF.EX.TowerFallExtensions
         /// </summary>
         private static void PostLoad(this Level self, GameState gs)
         {
-            foreach (TF.EX.Domain.Models.State.Player toLoad in gs.Players.ToArray())
+            foreach (Domain.Models.State.Player.Player toLoad in gs.Players.ToArray())
             {
                 var gamePlayer = self.GetPlayer(toLoad.Index);
 
@@ -744,13 +772,11 @@ namespace TF.EX.TowerFallExtensions
                 gamePlayerCorpse.LoadArrowCushion(playerCorpse);
             }
         }
-        private static List<Background.BGElement> GetBGElements(this Level level)
-        {
-            var dynBacground = DynamicData.For(level.Background);
-            return dynBacground.Get<List<Background.BGElement>>("elements");
-        }
 
-        private static Background.BGElement GetBGElementByIndex(this Level level, int index) { return GetBGElements(level)[index]; }
+        private static Background.BGElement GetBGElementByIndex(this Level level, int index) { return level.Background.GetBGElements()[index]; }
+
+        private static Background.BGElement GetFGElementByIndex(this Level level, int index) { return level.Foreground.GetBGElements()[index]; }
+
 
         public static Monocle.Entity GetEntityByDepth(this Level self, double actualDepth)
         {

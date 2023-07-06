@@ -1,6 +1,6 @@
 ﻿using TowerFall;
 
-namespace TF.EX.TowerFallExtensions
+namespace TF.EX.TowerFallExtensions.Layer
 {
     public static class LayerExtensions
     {

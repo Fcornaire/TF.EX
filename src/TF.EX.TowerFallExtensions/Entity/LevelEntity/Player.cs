@@ -4,6 +4,7 @@ using MonoMod.Utils;
 using System.Reflection;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models.State;
+using TF.EX.Domain.Models.State.Player;
 
 namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 {
@@ -43,8 +44,24 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 lastPlaformDepth = dynLastPlatform.Get<double>("actualDepth");
             }
 
+            var body = dynPlayer.Get<Monocle.Sprite<string>>("bodySprite");
+            var head = dynPlayer.Get<Monocle.Sprite<string>>("headSprite");
+            var headBack = dynPlayer.Get<Monocle.Sprite<string>>("headBackSprite");
+            var bow = dynPlayer.Get<Monocle.Sprite<string>>("bowSprite");
+            var shieldSprite = DynamicData.For(shield).Get<Monocle.SpritePart<int>>("sprite");
+            var wingsSprite = DynamicData.For(wings).Get<Monocle.Sprite<string>>("sprite");
 
-            return new TF.EX.Domain.Models.State.Player
+            var playerAnimations = new PlayerAnimations
+            {
+                Body = body.GetState(),
+                Head = head.GetState(),
+                HeadBack = headBack != null ? headBack.GetState() : null,
+                Bow = bow.GetState(),
+                Shield = shield != null ? shieldSprite.GetState() : null,
+                Wings = wings != null ? wingsSprite.GetState() : null
+            };
+
+            return new TF.EX.Domain.Models.State.Player.Player
             {
                 MarkedForRemoval = entity.MarkedForRemoval,
                 ActualDepth = actualDepth,
@@ -87,6 +104,8 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 ShouldStartAimingDown = dynPlayer.Get<bool>("startAimingDown"),
                 GraceLedgeDir = dynPlayer.Get<int>("graceLedgeDir"),
                 LastPlatformDepth = lastPlaformDepth,
+                Animations = playerAnimations,
+                Cling = entity.Cling,
             };
         }
 
@@ -220,6 +239,32 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             {
                 entity.TargetCollider = null;
             }
+
+            var body = dynPlayer.Get<Monocle.Sprite<string>>("bodySprite");
+            var head = dynPlayer.Get<Monocle.Sprite<string>>("headSprite");
+            var headBack = dynPlayer.Get<Monocle.Sprite<string>>("headBackSprite");
+            var bow = dynPlayer.Get<Monocle.Sprite<string>>("bowSprite");
+            var shieldSprite = dynShield.Get<Monocle.SpritePart<int>>("sprite");
+            var wingsSprite = dynWings.Get<Monocle.Sprite<string>>("sprite");
+
+            body.LoadState(toLoad.Animations.Body);
+            head.LoadState(toLoad.Animations.Head);
+            if (headBack != null)
+            {
+                headBack.LoadState(toLoad.Animations.HeadBack);
+            }
+            bow.LoadState(toLoad.Animations.Bow);
+            if (shieldSprite != null)
+            {
+                shieldSprite.LoadState(toLoad.Animations.Shield);
+            }
+            if (wingsSprite != null)
+            {
+                wingsSprite.LoadState(toLoad.Animations.Wings);
+            }
+
+
+            dynPlayer.Set("Cling", toLoad.Cling);
         }
 
         public static void LoadDeathArrow(this TowerFall.Player self, double deathArrowActualDepth)
