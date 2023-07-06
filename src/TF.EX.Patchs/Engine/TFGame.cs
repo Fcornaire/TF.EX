@@ -8,7 +8,6 @@ using TF.EX.Common;
 using TF.EX.Domain;
 using TF.EX.Domain.Externals;
 using TF.EX.Domain.Models;
-using TF.EX.Domain.Models.State;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
 using TF.EX.TowerFallExtensions;
@@ -67,7 +66,10 @@ namespace TF.EX.Patchs.Engine
         {
             orig();
 
-            Task.Run(() => AutoUpdateIfNeeded()).GetAwaiter().GetResult();
+            if (Config.SERVER.Contains(".com")) //TODO: find a better way to detect local / production
+            {
+                Task.Run(() => AutoUpdateIfNeeded()).GetAwaiter().GetResult();
+            }
         }
 
         private async Task AutoUpdateIfNeeded()

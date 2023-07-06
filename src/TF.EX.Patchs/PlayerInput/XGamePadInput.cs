@@ -108,7 +108,7 @@ namespace TF.EX.Patchs.PlayerInput
 
             var roundStarted = level.Session.RoundLogic.RoundStarted;
 
-            if ((IsLocalPlayerGamePad && level.IsLocalPlayerFrozen()) || _sessionService.GetSession().IsEnding || !roundStarted) //Ignore on frozen to prevent useless rollback
+            if (!roundStarted) //Ignore if round not started to prevent useless rollback
             {
                 _inputService.ResetPolledInput();
                 return new InputState();
