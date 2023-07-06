@@ -4,5 +4,7 @@
     {
         public List<BackgroundElement> BackgroundElements { get; set; }
         public List<ForegroundElement> ForegroundElements { get; set; }
+
+        public float LightingLayerSine { get; set; }
     }
 }

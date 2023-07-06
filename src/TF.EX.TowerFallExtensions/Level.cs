@@ -347,6 +347,9 @@ namespace TF.EX.TowerFallExtensions
             }
             gameState.Layer.ForegroundElements = fgs;
 
+            var sineWave = dynLightingLayer.Get<SineWave>("sine");
+            gameState.Layer.LightingLayerSine = sineWave.Counter;
+
             entity.DeleteAll<TowerFall.Hat>(); //TODO: Remove and save hats
 
             var dynGameplayLayer = DynamicData.For(entity.GetGameplayLayer());
@@ -720,6 +723,9 @@ namespace TF.EX.TowerFallExtensions
                     dynForegroundElement.Set("counter", toLoad.counter);
                 }
             }
+
+            var sine = dynLightingLayer.Get<SineWave>("sine");
+            sine.UpdateAttributes(gameState.Layer.LightingLayerSine);
 
             //Rng
             var rng = gameState.Rng;
