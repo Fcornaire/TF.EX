@@ -21,6 +21,14 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             var sine = dynPickup.Get<Monocle.SineWave>("sine");
             var markedForRemoval = dynPickup.Get<bool>("MarkedForRemoval");
 
+            TF.EX.Domain.Models.State.Sprite<int> shieldSprite = null;
+
+            if (type == TowerFall.Pickups.Shield)
+            {
+                var sprite = dynPickup.Get<Monocle.Sprite<int>>("sprite");
+                shieldSprite = sprite.GetState();
+            }
+
             return new Pickup
             {
                 ActualDepth = actualDepth,
@@ -32,7 +40,8 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 CollidableTimer = alarm != null ? alarm.FramesLeft : 0,
                 IsCollidable = entity.Collidable,
                 SineCounter = sine.Counter,
-                MarkedForRemoval = markedForRemoval
+                MarkedForRemoval = markedForRemoval,
+                ShieldSprite = shieldSprite
             };
         }
 
@@ -55,11 +64,17 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 
             dynPickup.Set("MarkedForRemoval", toLoad.MarkedForRemoval);
 
-            entity.DeleteComponent<Tween>();
-            entity.DeleteComponent<Alarm>();
+
+            if (toLoad.Type == PickupState.Shield)
+            {
+                var sprite = dynPickup.Get<Monocle.Sprite<int>>("sprite");
+                sprite.LoadState(toLoad.ShieldSprite);
+            }
 
             if (toLoad.TargetPositionTimer > 0)
             {
+                entity.DeleteComponent<Tween>();
+
                 Tween tween = Tween.Create(Tween.TweenMode.Oneshot, Ease.BackOut, 30, start: true);
                 var dynTween = DynamicData.For(tween);
                 dynTween.Set("FramesLeft", toLoad.TargetPositionTimer);
@@ -76,13 +91,12 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 
             if (toLoad.CollidableTimer > 0)
             {
-                Alarm.Set(entity, 10, () =>
+                entity.DeleteComponent<Alarm>();
+
+                Alarm.Set(entity, (int)toLoad.CollidableTimer, () =>
                 {
                     entity.Collidable = true;
                 });
-
-                var dynAlarm = DynamicData.For(entity.GetComponent<Alarm>());
-                dynAlarm.Set("FramesLeft", toLoad.CollidableTimer);
             }
         }
     }

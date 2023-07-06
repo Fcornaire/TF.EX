@@ -1,7 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using MonoMod.Utils;
 using TF.EX.Domain.Extensions;
-using TF.EX.Domain.Models.State;
+using TF.EX.Domain.Models.State.Player;
 
 namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 {

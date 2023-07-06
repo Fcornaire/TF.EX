@@ -1,4 +1,4 @@
-﻿namespace TF.EX.Domain.Models.State
+﻿namespace TF.EX.Domain.Models.State.Player
 {
     public class Player
     {
@@ -40,5 +40,8 @@
         public double ActualDepth { get; set; }
         public bool MarkedForRemoval { get; set; }
         public double LastPlatformDepth { get; set; }
+        public PlayerAnimations Animations { get; set; }
+
+        public int Cling { get; set; }
     }
 }

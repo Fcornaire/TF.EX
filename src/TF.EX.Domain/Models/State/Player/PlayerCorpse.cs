@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using TowerFall;
 
-namespace TF.EX.Domain.Models.State
+namespace TF.EX.Domain.Models.State.Player
 {
     public class PlayerCorpse
     {

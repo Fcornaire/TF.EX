@@ -2,6 +2,7 @@
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Models.State;
 using TF.EX.Domain.Models.State.HUD;
+using TF.EX.Domain.Models.State.Layer;
 using TF.EX.Domain.Models.State.Orb;
 using TF.EX.Domain.Utils;
 

@@ -1,13 +1,14 @@
 ﻿using TF.EX.Domain.Models.State.Arrows;
 using TF.EX.Domain.Models.State.LevelEntity;
 using TF.EX.Domain.Models.State.LevelEntity.Chest;
+using TF.EX.Domain.Models.State.Player;
 
 namespace TF.EX.Domain.Models.State
 {
     public class GameState
     {
-        public List<BackgroundElement> BackgroundElements { get; set; }
-        public List<Player> Players { get; set; } = new List<Player>();
+        public Layer.Layer Layer { get; set; } = new Layer.Layer();
+        public List<Player.Player> Players { get; set; } = new List<Player.Player>();
         public List<PlayerCorpse> PlayerCorpses { get; set; } = new List<PlayerCorpse>();
         public List<Arrow> Arrows { get; set; } = new List<Arrow>();
         public List<LevelEntity.Chest.Chest> Chests { get; set; } = new List<LevelEntity.Chest.Chest>();

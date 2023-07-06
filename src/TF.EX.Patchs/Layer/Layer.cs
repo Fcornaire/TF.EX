@@ -1,7 +1,7 @@
 ﻿using MonoMod.Utils;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
-using TF.EX.TowerFallExtensions;
+using TF.EX.TowerFallExtensions.Layer;
 using TowerFall;
 
 namespace TF.EX.Patchs.Layer

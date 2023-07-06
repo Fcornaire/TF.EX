@@ -61,6 +61,7 @@ namespace TF.EX.Patchs
             serviceCollection.AddSingleton<IHookable, HUDPatch>();
             serviceCollection.AddSingleton<IHookable, VersusCoinButtonPatch>();
             serviceCollection.AddSingleton<IHookable, SaveDataPatch>();
+            serviceCollection.AddSingleton<IHookable, ShieldPickupPatch>();
         }
 
         public static LavaPatch GetLavaPatch(this IServiceProvider serviceProvider)

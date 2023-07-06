@@ -1,4 +1,4 @@
-﻿namespace TF.EX.Domain.Models.State
+﻿namespace TF.EX.Domain.Models.State.Layer
 {
     public class BackgroundElement
     {
