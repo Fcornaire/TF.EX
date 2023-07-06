@@ -145,6 +145,8 @@ namespace TF.EX.TowerFallExtensions
 
             var dynRoundLogic = DynamicData.For(entity.Session.RoundLogic);
             gameState.RoundLogic.WasFinalKill = dynRoundLogic.Get<bool>("wasFinalKill");
+            gameState.RoundLogic.Time = entity.Session.RoundLogic.Time;
+
             var dynLightingLayer = DynamicData.For(entity.LightingLayer);
             var spotlights = dynLightingLayer.Get<LevelEntity[]>("spotlight");
             if (spotlights != null)
@@ -364,6 +366,11 @@ namespace TF.EX.TowerFallExtensions
             gameState.Rng = rngService.Get();
             gameState.Frame = (int)entity.FrameCounter;
 
+            gameState.MatchStats = new MatchStats[] {
+                entity.Session.MatchStats[0], entity.Session.MatchStats[1],
+            };
+
+
             return gameState;
         }
 
@@ -453,6 +460,7 @@ namespace TF.EX.TowerFallExtensions
             var dynRoundLogic = DynamicData.For(level.Session.RoundLogic);
             dynRoundLogic.Set("RoundStarted", session.RoundStarted);
             dynRoundLogic.Set("done", session.IsDone);
+            dynRoundLogic.Set("Time", gameState.RoundLogic.Time);
 
             if (currentMode.IsNetplay() || netplayManager.IsTestMode())
             {
@@ -732,7 +740,9 @@ namespace TF.EX.TowerFallExtensions
             rng.ResetRandom();
             rngService.UpdateState(rng.Gen_type);
 
-
+            var matchStats = gameState.MatchStats.ToArray();
+            level.Session.MatchStats[0] = matchStats[0];
+            level.Session.MatchStats[1] = matchStats[1];
 
             level.PostLoad(gameState);
 

@@ -35,6 +35,8 @@ namespace TF.EX.Domain.Models.State
 
         public bool IsLevelFrozen { get; set; } = false;
         public RoundLogic RoundLogic { get; set; } = new RoundLogic();
+
+        public IEnumerable<TowerFall.MatchStats> MatchStats { get; set; } = new List<TowerFall.MatchStats>();
         public int Frame { get; set; }
     }
 }

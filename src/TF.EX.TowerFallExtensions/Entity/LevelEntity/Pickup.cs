@@ -64,6 +64,8 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 
             dynPickup.Set("MarkedForRemoval", toLoad.MarkedForRemoval);
 
+            entity.DeleteComponent<Tween>();
+            entity.DeleteAllComponents<Alarm>(); //TODO: Prevent removing ChangeColorAlarm
 
             if (toLoad.Type == PickupState.Shield)
             {
@@ -73,8 +75,6 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 
             if (toLoad.TargetPositionTimer > 0)
             {
-                entity.DeleteComponent<Tween>();
-
                 Tween tween = Tween.Create(Tween.TweenMode.Oneshot, Ease.BackOut, 30, start: true);
                 var dynTween = DynamicData.For(tween);
                 dynTween.Set("FramesLeft", toLoad.TargetPositionTimer);
@@ -91,8 +91,6 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 
             if (toLoad.CollidableTimer > 0)
             {
-                entity.DeleteComponent<Alarm>();
-
                 Alarm.Set(entity, (int)toLoad.CollidableTimer, () =>
                 {
                     entity.Collidable = true;

@@ -20,6 +20,16 @@ namespace TF.EX.TowerFallExtensions.Entity
             }
         }
 
+        public static void DeleteAllComponents<T>(this Monocle.Entity entity) where T : Component
+        {
+            var components = entity.Components.Where(component => component is T).ToList();
+            foreach (var component in components)
+            {
+                component.RemoveSelf();
+                entity.Components.Remove(component);
+            }
+        }
+
         public static Tween GetChestOpeningTween(this Monocle.Entity chest)
         {
             foreach (var component in chest.Components)
