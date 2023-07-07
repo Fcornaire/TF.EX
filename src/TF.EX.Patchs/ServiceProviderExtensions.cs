@@ -54,14 +54,12 @@ namespace TF.EX.Patchs
             serviceCollection.AddSingleton<IHookable, PauseMenuPatch>();
             serviceCollection.AddSingleton<IHookable, SessionPatch>();
             serviceCollection.AddSingleton<IHookable, VersusLevelSystemPatch>();
-            serviceCollection.AddSingleton<IHookable, VersusStartPatch>();
             serviceCollection.AddSingleton<IHookable, ReplayRecorderPatch>();
             serviceCollection.AddSingleton<IHookable, ChainPatch>();
             serviceCollection.AddSingleton<IHookable, MatchSettingsPatch>();
             serviceCollection.AddSingleton<IHookable, HUDPatch>();
             serviceCollection.AddSingleton<IHookable, VersusCoinButtonPatch>();
             serviceCollection.AddSingleton<IHookable, SaveDataPatch>();
-            serviceCollection.AddSingleton<IHookable, ShieldPickupPatch>();
             serviceCollection.AddSingleton<IHookable, ParticleSystemPatch>();
             serviceCollection.AddSingleton<IHookable, LightningFlashLayerPatch>();
         }
