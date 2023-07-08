@@ -120,6 +120,16 @@ namespace TF.EX.Patchs.Engine
                 HasExported = true;
             }
 
+            if (_netplayManager.IsReplayMode())
+            {
+                if (gameLoaded && self.Scene is Level && !(self.Scene as Level).Paused)
+                {
+                    _replayService.RunFrame();
+                }
+                orig(self, gameTime);
+                return;
+            }
+
             if (!CanRunNetplayFrames(self.Scene) || (!_netplayManager.IsInit() && (self.Scene as Level).Session.RoundLogic is LastManStandingRoundLogic))
             {
                 if (!_netplayManager.IsInit())
@@ -128,16 +138,6 @@ namespace TF.EX.Patchs.Engine
                     Accumulator = TimeSpan.Zero;
                 }
 
-                orig(self, gameTime);
-                return;
-            }
-
-            if (_netplayManager.IsReplayMode())
-            {
-                if (gameLoaded && !(self.Scene as Level).Paused)
-                {
-                    _replayService.RunFrame();
-                }
                 orig(self, gameTime);
                 return;
             }
