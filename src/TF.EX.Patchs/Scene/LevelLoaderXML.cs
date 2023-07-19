@@ -1,8 +1,6 @@
 ﻿using MonoMod.Utils;
 using TF.EX.Domain;
 using TF.EX.Domain.Models.State;
-using TF.EX.Domain.Ports;
-using TF.EX.Domain.Ports.TF;
 using TF.EX.TowerFallExtensions;
 using TowerFall;
 
@@ -10,15 +8,6 @@ namespace TF.EX.Patchs.Scene
 {
     public class LevelLoaderXMLPatch : IHookable
     {
-        private readonly INetplayManager _netplayManager;
-        private readonly IHUDService _hudService;
-
-        public LevelLoaderXMLPatch(INetplayManager netplayManager, IHUDService hUDService)
-        {
-            _netplayManager = netplayManager;
-            _hudService = hUDService;
-        }
-
         public void Load()
         {
             On.TowerFall.LevelLoaderXML.ctor += LevelLoaderXML_ctor;

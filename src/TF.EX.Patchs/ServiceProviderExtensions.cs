@@ -11,6 +11,7 @@ using TF.EX.Patchs.Layer;
 using TF.EX.Patchs.PlayerInput;
 using TF.EX.Patchs.RoundLogic;
 using TF.EX.Patchs.Scene;
+using TF.EX.Patchs.SFX;
 
 namespace TF.EX.Patchs
 {
@@ -62,6 +63,9 @@ namespace TF.EX.Patchs
             serviceCollection.AddSingleton<IHookable, SaveDataPatch>();
             serviceCollection.AddSingleton<IHookable, ParticleSystemPatch>();
             serviceCollection.AddSingleton<IHookable, LightningFlashLayerPatch>();
+            serviceCollection.AddSingleton<IHookable, SFXPatch>();
+            serviceCollection.AddSingleton<IHookable, MonoclePatch>();
+            serviceCollection.AddSingleton<IHookable, SFXInstancedPatch>();
         }
 
         public static LavaPatch GetLavaPatch(this IServiceProvider serviceProvider)

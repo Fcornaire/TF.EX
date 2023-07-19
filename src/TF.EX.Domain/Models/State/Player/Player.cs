@@ -42,6 +42,8 @@
         public double LastPlatformDepth { get; set; }
         public PlayerAnimations Animations { get; set; }
 
+        public float LastAimDir { get; set; }
+
         public int Cling { get; set; }
     }
 }

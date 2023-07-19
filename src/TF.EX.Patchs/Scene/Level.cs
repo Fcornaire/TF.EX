@@ -2,6 +2,7 @@
 using Monocle;
 using MonoMod.Utils;
 using TF.EX.Domain.Ports;
+using TF.EX.Domain.Ports.TF;
 using TF.EX.TowerFallExtensions;
 using TowerFall;
 
@@ -10,12 +11,14 @@ namespace TF.EX.Patchs.Scene
     public class LevelPatch : IHookable
     {
         private readonly INetplayManager _netplayManager;
+        private readonly ISFXService _sfxService;
 
         private Random random = new Random();
 
-        public LevelPatch(INetplayManager netplayManager)
+        public LevelPatch(INetplayManager netplayManager, ISFXService sFXService)
         {
             _netplayManager = netplayManager;
+            _sfxService = sFXService;
         }
 
         public void Load()
@@ -32,8 +35,6 @@ namespace TF.EX.Patchs.Scene
 
         private void Level_Update(On.TowerFall.Level.orig_Update orig, Level self)
         {
-            self.AdjustSFX();
-
             if (_netplayManager.HaveFramesToReSimulate())
             {
                 var dynTFGame = DynamicData.For(TFGame.Instance);
@@ -63,10 +64,17 @@ namespace TF.EX.Patchs.Scene
                 _netplayManager.UpdateFramesToReSimulate(0);
             }
 
+            if (!_netplayManager.HaveFramesToReSimulate())
+            {
+                _sfxService.Synchronize((int)self.FrameCounter - 1, _netplayManager.IsTestMode());
+            }
+
             var dynEngine = DynamicData.For(TowerFall.TFGame.Instance);
             var nextScene = dynEngine.Get<Monocle.Scene>("nextScene");
             if (nextScene is LevelLoaderXML)
             {
+                _sfxService.Clear();
+                var currentFrame = self.FrameCounter;
                 dynEngine.Set("scene", dynEngine.Get<Monocle.Scene>("nextScene"));
                 while (!(TFGame.Instance.Scene as LevelLoaderXML).Finished)
                 {
@@ -76,6 +84,8 @@ namespace TF.EX.Patchs.Scene
                 dynEngine.Set("scene", dynEngine.Get<Monocle.Scene>("nextScene"));
                 TowerFall.TFGame.Instance.Scene.Begin();
                 TowerFall.TFGame.Instance.Scene.Update();
+
+                dynEngine.Set("FrameCounter", currentFrame);
             }
         }
 

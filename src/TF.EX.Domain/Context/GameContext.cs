@@ -1,4 +1,6 @@
-﻿using TF.EX.Domain.Externals;
+﻿using Microsoft.Xna.Framework.Audio;
+using TF.EX.Domain.Extensions;
+using TF.EX.Domain.Externals;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Models.State;
 using TF.EX.Domain.Models.State.HUD;
@@ -51,9 +53,19 @@ namespace TF.EX.Domain.Context
         void ResetPlayersIndex();
         HUD GetHUDState();
         void UpdateHUDState(HUD toLoad);
+        void AddesiredSfx(SFX toPlay);
+        ICollection<SoundEffectPlaying> GetCurrentSfxs();
+        ICollection<SFX> GetDesiredSfx();
+        int GetLastRollbackFrame();
+        void LoadDesiredSfx(IEnumerable<SFX> sFXes);
+        void UpdateLastRollbackFrame(int frame);
+        void AddSoundEffect(SoundEffect data, string filename);
+        void AddPlayedSfx(SoundEffectPlaying sfx);
+        bool HasSfxBeenPlayed(SFX sfx);
+        void ClearDesiredSfx();
     }
 
-    public class GameContext : IGameContext
+    internal class GameContext : IGameContext
     {
         private const int NUM_PLAYER = 2; //TODO: variable
 
@@ -67,6 +79,11 @@ namespace TF.EX.Domain.Context
         private Dictionary<int, double> _gamePlayerLayerActualDepthLookup = new Dictionary<int, double>();
         private IEnumerable<BackgroundElement> _backgroundElements = new List<BackgroundElement>();
         private HUD _hudState;
+        private ICollection<SFX> _desiredSfxs = new List<SFX>();
+        private ICollection<SoundEffectPlaying> _currentSfxs = new List<SoundEffectPlaying>();
+        private ICollection<SoundEffectPlaying> _playedSfxs = new List<SoundEffectPlaying>();
+        private Dictionary<string, SoundEffect> _soundEffects = new Dictionary<string, SoundEffect>();
+        private int _lastRollbackFrame = 0;
 
         private int _localPlayerIndex = -1;
         private int _remotePlayerIndex = -1;
@@ -339,6 +356,72 @@ namespace TF.EX.Domain.Context
                 VersusStart = toLoad.VersusStart,
                 VersusRoundResults = toLoad.VersusRoundResults,
             };
+        }
+
+        public void AddesiredSfx(SFX toPlay)
+        {
+            if (!_desiredSfxs.Any(sfx => sfx.Name == toPlay.Name && toPlay.Frame == sfx.Frame))
+            {
+                _desiredSfxs.Add(toPlay);
+            }
+        }
+
+        public ICollection<SFX> GetDesiredSfx()
+        {
+            return _desiredSfxs;
+        }
+
+        public void LoadDesiredSfx(IEnumerable<SFX> sFXes)
+        {
+            var toLoad = sFXes.ToList();
+            toLoad.ForEach(sfx =>
+            {
+                if (_soundEffects.ContainsKey(sfx.Name))
+                {
+                    sfx.Data = _soundEffects[sfx.Name];
+                }
+
+            });
+
+            _desiredSfxs = toLoad;
+        }
+
+        public void ClearDesiredSfx()
+        {
+            _desiredSfxs.Clear();
+        }
+
+        public void UpdateLastRollbackFrame(int frame)
+        {
+            _lastRollbackFrame = frame;
+        }
+
+        public void AddSoundEffect(SoundEffect data, string filename)
+        {
+            if (!_soundEffects.ContainsKey(filename))
+            {
+                _soundEffects.Add(filename, data);
+            }
+        }
+
+        public ICollection<SoundEffectPlaying> GetCurrentSfxs()
+        {
+            return _currentSfxs;
+        }
+
+        public int GetLastRollbackFrame()
+        {
+            return _lastRollbackFrame;
+        }
+
+        public void AddPlayedSfx(SoundEffectPlaying sfx)
+        {
+            _playedSfxs.Add(sfx);
+        }
+
+        public bool HasSfxBeenPlayed(SFX sfx)
+        {
+            return _playedSfxs.Any(sfxPlayed => sfxPlayed.Name == sfx.Name && sfxPlayed.Frame == sfx.Frame);
         }
     }
 }
