@@ -1,4 +1,5 @@
 ﻿using Monocle;
+using TF.EX.Domain.Models.State.Entity.LevelEntity;
 using TF.EX.Domain.Ports.TF;
 using TF.EX.Patchs.Calc;
 using TF.EX.TowerFallExtensions.Entity.LevelEntity;
@@ -69,7 +70,7 @@ namespace TF.EX.Patchs.Entity.LevelEntity
             if (shouldAdd)
             {
                 var old = orb.Lava.Lavas;
-                orb.Lava.Lavas = new Domain.Models.State.LevelEntity.Lava[orb.Lava.Lavas.Length + 1];
+                orb.Lava.Lavas = new Lava[orb.Lava.Lavas.Length + 1];
 
                 for (int i = 0; i < old.Length; i++)
                 {
@@ -81,7 +82,7 @@ namespace TF.EX.Patchs.Entity.LevelEntity
             _orbService.Save(orb);
         }
 
-        private void LoadState(TF.EX.Domain.Models.State.LevelEntity.Lava[] lavas, TowerFall.Lava self)
+        private void LoadState(Lava[] lavas, TowerFall.Lava self)
         {
             foreach (var lava in lavas)
             {

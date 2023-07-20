@@ -1,4 +1,4 @@
-﻿namespace TF.EX.Domain.Models.State
+﻿namespace TF.EX.Domain.Models.State.Entity.LevelEntity
 {
     public class Flash
     {
@@ -9,9 +9,9 @@
 
         public Flash(bool is_flashing, float flash_counter, float flash_interval)
         {
-            this.IsFlashing = is_flashing;
-            this.FlashCounter = flash_counter;
-            this.FlashInterval = flash_interval;
+            IsFlashing = is_flashing;
+            FlashCounter = flash_counter;
+            FlashInterval = flash_interval;
         }
     }
 }

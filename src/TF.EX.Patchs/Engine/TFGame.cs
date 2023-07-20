@@ -21,7 +21,6 @@ namespace TF.EX.Patchs.Engine
         public static bool HasExported = false;
         public static InputRenderer[] ReplayInputRenderers = new InputRenderer[4];
 
-        private bool IsFirstUpdate = true;
         private bool _shouldShowUpdateDialog = true;
 
         private readonly INetplayManager _netplayManager;
@@ -66,6 +65,10 @@ namespace TF.EX.Patchs.Engine
         {
             orig();
 
+            AppDomain.CurrentDomain.ProcessExit += new EventHandler(OnProcessExit);
+            LastUpdate = DateTime.Now;
+            Accumulator = TimeSpan.Zero;
+
             if (Config.SERVER.Contains(".com")) //TODO: find a better way to detect local / production
             {
                 Task.Run(() => AutoUpdateIfNeeded()).GetAwaiter().GetResult();
@@ -94,25 +97,12 @@ namespace TF.EX.Patchs.Engine
 
         private void TFGameUpdate_Patch(On.TowerFall.TFGame.orig_Update orig, TowerFall.TFGame self, GameTime gameTime)
         {
-            var dynTFGame = DynamicData.For(self);
-
             if (self.Scene is TowerFall.MainMenu)
             {
                 HandleMenuAction(self);
             }
 
-            if (IsFirstUpdate)
-            {
-                IsFirstUpdate = false;
-                self.IsFixedTimeStep = true;
-
-                LastUpdate = DateTime.Now;
-                Accumulator = TimeSpan.Zero;
-
-                AppDomain.CurrentDomain.ProcessExit += new EventHandler(OnProcessExit);
-            }
-
-            var gameLoaded = dynTFGame.Get<bool>("GameLoaded");
+            ManageTimeStep(self);
 
             if (_netplayManager.IsDisconnected() && !HasExported)
             {
@@ -122,6 +112,9 @@ namespace TF.EX.Patchs.Engine
 
             if (_netplayManager.IsReplayMode())
             {
+                var dynTFGame = DynamicData.For(self);
+                var gameLoaded = dynTFGame.Get<bool>("GameLoaded");
+
                 if (gameLoaded && self.Scene is Level && !(self.Scene as Level).Paused)
                 {
                     _replayService.RunFrame();
@@ -312,7 +305,7 @@ namespace TF.EX.Patchs.Engine
             var replayService = ServiceCollections.ResolveReplayService();
             var replay = replayService.GetReplay();
 
-            if (replay.Record.ToArray().Length > 0)
+            if (replay.Record.Count > 0)
             {
                 float num = 0f;
                 for (int i = 0; i < replay.Record[0].Inputs.Count; i++)
@@ -344,8 +337,30 @@ namespace TF.EX.Patchs.Engine
 
             if (!string.IsNullOrEmpty(clipped) && currentText != clipped)
             {
-                dynCommands.Set("currentText", $"{currentText} {clipped}");
+                dynCommands.Set("currentText", clipped);
                 Clipboard.Clear();
+            }
+        }
+
+        private void ManageTimeStep(TowerFall.TFGame self)
+        {
+            switch (self.Scene)
+            {
+                case Level _:
+                case LevelLoaderXML _:
+                    if (!self.IsFixedTimeStep)
+                    {
+                        self.IsFixedTimeStep = true;
+                        return;
+                    }
+                    break;
+                case TowerFall.MainMenu _:
+                    if (self.IsFixedTimeStep)
+                    {
+                        self.IsFixedTimeStep = false;
+                        return;
+                    }
+                    return;
             }
         }
     }

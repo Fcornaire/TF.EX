@@ -1,4 +1,4 @@
-﻿using TF.EX.Domain.Models.State.HUD;
+﻿using TF.EX.Domain.Models.State.Entity.HUD;
 
 namespace TF.EX.Domain.Ports.TF
 {

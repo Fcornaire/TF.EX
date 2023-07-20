@@ -121,7 +121,7 @@ namespace TF.EX.Domain
         {
             var hudService = ServiceProvider.GetRequiredService<IHUDService>();
             PurgeCachedPickup();
-            hudService.Update(new Domain.Models.State.HUD.HUD());
+            hudService.Update(new Domain.Models.State.Entity.HUD.HUD());
         }
 
         /// <summary>

@@ -1,6 +1,6 @@
 ﻿using static TowerFall.Lava;
 
-namespace TF.EX.Domain.Models.State.LevelEntity
+namespace TF.EX.Domain.Models.State.Entity.LevelEntity
 {
     public struct Lava
     {

@@ -2,7 +2,7 @@
 using Monocle;
 using MonoMod.Utils;
 using TF.EX.Domain.Extensions;
-using TF.EX.Domain.Models.State.LevelEntity.Chest;
+using TF.EX.Domain.Models.State.Entity.LevelEntity.Chest;
 
 namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 {

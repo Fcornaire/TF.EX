@@ -3,8 +3,7 @@ using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Externals;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Models.State;
-using TF.EX.Domain.Models.State.HUD;
-using TF.EX.Domain.Models.State.Layer;
+using TF.EX.Domain.Models.State.Entity.HUD;
 using TF.EX.Domain.Models.State.Orb;
 using TF.EX.Domain.Utils;
 
@@ -40,9 +39,6 @@ namespace TF.EX.Domain.Context
         void SaveGamePlayerLayerActualDepthLookup(Dictionary<int, double> toSave);
         void ResetGamePlayLayerActualDepthLookup();
         void ResetReplay();
-        IEnumerable<BackgroundElement> GetBackgroundElements();
-        void UpdateBackgroundElements(IEnumerable<BackgroundElement> backgroundElements);
-
         int GetLocalPlayerIndex();
         int GetRemotePlayerIndex();
 
@@ -77,7 +73,6 @@ namespace TF.EX.Domain.Context
         private Rng _rng = Rng.Default;
         private Replay _replay;
         private Dictionary<int, double> _gamePlayerLayerActualDepthLookup = new Dictionary<int, double>();
-        private IEnumerable<BackgroundElement> _backgroundElements = new List<BackgroundElement>();
         private HUD _hudState;
         private ICollection<SFX> _desiredSfxs = new List<SFX>();
         private ICollection<SoundEffectPlaying> _currentSfxs = new List<SoundEffectPlaying>();
@@ -274,16 +269,6 @@ namespace TF.EX.Domain.Context
         public void ResetReplay()
         {
             _replay = null;
-        }
-
-        public IEnumerable<BackgroundElement> GetBackgroundElements()
-        {
-            return _backgroundElements;
-        }
-
-        public void UpdateBackgroundElements(IEnumerable<BackgroundElement> backgroundElements)
-        {
-            _backgroundElements = backgroundElements.ToList();
         }
 
         public int GetLocalPlayerIndex()

@@ -3,8 +3,8 @@ using Monocle;
 using MonoMod.Utils;
 using System.Reflection;
 using TF.EX.Domain.Extensions;
-using TF.EX.Domain.Models.State;
-using TF.EX.Domain.Models.State.Player;
+using TF.EX.Domain.Models.State.Entity.LevelEntity;
+using TF.EX.Domain.Models.State.Entity.LevelEntity.Player;
 
 namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 {
@@ -17,11 +17,11 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 
             var dynScheduler = DynamicData.For(dynPlayer.Get<Monocle.Scheduler>("scheduler"));
             var schedulerCountersCopy = new List<float>();
-            schedulerCountersCopy.CopyFloat(dynScheduler.Get<List<float>>("counters"));
+            schedulerCountersCopy.Copy(dynScheduler.Get<List<float>>("counters"));
             var schedulerStartCounters = new List<int>();
-            schedulerStartCounters.CopyInt(dynScheduler.Get<List<int>>("startCounters"));
+            schedulerStartCounters.Copy(dynScheduler.Get<List<int>>("startCounters"));
 
-            var schedulerState = new TF.EX.Domain.Models.State.Scheduler
+            var schedulerState = new TF.EX.Domain.Models.State.Entity.LevelEntity.Player.Scheduler
             {
                 SchedulerActions = dynScheduler.Get<List<Action>>("actions").ToNames(),
                 SchedulerCounters = schedulerCountersCopy,
@@ -63,7 +63,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 
             var lastAimDirection = dynPlayer.Get<float>("lastAimDirection");
 
-            return new TF.EX.Domain.Models.State.Player.Player
+            return new TF.EX.Domain.Models.State.Entity.LevelEntity.Player.Player
             {
                 MarkedForRemoval = entity.MarkedForRemoval,
                 ActualDepth = actualDepth,
@@ -206,13 +206,13 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             {
                 var counters = dynScheduler.Get<List<float>>("counters");
                 counters.Clear();
-                counters.CopyFloat(toLoad.Scheduler.SchedulerCounters);
+                counters.Copy(toLoad.Scheduler.SchedulerCounters);
             }
             if (toLoad.Scheduler.SchedulerStartCounters != null)
             {
                 var startCounters = dynScheduler.Get<List<int>>("startCounters");
                 startCounters.Clear();
-                startCounters.CopyInt(toLoad.Scheduler.SchedulerStartCounters);
+                startCounters.Copy(toLoad.Scheduler.SchedulerStartCounters);
             }
 
             var platforms = entity.Level.GetAll<TowerFall.Platform>().ToArray();
@@ -305,28 +305,28 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             return arrow;
         }
 
-        private static TF.EX.Domain.Models.State.Hitbox GetHitbox(TowerFall.Player self)
+        private static Domain.Models.State.Entity.LevelEntity.Player.Hitbox GetHitbox(TowerFall.Player self)
         {
             var dynPlayer = DynamicData.For(self);
             var normalHitbox = dynPlayer.Get<TowerFall.WrapHitbox>("normalHitbox");
             if (self.Collider == normalHitbox)
             {
-                return TF.EX.Domain.Models.State.Hitbox.Normal;
+                return Domain.Models.State.Entity.LevelEntity.Player.Hitbox.Normal;
             }
 
-            return TF.EX.Domain.Models.State.Hitbox.Ducking;
+            return Domain.Models.State.Entity.LevelEntity.Player.Hitbox.Ducking;
         }
 
-        private static void LoadHitbox(TowerFall.Player self, TF.EX.Domain.Models.State.Hitbox hitbox)
+        private static void LoadHitbox(TowerFall.Player self, Domain.Models.State.Entity.LevelEntity.Player.Hitbox hitbox)
         {
             var dynPlayer = DynamicData.For(self);
 
             switch (hitbox)
             {
-                case TF.EX.Domain.Models.State.Hitbox.Normal:
+                case Domain.Models.State.Entity.LevelEntity.Player.Hitbox.Normal:
                     dynPlayer.Invoke("UseNormalHitbox");
                     break;
-                case TF.EX.Domain.Models.State.Hitbox.Ducking:
+                case Domain.Models.State.Entity.LevelEntity.Player.Hitbox.Ducking:
                     dynPlayer.Invoke("UseDuckingHitbox");
                     break;
             }

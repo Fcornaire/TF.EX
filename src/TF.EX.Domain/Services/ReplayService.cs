@@ -49,7 +49,7 @@ namespace TF.EX.Domain.Services
             var filePath = $"{REPLAYS_FOLDER}\\{filename}";
             //var filePathJson = $"{REPLAYS_FOLDER}\\{filenameJson}";
 
-            var players = replay.Record.SelectMany(r => r.GameState.Players).ToList();
+            var players = replay.Record.SelectMany(r => r.GameState.Entities.Players).ToList();
 
             //var json = JsonConvert.SerializeObject(players, Formatting.Indented);
             //File.WriteAllText(filePathJson, json);
@@ -86,7 +86,7 @@ namespace TF.EX.Domain.Services
                 var firstRecord = replay.Record.First(rec => rec.GameState.Rng != null);
                 _rngService.SetSeed(firstRecord.GameState.Rng.Seed);
 
-                for (int i = 0; i < firstRecord.GameState.Players.Count(); i++)
+                for (int i = 0; i < firstRecord.GameState.Entities.Players.Count(); i++)
                 {
                     TFGame.Players[i] = true;
                 }

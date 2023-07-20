@@ -6,5 +6,7 @@
         public List<ForegroundElement> ForegroundElements { get; set; }
 
         public float LightingLayerSine { get; set; }
+        public Dictionary<int, double> GameplayLayerActualDepthLookup { get; set; } = new Dictionary<int, double>();
+
     }
 }

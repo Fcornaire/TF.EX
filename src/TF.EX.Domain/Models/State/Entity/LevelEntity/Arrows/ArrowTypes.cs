@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace TF.EX.Domain.Models.State.Arrows
+namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
 {
     public enum ArrowTypes : int
     {
