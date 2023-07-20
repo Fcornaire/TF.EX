@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace TF.EX.Domain.Models.State
+﻿namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Player
 {
     public class Scheduler
     {

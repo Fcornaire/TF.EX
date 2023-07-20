@@ -1,4 +1,4 @@
-﻿namespace TF.EX.Domain.Models.State.HUD
+﻿namespace TF.EX.Domain.Models.State.Entity.HUD
 {
     public class VersusRoundResults
     {

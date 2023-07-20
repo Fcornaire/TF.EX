@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace TF.EX.Domain.Models.State.LevelEntity.Chest
+namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Chest
 {
     public enum ChestState : int
     {

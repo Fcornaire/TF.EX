@@ -40,10 +40,10 @@ namespace TF.EX.Patchs.Layer
             if (entity is VersusStart)
             {
                 var hud = _hudService.Get();
-                _hudService.Update(new Domain.Models.State.HUD.HUD
+                _hudService.Update(new Domain.Models.State.Entity.HUD.HUD
                 {
-                    VersusStart = new Domain.Models.State.HUD.VersusStart(),
-                    VersusRoundResults = new Domain.Models.State.HUD.VersusRoundResults
+                    VersusStart = new Domain.Models.State.Entity.HUD.VersusStart(),
+                    VersusRoundResults = new Domain.Models.State.Entity.HUD.VersusRoundResults
                     {
                         CoroutineState = hud.VersusRoundResults.CoroutineState
                     }
@@ -53,14 +53,14 @@ namespace TF.EX.Patchs.Layer
             if (entity is VersusRoundResults)
             {
                 var hud = _hudService.Get();
-                _hudService.Update(new Domain.Models.State.HUD.HUD
+                _hudService.Update(new Domain.Models.State.Entity.HUD.HUD
                 {
-                    VersusStart = new Domain.Models.State.HUD.VersusStart
+                    VersusStart = new Domain.Models.State.Entity.HUD.VersusStart
                     {
                         CoroutineState = hud.VersusStart.CoroutineState,
                         TweenState = hud.VersusStart.TweenState
                     },
-                    VersusRoundResults = new Domain.Models.State.HUD.VersusRoundResults()
+                    VersusRoundResults = new Domain.Models.State.Entity.HUD.VersusRoundResults()
                 });
             }
 
@@ -72,10 +72,10 @@ namespace TF.EX.Patchs.Layer
                 _sessionService.SaveSession(session);
             }
 
-            if (entity is LavaControl)
+            if (entity is TowerFall.LavaControl)
             {
                 var orb = _orbService.GetOrb();
-                orb.Lava = TF.EX.Domain.Models.State.LevelEntity.LavaControl.Default;
+                orb.Lava = Domain.Models.State.Entity.LevelEntity.LavaControl.Default;
                 _orbService.Save(orb);
             }
         }

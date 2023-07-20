@@ -1,5 +1,5 @@
 ﻿using TF.EX.Domain.Context;
-using TF.EX.Domain.Models.State.HUD;
+using TF.EX.Domain.Models.State.Entity.HUD;
 using TF.EX.Domain.Ports.TF;
 
 namespace TF.EX.Domain.Services.TF

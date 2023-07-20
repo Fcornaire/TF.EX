@@ -69,24 +69,7 @@ namespace TF.EX.Patchs.Scene
                 _sfxService.Synchronize((int)self.FrameCounter - 1, _netplayManager.IsTestMode());
             }
 
-            var dynEngine = DynamicData.For(TowerFall.TFGame.Instance);
-            var nextScene = dynEngine.Get<Monocle.Scene>("nextScene");
-            if (nextScene is LevelLoaderXML)
-            {
-                _sfxService.Clear();
-                var currentFrame = self.FrameCounter;
-                dynEngine.Set("scene", dynEngine.Get<Monocle.Scene>("nextScene"));
-                while (!(TFGame.Instance.Scene as LevelLoaderXML).Finished)
-                {
-                    TFGame.Instance.Scene.Update();
-                }
-
-                dynEngine.Set("scene", dynEngine.Get<Monocle.Scene>("nextScene"));
-                TowerFall.TFGame.Instance.Scene.Begin();
-                TowerFall.TFGame.Instance.Scene.Update();
-
-                dynEngine.Set("FrameCounter", currentFrame);
-            }
+            SkipLevelLoaderIfNeeded();
         }
 
         private void Level_HandlePausing(On.TowerFall.Level.orig_HandlePausing orig, Level self)
@@ -141,6 +124,28 @@ namespace TF.EX.Patchs.Scene
                         player.Add(indicator);
                     }
                 }
+            }
+        }
+
+        private void SkipLevelLoaderIfNeeded()
+        {
+            var dynEngine = DynamicData.For(TowerFall.TFGame.Instance);
+            var nextScene = dynEngine.Get<Monocle.Scene>("nextScene");
+            if (nextScene is LevelLoaderXML)
+            {
+                _sfxService.Clear();
+                var currentFrame = TowerFall.TFGame.Instance.Scene.FrameCounter;
+                dynEngine.Set("scene", dynEngine.Get<Monocle.Scene>("nextScene"));
+                while (!(TFGame.Instance.Scene as LevelLoaderXML).Finished)
+                {
+                    TFGame.Instance.Scene.Update();
+                }
+
+                dynEngine.Set("scene", dynEngine.Get<Monocle.Scene>("nextScene"));
+                TowerFall.TFGame.Instance.Scene.Begin();
+                TowerFall.TFGame.Instance.Scene.Update();
+
+                dynEngine.Set("FrameCounter", currentFrame);
             }
         }
     }

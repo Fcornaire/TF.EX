@@ -2,8 +2,7 @@
 using Monocle;
 using MonoMod.Utils;
 using TF.EX.Domain.Extensions;
-using TF.EX.Domain.Models.State;
-using TF.EX.Domain.Models.State.Arrows;
+using TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows;
 
 namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 {
@@ -40,7 +39,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 IsFrozen = entity.Frozen,
                 IsVisible = entity.Visible,
                 MarkedForRemoval = entity.MarkedForRemoval,
-                Flash = new Flash(entity.Flashing, flashCounter, flashInterval),
+                Flash = new Domain.Models.State.Entity.LevelEntity.Flash(entity.Flashing, flashCounter, flashInterval),
                 HasUnhittableEntity = entity.CannotHit != null
             };
         }

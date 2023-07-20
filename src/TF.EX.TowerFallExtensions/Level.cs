@@ -1,13 +1,12 @@
 ﻿using Microsoft.Xna.Framework;
 using Monocle;
 using MonoMod.Utils;
-using System.Reflection;
 using TF.EX.Domain;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models.State;
-using TF.EX.Domain.Models.State.Arrows;
+using TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows;
+using TF.EX.Domain.Models.State.Entity.LevelEntity.Chest;
 using TF.EX.Domain.Models.State.Layer;
-using TF.EX.Domain.Models.State.LevelEntity.Chest;
 using TF.EX.TowerFallExtensions.Entity.LevelEntity;
 using TF.EX.TowerFallExtensions.Layer;
 using TowerFall;
@@ -16,81 +15,6 @@ namespace TF.EX.TowerFallExtensions
 {
     public static class LevelExtensions
     {
-        public static bool IsLocalPlayerFrozen(this Level level)
-        {
-            if (level == null)
-            {
-                return false;
-            }
-
-            var players = level[GameTags.Player];
-            if (players != null && players.Count > 0)
-            {
-                var localPlayer = (TowerFall.Player)level[GameTags.Player][0];
-
-                if (localPlayer != null && localPlayer.State.Equals(TowerFall.Player.PlayerStates.Frozen))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        public static List<T> GetFields<T>(this object instance)
-        {
-            List<T> fieldList = new List<T>();
-
-            Type type = instance.GetType();
-            FieldInfo[] fields = type.GetFields(BindingFlags.Public | BindingFlags.Instance);
-
-            foreach (FieldInfo field in fields)
-            {
-                if (typeof(T).IsAssignableFrom(field.FieldType))
-                {
-                    T fieldValue = (T)field.GetValue(instance);
-                    fieldList.Add(fieldValue);
-                }
-            }
-
-            return fieldList;
-        }
-
-        public static T GetField<T>(this object instance, string propertyName)
-        {
-            Type type = instance.GetType();
-            FieldInfo[] fields = type.GetFields(BindingFlags.Public | BindingFlags.Instance);
-
-            foreach (FieldInfo field in fields)
-            {
-                if (typeof(T).IsAssignableFrom(field.FieldType) && field.Name.ToUpper() == propertyName.ToUpper())
-                {
-                    T fieldValue = (T)field.GetValue(instance);
-                    return fieldValue;
-                }
-            }
-
-            return default(T);
-        }
-
-        public static List<T> GetStaticFields<T>(Type type)
-        {
-            List<T> fieldsList = new List<T>();
-
-            FieldInfo[] fields = type.GetFields(BindingFlags.Public | BindingFlags.Static);
-
-            foreach (FieldInfo field in fields)
-            {
-                if (field.FieldType == typeof(T))
-                {
-                    T fieldValue = (T)field.GetValue(null);
-                    fieldsList.Add(fieldValue);
-                }
-            }
-
-            return fieldsList;
-        }
-
         public static void Delete<T>(this Level level) where T : Monocle.Entity
         {
             var entity = level.Layers.SelectMany(layer => layer.Value.Entities)
@@ -161,271 +85,33 @@ namespace TF.EX.TowerFallExtensions
             level.DeleteAll<TowerFall.PlayerCorpse>();
         }
 
-        public static GameState GetState(this Level entity)
+        public static GameState GetState(this Level self)
         {
             var gameState = new GameState();
+
             var hudService = ServiceCollections.ResolveHUDService();
-            var arrowService = ServiceCollections.ResolveArrowService();
-            (_, var currentMode) = ServiceCollections.ResolveStateMachineService();
-            var netplayManager = ServiceCollections.ResolveNetplayManager();
-            var sessionService = ServiceCollections.ResolveSessionService();
-            var orbService = ServiceCollections.ResolveOrbService();
             var rngService = ServiceCollections.ResolveRngService();
             var sfxService = ServiceCollections.ResolveSFXService();
 
-            //JumpPads
-            var jumpPads = entity.GetAll<JumpPad>();
-            var gameStateJumpPads = new List<TF.EX.Domain.Models.State.LevelEntity.JumpPad>();
-            foreach (var jumpPad in jumpPads)
-            {
-                gameStateJumpPads.Add(jumpPad.GetState());
-            }
-            gameState.JumpPads = gameStateJumpPads;
-
-            //SFX
+            gameState.AddJumpPadsState(self);
             gameState.SFXs = sfxService.Get();
-
-            //Levels
-            var dynLevelSystem = DynamicData.For(entity.Session.MatchSettings.LevelSystem);
-            var levels = dynLevelSystem.Get<List<string>>("levels");
-            var lastLevel = dynLevelSystem.Get<string>("lastLevel");
-            if (levels.Count > 0 && levels[0].Contains("00.oel"))
-            {
-                levels.RemoveAt(0);
-            }
-
-            gameState.RoundLevels.Nexts = levels.ToList();
-            gameState.RoundLevels.Last = lastLevel;
-
-            gameState.IsLevelFrozen = entity.Frozen;
-
-            var dynRoundLogic = DynamicData.For(entity.Session.RoundLogic);
-            gameState.RoundLogic.WasFinalKill = dynRoundLogic.Get<bool>("wasFinalKill");
-            gameState.RoundLogic.Time = entity.Session.RoundLogic.Time;
-
-            var dynLightingLayer = DynamicData.For(entity.LightingLayer);
-            var spotlights = dynLightingLayer.Get<LevelEntity[]>("spotlight");
-            if (spotlights != null)
-            {
-                foreach (var spotlight in spotlights)
-                {
-                    var dynLevelEntity = DynamicData.For(spotlight);
-                    gameState.RoundLogic.SpotlightDephts.Add(dynLevelEntity.Get<double>("actualDepth"));
-                }
-            }
-
-            //EventLogs
-            gameState.EventLogs = entity.Session.RoundLogic.Events.ToModel();
-
-            //Versus Start
-            //VersusRoundResults
-            gameState.Hud = hudService.Get();
-
-            //Players save state
-            var playersState = new List<Domain.Models.State.Player.Player>();
-            if (entity[GameTags.Player] != null)
-            {
-                var players = entity[GameTags.Player];
-                players.Sort(CompareDepth); //making sure we use the same order for the game state
-
-                foreach (TowerFall.Player player in players)
-                {
-                    playersState.Add(player.GetState());
-                }
-            }
-            gameState.Players = playersState;
-
-            //PlayerCorpse save
-            var playerCorpsesState = new List<Domain.Models.State.Player.PlayerCorpse>();
-            if (entity[GameTags.Corpse] != null && entity[GameTags.Corpse].Count > 0)
-            {
-                var gamePlayerCorpses = entity[GameTags.Corpse];
-                foreach (TowerFall.PlayerCorpse playerCorpse in gamePlayerCorpses)
-                {
-                    var pc = playerCorpse.GetState();
-                    playerCorpsesState.Add(pc);
-                    ServiceCollections.AddToCache(pc.ActualDepth, playerCorpse);
-                }
-            }
-            gameState.PlayerCorpses = playerCorpsesState;
-
-            //Arrow save state
-            var arrowsState = new List<TF.EX.Domain.Models.State.Arrows.Arrow>();
-            if (entity[GameTags.Arrow] != null && entity[GameTags.Arrow].Count > 0)
-            {
-                var arrows = entity[GameTags.Arrow].ToArray();
-
-                foreach (TowerFall.Arrow arrow in arrows)
-                {
-                    var dynArrow = DynamicData.For(arrow);
-                    dynArrow.Set("counter", Vector2.Zero);//For some weird reason, the counter is not reseted an ctor, so we do it here
-                                                          //Oh i think i found why, it's might be du to the arrow cache 
-
-                    if (arrow.StuckTo != null && arrow.State == TowerFall.Arrow.ArrowStates.Stuck)
-                    {
-                        arrowService.AddStuckArrow(arrow.Position.ToModel(), arrow.StuckTo);
-                    }
-                    arrowsState.Add(arrow.GetState());
-                }
-            }
-            gameState.Arrows = arrowsState;
-
-            //Chests save state
-            var chestsState = new List<TF.EX.Domain.Models.State.LevelEntity.Chest.Chest>();
-            if (entity[GameTags.TreasureChest] != null && entity[GameTags.TreasureChest].Count > 0)
-            {
-                var chests = entity[GameTags.TreasureChest].ToArray();
-
-                foreach (TowerFall.TreasureChest chest in chests)
-                {
-                    var che = chest.GetState();
-                    chestsState.Add(che);
-                    ServiceCollections.AddToCache(che.ActualDepth, chest);
-                }
-            }
-            gameState.Chests = chestsState;
-
-            //Pickup save state
-            var pickupsState = new List<TF.EX.Domain.Models.State.LevelEntity.Chest.Pickup>();
-            var gamePickups = entity.GetAll<TowerFall.Pickup>().ToArray();
-            if (gamePickups != null && gamePickups.Length > 0)
-            {
-                foreach (TowerFall.Pickup pickup in gamePickups)
-                {
-                    var pick = pickup.GetState();
-                    pickupsState.Add(pick);
-                    ServiceCollections.AddToCache(pick.ActualDepth, pickup);
-                }
-            }
-            gameState.Pickups = pickupsState;
-
-            //Session save
-            if (currentMode.IsNetplay() || netplayManager.IsTestMode())
-            {
-                var roundEndCounter = dynRoundLogic.Get<RoundEndCounter>("roundEndCounter");
-                var endCounter = DynamicData.For(roundEndCounter).Get<float>("endCounter");
-                var roundStarted = entity.Session.RoundLogic.RoundStarted;
-                var done = dynRoundLogic.Get<bool>("done");
-                var roundIndex = entity.Session.RoundIndex;
-
-                var isEnding = entity.Session.CurrentLevel.Ending;
-
-                var miasmaCounter = dynRoundLogic.Get<Counter>("miasmaCounter");
-                var counter = DynamicData.For(miasmaCounter).Get<float>("counter");
-
-                var stateSession = sessionService.GetSession();
-                stateSession.RoundStarted = roundStarted;
-                stateSession.RoundEndCounter = endCounter;
-                stateSession.IsEnding = isEnding;
-                stateSession.Miasma.Counter = counter;
-                stateSession.IsDone = done;
-                stateSession.RoundIndex = roundIndex;
-                var session = new Domain.Models.State.Session
-                {
-                    IsEnding = stateSession.IsEnding,
-                    RoundEndCounter = stateSession.RoundEndCounter,
-                    IsDone = stateSession.IsDone,
-                    RoundIndex = stateSession.RoundIndex,
-                    RoundStarted = stateSession.RoundStarted,
-                    Miasma = new Domain.Models.State.Miasma
-                    {
-                        Counter = stateSession.Miasma.Counter,
-                        CoroutineTimer = stateSession.Miasma.CoroutineTimer
-                    },
-                    Scores = entity.Session.Scores.ToArray(),
-                    OldScores = entity.Session.OldScores.ToArray(),
-                };
-
-                sessionService.SaveSession(stateSession);
-                gameState.Session = session;
-            }
-
-            //Orbs save
-            //var orb = orbService.GetOrb();
-
-            var orb = entity.OrbLogic.GetState();
-
-            //orb.Time.EngineTimeRate = TFGame.TimeRate;
-            //orb.Time.EngineTimeMult = TFGame.TimeRate; //In Fixed time step, TimeRate = TimeMult
-
-            //orbService.Save(orb);
-            gameState.Orb = orb;
-
-            //Lantern save
-            var lanternsState = new List<TF.EX.Domain.Models.State.LevelEntity.Lantern>();
-            var gameLanterns = entity.GetAll<TowerFall.Lantern>().ToArray();
-            if (gameLanterns != null && gameLanterns.Length > 0)
-            {
-                foreach (TowerFall.Lantern lantern in gameLanterns)
-                {
-                    var lan = lantern.GetState();
-                    lanternsState.Add(lan);
-                }
-            }
-            gameState.Lanterns = lanternsState;
-
-            //Chain save
-            var chainsState = new List<TF.EX.Domain.Models.State.LevelEntity.Chain>();
-            if (entity[GameTags.Chain] != null && entity[GameTags.Chain].Count > 0)
-            {
-                var gameChains = entity[GameTags.Chain].ToArray();
-                foreach (TowerFall.Chain chain in gameChains)
-                {
-                    var ch = chain.GetState();
-                    chainsState.Add(ch);
-                }
-            }
-            gameState.Chains = chainsState;
-
-            //Background save
-            var bgElements = entity.Background.GetBGElements().ToArray();
-            List<BackgroundElement> bgs = new List<BackgroundElement>();
-            for (int i = 0; i < bgElements.Length; i++)
-            {
-                TowerFall.Background.BGElement bg = bgElements[i];
-                if (bg is TowerFall.Background.ScrollLayer)
-                {
-                    var bgModel = (bg as TowerFall.Background.ScrollLayer).GetState(i);
-                    bgs.Add(bgModel);
-                }
-            }
-            gameState.Layer.BackgroundElements = bgs;
-
-            //Foreground save
-            var fgElements = entity.Foreground.GetBGElements().ToArray();
-            List<ForegroundElement> fgs = new List<ForegroundElement>();
-            for (int i = 0; i < fgElements.Length; i++)
-            {
-                TowerFall.Background.BGElement fg = fgElements[i];
-                if (fg is TowerFall.Background.WavyLayer)
-                {
-                    var fgModel = (fg as TowerFall.Background.WavyLayer).GetState(i);
-                    fgs.Add(fgModel);
-                }
-            }
-            gameState.Layer.ForegroundElements = fgs;
-
-            var sineWave = dynLightingLayer.Get<SineWave>("sine");
-            gameState.Layer.LightingLayerSine = sineWave.Counter;
-
-            entity.DeleteAll<TowerFall.Hat>(); //TODO: Remove and save hats
-
-            var dynGameplayLayer = DynamicData.For(entity.GetGameplayLayer());
-            var actualDepthLookup = dynGameplayLayer.Get<Dictionary<int, double>>("actualDepthLookup");
-            actualDepthLookup.Remove(-52);
-
-            actualDepthLookup.Remove(-600); //TODO: Miasma
-
-            sessionService.SaveGamePlayLayerActualDepthLookup(actualDepthLookup);
-            gameState.GamePlayerLayerActualDepthLookup = actualDepthLookup;
-
+            gameState.AddRoundLogicState(self);
+            gameState.Entities.Hud = hudService.Get();
+            gameState.AddPlayersState(self);
+            gameState.AddPlayersCorpseState(self);
+            gameState.AddArrowState(self);
+            gameState.AddChestsState(self);
+            gameState.AddPickupsState(self);
+            gameState.AddSessionState(self);
+            gameState.AddOrbState(self);
+            gameState.AddLanternState(self);
+            gameState.AddChainState(self);
+            gameState.AddLayerState(self);
             gameState.Rng = rngService.Get();
-            gameState.Frame = (int)entity.FrameCounter;
-
+            gameState.Frame = (int)self.FrameCounter;
             gameState.MatchStats = new MatchStats[] {
-                entity.Session.MatchStats[0], entity.Session.MatchStats[1],
+                self.Session.MatchStats[0], self.Session.MatchStats[1],
             };
-
 
             return gameState;
         }
@@ -445,9 +131,9 @@ namespace TF.EX.TowerFallExtensions
             sfxService.Load(gameState.SFXs);
 
             //JumpPads load
-            var inGamejumpPads = level.GetAll<JumpPad>();
+            var inGamejumpPads = level.GetAll<TowerFall.JumpPad>();
 
-            foreach (var jumpPad in gameState.JumpPads)
+            foreach (var jumpPad in gameState.Entities.JumpPads)
             {
                 var jumpPadToLoad = inGamejumpPads.FirstOrDefault(jp =>
                 {
@@ -464,9 +150,9 @@ namespace TF.EX.TowerFallExtensions
 
             //Round levels load
             var dynLevelSystem = DynamicData.For(level.Session.MatchSettings.LevelSystem);
-            var roundLevels = gameState.RoundLevels.Nexts.ToList();
+            var roundLevels = gameState.RoundLogic.RoundLevels.Nexts.ToList();
             dynLevelSystem.Set("levels", roundLevels);
-            dynLevelSystem.Set("lastLevel", gameState.RoundLevels.Last);
+            dynLevelSystem.Set("lastLevel", gameState.RoundLogic.RoundLevels.Last);
 
             //Session load
             var session = new TF.EX.Domain.Models.State.Session
@@ -492,7 +178,7 @@ namespace TF.EX.TowerFallExtensions
 
             if (session.RoundIndex != level.Session.RoundIndex)
             {
-                roundLevels.Insert(0, gameState.RoundLevels.Last);
+                roundLevels.Insert(0, gameState.RoundLogic.RoundLevels.Last);
                 dynLevelSystem.Set("levels", roundLevels);
 
                 var dynSession = DynamicData.For(level.Session);
@@ -513,7 +199,7 @@ namespace TF.EX.TowerFallExtensions
 
                 if (level.Session.RoundIndex != 0)
                 {
-                    foreach (var chest in gameState.Chests)
+                    foreach (var chest in gameState.Entities.Chests)
                     {
                         var dummyChest = new TreasureChest(Vector2.Zero, TreasureChest.Types.AutoOpen, TreasureChest.AppearModes.Time, TowerFall.Pickups.Arrows);
 
@@ -527,7 +213,7 @@ namespace TF.EX.TowerFallExtensions
             }
 
             var dynGameplayLayer = DynamicData.For(level.GetGameplayLayer());
-            dynGameplayLayer.Set("actualDepthLookup", gameState.GamePlayerLayerActualDepthLookup);
+            dynGameplayLayer.Set("actualDepthLookup", gameState.Layer.GameplayLayerActualDepthLookup);
 
             var dynScene = DynamicData.For(level as Monocle.Scene);
             dynScene.Set("FrameCounter", gameState.Frame);
@@ -579,18 +265,18 @@ namespace TF.EX.TowerFallExtensions
             }
 
             //Event logs
-            dynRoundLogic.Set("Events", gameState.EventLogs.ToTFModel());
+            dynRoundLogic.Set("Events", gameState.RoundLogic.EventLogs.ToTFModel());
 
-            hudService.Update(new Domain.Models.State.HUD.HUD());
+            hudService.Update(new Domain.Models.State.Entity.HUD.HUD());
             //VersusRoundResults
             level.Delete<VersusRoundResults>();
             Sounds.sfx_multiCoinEarned.Stop();
             level.Delete<HUDFade>();
 
-            if (gameState.Hud.VersusRoundResults.CoroutineState > 0)
+            if (gameState.Entities.Hud.VersusRoundResults.CoroutineState > 0)
             {
                 var hudFade = new TowerFall.HUDFade();
-                var versusRoundResults = new TowerFall.VersusRoundResults(level.Session, gameState.EventLogs.ToTFModel());
+                var versusRoundResults = new TowerFall.VersusRoundResults(level.Session, gameState.RoundLogic.EventLogs.ToTFModel());
                 var dynVersusRoundResults = DynamicData.For(versusRoundResults);
                 dynVersusRoundResults.Set("Scene", level);
                 dynVersusRoundResults.Set("Level", level);
@@ -601,7 +287,7 @@ namespace TF.EX.TowerFallExtensions
                 versusRoundResults.Added();
                 hudFade.Added();
 
-                for (int i = 0; i < gameState.Hud.VersusRoundResults.CoroutineState; i++)
+                for (int i = 0; i < gameState.Entities.Hud.VersusRoundResults.CoroutineState; i++)
                 {
                     versusRoundResults.Update();
                     hudFade.Update();
@@ -611,7 +297,7 @@ namespace TF.EX.TowerFallExtensions
             //VersusStart
             level.Delete<VersusStart>();
 
-            if (gameState.Hud.VersusStart.CoroutineState > 0)
+            if (gameState.Entities.Hud.VersusStart.CoroutineState > 0)
             {
                 var versusStart = new TowerFall.VersusStart(level.Session);
                 var dynVersusStart = DynamicData.For(versusStart);
@@ -621,14 +307,14 @@ namespace TF.EX.TowerFallExtensions
                 level.Layers.FirstOrDefault(l => l.Value.Index == versusStart.LayerIndex).Value.Entities.Add(versusStart);
                 versusStart.Added();
 
-                for (int i = 0; i < gameState.Hud.VersusStart.CoroutineState; i++)
+                for (int i = 0; i < gameState.Entities.Hud.VersusStart.CoroutineState; i++)
                 {
                     versusStart.Update();
                 }
             }
 
             //Players
-            foreach (Domain.Models.State.Player.Player toLoad in gameState.Players.ToArray())
+            foreach (Domain.Models.State.Entity.LevelEntity.Player.Player toLoad in gameState.Entities.Players.ToArray())
             {
                 var gamePlayer = level.GetPlayer(toLoad.Index);
                 if (gamePlayer != null)
@@ -656,9 +342,9 @@ namespace TF.EX.TowerFallExtensions
 
             //PlayerCorpses
             level.DeleteAll<TowerFall.PlayerCorpse>();
-            var corpsesToLoad = gameState.PlayerCorpses.ToArray();
+            var corpsesToLoad = gameState.Entities.PlayerCorpses.ToArray();
 
-            foreach (Domain.Models.State.Player.PlayerCorpse toLoad in corpsesToLoad)
+            foreach (Domain.Models.State.Entity.LevelEntity.Player.PlayerCorpse toLoad in corpsesToLoad)
             {
                 var cachedPlayerCorpse = ServiceCollections.GetCached<TowerFall.PlayerCorpse>(toLoad.ActualDepth);
 
@@ -691,7 +377,7 @@ namespace TF.EX.TowerFallExtensions
             {
                 level.DeleteAll<TowerFall.Arrow>();
 
-                foreach (TF.EX.Domain.Models.State.Arrows.Arrow toLoad in gameState.Arrows.ToArray())
+                foreach (Domain.Models.State.Entity.LevelEntity.Arrows.Arrow toLoad in gameState.Entities.Arrows.ToArray())
                 {
                     TowerFall.LevelEntity entityHavingArrow = level.GetPlayerOrCorpse(toLoad.PlayerIndex);
                     if (entityHavingArrow == null)
@@ -714,7 +400,7 @@ namespace TF.EX.TowerFallExtensions
             {
                 level.DeleteAll<TowerFall.TreasureChest>();
 
-                foreach (var chestToLoad in gameState.Chests.ToArray())
+                foreach (var chestToLoad in gameState.Entities.Chests.ToArray())
                 {
                     var cachedChest = ServiceCollections.GetCached<TreasureChest>(chestToLoad.ActualDepth);
 
@@ -727,7 +413,7 @@ namespace TF.EX.TowerFallExtensions
             //Pickups load
             level.DeleteAll<TowerFall.Pickup>();
 
-            foreach (var pickupToLoad in gameState.Pickups.ToArray())
+            foreach (var pickupToLoad in gameState.Entities.Pickups.ToArray())
             {
                 var cachedPickup = ServiceCollections.GetCached<TowerFall.Pickup>(pickupToLoad.ActualDepth);
 
@@ -742,16 +428,14 @@ namespace TF.EX.TowerFallExtensions
             }
 
             //Orbs load
-            var orb = gameState.Orb;
-            //orbService.Save(orb);
+            var orb = gameState.Entities.Orb;
 
-            //TFGame.TimeRate = orb.Time.EngineTimeRate;
-            var lavaControl = level.Get<LavaControl>();
+            var lavaControl = level.Get<TowerFall.LavaControl>();
             if (orb.Lava.IsDefault())
             {
                 if (lavaControl != null)
                 {
-                    var lavas = level.GetAll<Lava>();
+                    var lavas = level.GetAll<TowerFall.Lava>();
 
                     foreach (var lava in lavas)
                     {
@@ -766,9 +450,9 @@ namespace TF.EX.TowerFallExtensions
             level.OrbLogic.LoadState(orb);
 
             //Lantern load
-            foreach (TF.EX.Domain.Models.State.LevelEntity.Lantern toLoad in gameState.Lanterns.ToArray())
+            foreach (Domain.Models.State.Entity.LevelEntity.Lantern toLoad in gameState.Entities.Lanterns.ToArray())
             {
-                var gameLantern = level.GetEntityByDepth(toLoad.ActualDepth) as Lantern;
+                var gameLantern = level.GetEntityByDepth(toLoad.ActualDepth) as TowerFall.Lantern;
 
                 if (gameLantern != null)
                 {
@@ -777,9 +461,9 @@ namespace TF.EX.TowerFallExtensions
             }
 
             //Chain load
-            foreach (TF.EX.Domain.Models.State.LevelEntity.Chain toLoad in gameState.Chains.ToArray())
+            foreach (Domain.Models.State.Entity.LevelEntity.Chain toLoad in gameState.Entities.Chains.ToArray())
             {
-                var gameChain = level.GetEntityByDepth(toLoad.ActualDepth) as Chain;
+                var gameChain = level.GetEntityByDepth(toLoad.ActualDepth) as TowerFall.Chain;
 
                 if (gameChain != null)
                 {
@@ -844,14 +528,14 @@ namespace TF.EX.TowerFallExtensions
         /// </summary>
         private static void PostLoad(this Level self, GameState gs)
         {
-            foreach (Domain.Models.State.Player.Player toLoad in gs.Players.ToArray())
+            foreach (Domain.Models.State.Entity.LevelEntity.Player.Player toLoad in gs.Entities.Players.ToArray())
             {
                 var gamePlayer = self.GetPlayer(toLoad.Index);
 
                 gamePlayer.LoadDeathArrow(toLoad.DeathArrowDepth);
             }
 
-            foreach (TF.EX.Domain.Models.State.Arrows.Arrow toLoad in gs.Arrows.ToArray())
+            foreach (Domain.Models.State.Entity.LevelEntity.Arrows.Arrow toLoad in gs.Entities.Arrows.ToArray())
             {
                 var arrow = self.GetEntityByDepth(toLoad.ActualDepth) as TowerFall.Arrow;
                 if (arrow != null)
@@ -860,7 +544,7 @@ namespace TF.EX.TowerFallExtensions
                 }
             }
 
-            foreach (var playerCorpse in gs.PlayerCorpses.ToArray())
+            foreach (var playerCorpse in gs.Entities.PlayerCorpses.ToArray())
             {
                 var gamePlayerCorpse = self.GetEntityByDepth(playerCorpse.ActualDepth) as TowerFall.PlayerCorpse;
                 gamePlayerCorpse.LoadArrowCushion(playerCorpse);
@@ -887,6 +571,259 @@ namespace TF.EX.TowerFallExtensions
             }
 
             return entity;
+        }
+
+        private static void AddJumpPadsState(this GameState state, Level level)
+        {
+            var jumpPads = level.GetAll<TowerFall.JumpPad>();
+            foreach (var jumpPad in jumpPads)
+            {
+                state.Entities.JumpPads.Add(jumpPad.GetState());
+            }
+        }
+
+        private static void AddRoundLogicState(this GameState gameState, Level level)
+        {
+            var dynLevelSystem = DynamicData.For(level.Session.MatchSettings.LevelSystem);
+            var levels = dynLevelSystem.Get<List<string>>("levels");
+            var lastLevel = dynLevelSystem.Get<string>("lastLevel");
+            if (levels.Count > 0 && levels[0].Contains("00.oel"))
+            {
+                levels.RemoveAt(0);
+            }
+
+            gameState.RoundLogic.RoundLevels.Nexts = levels.ToList();
+            gameState.RoundLogic.RoundLevels.Last = lastLevel;
+
+            gameState.IsLevelFrozen = level.Frozen;
+
+            var dynRoundLogic = DynamicData.For(level.Session.RoundLogic);
+            gameState.RoundLogic.WasFinalKill = dynRoundLogic.Get<bool>("wasFinalKill");
+            gameState.RoundLogic.Time = level.Session.RoundLogic.Time;
+
+            var dynLightingLayer = DynamicData.For(level.LightingLayer);
+            var spotlights = dynLightingLayer.Get<LevelEntity[]>("spotlight");
+            if (spotlights != null)
+            {
+                foreach (var spotlight in spotlights)
+                {
+                    var dynLevelEntity = DynamicData.For(spotlight);
+                    gameState.RoundLogic.SpotlightDephts.Add(dynLevelEntity.Get<double>("actualDepth"));
+                }
+            }
+
+            //EventLogs
+            gameState.RoundLogic.EventLogs = level.Session.RoundLogic.Events.ToModel();
+        }
+
+        private static void AddPlayersState(this GameState gameState, Level level)
+        {
+            if (level[GameTags.Player] != null)
+            {
+                var players = level[GameTags.Player];
+                players.Sort(CompareDepth); //making sure we use the same order for the game state
+
+                foreach (TowerFall.Player player in players)
+                {
+                    gameState.Entities.Players.Add(player.GetState());
+                }
+            }
+        }
+
+        private static void AddPlayersCorpseState(this GameState gameState, Level level)
+        {
+            if (level[GameTags.Corpse] != null && level[GameTags.Corpse].Count > 0)
+            {
+                var gamePlayerCorpses = level[GameTags.Corpse];
+                foreach (TowerFall.PlayerCorpse playerCorpse in gamePlayerCorpses)
+                {
+                    var pc = playerCorpse.GetState();
+                    gameState.Entities.PlayerCorpses.Add(pc);
+                    ServiceCollections.AddToCache(pc.ActualDepth, playerCorpse);
+                }
+            }
+        }
+
+        private static void AddArrowState(this GameState gameState, Level level)
+        {
+            var arrowService = ServiceCollections.ResolveArrowService();
+
+            if (level[GameTags.Arrow] != null && level[GameTags.Arrow].Count > 0)
+            {
+                var arrows = level[GameTags.Arrow].ToArray();
+
+                foreach (TowerFall.Arrow arrow in arrows)
+                {
+                    var dynArrow = DynamicData.For(arrow);
+                    dynArrow.Set("counter", Vector2.Zero);//For some weird reason, the counter is not reseted an ctor, so we do it here
+                                                          //Oh i think i found why, it's might be du to the arrow cache 
+
+                    if (arrow.StuckTo != null && arrow.State == TowerFall.Arrow.ArrowStates.Stuck)
+                    {
+                        arrowService.AddStuckArrow(arrow.Position.ToModel(), arrow.StuckTo);
+                    }
+                    gameState.Entities.Arrows.Add(arrow.GetState());
+                }
+            }
+        }
+
+        private static void AddChestsState(this GameState gameState, Level level)
+        {
+            if (level[GameTags.TreasureChest] != null && level[GameTags.TreasureChest].Count > 0)
+            {
+                var chests = level[GameTags.TreasureChest].ToArray();
+
+                foreach (TowerFall.TreasureChest chest in chests)
+                {
+                    var che = chest.GetState();
+                    gameState.Entities.Chests.Add(che);
+                    ServiceCollections.AddToCache(che.ActualDepth, chest);
+                }
+            }
+        }
+
+        private static void AddPickupsState(this GameState gameState, Level level)
+        {
+            var gamePickups = level.GetAll<TowerFall.Pickup>().ToArray();
+            if (gamePickups != null && gamePickups.Length > 0)
+            {
+                foreach (TowerFall.Pickup pickup in gamePickups)
+                {
+                    var pick = pickup.GetState();
+                    gameState.Entities.Pickups.Add(pick);
+                    ServiceCollections.AddToCache(pick.ActualDepth, pickup);
+                }
+            }
+        }
+
+        private static void AddSessionState(this GameState gameState, Level level)
+        {
+            (_, var currentMode) = ServiceCollections.ResolveStateMachineService();
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            var sessionService = ServiceCollections.ResolveSessionService();
+
+            var dynRoundLogic = DynamicData.For(level.Session.RoundLogic);
+
+            if (currentMode.IsNetplay() || netplayManager.IsTestMode())
+            {
+                var roundEndCounter = dynRoundLogic.Get<RoundEndCounter>("roundEndCounter");
+                var endCounter = DynamicData.For(roundEndCounter).Get<float>("endCounter");
+                var roundStarted = level.Session.RoundLogic.RoundStarted;
+                var done = dynRoundLogic.Get<bool>("done");
+                var roundIndex = level.Session.RoundIndex;
+
+                var isEnding = level.Session.CurrentLevel.Ending;
+
+                var miasmaCounter = dynRoundLogic.Get<Counter>("miasmaCounter");
+                var counter = DynamicData.For(miasmaCounter).Get<float>("counter");
+
+                var stateSession = sessionService.GetSession();
+                stateSession.RoundStarted = roundStarted;
+                stateSession.RoundEndCounter = endCounter;
+                stateSession.IsEnding = isEnding;
+                stateSession.Miasma.Counter = counter;
+                stateSession.IsDone = done;
+                stateSession.RoundIndex = roundIndex;
+                var session = new Domain.Models.State.Session
+                {
+                    IsEnding = stateSession.IsEnding,
+                    RoundEndCounter = stateSession.RoundEndCounter,
+                    IsDone = stateSession.IsDone,
+                    RoundIndex = stateSession.RoundIndex,
+                    RoundStarted = stateSession.RoundStarted,
+                    Miasma = new Domain.Models.State.Miasma
+                    {
+                        Counter = stateSession.Miasma.Counter,
+                        CoroutineTimer = stateSession.Miasma.CoroutineTimer
+                    },
+                    Scores = level.Session.Scores.ToArray(),
+                    OldScores = level.Session.OldScores.ToArray(),
+                };
+
+                sessionService.SaveSession(stateSession);
+                gameState.Session = session;
+            }
+        }
+
+        private static void AddOrbState(this GameState gameState, Level level)
+        {
+            var orb = level.OrbLogic.GetState();
+            gameState.Entities.Orb = orb;
+        }
+
+        private static void AddLanternState(this GameState gameState, Level level)
+        {
+            var gameLanterns = level.GetAll<TowerFall.Lantern>().ToArray();
+            if (gameLanterns != null && gameLanterns.Length > 0)
+            {
+                foreach (TowerFall.Lantern lantern in gameLanterns)
+                {
+                    var lan = lantern.GetState();
+                    gameState.Entities.Lanterns.Add(lan);
+                }
+            }
+        }
+
+        private static void AddChainState(this GameState gameState, Level level)
+        {
+            if (level[GameTags.Chain] != null && level[GameTags.Chain].Count > 0)
+            {
+                var gameChains = level[GameTags.Chain].ToArray();
+                foreach (TowerFall.Chain chain in gameChains)
+                {
+                    var ch = chain.GetState();
+                    gameState.Entities.Chains.Add(ch);
+                }
+            }
+        }
+
+        private static void AddLayerState(this GameState gameState, Level level)
+        {
+            var sessionService = ServiceCollections.ResolveSessionService();
+
+            //Background save
+            var bgElements = level.Background.GetBGElements().ToArray();
+            List<BackgroundElement> bgs = new List<BackgroundElement>();
+            for (int i = 0; i < bgElements.Length; i++)
+            {
+                TowerFall.Background.BGElement bg = bgElements[i];
+                if (bg is TowerFall.Background.ScrollLayer)
+                {
+                    var bgModel = (bg as TowerFall.Background.ScrollLayer).GetState(i);
+                    bgs.Add(bgModel);
+                }
+            }
+            gameState.Layer.BackgroundElements = bgs;
+
+            //Foreground save
+            var fgElements = level.Foreground.GetBGElements().ToArray();
+            List<ForegroundElement> fgs = new List<ForegroundElement>();
+            for (int i = 0; i < fgElements.Length; i++)
+            {
+                TowerFall.Background.BGElement fg = fgElements[i];
+                if (fg is TowerFall.Background.WavyLayer)
+                {
+                    var fgModel = (fg as TowerFall.Background.WavyLayer).GetState(i);
+                    fgs.Add(fgModel);
+                }
+            }
+            gameState.Layer.ForegroundElements = fgs;
+
+            var dynLightingLayer = DynamicData.For(level.LightingLayer);
+
+            var sineWave = dynLightingLayer.Get<SineWave>("sine");
+            gameState.Layer.LightingLayerSine = sineWave.Counter;
+
+            level.DeleteAll<TowerFall.Hat>(); //TODO: Remove and save hats
+
+            var dynGameplayLayer = DynamicData.For(level.GetGameplayLayer());
+            var actualDepthLookup = dynGameplayLayer.Get<Dictionary<int, double>>("actualDepthLookup");
+            actualDepthLookup.Remove(-52);
+
+            actualDepthLookup.Remove(-600); //TODO: Miasma
+
+            sessionService.SaveGamePlayLayerActualDepthLookup(actualDepthLookup);
+            gameState.Layer.GameplayLayerActualDepthLookup = actualDepthLookup;
         }
     }
 }

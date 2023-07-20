@@ -1,4 +1,4 @@
-﻿namespace TF.EX.Domain.Models.State.Player
+﻿namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Player
 {
     public class PlayerAnimations
     {
