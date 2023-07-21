@@ -1,6 +1,4 @@
-﻿using TF.EX.Domain.Models.State.Entity.LevelEntity;
-
-namespace TF.EX.Domain.Models.State.Orb
+﻿namespace TF.EX.Domain.Models.State.Orb
 {
     public interface IOrb
     {
@@ -11,7 +9,6 @@ namespace TF.EX.Domain.Models.State.Orb
     {
         public Time Time { get; set; } = Time.Default;
         public Dark Dark { get; set; } = Dark.Default;
-        public LavaControl Lava { get; set; } = LavaControl.Default;
         public Counter Space { get; set; } = Counter.Default;
         public Counter Chaos { get; set; } = Counter.Default;
 
@@ -19,12 +16,11 @@ namespace TF.EX.Domain.Models.State.Orb
         {
             Time = Time.Default,
             Dark = Dark.Default,
-            Lava = LavaControl.Default,
             Space = Counter.Default,
             Chaos = Counter.Default
         };
 
-        public bool IsDefault() => Time.IsDefault() && Dark.IsDefault() && Lava.IsDefault();
+        public bool IsDefault() => Time.IsDefault() && Dark.IsDefault();
 
     }
 }

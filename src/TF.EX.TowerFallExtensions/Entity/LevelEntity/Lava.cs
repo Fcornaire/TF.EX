@@ -14,11 +14,11 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 
             return new Lava
             {
-                side = entity.Side,
-                is_collidable = entity.Collidable,
-                position = entity.Position.ToModel(),
-                percent = entity.Percent,
-                sine_counter = sine.Counter,
+                Side = entity.Side,
+                IsCollidable = entity.Collidable,
+                Position = entity.Position.ToModel(),
+                Percent = entity.Percent,
+                SineCounter = sine.Counter,
             };
         }
 
@@ -27,11 +27,10 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             var dynLava = DynamicData.For(entity);
             var sine = dynLava.Get<SineWave>("sine");
 
-            dynLava.Set("Collidable", toLoad.is_collidable);
-            dynLava.Set("Position", toLoad.position.ToTFVector());
-            dynLava.Set("Percent", toLoad.percent);
-            sine.UpdateAttributes(toLoad.sine_counter);
+            dynLava.Set("Collidable", toLoad.IsCollidable);
+            dynLava.Set("Position", toLoad.Position.ToTFVector());
+            dynLava.Set("Percent", toLoad.Percent);
+            sine.UpdateAttributes(toLoad.SineCounter);
         }
-
     }
 }

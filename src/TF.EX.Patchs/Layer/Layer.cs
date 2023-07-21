@@ -71,13 +71,6 @@ namespace TF.EX.Patchs.Layer
                 session.Miasma = TF.EX.Domain.Models.State.Miasma.Default(); //FIX
                 _sessionService.SaveSession(session);
             }
-
-            if (entity is TowerFall.LavaControl)
-            {
-                var orb = _orbService.GetOrb();
-                orb.Lava = Domain.Models.State.Entity.LevelEntity.LavaControl.Default;
-                _orbService.Save(orb);
-            }
         }
 
         private void Layer_UpdateEntityList(On.Monocle.Layer.orig_UpdateEntityList orig, Monocle.Layer self)

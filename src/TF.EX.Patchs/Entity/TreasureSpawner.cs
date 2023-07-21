@@ -38,23 +38,6 @@ namespace TF.EX.Patchs.Entity
             //    }
             //}
 
-            if (res.Count > 0) //TODO: re enable lava orb
-            {
-                foreach (var c in res.ToArray())
-                {
-
-                    var dynPickup = MonoMod.Utils.DynamicData.For(c);
-                    var pickups = dynPickup.Get<List<TowerFall.Pickups>>("pickups");
-
-                    if (pickups.Count > 0 && pickups[0] == TowerFall.Pickups.LavaOrb)
-                    {
-                        Console.WriteLine("temporarily disabled Lava for now!");
-
-                        pickups[0] = TowerFall.Pickups.Arrows;
-                    }
-                }
-            }
-
             return res;
         }
     }
