@@ -69,7 +69,6 @@ namespace TF.EX.Patchs.Layer
             {
                 var session = _sessionService.GetSession();
                 session.Miasma = TF.EX.Domain.Models.State.Miasma.Default(); //FIX
-                _sessionService.SaveSession(session);
             }
         }
 

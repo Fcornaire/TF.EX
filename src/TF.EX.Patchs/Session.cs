@@ -91,7 +91,6 @@ namespace TF.EX.Patchs
 
             var session = _sessionService.GetSession();
             session.RoundStarted = true;
-            _sessionService.SaveSession(session);
         }
 
         private void Session_ctor(On.TowerFall.Session.orig_ctor orig, TowerFall.Session self, TowerFall.MatchSettings settings)
