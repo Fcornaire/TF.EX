@@ -25,6 +25,11 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             var targetCounter = dynLavaControl.Get<Counter>("targetCounter");
             var target = entity.Target;
 
+            if (lavas[0].Percent <= 0 && !targetCounter) //Orb logic OnLavaFinish might have not been called yet
+            {
+                return null;
+            }
+
             return new LavaControl
             {
                 Mode = mode,
@@ -44,16 +49,13 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 
             entity.Target = toLoad.Target;
 
-            var lavas = new TowerFall.Lava[toLoad.Lavas.Length];
+            var lavas = dynLavaControl.Get<TowerFall.Lava[]>("lavas");
 
             for (int i = 0; i < toLoad.Lavas.Length; i++)
             {
                 var currentLava = toLoad.Lavas[i];
-                var lavaToLoad = new TowerFall.Lava(entity, currentLava.side);
-                lavaToLoad.LoadState(currentLava);
-                lavas[i] = lavaToLoad;
+                lavas[i].LoadState(currentLava);
             }
-            dynLavaControl.Set("lavas", lavas);
         }
     }
 }

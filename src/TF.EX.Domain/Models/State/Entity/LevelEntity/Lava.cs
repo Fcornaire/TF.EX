@@ -2,13 +2,12 @@
 
 namespace TF.EX.Domain.Models.State.Entity.LevelEntity
 {
-    public struct Lava
+    public class Lava
     {
-        public LavaSide side;
-        public bool is_collidable;
-        public Vector2f position;
-        public float percent;
-        public float sine_counter;
-
+        public LavaSide Side { get; set; }
+        public bool IsCollidable { get; set; }
+        public Vector2f Position { get; set; }
+        public float Percent { get; set; }
+        public float SineCounter { get; set; }
     }
 }

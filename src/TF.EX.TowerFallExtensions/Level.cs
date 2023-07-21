@@ -107,6 +107,7 @@ namespace TF.EX.TowerFallExtensions
             gameState.AddLanternState(self);
             gameState.AddChainState(self);
             gameState.AddLayerState(self);
+            gameState.AddLavaControlState(self);
             gameState.Rng = rngService.Get();
             gameState.Frame = (int)self.FrameCounter;
             gameState.MatchStats = new MatchStats[] {
@@ -429,24 +430,6 @@ namespace TF.EX.TowerFallExtensions
 
             //Orbs load
             var orb = gameState.Entities.Orb;
-
-            var lavaControl = level.Get<TowerFall.LavaControl>();
-            if (orb.Lava.IsDefault())
-            {
-                if (lavaControl != null)
-                {
-                    var lavas = level.GetAll<TowerFall.Lava>();
-
-                    foreach (var lava in lavas)
-                    {
-                        level.GetGameplayLayer().Entities.Remove(lava);
-                        lava.Removed();
-                    }
-
-                    level.GetGameplayLayer().Entities.Remove(lavaControl);
-                    lavaControl.Removed();
-                }
-            }
             level.OrbLogic.LoadState(orb);
 
             //Lantern load
@@ -470,6 +453,9 @@ namespace TF.EX.TowerFallExtensions
                     gameChain.LoadState(toLoad);
                 }
             }
+
+            //Lava load
+            gameState.LoadLavaControl(level);
 
             //Background load
             foreach (BackgroundElement toLoad in gameState.Layer.BackgroundElements.ToArray())
@@ -777,6 +763,17 @@ namespace TF.EX.TowerFallExtensions
             }
         }
 
+        private static void AddLavaControlState(this GameState gameState, Level level)
+        {
+
+            var gameLavaControl = level.Get<LavaControl>();
+            if (gameLavaControl != null)
+            {
+                gameState.Entities.LavaControl = gameLavaControl.GetState();
+            }
+
+        }
+
         private static void AddLayerState(this GameState gameState, Level level)
         {
             var sessionService = ServiceCollections.ResolveSessionService();
@@ -824,6 +821,69 @@ namespace TF.EX.TowerFallExtensions
 
             sessionService.SaveGamePlayLayerActualDepthLookup(actualDepthLookup);
             gameState.Layer.GameplayLayerActualDepthLookup = actualDepthLookup;
+        }
+
+        private static void LoadLavaControl(this GameState gameState, Level level)
+        {
+            var gameLavaControl = level.Get<LavaControl>();
+            var lavaControl = gameState.Entities.LavaControl;
+            var dynOrbLogic = DynamicData.For(level.OrbLogic);
+
+            if (lavaControl == null && gameLavaControl != null)
+            {
+
+                var lavas = level.GetAll<TowerFall.Lava>();
+
+                foreach (var lava in lavas.ToList())
+                {
+                    level.GetGameplayLayer().Entities.Remove(lava);
+                    lava.Removed();
+                }
+
+                level.GetGameplayLayer().Entities.Remove(gameLavaControl);
+                gameLavaControl.Removed();
+
+                dynOrbLogic.Set("control", null);
+            }
+
+            if (lavaControl != null)
+            {
+                if (gameLavaControl != null)
+                {
+                    gameLavaControl.LoadState(lavaControl);
+
+                    var inGameLavaControl = dynOrbLogic.Get<LavaControl>("control");
+                    if (inGameLavaControl == null)
+                    {
+                        dynOrbLogic.Set("control", gameLavaControl);
+                    }
+                }
+                else
+                {
+                    var lavaC = new LavaControl(lavaControl.Mode, lavaControl.OwnerIndex);
+                    var dynLavaC = DynamicData.For(lavaC);
+                    var lavas = dynLavaC.Get<TowerFall.Lava[]>("lavas");
+                    lavas = new TowerFall.Lava[lavaControl.Lavas.Count()];
+
+                    int ind = 0;
+                    foreach (var lava in lavaControl.Lavas)
+                    {
+                        var lavaToAdd = new TowerFall.Lava(lavaC, lava.Side);
+                        var dynLavaToAdd = DynamicData.For(lavaToAdd);
+                        dynLavaToAdd.Set("Scene", level);
+
+                        level.GetGameplayLayer().Entities.Add(lavaToAdd);
+                        lavaToAdd.Added();
+
+                        lavas[ind] = lavaToAdd;
+                        ind++;
+                    }
+                    dynLavaC.Set("lavas", lavas);
+
+                    lavaC.LoadState(lavaControl);
+                    dynOrbLogic.Set("control", gameLavaControl);
+                }
+            }
         }
     }
 }
