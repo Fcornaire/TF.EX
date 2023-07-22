@@ -152,7 +152,7 @@ namespace TF.EX.Domain.Services
             var status = GGRSFFI.netplay_poll().ToModelGGrsFFI();
             if (!status.IsOk)
             {
-                if (status.Info.AsString().Contains("Peer Disconnected!"))
+                if (status.Info.AsString().Contains("Peer Disconnected!") || status.Info.AsString().Contains("local_frame_advantage bigger than"))
                 {
                     _isDisconnected = true;
                 }
