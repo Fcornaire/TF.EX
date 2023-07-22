@@ -167,6 +167,10 @@ namespace TF.EX.TowerFallExtensions
                 {
                     CoroutineTimer = gameState.Session.Miasma.CoroutineTimer,
                     Counter = gameState.Session.Miasma.Counter,
+                    DissipateTimer = gameState.Session.Miasma.DissipateTimer,
+                    IsDissipating = gameState.Session.Miasma.IsDissipating,
+                    Percent = gameState.Session.Miasma.Percent,
+                    SideWeight = gameState.Session.Miasma.SideWeight,
                 },
                 Scores = gameState.Session.Scores.ToArray(),
                 OldScores = gameState.Session.OldScores.ToArray(),
@@ -241,27 +245,35 @@ namespace TF.EX.TowerFallExtensions
 
             level.Delete<TowerFall.Miasma>();
 
-            if (gameState.Session.Miasma.CoroutineTimer > 0)
+            var sess = sessionService.GetSession();
+
+            if (gameState.Session.Miasma.IsDissipating)
             {
-                var sess = sessionService.GetSession();
-                sess.Miasma.CoroutineTimer = 0;
-                sessionService.SaveSession(sess);
+                var miasma = level.AddMiasmaToGameplayLayer(gameState.Session.Miasma.ActualDepth);
 
-                var miasma = new TowerFall.Miasma(TowerFall.Miasma.Modes.Versus);
-                var dynMiasma = DynamicData.For(miasma);
-                dynMiasma.Set("Scene", level);
-                dynMiasma.Set("Level", level);
-                dynMiasma.Set("actualDepth", gameState.Session.Miasma.ActualDepth);
+                miasma.Percent = gameState.Session.Miasma.Percent;
+                miasma.SideWeight = gameState.Session.Miasma.SideWeight;
+                sess.Miasma.DissipateTimer = 0;
 
-                level.GetGameplayLayer().Entities.Add(miasma);
-                miasma.Added();
+                miasma.Dissipate();
 
-                var dynamicRounlogic = DynamicData.For(level.Session.RoundLogic);
-                dynamicRounlogic.Set("miasma", miasma);
-
-                for (int i = 0; i < gameState.Session.Miasma.CoroutineTimer; i++)
+                for (int i = 0; i < gameState.Session.Miasma.DissipateTimer; i++)
                 {
                     miasma.Update();
+                }
+            }
+            else
+            {
+                if (gameState.Session.Miasma.CoroutineTimer > 0)
+                {
+                    sess.Miasma.CoroutineTimer = 0;
+
+                    var miasma = level.AddMiasmaToGameplayLayer(gameState.Session.Miasma.ActualDepth);
+
+                    for (int i = 0; i < gameState.Session.Miasma.CoroutineTimer; i++)
+                    {
+                        miasma.Update();
+                    }
                 }
             }
 
@@ -720,7 +732,11 @@ namespace TF.EX.TowerFallExtensions
                     Miasma = new Domain.Models.State.Miasma
                     {
                         Counter = stateSession.Miasma.Counter,
-                        CoroutineTimer = stateSession.Miasma.CoroutineTimer
+                        CoroutineTimer = stateSession.Miasma.CoroutineTimer,
+                        DissipateTimer = stateSession.Miasma.DissipateTimer,
+                        IsDissipating = stateSession.Miasma.IsDissipating,
+                        Percent = stateSession.Miasma.Percent,
+                        SideWeight = stateSession.Miasma.SideWeight,
                     },
                     Scores = level.Session.Scores.ToArray(),
                     OldScores = level.Session.OldScores.ToArray(),
@@ -884,6 +900,23 @@ namespace TF.EX.TowerFallExtensions
                     dynOrbLogic.Set("control", gameLavaControl);
                 }
             }
+        }
+
+        private static TowerFall.Miasma AddMiasmaToGameplayLayer(this TowerFall.Level level, double actualDepth)
+        {
+            var miasma = new TowerFall.Miasma(TowerFall.Miasma.Modes.Versus);
+            var dynMiasma = DynamicData.For(miasma);
+            dynMiasma.Set("Scene", level);
+            dynMiasma.Set("Level", level);
+            dynMiasma.Set("actualDepth", actualDepth);
+
+            level.GetGameplayLayer().Entities.Add(miasma);
+            miasma.Added();
+
+            var dynamicRounlogic = DynamicData.For(level.Session.RoundLogic);
+            dynamicRounlogic.Set("miasma", miasma);
+
+            return miasma;
         }
     }
 }

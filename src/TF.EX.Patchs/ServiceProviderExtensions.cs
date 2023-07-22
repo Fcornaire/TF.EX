@@ -66,6 +66,7 @@ namespace TF.EX.Patchs
             serviceCollection.AddSingleton<IHookable, SFXPatch>();
             serviceCollection.AddSingleton<IHookable, MonoclePatch>();
             serviceCollection.AddSingleton<IHookable, SFXInstancedPatch>();
+            serviceCollection.AddSingleton<IHookable, MiasmaPatch>();
         }
 
         public static LavaPatch GetLavaPatch(this IServiceProvider serviceProvider)

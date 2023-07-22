@@ -28,8 +28,15 @@ namespace TF.EX.Patchs.Component
             if (self.Entity is TowerFall.Miasma)
             {
                 var session = _sessionService.GetSession();
-                session.Miasma.CoroutineTimer += 1;
-                _sessionService.SaveSession(session);
+
+                if (session.Miasma.IsDissipating)
+                {
+                    session.Miasma.DissipateTimer += 1;
+                }
+                else
+                {
+                    session.Miasma.CoroutineTimer += 1;
+                }
             }
 
             if (self.Entity is TowerFall.VersusStart)

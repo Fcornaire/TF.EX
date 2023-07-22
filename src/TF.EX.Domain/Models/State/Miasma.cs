@@ -4,6 +4,14 @@
     {
         public float Counter { get; set; }
         public int CoroutineTimer { get; set; }
+
+        public bool IsDissipating { get; set; }
+        public int DissipateTimer { get; set; }
+
+        public float Percent { get; set; }
+
+        public float SideWeight { get; set; }
+
         public double ActualDepth { get; set; } = Constants.MIASMA_CUSTOM_DEPTH;
 
         public static Miasma Default()
