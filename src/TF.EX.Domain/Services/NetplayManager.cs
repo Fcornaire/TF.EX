@@ -187,6 +187,12 @@ namespace TF.EX.Domain.Services
                     _isSynchronized = true;
                     _isSyncing = false;
                     _isDisconnected = false;
+
+                    if (_events.Any(s => s.Contains(Event.Synchronized.ToString())))
+                    {
+                        FortRise.Logger.Log("Synchronized! Disconnecting from lobby");
+                        MatchboxClientFFI.disconnect();
+                    }
                 }
 
                 if (_isSynchronized &&

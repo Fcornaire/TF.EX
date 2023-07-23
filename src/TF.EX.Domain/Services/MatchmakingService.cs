@@ -360,8 +360,14 @@ namespace TF.EX.Domain.Services
                             }
                             _stopwatch.Stop();
                             _ping = (int)_stopwatch.ElapsedMilliseconds;
-                            _stopwatch.Restart();
-                            MatchboxClientFFI.send_message(PeerMessageType.Ping.ToString(), peerMessage.PeerId.ToString());
+
+                            Task.Run(async () =>
+                            {
+                                await Task.Delay(1000);
+
+                                _stopwatch.Restart();
+                                MatchboxClientFFI.send_message(PeerMessageType.Ping.ToString(), peerMessage.PeerId.ToString());
+                            });
 
                             break;
                         case PeerMessageType.Archer:
@@ -469,7 +475,6 @@ namespace TF.EX.Domain.Services
         public async Task CloseAsync()
         {
             await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, null, CancellationToken.None);
-            MatchboxClientFFI.disconnect();
 
             cancellationTokenSource.Cancel();
             cancellationTokenSource = new CancellationTokenSource();
