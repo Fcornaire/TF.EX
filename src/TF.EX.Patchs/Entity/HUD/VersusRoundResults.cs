@@ -24,7 +24,6 @@ namespace TF.EX.Patchs.Entity.HUD
             var finished = dynVersusRoundResults.Get<bool>("finished");
             if (finished)
             {
-                self.RemoveSelf(); //Removing so removed from the game state (not done originally)
                 var miasma = (TFGame.Instance.Scene as Level).Get<Miasma>(); //Also manually removing the miasma
                 if (miasma != null)
                 {
