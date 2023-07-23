@@ -38,12 +38,8 @@ namespace TF.EX.Domain.Services.StateMachine
                     HandleRemotePlayerCHoice();
                     break;
                 case Netplay1V1State.Start:
-                    _matchmakingService.DisconnectFromServer();
-                    break;
                 case Netplay1V1State.Finished:
-                    break;
                 case Netplay1V1State.Error:
-                    break;
                 default:
                     break;
             }
