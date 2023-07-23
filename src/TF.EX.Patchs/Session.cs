@@ -1,5 +1,7 @@
 ﻿using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
+using TF.EX.TowerFallExtensions;
+using TowerFall;
 
 namespace TF.EX.Patchs
 {
@@ -37,6 +39,15 @@ namespace TF.EX.Patchs
 
         private void Session_CreateResults(On.TowerFall.Session.orig_CreateResults orig, TowerFall.Session self)
         {
+            var versusMatchResults = self.CurrentLevel.Get<VersusMatchResults>();
+
+            if (versusMatchResults != null)
+            {
+                FortRise.Logger.Log("VersusMatchResults found, skipping CreateResults");
+                versusMatchResults.TweenIn();
+                return;
+            }
+
             orig(self);
 
             if (_netplayManager.IsInit() && _netplayManager.HaveFramesToReSimulate())
