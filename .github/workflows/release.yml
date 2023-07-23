@@ -50,7 +50,6 @@ jobs:
       uses: robinraju/release-downloader@v1.8
       with:
         repository: "Fcornaire/ggrs-ffi"
-        token: ${{ secrets.REPO_AT }}
         latest: true
         out-file-path: "TF.EX/Native"
         fileName: "ggrs_ffi.dll"
@@ -58,7 +57,6 @@ jobs:
       uses: robinraju/release-downloader@v1.8
       with:
         repository: "Fcornaire/matchbox-client-ffi"
-        token: ${{ secrets.REPO_AT }}
         latest: true
         out-file-path: "TF.EX/Native"
         fileName: "matchbox_client_ffi.dll"
