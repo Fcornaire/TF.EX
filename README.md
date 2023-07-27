@@ -119,7 +119,7 @@ To be able to add feature or fix things, you will need to :
 4. Launch Towefall and on the main screen, open the Dev console wih the key ² (If not opening, ensure you enabled dev console in the game settings) and enter the following command
 
 ```
-test LMS 0 42 2
+test LMS 0 1 42 2
 ```
 
 A LastManStanding game should be running in a GGRS [SyncTestSession](https://github.com/gschup/ggrs/wiki/2.-Sessions#sessionbuilder)

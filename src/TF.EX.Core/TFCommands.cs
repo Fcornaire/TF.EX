@@ -45,7 +45,7 @@ namespace TF.EX.Core
                 TFGame.Players[i] = TFGame.PlayerInputs[i] != null;
             }
 
-            StartGame(mode, map, startLevel, netplayManager);
+            StartGame(mode, netplayManager, map, startLevel);
 
             TFGame.Instance.Commands.Open = false;
         }

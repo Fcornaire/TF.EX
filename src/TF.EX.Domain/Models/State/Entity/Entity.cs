@@ -16,6 +16,8 @@ namespace TF.EX.Domain.Models.State.Entity
         public ICollection<Chain> Chains { get; set; } = new List<Chain>();
         public ICollection<JumpPad> JumpPads { get; set; } = new List<JumpPad>();
         public ICollection<Orb> Orbs { get; set; } = new List<Orb>();
+        public ICollection<CrackedPlatform> CrackedPlatforms { get; set; } = new List<CrackedPlatform>();
+
         public LavaControl LavaControl { get; set; }
 
         public HUD.HUD Hud { get; set; } = new HUD.HUD();

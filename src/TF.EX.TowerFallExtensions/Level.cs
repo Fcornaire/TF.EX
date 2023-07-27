@@ -127,6 +127,7 @@ namespace TF.EX.TowerFallExtensions
             gameState.MatchStats = new MatchStats[] {
                 self.Session.MatchStats[0], self.Session.MatchStats[1],
             };
+            gameState.AddCrackedPlatform(self);
 
             return gameState;
         }
@@ -484,6 +485,9 @@ namespace TF.EX.TowerFallExtensions
             //Lava load
             gameState.LoadLavaControl(level);
 
+            //CrackedPlatform load
+            gameState.LoadCrackedPlatform(level);
+
             //Background load
             foreach (BackgroundElement toLoad in gameState.Layer.BackgroundElements.ToArray())
             {
@@ -811,7 +815,6 @@ namespace TF.EX.TowerFallExtensions
 
         private static void AddLavaControlState(this GameState gameState, Level level)
         {
-
             var gameLavaControl = level.Get<LavaControl>();
             if (gameLavaControl != null)
             {
@@ -870,6 +873,19 @@ namespace TF.EX.TowerFallExtensions
 
             sessionService.SaveGamePlayLayerActualDepthLookup(actualDepthLookup);
             gameState.Layer.GameplayLayerActualDepthLookup = actualDepthLookup;
+        }
+
+        public static void AddCrackedPlatform(this GameState gameState, TowerFall.Level level)
+        {
+            var crackedPlatforms = level.GetAll<TowerFall.CrackedPlatform>().ToArray();
+            if (crackedPlatforms != null && crackedPlatforms.Length > 0)
+            {
+                foreach (TowerFall.CrackedPlatform orb in crackedPlatforms)
+                {
+                    var crackedPlatState = orb.GetState();
+                    gameState.Entities.CrackedPlatforms.Add(crackedPlatState);
+                }
+            }
         }
 
         private static void LoadLavaControl(this GameState gameState, Level level)
@@ -949,6 +965,25 @@ namespace TF.EX.TowerFallExtensions
                 }
 
                 gameOrb.LoadState(toLoad);
+            }
+        }
+
+        public static void LoadCrackedPlatform(this GameState gameState, TowerFall.Level level)
+        {
+            var gameCrackedPlatforms = level.GetAll<TowerFall.CrackedPlatform>().ToArray();
+            if (gameCrackedPlatforms != null && gameCrackedPlatforms.Length > 0)
+            {
+                foreach (TowerFall.CrackedPlatform crackedPlatform in gameCrackedPlatforms)
+                {
+                    var dynCrackedPlatform = DynamicData.For(crackedPlatform);
+                    var actualDepth = dynCrackedPlatform.Get<double>("actualDepth");
+
+                    var currentCrackedPlatform = gameState.Entities.CrackedPlatforms.FirstOrDefault(cp => cp.ActualDepth == actualDepth);
+                    if (currentCrackedPlatform != null)
+                    {
+                        crackedPlatform.LoadState(currentCrackedPlatform);
+                    }
+                }
             }
         }
 
