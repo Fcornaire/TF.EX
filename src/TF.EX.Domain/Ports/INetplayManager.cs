@@ -67,7 +67,7 @@ namespace TF.EX.Domain.Ports
         string GetPlayer2Name();
 
         void UpdatePlayer2Name(string name);
-        void SetRoom(string roomUrl);
+        void SetRoomAndServerMode(string roomUrl);
 
         bool ShouldSwapPlayer();
         PlayerDraw GetPlayerDraw();

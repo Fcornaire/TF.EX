@@ -1,6 +1,6 @@
-﻿namespace TF.EX.Domain.Models.State.Orb
+﻿namespace TF.EX.Domain.Models.State.OrbLogic
 {
-    public class Time : IOrb
+    public class Time : IOrbLogic
     {
         public Counter Counter { get; set; }
         public float EngineTimeRate { get; set; }

@@ -10,15 +10,13 @@ namespace TF.EX.Patchs.Layer
     {
         private readonly INetplayManager _netplayManager;
         private readonly ISessionService _sessionService;
-        private readonly IOrbService _orbService;
         private readonly IHUDService _hudService;
 
-        public LayerPatch(INetplayManager netplayManager, IHUDService hudService, ISessionService sessionService, IOrbService orbService)
+        public LayerPatch(INetplayManager netplayManager, IHUDService hudService, ISessionService sessionService)
         {
             _netplayManager = netplayManager;
             _hudService = hudService;
             _sessionService = sessionService;
-            _orbService = orbService;
         }
 
         public void Load()

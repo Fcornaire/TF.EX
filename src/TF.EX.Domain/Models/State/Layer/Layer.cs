@@ -2,8 +2,8 @@
 {
     public class Layer
     {
-        public List<BackgroundElement> BackgroundElements { get; set; }
-        public List<ForegroundElement> ForegroundElements { get; set; }
+        public IEnumerable<BackgroundElement> BackgroundElements { get; set; } = Enumerable.Empty<BackgroundElement>();
+        public IEnumerable<ForegroundElement> ForegroundElements { get; set; } = Enumerable.Empty<ForegroundElement>();
 
         public float LightingLayerSine { get; set; }
         public Dictionary<int, double> GameplayLayerActualDepthLookup { get; set; } = new Dictionary<int, double>();

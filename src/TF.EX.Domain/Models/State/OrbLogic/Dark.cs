@@ -1,6 +1,6 @@
-﻿namespace TF.EX.Domain.Models.State.Orb
+﻿namespace TF.EX.Domain.Models.State.OrbLogic
 {
-    public class Dark : IOrb
+    public class Dark : IOrbLogic
     {
         public Counter Counter { get; set; }
         public bool IsDarkened { get; set; }

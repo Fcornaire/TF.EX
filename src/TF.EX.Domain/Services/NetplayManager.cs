@@ -653,12 +653,13 @@ namespace TF.EX.Domain.Services
             _player2Name = player2Name;
         }
 
-        public void SetRoom(string roomUrl)
+        public void SetRoomAndServerMode(string roomUrl)
         {
             GGRSConfig.Netplay.Server = new NetplayServerConfig
             {
                 RoomUrl = roomUrl
             };
+            _netplayMode = NetplayMode.Server;
         }
 
         public bool ShouldSwapPlayer()

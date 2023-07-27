@@ -6,9 +6,9 @@ namespace TF.EX.TowerFallExtensions
 {
     public static class OrbLogicExtenions
     {
-        public static TF.EX.Domain.Models.State.Orb.Orb GetState(this TowerFall.OrbLogic self)
+        public static TF.EX.Domain.Models.State.OrbLogic.OrbLogic GetState(this TowerFall.OrbLogic self)
         {
-            var orb = new TF.EX.Domain.Models.State.Orb.Orb();
+            var orb = new TF.EX.Domain.Models.State.OrbLogic.OrbLogic();
             var dynOrb = DynamicData.For(self);
             var slowTimeEndCounter = dynOrb.Get<Counter>("slowTimeEndCounter");
             var slowTimeStartCounter = dynOrb.Get<Counter>("slowTimeStartCounter");
@@ -34,7 +34,7 @@ namespace TF.EX.TowerFallExtensions
             return orb;
         }
 
-        public static void LoadState(this TowerFall.OrbLogic self, TF.EX.Domain.Models.State.Orb.Orb orb)
+        public static void LoadState(this TowerFall.OrbLogic self, TF.EX.Domain.Models.State.OrbLogic.OrbLogic orb)
         {
             var dynOrb = DynamicData.For(self);
 

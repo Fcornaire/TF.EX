@@ -18,8 +18,9 @@ namespace TF.EX.Core
         {
             var mode = args.Length > 0 ? ParseMode(args[0]) : TowerFall.Modes.LastManStanding;
             var startLevel = args.Length > 1 ? Math.Min(int.Parse(args[1]), 9) : 0;
-            var seed = args.Length > 2 ? int.Parse(args[2]) : 42;
-            var checkDistance = args.Length > 3 ? Math.Min(int.Parse(args[3]), 7) : 2;
+            var map = args.Length > 2 ? Math.Min(int.Parse(args[2]), 14) : 0;
+            var seed = args.Length > 3 ? int.Parse(args[3]) : 42;
+            var checkDistance = args.Length > 4 ? Math.Min(int.Parse(args[4]), 7) : 2;
 
             var logger = ServiceCollections.ResolveLogger();
             logger.LogDebug<Commands>($"Launching test mode with mode: {mode}, startLevel: {startLevel}, seed: {seed}, checkDistance: {checkDistance}");
@@ -44,7 +45,7 @@ namespace TF.EX.Core
                 TFGame.Players[i] = TFGame.PlayerInputs[i] != null;
             }
 
-            StartGame(mode, startLevel, netplayManager);
+            StartGame(mode, map, startLevel, netplayManager);
 
             TFGame.Instance.Commands.Open = false;
         }
@@ -96,7 +97,7 @@ namespace TF.EX.Core
             rngService.SetSeed(seed);
             replayService.Initialize();
 
-            StartGame(mode, startLevel, netplayManager);
+            StartGame(mode, netplayManager, startLevel);
 
             TFGame.Instance.Commands.Open = false;
         }
@@ -164,7 +165,7 @@ namespace TF.EX.Core
             netplayManager.SetServerMode(roomUrl);
             replayService.Initialize();
 
-            StartGame(mode, 0, netplayManager);
+            StartGame(mode, netplayManager, 0);
 
             TFGame.Instance.Commands.Open = false;
         }
@@ -183,7 +184,7 @@ namespace TF.EX.Core
 
         private static TowerFall.Modes ParseMode(string arg)
         {
-            switch (arg)
+            switch (arg.ToUpper())
             {
                 case "LMS": return TowerFall.Modes.LastManStanding;
                 case "HH": return TowerFall.Modes.HeadHunters;
@@ -201,7 +202,7 @@ namespace TF.EX.Core
             }
         }
 
-        private static void StartGame(TowerFall.Modes mode, int startLevel, INetplayManager netplayManager)
+        private static void StartGame(TowerFall.Modes mode, INetplayManager netplayManager, int map = 0, int startLevel = 0)
         {
             for (int i = 0; i < 4; i++)
             {
@@ -209,6 +210,7 @@ namespace TF.EX.Core
             }
 
             MatchSettings matchSettings = MatchSettings.GetDefaultVersus();
+            matchSettings.LevelSystem = GameData.VersusTowers[map].GetLevelSystem();
             matchSettings.Mode = mode;
             (matchSettings.LevelSystem as VersusLevelSystem).StartOnLevel(startLevel);
             var session = new Session(matchSettings);

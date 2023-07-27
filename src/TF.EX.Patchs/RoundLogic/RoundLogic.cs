@@ -46,7 +46,7 @@ namespace TF.EX.Patchs.RoundLogic
             List<Vector2> xMLPositions = self.Session.CurrentLevel.GetXMLPositions("PlayerSpawn");
 
             _rngService.Get().ResetRandom();
-            xMLPositions = CalcExtensions.OwnVectorShuffle(xMLPositions.ToArray());
+            xMLPositions = CalcExtensions.OwnVectorShuffle(xMLPositions).ToList();
             int num;
             if (!self.Session.IsInOvertime)
             {

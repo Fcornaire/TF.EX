@@ -15,11 +15,12 @@ namespace TF.EX.Domain.Models.State.Entity
         public ICollection<Lantern> Lanterns { get; set; } = new List<Lantern>();
         public ICollection<Chain> Chains { get; set; } = new List<Chain>();
         public ICollection<JumpPad> JumpPads { get; set; } = new List<JumpPad>();
+        public ICollection<Orb> Orbs { get; set; } = new List<Orb>();
         public LavaControl LavaControl { get; set; }
 
         public HUD.HUD Hud { get; set; } = new HUD.HUD();
 
-        public Orb.Orb Orb { get; set; } = new Orb.Orb();
+        public OrbLogic.OrbLogic OrbLogic { get; set; } = new OrbLogic.OrbLogic();
 
     }
 }

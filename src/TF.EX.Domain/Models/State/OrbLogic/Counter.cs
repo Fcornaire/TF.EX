@@ -1,4 +1,4 @@
-﻿namespace TF.EX.Domain.Models.State.Orb
+﻿namespace TF.EX.Domain.Models.State.OrbLogic
 {
     public class Counter
     {

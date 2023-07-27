@@ -16,6 +16,17 @@ namespace TF.EX.TowerFallExtensions
     public static class LevelExtensions
     {
         //TODO: remove and use Scene extension instead
+        public static void Spawn<T>(this Level level, T toSpawn, double actualDepth) where T : Monocle.Entity
+        {
+            var dynEntity = DynamicData.For(toSpawn);
+            dynEntity.Set("Scene", level);
+            dynEntity.Set("Level", level);
+            dynEntity.Set("actualDepth", actualDepth);
+
+            level.GetGameplayLayer().Entities.Add(toSpawn);
+            toSpawn.Added();
+        }
+
         public static void Delete<T>(this Level level) where T : Monocle.Entity
         {
             var entity = level.Layers.SelectMany(layer => layer.Value.Entities)
@@ -109,6 +120,7 @@ namespace TF.EX.TowerFallExtensions
             gameState.AddLanternState(self);
             gameState.AddChainState(self);
             gameState.AddLayerState(self);
+            gameState.AddOrbsState(self);
             gameState.AddLavaControlState(self);
             gameState.Rng = rngService.Get();
             gameState.Frame = (int)self.FrameCounter;
@@ -125,7 +137,6 @@ namespace TF.EX.TowerFallExtensions
             var arrowService = ServiceCollections.ResolveArrowService();
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var sessionService = ServiceCollections.ResolveSessionService();
-            var orbService = ServiceCollections.ResolveOrbService();
             var rngService = ServiceCollections.ResolveRngService();
             var sfxService = ServiceCollections.ResolveSFXService();
             var currentMode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
@@ -442,7 +453,7 @@ namespace TF.EX.TowerFallExtensions
             }
 
             //Orbs load
-            var orb = gameState.Entities.Orb;
+            var orb = gameState.Entities.OrbLogic;
             level.OrbLogic.LoadState(orb);
 
             //Lantern load
@@ -455,6 +466,9 @@ namespace TF.EX.TowerFallExtensions
                     gameLantern.LoadState(toLoad);
                 }
             }
+
+            //Orbload
+            gameState.LoadOrb(level);
 
             //Chain load
             foreach (Domain.Models.State.Entity.LevelEntity.Chain toLoad in gameState.Entities.Chains.ToArray())
@@ -753,7 +767,7 @@ namespace TF.EX.TowerFallExtensions
         private static void AddOrbState(this GameState gameState, Level level)
         {
             var orb = level.OrbLogic.GetState();
-            gameState.Entities.Orb = orb;
+            gameState.Entities.OrbLogic = orb;
         }
 
         private static void AddLanternState(this GameState gameState, Level level)
@@ -778,6 +792,19 @@ namespace TF.EX.TowerFallExtensions
                 {
                     var ch = chain.GetState();
                     gameState.Entities.Chains.Add(ch);
+                }
+            }
+        }
+
+        private static void AddOrbsState(this GameState gameState, Level level)
+        {
+            var gameOrbs = level.GetAll<TowerFall.Orb>().ToArray();
+            if (gameOrbs != null && gameOrbs.Length > 0)
+            {
+                foreach (TowerFall.Orb orb in gameOrbs)
+                {
+                    var orbState = orb.GetState();
+                    gameState.Entities.Orbs.Add(orbState);
                 }
             }
         }
@@ -812,18 +839,21 @@ namespace TF.EX.TowerFallExtensions
             gameState.Layer.BackgroundElements = bgs;
 
             //Foreground save
-            var fgElements = level.Foreground.GetBGElements().ToArray();
-            List<ForegroundElement> fgs = new List<ForegroundElement>();
-            for (int i = 0; i < fgElements.Length; i++)
+            if (level.Foreground != null)
             {
-                TowerFall.Background.BGElement fg = fgElements[i];
-                if (fg is TowerFall.Background.WavyLayer)
+                var fgElements = level.Foreground.GetBGElements().ToArray();
+                List<ForegroundElement> fgs = new List<ForegroundElement>();
+                for (int i = 0; i < fgElements.Length; i++)
                 {
-                    var fgModel = (fg as TowerFall.Background.WavyLayer).GetState(i);
-                    fgs.Add(fgModel);
+                    TowerFall.Background.BGElement fg = fgElements[i];
+                    if (fg is TowerFall.Background.WavyLayer)
+                    {
+                        var fgModel = (fg as TowerFall.Background.WavyLayer).GetState(i);
+                        fgs.Add(fgModel);
+                    }
                 }
+                gameState.Layer.ForegroundElements = fgs;
             }
-            gameState.Layer.ForegroundElements = fgs;
 
             var dynLightingLayer = DynamicData.For(level.LightingLayer);
 
@@ -902,6 +932,23 @@ namespace TF.EX.TowerFallExtensions
                     lavaC.LoadState(lavaControl);
                     dynOrbLogic.Set("control", gameLavaControl);
                 }
+            }
+        }
+
+        private static void LoadOrb(this GameState gameState, Level level)
+        {
+            foreach (Domain.Models.State.Entity.LevelEntity.Orb toLoad in gameState.Entities.Orbs.ToArray())
+            {
+                var gameOrb = level.GetEntityByDepth(toLoad.ActualDepth) as TowerFall.Orb;
+
+                if (gameOrb == null)
+                {
+                    var orb = new TowerFall.Orb(toLoad.Position.ToTFVector(), false);
+                    level.Spawn(orb, toLoad.ActualDepth);
+                    gameOrb = orb;
+                }
+
+                gameOrb.LoadState(toLoad);
             }
         }
 
