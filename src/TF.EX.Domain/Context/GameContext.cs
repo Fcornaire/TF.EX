@@ -126,10 +126,21 @@ namespace TF.EX.Domain.Context
 
         public TowerFall.InputState GetCurrentInput(int characterIndex)
         {
+            if (characterIndex < 0)
+            {
+                return EmptyInput();
+            }
+
             if (CurrentInputs.Get().Count == 0)
             {
                 return EmptyInput();
             }
+
+            if (characterIndex >= CurrentInputs.Get().Count)
+            {
+                return EmptyInput();
+            }
+
             return CurrentInputs[characterIndex];
         }
 

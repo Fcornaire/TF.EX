@@ -283,27 +283,25 @@ namespace TF.EX.TowerFallExtensions
             hudService.Update(new Domain.Models.State.Entity.HUD.HUD());
             //VersusRoundResults
             level.Delete<VersusRoundResults>();
-            Sounds.sfx_multiCoinEarned.Stop();
             level.Delete<HUDFade>();
 
             if (gameState.Entities.Hud.VersusRoundResults.CoroutineState > 0)
             {
-                var hudFade = new TowerFall.HUDFade();
+                //var hudFade = new TowerFall.HUDFade(); //Properly track this
                 var versusRoundResults = new TowerFall.VersusRoundResults(level.Session, gameState.RoundLogic.EventLogs.ToTFModel());
                 var dynVersusRoundResults = DynamicData.For(versusRoundResults);
                 dynVersusRoundResults.Set("Scene", level);
                 dynVersusRoundResults.Set("Level", level);
 
-                var hudLayer = level.Layers.FirstOrDefault(l => l.Value.Index == hudFade.LayerIndex).Value;
+                var hudLayer = level.Layers.FirstOrDefault(l => l.Value.Index == versusRoundResults.LayerIndex).Value;
                 hudLayer.Entities.Add(versusRoundResults);
-                hudLayer.Entities.Add(hudFade);
+                //hudLayer.Entities.Add(hudFade);
                 versusRoundResults.Added();
-                hudFade.Added();
+                //hudFade.Added();
 
                 for (int i = 0; i < gameState.Entities.Hud.VersusRoundResults.CoroutineState; i++)
                 {
                     versusRoundResults.Update();
-                    hudFade.Update();
                 }
             }
 
