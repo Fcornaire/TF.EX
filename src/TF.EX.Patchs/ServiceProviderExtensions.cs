@@ -68,6 +68,7 @@ namespace TF.EX.Patchs
             serviceCollection.AddSingleton<IHookable, SFXInstancedPatch>();
             serviceCollection.AddSingleton<IHookable, MiasmaPatch>();
             serviceCollection.AddSingleton<IHookable, VersusPlayerMatchResultsPatch>();
+            serviceCollection.AddSingleton<IHookable, ReplayViewerPatch>();
         }
 
         public static LavaPatch GetLavaPatch(this IServiceProvider serviceProvider)
