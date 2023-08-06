@@ -1,4 +1,7 @@
-﻿using TF.EX.Domain.Ports;
+﻿using MonoMod.Utils;
+using TF.EX.Domain;
+using TF.EX.Domain.Extensions;
+using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
 using TF.EX.TowerFallExtensions;
 using TowerFall;
@@ -10,12 +13,14 @@ namespace TF.EX.Patchs
         private readonly ISessionService _sessionService;
         private readonly INetplayManager _netplayManager;
         private readonly IInputService _inputService;
+        private readonly IRngService _rngService;
 
-        public SessionPatch(ISessionService sessionService, INetplayManager netplayManager, IInputService inputService)
+        public SessionPatch(ISessionService sessionService, INetplayManager netplayManager, IInputService inputService, IRngService rngService)
         {
             _sessionService = sessionService;
             _netplayManager = netplayManager;
             _inputService = inputService;
+            _rngService = rngService;
         }
 
         public void Load()
@@ -25,6 +30,8 @@ namespace TF.EX.Patchs
             On.TowerFall.Session.CreateResults += Session_CreateResults;
             On.TowerFall.Session.GetOldScore += Session_GetOldScore;
             On.TowerFall.Session.GetWinner += Session_GetWinner;
+            On.TowerFall.Session.StartGame += Session_StartGame;
+            On.TowerFall.Session.GotoNextRound += Session_GotoNextRound;
         }
 
         public void Unload()
@@ -34,9 +41,56 @@ namespace TF.EX.Patchs
             On.TowerFall.Session.CreateResults -= Session_CreateResults;
             On.TowerFall.Session.GetOldScore -= Session_GetOldScore;
             On.TowerFall.Session.GetWinner -= Session_GetWinner;
+            On.TowerFall.Session.StartGame -= Session_StartGame;
+            On.TowerFall.Session.GotoNextRound -= Session_GotoNextRound;
+
         }
 
+        /// <summary>
+        /// Some hack since MatchResult is not tracked in the gamestate
+        /// </summary>
+        /// <param name="orig"></param>
+        /// <param name="self"></param>
+        private void Session_GotoNextRound(On.TowerFall.Session.orig_GotoNextRound orig, Session self)
+        {
+            var (_, mode) = ServiceCollections.ResolveStateMachineService();
 
+            if (mode.IsNetplay() && self.GetWinner() != -1)
+            {
+                FortRise.Logger.Log("Skipping GotoNextRound since game ended");
+
+                var vsRoundResult = self.CurrentLevel.Get<VersusRoundResults>();
+                var vsMatchResult = self.CurrentLevel.Get<VersusMatchResults>();
+
+                if (vsRoundResult != null && vsMatchResult != null)
+                {
+                    FortRise.Logger.Log("[Hack] Setting roundResults on matchResults");
+
+                    vsRoundResult.MatchResults = vsMatchResult;
+                    var dynMatchResult = DynamicData.For(vsMatchResult);
+                    dynMatchResult.Set("roundResults", vsRoundResult);
+                    self.CurrentLevel.Frozen = true;
+                    ArcherData.Get(TFGame.Characters[self.GetWinner()], TFGame.AltSelect[self.GetWinner()]).PlayVictoryMusic();
+                }
+                return;
+            }
+
+            orig(self);
+        }
+
+        private void Session_StartGame(On.TowerFall.Session.orig_StartGame orig, Session self)
+        {
+            _rngService.Get().ResetGenType();
+            _rngService.Get().ResetRandom();
+
+            orig(self);
+        }
+
+        /// <summary>
+        /// Some hack since MatchResult is not tracked in the gamestate
+        /// </summary>
+        /// <param name="orig"></param>
+        /// <param name="self"></param>
         private void Session_CreateResults(On.TowerFall.Session.orig_CreateResults orig, TowerFall.Session self)
         {
             var versusMatchResults = self.CurrentLevel.Get<VersusMatchResults>();
@@ -45,6 +99,9 @@ namespace TF.EX.Patchs
             {
                 FortRise.Logger.Log("VersusMatchResults found, skipping CreateResults");
                 versusMatchResults.TweenIn();
+
+                ArcherData.Get(TFGame.Characters[self.GetWinner()], TFGame.AltSelect[self.GetWinner()]).PlayVictoryMusic();
+                self.CurrentLevel.Frozen = true;
                 return;
             }
 

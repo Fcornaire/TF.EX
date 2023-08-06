@@ -40,15 +40,6 @@ namespace TF.EX.Patchs.Entity
                 return;
             }
 
-            if (_netplayManager.IsDisconnected())
-            {
-                _netplayManager.Reset();
-                TFGame.Players[0] = false;
-                TFGame.Players[1] = false;
-                TFGame.Characters[0] = 0;
-                TFGame.Characters[1] = 1;
-            }
-
             orig(self);
 
         }

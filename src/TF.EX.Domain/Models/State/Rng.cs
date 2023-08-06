@@ -5,7 +5,7 @@ namespace TF.EX.Domain.Models.State
     public class Rng
     {
         public int Seed;
-        public List<RngGenType> Gen_type;
+        public ICollection<RngGenType> Gen_type;
 
         public Rng(int seed)
         {
@@ -15,21 +15,15 @@ namespace TF.EX.Domain.Models.State
 
         public static Rng Default => new Rng(-1);
 
-        public bool IsDefault()
+        public void ResetGenType()
         {
-            return Seed == Default.Seed;
+            Gen_type = new List<RngGenType>();
         }
 
         public void ResetRandom()
         {
             Calc.Random = new Random(Seed);
             Reset(Calc.Random);
-        }
-
-        public void ResetRandom(Random toReset)
-        {
-            toReset = new Random(Seed);
-            Reset(toReset);
         }
 
         private void Reset(Random r)

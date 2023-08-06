@@ -176,11 +176,9 @@ namespace TF.EX.Domain.Context
 
         public void SetSeed(int seed)
         {
-            if (_rng.IsDefault())
-            {
-                _rng = new Rng(seed);
-            }
+            _rng = new Rng(seed);
         }
+
 
         public int GetSeed()
         {

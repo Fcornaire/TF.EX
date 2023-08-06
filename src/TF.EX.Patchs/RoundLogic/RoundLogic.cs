@@ -1,12 +1,10 @@
 ﻿using Microsoft.Xna.Framework;
 using Monocle;
 using MonoMod.Utils;
-using TF.EX.Domain;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models.State;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
-using TF.EX.Patchs.Engine;
 using TF.EX.TowerFallExtensions;
 
 namespace TF.EX.Patchs.RoundLogic
@@ -15,20 +13,19 @@ namespace TF.EX.Patchs.RoundLogic
     {
         private readonly INetplayManager _netplayManager;
         private readonly ISessionService _sessionService;
-        private readonly IReplayService _replayService;
+        private readonly IRngService _rngService;
         private readonly IInputService _inputInputService;
 
-        public RoundLogicPatch(INetplayManager netplayManager, ISessionService sessionService, IReplayService replayService, IInputService inputInputService)
+        public RoundLogicPatch(INetplayManager netplayManager, ISessionService sessionService, IRngService rngService, IInputService inputInputService)
         {
             _netplayManager = netplayManager;
             _sessionService = sessionService;
-            _replayService = replayService;
+            _rngService = rngService;
             _inputInputService = inputInputService;
         }
 
         public void Load()
         {
-            On.TowerFall.RoundLogic.ctor += RoundLogic_ctor;
             On.TowerFall.RoundLogic.OnUpdate += RoundLogic_OnUpdate;
             On.TowerFall.RoundLogic.AddScore += RoundLogic_AddScore;
             On.TowerFall.RoundLogic.InsertCrownEvent += RoundLogic_InsertCrownEvent;
@@ -37,7 +34,6 @@ namespace TF.EX.Patchs.RoundLogic
 
         public void Unload()
         {
-            On.TowerFall.RoundLogic.ctor -= RoundLogic_ctor;
             On.TowerFall.RoundLogic.OnUpdate -= RoundLogic_OnUpdate;
             On.TowerFall.RoundLogic.AddScore -= RoundLogic_AddScore;
             On.TowerFall.RoundLogic.InsertCrownEvent -= RoundLogic_InsertCrownEvent;
@@ -48,6 +44,8 @@ namespace TF.EX.Patchs.RoundLogic
         {
             Vector2[] array = new Vector2[4];
             List<Vector2> xMLPositions = self.Session.CurrentLevel.GetXMLPositions("PlayerSpawn");
+
+            _rngService.Get().ResetRandom();
             xMLPositions = CalcExtensions.OwnVectorShuffle(xMLPositions.ToArray());
             int num;
             if (!self.Session.IsInOvertime)
@@ -189,23 +187,6 @@ namespace TF.EX.Patchs.RoundLogic
                     miasma.Added();
                     dynMiasma.Set("actualDepth", Constants.MIASMA_CUSTOM_DEPTH); //Setting the custom depth for sorting layer later
                 }
-            }
-        }
-
-        private void RoundLogic_ctor(On.TowerFall.RoundLogic.orig_ctor orig, TowerFall.RoundLogic self, TowerFall.Session session, bool canHaveMiasma)
-        {
-            orig(self, session, canHaveMiasma);
-
-            (_, var mode) = ServiceCollections.ResolveStateMachineService();
-
-            if (!_netplayManager.IsReplayMode() && mode.IsNetplay())
-            {
-                _netplayManager.Init(); //TODO: Proper init lifecycle
-                _replayService.Initialize();
-
-                TowerFall.TFGame.ConsoleEnabled = false;
-
-                TFGamePatch.HasExported = false;
             }
         }
 

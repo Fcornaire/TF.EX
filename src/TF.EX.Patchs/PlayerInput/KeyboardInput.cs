@@ -78,6 +78,10 @@ namespace TF.EX.Patchs.PlayerInput
         private InputState KeyboardInput_GetState(On.TowerFall.KeyboardInput.orig_GetState orig, KeyboardInput self)
         {
             //EnsureStateMachine();
+            if (_netplayManager.GetNetplayMode() != Domain.Models.NetplayMode.Test && !_netplayManager.IsSynchronized())
+            {
+                return orig(self);
+            }
 
             (_, var mode) = ServiceCollections.ResolveStateMachineService();
 

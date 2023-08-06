@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Monocle;
+using TF.EX.Patchs.Calc;
 
 namespace TF.EX.Patchs.Entity
 {
@@ -29,10 +30,12 @@ namespace TF.EX.Patchs.Entity
             Vector2 positionRange,
             float direction)
         {
+            CalcPatch.IgnoreToRegisterRng();
             for (int i = 0; i < amount; i++)
             {
                 self.Emit(type, _random.Range(position - positionRange, positionRange * 2f), direction);
             }
+            CalcPatch.UnignoreToRegisterRng();
         }
 
         //Same as original, but with custom random since calc is being used deterministically
@@ -44,12 +47,12 @@ namespace TF.EX.Patchs.Entity
             Vector2 position,
             Vector2 positionRange)
         {
-
+            CalcPatch.IgnoreToRegisterRng();
             for (int i = 0; i < amount; i++)
             {
                 self.Emit(type, _random.Range(position - positionRange, positionRange * 2f));
             }
-
+            CalcPatch.UnignoreToRegisterRng();
         }
     }
 }

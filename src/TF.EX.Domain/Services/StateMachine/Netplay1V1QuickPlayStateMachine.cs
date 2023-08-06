@@ -1,14 +1,16 @@
 ﻿using Monocle;
 using TF.EX.Domain.Ports;
+using TF.EX.Domain.Ports.TF;
 using TowerFall;
 
 namespace TF.EX.Domain.Services.StateMachine
 {
     public class Netplay1V1QuickPlayStateMachine : NetplayStateMachine
     {
-
-        public Netplay1V1QuickPlayStateMachine(IMatchmakingService matchmakingService) : base(matchmakingService)
+        private readonly IRngService _rngService;
+        public Netplay1V1QuickPlayStateMachine(IMatchmakingService matchmakingService, IRngService rngService) : base(matchmakingService)
         {
+            _rngService = rngService;
         }
 
         public override string GetClipped()

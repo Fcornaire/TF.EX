@@ -24,13 +24,6 @@ namespace TF.EX.TowerFallExtensions
             {
                 level.Layers.FirstOrDefault(layer => layer.Value.Index == entity.LayerIndex).Value.Entities.Remove(entity);
                 entity.Removed();
-
-                if (entity is VersusStart)
-                {
-                    Sounds.sfx_multiStartLevel.Stop();
-                    Sounds.sfx_trainingStartLevelStone.Stop();
-                    Sounds.sfx_trainingStartLevelOut.Stop();
-                }
             }
         }
 

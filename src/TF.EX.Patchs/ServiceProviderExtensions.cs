@@ -71,36 +71,6 @@ namespace TF.EX.Patchs
             serviceCollection.AddSingleton<IHookable, ReplayViewerPatch>();
         }
 
-        public static LavaPatch GetLavaPatch(this IServiceProvider serviceProvider)
-        {
-            return serviceProvider.GetServices<IHookable>().First(service => service is LavaPatch) as LavaPatch;
-        }
-
-        public static PlayerPatch GetPlayerPatch(this IServiceProvider serviceProvider)
-        {
-            return serviceProvider.GetServices<IHookable>().First(service => service is PlayerPatch) as PlayerPatch;
-        }
-
-        public static ArrowPatch GetArrowPatch(this IServiceProvider serviceProvider)
-        {
-            return serviceProvider.GetServices<IHookable>().First(service => service is ArrowPatch) as ArrowPatch;
-        }
-
-        public static PickupPatch GetPickupPatch(this IServiceProvider serviceProvider)
-        {
-            return serviceProvider.GetServices<IHookable>().First(service => service is PickupPatch) as PickupPatch;
-        }
-
-        public static OrbLogicPatch GetOrbLogicPatch(this IServiceProvider serviceProvider)
-        {
-            return serviceProvider.GetServices<IHookable>().First(service => service is OrbLogicPatch) as OrbLogicPatch;
-        }
-
-        public static LevelPatch GetLevelPatch(this IServiceProvider serviceProvider)
-        {
-            return serviceProvider.GetServices<IHookable>().First(service => service is LevelPatch) as LevelPatch;
-        }
-
         public static void LoadPatchs(this IServiceProvider serviceProvider)
         {
             foreach (var hookable in serviceProvider.GetServices<IHookable>())

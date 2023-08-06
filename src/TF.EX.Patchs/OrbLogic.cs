@@ -1,17 +1,9 @@
-﻿using TF.EX.Domain.Ports.TF;
-using TF.EX.Patchs.Calc;
+﻿using TF.EX.Patchs.Calc;
 
 namespace TF.EX.Patchs
 {
     public class OrbLogicPatch : IHookable
     {
-        private readonly IOrbService _orbService;
-
-        public OrbLogicPatch(IOrbService orbService)
-        {
-            _orbService = orbService;
-        }
-
         public void Load()
         {
             On.TowerFall.OrbLogic.Update += OrbLogic_Update;

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using MonoMod.Utils;
+using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Ports;
 using TF.EX.TowerFallExtensions;

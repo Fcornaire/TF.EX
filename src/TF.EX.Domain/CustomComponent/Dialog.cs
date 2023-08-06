@@ -3,7 +3,7 @@ using Monocle;
 using MonoMod.Utils;
 using TowerFall;
 
-namespace TF.EX.Patchs
+namespace TF.EX.Domain.CustomComponent
 {
     //TODO: Make this a proper menu
     public class Dialog : Monocle.Entity
@@ -20,6 +20,7 @@ namespace TF.EX.Patchs
         private int optionIndex;
         private string dialogText;
         private bool _withAction => _actions.Any();
+        private bool _withCenterAction => _centerAction != null;
         private bool _noOrb = false;
         private bool _isDisabled = false;
 
@@ -38,6 +39,7 @@ namespace TF.EX.Patchs
         {
             var dynDialog = DynamicData.For(this);
             dynDialog.Set("Scene", TFGame.Instance.Scene);
+            dynDialog.Set("depth", -10000000);
 
             _centerAction = centerAction;
             _actions = actions;
@@ -61,7 +63,10 @@ namespace TF.EX.Patchs
             }
             else
             {
-                AddItem("CANCEL", _cancel);
+                if (_cancel != null)
+                {
+                    AddItem("CANCEL", _cancel);
+                }
             }
 
             this.title = title;
@@ -167,43 +172,43 @@ namespace TF.EX.Patchs
                 Draw.OutlineTextCentered(TFGame.Font, title.ToUpper(), vector, Color.White, 1.5f);
             }
 
+            if (_withCenterAction)
+            {
+                var pingStr = _centerAction();
+                int latency;
+
+                var color = Color.White;
+                if (Int32.TryParse(pingStr.Split(' ')[0], out latency))
+                {
+                    switch (latency)
+                    {
+                        case var n when (n >= 0 && n < 60):
+                            color = Color.LightGreen;
+                            break;
+                        case var n when (n >= 60 && n < 120):
+                            color = Color.GreenYellow;
+                            break;
+                        case var n when (n >= 120 && n < 150):
+                            color = Color.OrangeRed;
+                            break;
+                        case var n when (n >= 150):
+                            color = Color.Red;
+                            break;
+                        default:
+                            break;
+                    }
+                    Draw.OutlineTextCentered(TFGame.Font, pingStr, Position, color, 1.5f);
+
+                    _isDisabled = (latency == 0);
+                }
+                else
+                {
+                    Draw.OutlineTextCentered(TFGame.Font, _centerAction().ToUpper(), Position, NotSelection, 1.5f);
+                }
+            }
+
             if (_withAction)
             {
-                if (_centerAction != null)
-                {
-                    var pingStr = _centerAction();
-                    int latency;
-
-                    var color = Color.White;
-                    if (Int32.TryParse(pingStr.Split(' ')[0], out latency))
-                    {
-                        switch (latency)
-                        {
-                            case var n when (n >= 0 && n < 60):
-                                color = Color.LightGreen;
-                                break;
-                            case var n when (n >= 60 && n < 120):
-                                color = Color.GreenYellow;
-                                break;
-                            case var n when (n >= 120 && n < 150):
-                                color = Color.OrangeRed;
-                                break;
-                            case var n when (n >= 150):
-                                color = Color.Red;
-                                break;
-                            default:
-                                break;
-                        }
-                        Draw.OutlineTextCentered(TFGame.Font, pingStr, Position, color, 1.5f);
-
-                        _isDisabled = (latency == 0);
-                    }
-                    else
-                    {
-                        Draw.OutlineTextCentered(TFGame.Font, _centerAction().ToUpper(), Position, NotSelection, 1.5f);
-                    }
-                }
-
                 Vector2 vectorText = vector + new Vector2(0f, 25f);
                 Draw.OutlineTextCentered(TFGame.Font, dialogText.ToUpper(), vectorText, NotSelection, 1.5f);
 
@@ -225,9 +230,11 @@ namespace TF.EX.Patchs
             {
                 Vector2 vectorText = Position + new Vector2(0f, -25f);
                 Draw.OutlineTextCentered(TFGame.Font, dialogText.ToUpper(), vectorText, NotSelection, 1.5f);
-                Draw.OutlineTextCentered(font: TFGame.Font, text: optionNames[0], position: vectorText + new Vector2(0f, 70f), Color.OrangeRed, 1.2f);
+                if (optionNames.Count == 1)
+                {
+                    Draw.OutlineTextCentered(font: TFGame.Font, text: optionNames[0], position: vectorText + new Vector2(0f, 70f), Color.OrangeRed, 1.2f);
+                }
             }
         }
-
     }
 }
