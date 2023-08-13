@@ -5,6 +5,7 @@ namespace TF.EX.Domain.Ports.TF
     public interface ISessionService
     {
         Session GetSession();
+        void Reset();
         void SaveSession(Session session);
 
         Dictionary<int, double> GetGamePlayLayerActualDepthLookup();

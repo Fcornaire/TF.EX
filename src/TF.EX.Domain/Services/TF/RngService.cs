@@ -30,7 +30,7 @@ namespace TF.EX.Domain.Services.TF
             Calc.Random = new Random(seed);
         }
 
-        public void UpdateState(List<RngGenType> genTypes)
+        public void UpdateState(ICollection<RngGenType> genTypes)
         {
             var rng = Get();
             rng.Gen_type = genTypes.ToList();
@@ -42,6 +42,11 @@ namespace TF.EX.Domain.Services.TF
             var rng = Get();
             rng.Gen_type.Add(genType);
             _gameContext.UpdateRng(rng);
+        }
+
+        public void ResetGenType()
+        {
+            Get().ResetGenType();
         }
     }
 }

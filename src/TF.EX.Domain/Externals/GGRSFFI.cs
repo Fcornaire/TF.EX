@@ -1,5 +1,4 @@
-﻿using System;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using TF.EX.Common.Handle;
 using TF.EX.Domain.Models;
 
@@ -7,11 +6,20 @@ namespace TF.EX.Domain.Externals
 {
     public class GGRSFFI
     {
+        public static bool IsInInit = false;
+
         [DllImport("ggrs_ffi.dll")]
         public static extern Status netplay_init(SafeBytesFFI netplay_conf);
 
         [DllImport("ggrs_ffi.dll")]
         public static extern Status netplay_poll();
+
+        [DllImport("ggrs_ffi.dll")]
+        public static extern Status netplay_is_synchronized();
+
+        [DllImport("ggrs_ffi.dll")]
+        public static extern Status netplay_is_disconnected();
+
         [DllImport("ggrs_ffi.dll")]
         public static extern void status_info_free(IntPtr info);
 

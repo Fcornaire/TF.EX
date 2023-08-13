@@ -1,6 +1,9 @@
-﻿using MonoMod.Utils;
+﻿using Microsoft.Xna.Framework;
+using MonoMod.Utils;
 using TF.EX.Domain;
+using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Models.State;
+using TF.EX.Domain.Ports;
 using TF.EX.TowerFallExtensions;
 using TowerFall;
 
@@ -8,14 +11,49 @@ namespace TF.EX.Patchs.Scene
 {
     public class LevelLoaderXMLPatch : IHookable
     {
+        private readonly INetplayManager _netplayManager;
+        private readonly IMatchmakingService _matchmakingService;
+
+        public LevelLoaderXMLPatch(INetplayManager netplayManager, IMatchmakingService matchmakingService)
+        {
+            _netplayManager = netplayManager;
+            _matchmakingService = matchmakingService;
+        }
+
         public void Load()
         {
             On.TowerFall.LevelLoaderXML.ctor += LevelLoaderXML_ctor;
+            On.TowerFall.LevelLoaderXML.Update += LevelLoaderXML_Update;
         }
 
         public void Unload()
         {
             On.TowerFall.LevelLoaderXML.ctor -= LevelLoaderXML_ctor;
+            On.TowerFall.LevelLoaderXML.Update -= LevelLoaderXML_Update;
+        }
+
+        private void LevelLoaderXML_Update(On.TowerFall.LevelLoaderXML.orig_Update orig, LevelLoaderXML self)
+        {
+            orig(self);
+
+            if (self.Finished
+                && !_netplayManager.IsReplayMode()
+                && !_netplayManager.IsSynchronized()
+                && self.Level.Get<Dialog>() is null
+                && self.Level.Session.RoundIndex == 0
+                && _netplayManager.GetNetplayMode() is not Domain.Models.NetplayMode.Test)
+            {
+                var dialog = new Dialog("Infos",
+                    "Etablishing a connection ...",
+                    new Vector2(160f, 120f),
+                    null,
+                    new Dictionary<string, Action>(),
+                    null,
+                    true
+                );
+                var dynLayer = DynamicData.For(self.Level.GetGameplayLayer());
+                dynLayer.Invoke("Add", dialog, false);
+            }
         }
 
         private void LevelLoaderXML_ctor(On.TowerFall.LevelLoaderXML.orig_ctor orig, LevelLoaderXML self, TowerFall.Session session)

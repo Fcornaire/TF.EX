@@ -1,6 +1,8 @@
 ﻿using Microsoft.Xna.Framework;
 using Monocle;
 using MonoMod.Utils;
+using TF.EX.Domain.CustomComponent;
+using TF.EX.Domain.Externals;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
 using TF.EX.TowerFallExtensions;
@@ -64,12 +66,29 @@ namespace TF.EX.Patchs.Scene
                 _netplayManager.UpdateFramesToReSimulate(0);
             }
 
-            if (!_netplayManager.HaveFramesToReSimulate())
+            if (!_netplayManager.HaveFramesToReSimulate() && _netplayManager.IsSynchronized())
             {
                 _sfxService.Synchronize((int)self.FrameCounter - 1, _netplayManager.IsTestMode());
             }
 
             SkipLevelLoaderIfNeeded();
+
+            EnsureNoDialog(self);
+        }
+
+        private void EnsureNoDialog(Level self)
+        {
+            if (_netplayManager.IsSynchronized())
+            {
+                var entities = self.GetGameplayLayer().Entities;
+                var dialog = entities.FirstOrDefault(e => e is Dialog) as Dialog;
+
+                if (dialog != null)
+                {
+                    dialog.Removed();
+                    entities.Remove(dialog);
+                }
+            }
         }
 
         private void Level_HandlePausing(On.TowerFall.Level.orig_HandlePausing orig, Level self)
@@ -134,7 +153,6 @@ namespace TF.EX.Patchs.Scene
             if (nextScene is LevelLoaderXML)
             {
                 _sfxService.Clear();
-                var currentFrame = TowerFall.TFGame.Instance.Scene.FrameCounter;
                 dynEngine.Set("scene", dynEngine.Get<Monocle.Scene>("nextScene"));
                 while (!(TFGame.Instance.Scene as LevelLoaderXML).Finished)
                 {
@@ -145,7 +163,7 @@ namespace TF.EX.Patchs.Scene
                 TowerFall.TFGame.Instance.Scene.Begin();
                 TowerFall.TFGame.Instance.Scene.Update();
 
-                dynEngine.Set("FrameCounter", currentFrame);
+                dynEngine.Set("FrameCounter", GGRSFFI.netplay_current_frame());
             }
         }
     }

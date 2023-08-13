@@ -26,10 +26,23 @@ namespace TF.EX.Patchs.Calc
         public static void UnregisterRng()
         {
             _rngRegisteringCount--;
+
+            if (_rngRegisteringCount < 0)
+            {
+                _rngRegisteringCount = 0;
+            }
+
             if (_rngRegisteringCount == 0)
             {
                 _shouldRegisterRng = false;
             }
+        }
+
+        public static void Reset()
+        {
+            _shouldIgnoreToRegisterRng = false;
+            _shouldRegisterRng = false;
+            _rngRegisteringCount = 0;
         }
 
         public static void IgnoreToRegisterRng()
@@ -70,12 +83,6 @@ namespace TF.EX.Patchs.Calc
             {
                 rngService.AddGen(RngGenType.Integer);
             }
-        }
-
-        public static void AddGen(RngGenType genType)
-        {
-            var rngService = ServiceCollections.ResolveRngService();
-            rngService.AddGen(genType);
         }
 
         private float NextFloat_Patch(On.Monocle.Calc.orig_NextFloat_Random orig, Random random)

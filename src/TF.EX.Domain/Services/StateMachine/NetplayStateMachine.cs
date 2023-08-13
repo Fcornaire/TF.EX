@@ -37,6 +37,7 @@ namespace TF.EX.Domain.Services.StateMachine
         public void Reset()
         {
             _state = Netplay1V1State.None;
+            _hasLocalPlayerChoosed = false;
         }
 
         public abstract void Update();

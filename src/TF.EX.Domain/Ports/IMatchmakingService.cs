@@ -9,6 +9,7 @@
         bool ConnectToServerAndListen();
 
         void DisconnectFromServer();
+        void DisconnectFromLobby();
         void RegisterForDirect();
 
         string GetDirectCode();

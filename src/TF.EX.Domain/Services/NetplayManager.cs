@@ -1,4 +1,6 @@
-﻿using Newtonsoft.Json;
+﻿using MonoMod.Utils;
+using Newtonsoft.Json;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using TF.EX.Common.Handle;
 using TF.EX.Domain.Context;
@@ -15,7 +17,6 @@ namespace TF.EX.Domain.Services
     public class NetplayManager : INetplayManager
     {
         private bool _isInit;
-        private bool _isSynchronized;
         private bool _isAttemptingToReconnect;
         private double _framesToReSimulate;
         private NetplayMode _netplayMode;
@@ -23,6 +24,7 @@ namespace TF.EX.Domain.Services
         private double _framesAhead;
         private bool _isUpdating = false;
         private bool _isFirstInit = true;
+        private bool _hasFailedInitialConnection = false;
         private (int, ArcherData.ArcherTypes)[] _originalSelection = new (int, ArcherData.ArcherTypes)[4];
 
         private readonly IInputService _inputService;
@@ -31,10 +33,11 @@ namespace TF.EX.Domain.Services
         private List<string> _events;
         private List<NetplayRequest> _netplayRequests;
         private NetworkStats _networkStats;
-        private bool _isDisconnected = false;
         private bool _hasDesynch = false;
         private bool _isSyncing = false;
         private string _player2Name = "PLAYER";
+        private CancellationTokenSource _cancellationTokenSource;
+        private CancellationToken _cancellationToken;
 
         public GGRSConfig GGRSConfig { get; internal set; }
         public NetplayMeta NetplayMeta { get; internal set; }
@@ -46,7 +49,6 @@ namespace TF.EX.Domain.Services
             _isInit = false;
             _netplayRequests = new List<NetplayRequest>();
             _events = new List<string>();
-            _isSynchronized = false;
             _framesToReSimulate = 0;
             _networkStats = new NetworkStats();
             _isRollbackFrame = false;
@@ -60,70 +62,121 @@ namespace TF.EX.Domain.Services
             _inputService = inputService;
         }
 
-        public void Init()
+        public void Init(TowerFall.RoundLogic roundLogic)
         {
             if (!_isInit)
             {
-                _isDisconnected = false;
+                _hasFailedInitialConnection = false;
 
                 GGRSConfig.Name = NetplayMeta.Name;
                 GGRSConfig.InputDelay = NetplayMeta.InputDelay;
 
-                using (var handle = new SafeBytes<GGRSConfig>(GGRSConfig, false))
+                _cancellationTokenSource = new CancellationTokenSource();
+                _cancellationToken = _cancellationTokenSource.Token;
+
+                if (_netplayMode != NetplayMode.Test && _netplayMode != NetplayMode.Replay)
                 {
-                    var status = GGRSFFI.netplay_init(handle.ToBytesFFI()).ToModelGGrsFFI();
+                    Task.Run(async () =>
+                            {
+                                using var handle = new SafeBytes<GGRSConfig>(GGRSConfig, false);
+                                GGRSFFI.IsInInit = true;
+                                var status = GGRSFFI.netplay_init(handle.ToBytesFFI()).ToModelGGrsFFI();
+                                GGRSFFI.IsInInit = false;
 
-                    if (!status.IsOk)
-                    {
-                        throw new InvalidOperationException($"Init error : {status.Info.AsString()}");
-                    }
+                                if (!status.IsOk)
+                                {
+                                    var info = status.Info.AsString();
+                                    if (info.Contains("Initialization failed"))
+                                    {
+                                        FortRise.Logger.Log($"Netplay Init error : {info}");
+                                        _hasFailedInitialConnection = true;
 
-                    _isInit = true;
-                }
+                                        TowerFall.Sounds.ui_invalid.Play();
+                                        (TFGame.Instance.Scene as Level).GoToVersusOptions();
 
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        throw new InvalidOperationException($"Init error : {status.Info.AsString()}");
+                                    }
+                                }
 
-                if (_isFirstInit)
-                {
-                    _originalSelection[0] = (TFGame.Characters[0], TFGame.AltSelect[0]);
-                    _originalSelection[1] = (TFGame.Characters[1], TFGame.AltSelect[1]);
+                                FortRise.Logger.Log($"Netplay initialization succeeded");
+                                _isInit = true;
 
-                    var (char0, alt0) = _originalSelection[0];
-                    var (char1, alt1) = _originalSelection[1];
+                                var timer = new Stopwatch();
+                                timer.Start();
 
-                    if (ShouldSwapPlayer())
-                    {
-                        TFGame.Characters[0] = char1;
-                        TFGame.AltSelect[0] = alt1;
-                        TFGame.Characters[1] = char0;
-                        TFGame.AltSelect[1] = alt0;
-                    }
+                                while (!IsSynchronized() && !_cancellationToken.IsCancellationRequested && timer.ElapsedMilliseconds < 20000)
+                                {
+                                    Poll();
+                                    await Task.Delay(TFGame.FrameTime);
+                                }
+
+                                timer.Stop();
+
+                                if (!IsSynchronized())
+                                {
+                                    _isInit = false;
+                                    _hasFailedInitialConnection = true;
+                                    FortRise.Logger.Log($"Netplay Can't etablish a connexion to the opponent ...");
+                                    TowerFall.Sounds.ui_invalid.Play();
+
+                                    (TFGame.Instance.Scene as Level).GoToVersusOptions();
+                                    return;
+                                }
+
+                                if (_isFirstInit)
+                                {
+                                    _originalSelection[0] = (TFGame.Characters[0], TFGame.AltSelect[0]);
+                                    _originalSelection[1] = (TFGame.Characters[1], TFGame.AltSelect[1]);
+
+                                    var (char0, alt0) = _originalSelection[0];
+                                    var (char1, alt1) = _originalSelection[1];
+
+                                    if (ShouldSwapPlayer())
+                                    {
+                                        TFGame.Characters[0] = char1;
+                                        TFGame.AltSelect[0] = alt1;
+                                        TFGame.Characters[1] = char0;
+                                        TFGame.AltSelect[1] = alt0;
+                                    }
+                                }
+                                else
+                                {
+                                    var (char0, alt0) = _originalSelection[0];
+                                    var (char1, alt1) = _originalSelection[1];
+
+                                    if (ShouldSwapPlayer())
+                                    {
+                                        TFGame.Characters[0] = char1;
+                                        TFGame.AltSelect[0] = alt1;
+                                        TFGame.Characters[1] = char0;
+                                        TFGame.AltSelect[1] = alt0;
+                                    }
+                                    else
+                                    {
+                                        TFGame.Characters[0] = char0;
+                                        TFGame.AltSelect[0] = alt0;
+                                        TFGame.Characters[1] = char1;
+                                        TFGame.AltSelect[1] = alt1;
+                                    }
+                                }
+
+                                _isFirstInit = false;
+                                var dynRoundLogic = DynamicData.For(roundLogic);
+
+                                roundLogic.Session.CurrentLevel.Add(new VersusStart(roundLogic.Session));
+                                dynRoundLogic.Set("Players", dynRoundLogic.Invoke("SpawnPlayersFFA"));
+                            }, _cancellationToken);
                 }
                 else
                 {
-                    var (char0, alt0) = _originalSelection[0];
-                    var (char1, alt1) = _originalSelection[1];
-
-                    if (ShouldSwapPlayer())
-                    {
-                        TFGame.Characters[0] = char1;
-                        TFGame.AltSelect[0] = alt1;
-                        TFGame.Characters[1] = char0;
-                        TFGame.AltSelect[1] = alt0;
-                    }
-                    else
-                    {
-                        TFGame.Characters[0] = char0;
-                        TFGame.AltSelect[0] = alt0;
-                        TFGame.Characters[1] = char1;
-                        TFGame.AltSelect[1] = alt1;
-                    }
+                    using var handle = new SafeBytes<GGRSConfig>(GGRSConfig, false);
+                    GGRSFFI.netplay_init(handle.ToBytesFFI()).ToModelGGrsFFI();
+                    _isInit = true;
                 }
-
-                _isFirstInit = false;
-
-                _gameContext.GetLocalPlayerIndex();
-                _gameContext.GetRemotePlayerIndex();
-
             }
         }
 
@@ -135,7 +188,7 @@ namespace TF.EX.Domain.Services
             if (_isInit)
             {
                 NativePoll();
-                if (!_isDisconnected)
+                if (!IsDisconnected())
                 {
                     _framesAhead = GGRSFFI.netplay_frames_ahead();
                     GetEventAndUpdate();
@@ -152,9 +205,11 @@ namespace TF.EX.Domain.Services
             var status = GGRSFFI.netplay_poll().ToModelGGrsFFI();
             if (!status.IsOk)
             {
-                if (status.Info.AsString().Contains("Peer Disconnected!") || status.Info.AsString().Contains("local_frame_advantage bigger than"))
+                if (status.Info.AsString().Contains("Peer Disconnected!")
+                    || status.Info.AsString().Contains("local_frame_advantage bigger than")
+                    || status.Info.AsString().Contains("No session found"))
                 {
-                    _isDisconnected = true;
+                    FortRise.Logger.Log($"Error when polling remote client : {status.Info.AsString()}", FortRise.Logger.LogLevel.Warning);
                 }
                 else
                 {
@@ -178,33 +233,27 @@ namespace TF.EX.Domain.Services
                 if (_events.Contains(Event.Synchronizing.ToString()))
                 {
                     _isSyncing = true;
-                    _isDisconnected = false;
                 }
 
-                if (!_isSynchronized
-                    && (_events.Any(s => s.Contains(Event.NetworkResumed.ToString())) || _events.Any(s => s.Contains(Event.Synchronized.ToString()))))
+                if (_events.Any(s => s.Contains(Event.NetworkResumed.ToString())) || _events.Any(s => s.Contains(Event.Synchronized.ToString())))
                 {
-                    _isSynchronized = true;
                     _isSyncing = false;
-                    _isDisconnected = false;
 
                     if (_events.Any(s => s.Contains(Event.Synchronized.ToString())))
                     {
                         FortRise.Logger.Log("Synchronized! Disconnecting from lobby");
-                        MatchboxClientFFI.disconnect();
+                        ServiceCollections.ResolveMatchmakingService().DisconnectFromLobby();
                     }
                 }
 
-                if (_isSynchronized &&
-                    _events.Any(s => s.Contains(Event.NetworkInterrupted.ToString())))
+                if (_events.Any(s => s.Contains(Event.NetworkInterrupted.ToString())))
                 {
-                    _isSynchronized = false;
                     _isAttemptingToReconnect = true;
                 }
 
                 if (_events.Any(s => s.Contains(Event.Disconnected.ToString())))
                 {
-                    _isDisconnected = true;
+                    ServiceCollections.ResolveMatchmakingService().DisconnectFromServer();
                 }
 
                 //TODO: find a way to properly detect desynch
@@ -222,10 +271,7 @@ namespace TF.EX.Domain.Services
                 //}
             }
 
-            if (IsTestMode())
-            {
-                _events.ForEach(evt => Console.WriteLine("event : " + evt));
-            }
+            _events.ForEach(evt => FortRise.Logger.Log("[Netplay] event : " + evt));
         }
 
         private void UpdateNetworkStats()
@@ -237,10 +283,6 @@ namespace TF.EX.Domain.Services
                 {
                     _networkStats = handle.Value;
                 }
-                else
-                {
-                    Console.WriteLine("NetworkStats : " + status_stats.Info.AsString());
-                }
             }
         }
 
@@ -250,9 +292,10 @@ namespace TF.EX.Domain.Services
 
             if (!status.IsOk)
             {
-                if (status.Info.AsString().Contains("Peer Disconnected!"))
+                if (status.Info.AsString().Contains("Peer Disconnected!") || status.Info.AsString().Contains("No session found"))
                 {
-                    _isDisconnected = true;
+                    FortRise.Logger.Log($"Error when advancing frame : {status.Info.AsString()}", FortRise.Logger.LogLevel.Warning);
+
                     return status;
                 }
 
@@ -394,7 +437,7 @@ namespace TF.EX.Domain.Services
 
         bool INetplayManager.IsInit()
         {
-            return _isInit && !_isDisconnected;
+            return _isInit && !IsDisconnected();
         }
 
         public NetplayMode GetNetplayMode()
@@ -423,12 +466,26 @@ namespace TF.EX.Domain.Services
 
         public bool IsSynchronized()
         {
-            return _isSynchronized;
+            if (GGRSFFI.IsInInit)
+            {
+                return false;
+            }
+
+            var res = GGRSFFI.netplay_is_synchronized().ToModelGGrsFFI();
+
+            return res.IsOk;
         }
 
         public bool IsDisconnected()
         {
-            return _isDisconnected;
+            if (GGRSFFI.IsInInit)
+            {
+                return false;
+            }
+
+            var res = GGRSFFI.netplay_is_disconnected().ToModelGGrsFFI();
+
+            return res.IsOk;
         }
 
         public double GetFramesToReSimulate()
@@ -473,31 +530,47 @@ namespace TF.EX.Domain.Services
 
         public void Reset()
         {
-            if (_isInit)
+            using (var status = GGRSFFI.netplay_reset().ToModelGGrsFFI())
             {
-                using (var status = GGRSFFI.netplay_reset().ToModelGGrsFFI())
+                if (!status.IsOk)
                 {
-                    if (!status.IsOk)
+                    if (status.Info.AsString().Contains("No session found"))
+                    {
+                        FortRise.Logger.Log($"Netplay error when reset : {status.Info.AsString()}, skipping netplay reset", FortRise.Logger.LogLevel.Warning);
+
+                    }
+                    else
                     {
                         throw new InvalidOperationException($"Reset error : {status.Info.AsString()}");
                     }
                 }
-
-                _isInit = false;
-                _netplayRequests = new List<NetplayRequest>();
-                _events = new List<string>();
-                _isSynchronized = false;
-                _framesToReSimulate = 0;
-                _networkStats = new NetworkStats();
-                _isRollbackFrame = false;
-                _framesAhead = 0;
-                _isDisconnected = true;
-                _hasDesynch = false;
-                _isAttemptingToReconnect = false;
-                _isSyncing = false;
-                _isUpdating = false;
-                _gameContext.ResetPlayersIndex();
             }
+
+            ServiceCollections.ResolveMatchmakingService().DisconnectFromServer();
+            ServiceCollections.ResolveMatchmakingService().DisconnectFromLobby();
+            ServiceCollections.ResolveSessionService().Reset();
+
+            _isInit = false;
+            _netplayRequests = new List<NetplayRequest>();
+            _events = new List<string>();
+            _framesToReSimulate = 0;
+            _networkStats = new NetworkStats();
+            _isRollbackFrame = false;
+            _framesAhead = 0;
+            _hasDesynch = false;
+            _isAttemptingToReconnect = false;
+            _isSyncing = false;
+            _isUpdating = false;
+            _gameContext.ResetPlayersIndex();
+
+            _cancellationTokenSource.Cancel();
+            GGRSFFI.IsInInit = false;
+            _cancellationTokenSource = new CancellationTokenSource();
+            _cancellationToken = _cancellationTokenSource.Token;
+
+            (var stateMachine, _) = ServiceCollections.ResolveStateMachineService();
+            stateMachine.Reset();
+            ServiceCollections.ResolveReplayService().Reset();
         }
 
         public NetplayMeta GetNetplayMeta()
@@ -640,6 +713,16 @@ namespace TF.EX.Domain.Services
         public void ResetMode()
         {
             _netplayMode = NetplayMode.Uninitialized;
+        }
+
+        public bool HasFailedInitialConnection()
+        {
+            return _hasFailedInitialConnection;
+        }
+
+        public void SetIsFirstInit(bool isFirstInit)
+        {
+            _isFirstInit = isFirstInit;
         }
     }
 }

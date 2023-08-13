@@ -83,7 +83,7 @@ namespace TF.EX.Domain.Services
 
             if (replay.Record.Any())
             {
-                var firstRecord = replay.Record.First(rec => rec.GameState.Rng != null);
+                var firstRecord = replay.Record.First(rec => rec.GameState.Entities.Players.Count > 0);
                 _rngService.SetSeed(firstRecord.GameState.Rng.Seed);
 
                 for (int i = 0; i < firstRecord.GameState.Entities.Players.Count(); i++)

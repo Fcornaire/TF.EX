@@ -3,11 +3,12 @@ using Monocle;
 using TF.EX.Domain;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
+using TF.EX.Patchs.Engine;
 using TowerFall;
 
 namespace TF.EX.Core.RoundLogic
 {
-    //TODO: Implement this
+    //TODO: Refactor this class to a Netplay1v1RoundLogic
     [CustomRoundLogic("Netplay1v1DirectRoundLogic")]
     public class Netplay1v1DirectRoundLogic : CustomVersusRoundLogic
     {
@@ -19,12 +20,14 @@ namespace TF.EX.Core.RoundLogic
 
         private readonly INetplayManager _netplayManager;
         private readonly IInputService _inputInputService;
+        private readonly IReplayService _replayService;
 
         public Netplay1v1DirectRoundLogic(Session session, bool canHaveMiasma) : base(session, true)
         {
             roundEndCounter = new RoundEndCounter(session);
             _netplayManager = ServiceCollections.ResolveNetplayManager();
             _inputInputService = ServiceCollections.ResolveInputService();
+            _replayService = ServiceCollections.ResolveReplayService();
         }
 
         public static RoundLogicInfo Create()
@@ -42,8 +45,21 @@ namespace TF.EX.Core.RoundLogic
             if (!_netplayManager.HaveFramesToReSimulate()) //Prevent adding a VersusStart on a rollback frame
             {
                 base.OnLevelLoadFinish();
-                base.Session.CurrentLevel.Add(new VersusStart(base.Session));
-                base.Players = SpawnPlayersFFA();
+
+                if (!_netplayManager.IsInit())
+                {
+                    FortRise.Logger.Log("NetplayManager start initialization");
+                    _netplayManager.Init(this);
+                    _replayService.Initialize();
+
+                    TowerFall.TFGame.ConsoleEnabled = false;
+                    TFGamePatch.HasExported = false;
+                }
+                else
+                {
+                    base.Session.CurrentLevel.Add(new VersusStart(base.Session));
+                    base.Players = SpawnPlayersFFA();
+                }
             }
         }
 

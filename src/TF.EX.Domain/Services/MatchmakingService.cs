@@ -60,7 +60,7 @@ namespace TF.EX.Domain.Services
                 {
                     if (_webSocket.State != WebSocketState.Open)
                     {
-                        await _webSocket.ConnectAsync(new Uri(MATCHMAKING_URL), CancellationToken.None);
+                        await _webSocket.ConnectAsync(new Uri(MATCHMAKING_URL), cancellationToken);
                     }
                 }).GetAwaiter().GetResult();
             }
@@ -77,17 +77,17 @@ namespace TF.EX.Domain.Services
                     if (!_isListening)
                     {
                         _isListening = true;
-                        while (!cancellationToken.IsCancellationRequested)
+                        while (_isListening)
                         {
                             var segment = new ArraySegment<byte>(_buffer);
-                            var result = await _webSocket.ReceiveAsync(segment, CancellationToken.None);
+                            var result = await _webSocket.ReceiveAsync(segment, cancellationToken);
                             await HandleMessage(result);
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("Listenning message : " + ex.Message);
+                    Console.WriteLine("Error while listenning to server message : " + ex.Message); //NOT KILLED
                     Reset();
                 }
             }, cancellationToken);
@@ -132,7 +132,7 @@ namespace TF.EX.Domain.Services
 
             var message = JsonConvert.SerializeObject(registerMessage);
             var segment = new ArraySegment<byte>(System.Text.Encoding.UTF8.GetBytes(message));
-            await _webSocket.SendAsync(segment, WebSocketMessageType.Binary, true, CancellationToken.None);
+            await _webSocket.SendAsync(segment, WebSocketMessageType.Binary, true, cancellationToken);
         }
 
         private async Task SendCode(string text)
@@ -141,7 +141,7 @@ namespace TF.EX.Domain.Services
             matchWithDirectMsg.MatchWithDirectCode.Code = text;
             var message = JsonConvert.SerializeObject(matchWithDirectMsg);
             var segment = new ArraySegment<byte>(System.Text.Encoding.UTF8.GetBytes(message));
-            await _webSocket.SendAsync(segment, WebSocketMessageType.Binary, true, CancellationToken.None);
+            await _webSocket.SendAsync(segment, WebSocketMessageType.Binary, true, cancellationToken);
         }
 
         private async Task SendRegisterQuickPlayMessage()
@@ -151,7 +151,7 @@ namespace TF.EX.Domain.Services
 
             var message = JsonConvert.SerializeObject(registerMessage);
             var segment = new ArraySegment<byte>(System.Text.Encoding.UTF8.GetBytes(message));
-            await _webSocket.SendAsync(segment, WebSocketMessageType.Binary, true, CancellationToken.None);
+            await _webSocket.SendAsync(segment, WebSocketMessageType.Binary, true, cancellationToken);
         }
 
         private async Task SendCancelQuickPlayMessage()
@@ -160,7 +160,7 @@ namespace TF.EX.Domain.Services
 
             var message = JsonConvert.SerializeObject(cancelMessage);
             var segment = new ArraySegment<byte>(System.Text.Encoding.UTF8.GetBytes(message));
-            await _webSocket.SendAsync(segment, WebSocketMessageType.Binary, true, CancellationToken.None);
+            await _webSocket.SendAsync(segment, WebSocketMessageType.Binary, true, cancellationToken);
         }
 
         private async Task SendAcceptQuickPlayMessage()
@@ -169,7 +169,7 @@ namespace TF.EX.Domain.Services
 
             var message = JsonConvert.SerializeObject(acceptMessage);
             var segment = new ArraySegment<byte>(System.Text.Encoding.UTF8.GetBytes(message));
-            await _webSocket.SendAsync(segment, WebSocketMessageType.Binary, true, CancellationToken.None);
+            await _webSocket.SendAsync(segment, WebSocketMessageType.Binary, true, cancellationToken);
         }
 
         private async Task HandleMessage(WebSocketReceiveResult result)
@@ -284,10 +284,9 @@ namespace TF.EX.Domain.Services
 
             if (message.Contains("DeniedQuickPlay"))
             {
-                MatchboxClientFFI.disconnect();
+                DisconnectFromLobby();
                 _hasFoundOpponentForQuickPlay = false;
                 _OpponentDeclined = true;
-                _ping = 0;
             }
 
             if (message.Contains("TotalAvailablePlayersInQuickPlayQueue"))
@@ -297,10 +296,6 @@ namespace TF.EX.Domain.Services
             }
         }
 
-        public void StopRoomCommunication()
-        {
-            cancellationTokenSourceLobby.Cancel();
-        }
 
         private void ConnectAndListenToLobby(string roomUrl)
         {
@@ -327,12 +322,8 @@ namespace TF.EX.Domain.Services
                 catch (Exception e)
                 {
                     Console.WriteLine($"Exception lobby msg : {e}");
-                    MatchboxClientFFI.disconnect();
+                    DisconnectFromLobby();
                     _OpponentDeclined = true;
-
-                    cancellationTokenSourceLobby.Cancel();
-                    cancellationTokenSourceLobby = new CancellationTokenSource();
-                    cancellationTokenLobby = cancellationTokenSourceLobby.Token;
                 }
             }, cancellationTokenLobby);
 
@@ -399,7 +390,7 @@ namespace TF.EX.Domain.Services
                             break;
                         case PeerMessageType.Greetings:
                             _opponentPeerId = peerMessage.PeerId;
-                            _stopwatch.Start();
+                            _stopwatch.Restart();
                             MatchboxClientFFI.send_message(PeerMessageType.Ping.ToString(), peerMessage.PeerId.ToString());
                             break;
                         default:
@@ -411,12 +402,8 @@ namespace TF.EX.Domain.Services
             catch (Exception e)
             {
                 Console.WriteLine($"Exception when receiving lobby msg : {e}");
-                MatchboxClientFFI.disconnect();
+                DisconnectFromLobby();
                 _OpponentDeclined = true;
-
-                cancellationTokenSourceLobby.Cancel();
-                cancellationTokenSourceLobby = new CancellationTokenSource();
-                cancellationTokenLobby = cancellationTokenSourceLobby.Token;
             }
         }
 
@@ -474,7 +461,10 @@ namespace TF.EX.Domain.Services
         /// <returns></returns>
         public async Task CloseAsync()
         {
-            await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, null, CancellationToken.None);
+            if (_webSocket.State == WebSocketState.Open)
+            {
+                await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, null, CancellationToken.None);
+            }
 
             cancellationTokenSource.Cancel();
             cancellationTokenSource = new CancellationTokenSource();
@@ -508,13 +498,7 @@ namespace TF.EX.Domain.Services
 
         public void DisconnectFromServer()
         {
-            if (_webSocket.State == WebSocketState.Open)
-            {
-                Task.Run(async () =>
-                    {
-                        await CloseAsync();
-                    }).GetAwaiter().GetResult();
-            }
+            Task.Run(CloseAsync).GetAwaiter().GetResult();
         }
 
         private void Reset()
@@ -527,6 +511,7 @@ namespace TF.EX.Domain.Services
             _OpponentDeclined = false;
             _hasRegisteredForQuickPlay = false;
             _isListening = false;
+            _stopwatch.Reset();
             _ping = 0;
         }
 
@@ -553,6 +538,16 @@ namespace TF.EX.Domain.Services
         public bool HasOpponentChoosed()
         {
             return _hasOpponentChoosed;
+        }
+
+        public void DisconnectFromLobby()
+        {
+            MatchboxClientFFI.disconnect();
+            cancellationTokenSourceLobby.Cancel();
+            cancellationTokenSourceLobby = new CancellationTokenSource();
+            cancellationTokenLobby = cancellationTokenSourceLobby.Token;
+            _ping = 0;
+            _stopwatch.Reset();
         }
     }
 }

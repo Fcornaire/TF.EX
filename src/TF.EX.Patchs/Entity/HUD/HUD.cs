@@ -23,15 +23,13 @@ namespace TF.EX.Patchs.Entity.HUD
             if (self is VersusMatchResults)
             {
                 var dynVersusMatchResults = DynamicData.For(self);
-                var finished = (bool)dynVersusMatchResults.Get("finished");
+                var finished = dynVersusMatchResults.Get<bool>("finished");
+                var hasReset = dynVersusMatchResults.Get<bool>("HasReset");
 
-                if (finished)
+                if (finished && !hasReset)
                 {
-                    ServiceCollections.ResetState();
                     ServiceCollections.ResolveNetplayManager().Reset();
-                    ServiceCollections.ResolveReplayService().Reset();
-                    (var stateMachine, _) = ServiceCollections.ResolveStateMachineService();
-                    stateMachine.Reset();
+                    dynVersusMatchResults.Set("HasReset", true);
                 }
             }
         }

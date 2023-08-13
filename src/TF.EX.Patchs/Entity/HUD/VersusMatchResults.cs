@@ -1,6 +1,8 @@
-﻿using TF.EX.Domain.Ports;
+﻿using MonoMod.Utils;
+using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
 using TF.EX.Patchs.Engine;
+using TowerFall;
 
 namespace TF.EX.Patchs.Entity.HUD
 {
@@ -8,13 +10,11 @@ namespace TF.EX.Patchs.Entity.HUD
     {
         private readonly IReplayService _replayService;
         private readonly IRngService _rngService;
-        private readonly INetplayManager _netplayManager;
 
-        public VersusMatchResultsPatch(IReplayService replayService, IRngService rngService, INetplayManager netplayManager)
+        public VersusMatchResultsPatch(IReplayService replayService, IRngService rngService)
         {
             _replayService = replayService;
             _rngService = rngService;
-            _netplayManager = netplayManager;
         }
 
         public void Load()
@@ -30,6 +30,11 @@ namespace TF.EX.Patchs.Entity.HUD
         private void VersusMatchResults_ctor(On.TowerFall.VersusMatchResults.orig_ctor orig, TowerFall.VersusMatchResults self, TowerFall.Session session, TowerFall.VersusRoundResults roundResults)
         {
             orig(self, session, roundResults);
+
+            (TFGame.Instance.Scene as Level).Frozen = true;
+
+            var dynVersusMatchResults = DynamicData.For(self);
+            dynVersusMatchResults.Add("HasReset", false);
 
             if (!TFGamePatch.HasExported)
             {

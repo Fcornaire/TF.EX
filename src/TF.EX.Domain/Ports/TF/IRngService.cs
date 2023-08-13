@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using TF.EX.Domain.Models.State;
+﻿using TF.EX.Domain.Models.State;
 
 namespace TF.EX.Domain.Ports.TF
 {
@@ -9,7 +8,9 @@ namespace TF.EX.Domain.Ports.TF
         Rng Get();
 
         int GetSeed();
-        void UpdateState(List<RngGenType> genTypes);
+        void UpdateState(ICollection<RngGenType> genTypes);
         void AddGen(RngGenType genType);
+
+        void ResetGenType();
     }
 }

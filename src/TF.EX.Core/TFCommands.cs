@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using TF.EX.Domain;
 using TF.EX.Domain.Models;
+using TF.EX.Domain.Ports;
 using TF.EX.Patchs.Engine;
 using TowerFall;
 
@@ -33,7 +34,6 @@ namespace TF.EX.Core
             netplayManager.SetTestMode(checkDistance);
 
             rngService.SetSeed(seed);
-            netplayManager.Init();
             replayService.Initialize();
 
             for (int i = 0; i < 4; i++)
@@ -41,7 +41,7 @@ namespace TF.EX.Core
                 TFGame.Players[i] = TFGame.PlayerInputs[i] != null;
             }
 
-            StartGame(mode, startLevel);
+            StartGame(mode, startLevel, netplayManager);
 
             TFGame.Instance.Commands.Open = false;
         }
@@ -91,10 +91,9 @@ namespace TF.EX.Core
             netplayManager.SetLocalMode(addr, draw);
 
             rngService.SetSeed(seed);
-            netplayManager.Init();
             replayService.Initialize();
 
-            StartGame(mode, startLevel);
+            StartGame(mode, startLevel, netplayManager);
 
             TFGame.Instance.Commands.Open = false;
         }
@@ -146,10 +145,9 @@ namespace TF.EX.Core
 
             rngService.SetSeed(seed);
             netplayManager.SetServerMode(roomUrl);
-            netplayManager.Init();
             replayService.Initialize();
 
-            StartGame(mode, 0);
+            StartGame(mode, 0, netplayManager);
 
             TFGame.Instance.Commands.Open = false;
         }
@@ -186,7 +184,7 @@ namespace TF.EX.Core
             }
         }
 
-        private static void StartGame(TowerFall.Modes mode, int startLevel)
+        private static void StartGame(TowerFall.Modes mode, int startLevel, INetplayManager netplayManager)
         {
             for (int i = 0; i < 4; i++)
             {
@@ -196,7 +194,9 @@ namespace TF.EX.Core
             MatchSettings matchSettings = MatchSettings.GetDefaultVersus();
             matchSettings.Mode = mode;
             (matchSettings.LevelSystem as VersusLevelSystem).StartOnLevel(startLevel);
-            new Session(matchSettings).StartGame();
+            var session = new Session(matchSettings);
+            netplayManager.Init(session.RoundLogic);
+            session.StartGame();
         }
     }
 }

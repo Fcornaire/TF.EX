@@ -7,7 +7,7 @@ namespace TF.EX.Domain.Ports
     {
         void Poll();
 
-        void Init();
+        void Init(TowerFall.RoundLogic roundLogic);
 
         bool IsInit();
 
@@ -82,5 +82,9 @@ namespace TF.EX.Domain.Ports
         void SetServerMode(string roomUrl);
         void ResetMode();
         void SetReplayMode();
+
+        bool HasFailedInitialConnection();
+
+        void SetIsFirstInit(bool isFirstInit);
     }
 }

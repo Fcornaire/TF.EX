@@ -99,6 +99,14 @@ namespace TF.EX.Patchs.PlayerInput
 
         private InputState XGamepadInput_GetState(On.TowerFall.XGamepadInput.orig_GetState orig, XGamepadInput self)
         {
+
+            if (_netplayManager.GetNetplayMode() != Domain.Models.NetplayMode.Test
+                && _netplayManager.GetNetplayMode() != Domain.Models.NetplayMode.Replay
+                && !_netplayManager.IsSynchronized())
+            {
+                return orig(self);
+            }
+
             var level = TFGame.Instance.Scene as TowerFall.Level;
 
             if (level == null)
@@ -155,11 +163,6 @@ namespace TF.EX.Patchs.PlayerInput
                 return true;
             }
 
-            if (netplayManager.IsDisconnected())
-            {
-                return actualInput;
-            }
-
             if (isPaused)
             {
                 return actualInput;
@@ -199,6 +202,11 @@ namespace TF.EX.Patchs.PlayerInput
             if (isNetplayInit)
             {
                 return true;
+            }
+
+            if (netplayManager.IsDisconnected())
+            {
+                return actualInput;
             }
 
             if (isReplayMode)
