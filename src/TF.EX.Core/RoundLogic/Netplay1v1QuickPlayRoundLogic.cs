@@ -1,5 +1,7 @@
-﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Xna.Framework;
 using Monocle;
+using TF.EX.Common.Extensions;
 using TF.EX.Domain;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
@@ -21,6 +23,7 @@ namespace TF.EX.Core.RoundLogic
         private readonly INetplayManager _netplayManager;
         private readonly IInputService _inputInputService;
         private readonly IReplayService _replayService;
+        private readonly ILogger _logger;
 
         public Netplay1v1QuickPlayRoundLogic(Session session, bool canHaveMiasma) : base(session, true)
         {
@@ -28,6 +31,7 @@ namespace TF.EX.Core.RoundLogic
             _netplayManager = ServiceCollections.ResolveNetplayManager();
             _inputInputService = ServiceCollections.ResolveInputService();
             _replayService = ServiceCollections.ResolveReplayService();
+            _logger = ServiceCollections.ResolveLogger();
         }
 
         public static RoundLogicInfo Create()
@@ -46,7 +50,7 @@ namespace TF.EX.Core.RoundLogic
 
             if (!_netplayManager.IsInit())
             {
-                FortRise.Logger.Log("NetplayManager start initialization");
+                _logger.LogDebug<Netplay1v1QuickPlayRoundLogic>("Configuring and initializing current netplay session");
                 _netplayManager.Init(this);
                 _replayService.Initialize();
 

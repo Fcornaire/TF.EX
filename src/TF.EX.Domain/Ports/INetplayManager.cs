@@ -59,7 +59,6 @@ namespace TF.EX.Domain.Ports
 
         bool IsAttemptingToReconnect();
 
-        bool IsSynchronizing();
         void Reset();
         NetplayMeta GetNetplayMeta();
         void UpdateMeta(NetplayMeta config);
@@ -86,5 +85,6 @@ namespace TF.EX.Domain.Ports
         bool HasFailedInitialConnection();
 
         void SetIsFirstInit(bool isFirstInit);
+        bool IsSyncing();
     }
 }

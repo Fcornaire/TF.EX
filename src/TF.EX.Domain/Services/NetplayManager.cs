@@ -1,7 +1,9 @@
-﻿using MonoMod.Utils;
+﻿using Microsoft.Extensions.Logging;
+using MonoMod.Utils;
 using Newtonsoft.Json;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using TF.EX.Common.Extensions;
 using TF.EX.Common.Handle;
 using TF.EX.Domain.Context;
 using TF.EX.Domain.Extensions;
@@ -18,6 +20,7 @@ namespace TF.EX.Domain.Services
     {
         private bool _isInit;
         private bool _isAttemptingToReconnect;
+        private bool _isSyncing = false;
         private double _framesToReSimulate;
         private NetplayMode _netplayMode;
         private bool _isRollbackFrame;
@@ -29,12 +32,12 @@ namespace TF.EX.Domain.Services
 
         private readonly IInputService _inputService;
         private readonly IGameContext _gameContext;
+        private readonly ILogger _logger;
 
         private List<string> _events;
         private List<NetplayRequest> _netplayRequests;
         private NetworkStats _networkStats;
         private bool _hasDesynch = false;
-        private bool _isSyncing = false;
         private string _player2Name = "PLAYER";
         private CancellationTokenSource _cancellationTokenSource;
         private CancellationToken _cancellationToken;
@@ -44,7 +47,8 @@ namespace TF.EX.Domain.Services
 
         public NetplayManager(
             IInputService inputService,
-            IGameContext gameContext)
+            IGameContext gameContext,
+            ILogger logger)
         {
             _isInit = false;
             _netplayRequests = new List<NetplayRequest>();
@@ -60,6 +64,7 @@ namespace TF.EX.Domain.Services
             LoadConfig();
 
             _inputService = inputService;
+            _logger = logger;
         }
 
         public void Init(TowerFall.RoundLogic roundLogic)
@@ -88,7 +93,8 @@ namespace TF.EX.Domain.Services
                                     var info = status.Info.AsString();
                                     if (info.Contains("Initialization failed"))
                                     {
-                                        FortRise.Logger.Log($"Netplay Init error : {info}");
+                                        _logger.LogError<NetplayManager>($"Failed to initialize netplay session : {info}");
+
                                         _hasFailedInitialConnection = true;
 
                                         TowerFall.Sounds.ui_invalid.Play();
@@ -102,7 +108,7 @@ namespace TF.EX.Domain.Services
                                     }
                                 }
 
-                                FortRise.Logger.Log($"Netplay initialization succeeded");
+                                _logger.LogDebug<NetplayManager>($"Netplay initialization succeeded");
                                 _isInit = true;
 
                                 var timer = new Stopwatch();
@@ -120,12 +126,15 @@ namespace TF.EX.Domain.Services
                                 {
                                     _isInit = false;
                                     _hasFailedInitialConnection = true;
-                                    FortRise.Logger.Log($"Netplay Can't etablish a connexion to the opponent ...");
+                                    _logger.LogError<NetplayManager>($"Failed to etablish a connexion to the opponent, aborting session...");
                                     TowerFall.Sounds.ui_invalid.Play();
 
                                     (TFGame.Instance.Scene as Level).GoToVersusOptions();
                                     return;
                                 }
+
+                                _logger.LogDebug<NetplayManager>($"Netplay session etablished with {_player2Name}");
+                                ServiceCollections.ResolveMatchmakingService().DisconnectFromLobby();
 
                                 if (_isFirstInit)
                                 {
@@ -209,7 +218,7 @@ namespace TF.EX.Domain.Services
                     || status.Info.AsString().Contains("local_frame_advantage bigger than")
                     || status.Info.AsString().Contains("No session found"))
                 {
-                    FortRise.Logger.Log($"Error when polling remote client : {status.Info.AsString()}", FortRise.Logger.LogLevel.Warning);
+                    _logger.LogError<NetplayManager>($"Error when handling opponent communication : {status.Info.AsString()}");
                 }
                 else
                 {
@@ -230,25 +239,24 @@ namespace TF.EX.Domain.Services
 
             if (_events.ToList().Count > 0)
             {
-                if (_events.Contains(Event.Synchronizing.ToString()))
+                if (_events.Any(s => s.Contains(Event.Synchronizing.ToString())))
                 {
                     _isSyncing = true;
-                }
-
-                if (_events.Any(s => s.Contains(Event.NetworkResumed.ToString())) || _events.Any(s => s.Contains(Event.Synchronized.ToString())))
-                {
-                    _isSyncing = false;
-
-                    if (_events.Any(s => s.Contains(Event.Synchronized.ToString())))
-                    {
-                        FortRise.Logger.Log("Synchronized! Disconnecting from lobby");
-                        ServiceCollections.ResolveMatchmakingService().DisconnectFromLobby();
-                    }
                 }
 
                 if (_events.Any(s => s.Contains(Event.NetworkInterrupted.ToString())))
                 {
                     _isAttemptingToReconnect = true;
+                }
+
+                if (_events.Any(s => s.Contains(Event.NetworkResumed.ToString())))
+                {
+                    _isAttemptingToReconnect = false;
+                }
+
+                if (_events.Any(s => s.Contains(Event.Synchronized.ToString())))
+                {
+                    _isSyncing = false;
                 }
 
                 if (_events.Any(s => s.Contains(Event.Disconnected.ToString())))
@@ -271,7 +279,7 @@ namespace TF.EX.Domain.Services
                 //}
             }
 
-            _events.ForEach(evt => FortRise.Logger.Log("[Netplay] event : " + evt));
+            _events.ForEach(evt => _logger.LogDebug<NetplayManager>($"Event {DateTime.UtcNow} : {evt}"));
         }
 
         private void UpdateNetworkStats()
@@ -294,7 +302,7 @@ namespace TF.EX.Domain.Services
             {
                 if (status.Info.AsString().Contains("Peer Disconnected!") || status.Info.AsString().Contains("No session found"))
                 {
-                    FortRise.Logger.Log($"Error when advancing frame : {status.Info.AsString()}", FortRise.Logger.LogLevel.Warning);
+                    _logger.LogError<NetplayManager>($"Error when advancing frame : {status.Info.AsString()}");
 
                     return status;
                 }
@@ -523,26 +531,19 @@ namespace TF.EX.Domain.Services
             return _isAttemptingToReconnect;
         }
 
-        public bool IsSynchronizing()
-        {
-            return _isSyncing;
-        }
-
         public void Reset()
         {
-            using (var status = GGRSFFI.netplay_reset().ToModelGGrsFFI())
-            {
-                if (!status.IsOk)
-                {
-                    if (status.Info.AsString().Contains("No session found"))
-                    {
-                        FortRise.Logger.Log($"Netplay error when reset : {status.Info.AsString()}, skipping netplay reset", FortRise.Logger.LogLevel.Warning);
+            using var status = GGRSFFI.netplay_reset().ToModelGGrsFFI();
 
-                    }
-                    else
-                    {
-                        throw new InvalidOperationException($"Reset error : {status.Info.AsString()}");
-                    }
+            if (!status.IsOk)
+            {
+                if (status.Info.AsString().Contains("No session found"))
+                {
+                    _logger.LogError<NetplayManager>($"Netplay error when reseting : {status.Info.AsString()}, skipping netplay reset");
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Reset error : {status.Info.AsString()}");
                 }
             }
 
@@ -559,7 +560,6 @@ namespace TF.EX.Domain.Services
             _framesAhead = 0;
             _hasDesynch = false;
             _isAttemptingToReconnect = false;
-            _isSyncing = false;
             _isUpdating = false;
             _gameContext.ResetPlayersIndex();
 
@@ -723,6 +723,11 @@ namespace TF.EX.Domain.Services
         public void SetIsFirstInit(bool isFirstInit)
         {
             _isFirstInit = isFirstInit;
+        }
+
+        public bool IsSyncing()
+        {
+            return _isSyncing;
         }
     }
 }

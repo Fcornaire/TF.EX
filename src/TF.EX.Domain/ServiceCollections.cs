@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using TF.EX.Common;
+using TF.EX.Common.Logging;
 using TF.EX.Domain.Context;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Ports;
@@ -30,6 +32,7 @@ namespace TF.EX.Domain
             ServiceCollection.AddMemoryCache();
 
             ServiceCollection.AddSingleton<IAutoUpdater, AutoUpdater>();
+            ServiceCollection.AddSingleton<ILogger, Logger>();
 
             ServiceCollection.AddSingleton<IGameContext, GameContext>();
             ServiceCollection.AddSingleton<INetplayManager, NetplayManager>();
@@ -105,6 +108,8 @@ namespace TF.EX.Domain
         public static IOrbService ResolveOrbService() { return ServiceProvider.GetRequiredService<IOrbService>(); }
 
         public static ISFXService ResolveSFXService() { return ServiceProvider.GetRequiredService<ISFXService>(); }
+
+        public static ILogger ResolveLogger() { return ServiceProvider.GetRequiredService<ILogger>(); }
 
 
         public static (INetplayStateMachine, TF.EX.Domain.Models.Modes) ResolveStateMachineService()

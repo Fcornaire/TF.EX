@@ -1,4 +1,5 @@
 ﻿using MonoMod.Utils;
+using TF.EX.Common.Logging;
 using TF.EX.Domain;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models;
@@ -24,6 +25,7 @@ namespace TF.EX.Patchs.Commands
             On.Monocle.Commands.ExecuteCommand += ExecuteCommand_Patch;
             On.Monocle.Commands.EnterCommand += EnterCommand_Patch;
             On.Monocle.Commands.UpdateOpen += UpdateOpen_Patch;
+            On.Monocle.Commands.Log += Commands_Log;
         }
 
         public void Unload()
@@ -31,6 +33,15 @@ namespace TF.EX.Patchs.Commands
             On.Monocle.Commands.ExecuteCommand -= ExecuteCommand_Patch;
             On.Monocle.Commands.EnterCommand -= EnterCommand_Patch;
             On.Monocle.Commands.UpdateOpen -= UpdateOpen_Patch;
+            On.Monocle.Commands.Log -= Commands_Log;
+        }
+
+        private void Commands_Log(On.Monocle.Commands.orig_Log orig, Monocle.Commands self, string str)
+        {
+            if (!Logger.ShouldIgnoreCommandLog)
+            {
+                orig(self, str);
+            }
         }
 
         private void UpdateOpen_Patch(On.Monocle.Commands.orig_UpdateOpen orig, Monocle.Commands self)
@@ -138,17 +149,6 @@ namespace TF.EX.Patchs.Commands
 
         private void EnsureStateMachine()
         {
-            //if (_stateMachine == null)
-            //{
-            //    (var service, _) = ServiceCollections.ResolveStateMachineService();
-            //    _stateMachine = service;
-            //}
-
-            //if (_netplayManager == null)
-            //{
-            //    _netplayManager = ServiceCollections.ResolveNetplayManager();
-            //}
-
             var (stateMachine, mode) = ServiceCollections.ResolveStateMachineService();
 
             if (_stateMachine is DefaultNetplayStateMachine || _currrentMode != TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel())

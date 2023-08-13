@@ -114,12 +114,12 @@ namespace TF.EX.TowerFallExtensions
         {
             var hudService = ServiceCollections.ResolveHUDService();
             var arrowService = ServiceCollections.ResolveArrowService();
-            (_, var currentMode) = ServiceCollections.ResolveStateMachineService();
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var sessionService = ServiceCollections.ResolveSessionService();
             var orbService = ServiceCollections.ResolveOrbService();
             var rngService = ServiceCollections.ResolveRngService();
             var sfxService = ServiceCollections.ResolveSFXService();
+            var currentMode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
 
             sfxService.UpdateLastRollbackFrame(gameState.Frame);
             sfxService.Load(gameState.SFXs);
@@ -687,9 +687,10 @@ namespace TF.EX.TowerFallExtensions
 
         private static void AddSessionState(this GameState gameState, Level level)
         {
-            (_, var currentMode) = ServiceCollections.ResolveStateMachineService();
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var sessionService = ServiceCollections.ResolveSessionService();
+
+            var currentMode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
 
             var dynRoundLogic = DynamicData.For(level.Session.RoundLogic);
 

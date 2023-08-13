@@ -1,4 +1,6 @@
-﻿namespace TF.EX.Patchs
+﻿using TF.EX.Domain.Extensions;
+
+namespace TF.EX.Patchs
 {
     internal class ReplayRecorderPatch : IHookable
     {
@@ -14,8 +16,16 @@
 
         private void ReplayRecorder_ClearFrames(On.TowerFall.ReplayRecorder.orig_ClearFrames orig, TowerFall.ReplayRecorder self)
         {
-            Console.WriteLine("ReplayRecorder.ClearFrames Ignored");
+            var mode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
+
+            if (mode.IsNetplay())
+            {
+                /// We don't need Original ReplayRecorder in Netplay
+                /// We can ignore this
+                return;
+            }
+
+            orig(self);
         }
     }
-
 }

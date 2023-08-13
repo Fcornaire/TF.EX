@@ -1,10 +1,12 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Xna.Framework;
 using Monocle;
 using MonoMod.Utils;
 using System.Reflection;
 using System.Windows.Forms;
 using TF.EX.Common;
+using TF.EX.Common.Extensions;
 using TF.EX.Domain;
 using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Externals;
@@ -29,6 +31,7 @@ namespace TF.EX.Patchs.Engine
         private readonly IInputService _inputService;
         private readonly IReplayService _replayService;
         private readonly IMatchmakingService _matchmakingService;
+        private readonly ILogger _logger;
 
         private DateTime LastUpdate;
         private TimeSpan Accumulator;
@@ -41,12 +44,14 @@ namespace TF.EX.Patchs.Engine
             INetplayManager netplayManager,
             IInputService inputService,
             IReplayService replayService,
-            IMatchmakingService matchmakingService)
+            IMatchmakingService matchmakingService,
+            ILogger logger)
         {
             _netplayManager = netplayManager;
             _inputService = inputService;
             _replayService = replayService;
             _matchmakingService = matchmakingService;
+            _logger = logger;
         }
 
         public void Load()
@@ -245,7 +250,7 @@ namespace TF.EX.Patchs.Engine
                     }
                     else
                     {
-                        Console.WriteLine($"Not syncrhonized {GGRSFFI.netplay_current_frame()}");
+                        _logger.LogDebug<TFGame>($"Not syncrhonized {GGRSFFI.netplay_current_frame()}");
                     }
                 }
             }
