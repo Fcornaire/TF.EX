@@ -1,12 +1,20 @@
-﻿using System.IO.Compression;
+﻿using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using System.IO.Compression;
 using System.Net;
 using System.Text.RegularExpressions;
+using TF.EX.Common.Extensions;
 
 namespace TF.EX.Common
 {
     internal class Meta
     {
         public string Version { get; set; }
+    }
+
+    internal class GithubTag
+    {
+        public string Name { get; set; }
     }
 
     public interface IAutoUpdater
@@ -18,6 +26,7 @@ namespace TF.EX.Common
 
     public class AutoUpdater : IAutoUpdater
     {
+        private readonly ILogger _logger;
         private string DownloadPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "TF.EX", "Update");
         private string UpdatePath => $"{DownloadPath}/TF.EX";
 
@@ -25,66 +34,70 @@ namespace TF.EX.Common
 
         private bool _isUpdateAvailable = false;
 
+        public AutoUpdater(ILogger logger)
+        {
+            _logger = logger;
+        }
+
         public async Task CheckForUpdate()
         {
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+
             try
             {
                 var meta = File.ReadAllText(".\\Mods\\TF.EX\\meta.json");
-                var version = GetVersion(meta);
+                var currentVersion = GetVersion(meta);
 
-                Console.WriteLine($"TF.EX Mod current version {version}");
+                _logger.LogDebug<AutoUpdater>($"TF.EX Mod current version {currentVersion}");
+                _logger.LogDebug<AutoUpdater>($"Checking last TF.EX mod version");
 
-                Console.WriteLine("Checking for updates...");
-                await DownloadLatest();
+                var latestVersion = await GetLatestVersion();
 
-                ExtractAndCheckIfUpdatable(version);
+                _logger.LogDebug<AutoUpdater>($"Latest TF.EX mod version : {latestVersion}");
 
+                if (latestVersion > currentVersion)
+                {
+                    _logger.LogDebug<AutoUpdater>("TF.EX Mod Update available!");
+                    await DownloadLatest();
+                    ExtractUpdate();
+                    _logger.LogDebug<AutoUpdater>($"Donwloaded and extracted {latestVersion} update");
+
+                    _isUpdateAvailable = true;
+                }
+                else
+                {
+                    _logger.LogDebug<AutoUpdater>("No TF.EX Mod update available");
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Exception while trying to check for Update: {ex.Message}");
-                Console.WriteLine(ex.StackTrace);
+                _logger.LogError<AutoUpdater>($"Error while trying to check for Update", ex);
             }
         }
 
-        private void ExtractAndCheckIfUpdatable(string currentVersion)
+        private void ExtractUpdate()
         {
             try
             {
                 if (!Directory.Exists(DownloadPath))
                 {
-                    Console.WriteLine("No update found");
+                    _logger.LogError<AutoUpdater>("No update found");
                     return;
                 }
 
                 if (!File.Exists(ZipPath))
                 {
-                    Console.WriteLine("No update found");
+                    _logger.LogError<AutoUpdater>("No update found");
                     return;
                 }
 
-                Console.WriteLine("Extracting update...");
+                _logger.LogDebug<AutoUpdater>("Extracting update...");
 
                 ZipFile.ExtractToDirectory(ZipPath, DownloadPath);
-
-                if (!Directory.Exists(UpdatePath))
-                {
-                    Console.WriteLine("No update found");
-                    return;
-                }
-
-                var metaDownload = File.ReadAllText(Path.Combine(UpdatePath, "meta.json"));
-                var newVersion = GetVersion(metaDownload);
-
-                if (IsUpdateAvailable(currentVersion, newVersion))
-                {
-                    _isUpdateAvailable = true;
-                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Exception while trying to extract update: {ex.Message}");
-                Console.WriteLine(ex.StackTrace);
+                _logger.LogError<AutoUpdater>($"Exception while trying to extract update", ex);
             }
         }
 
@@ -92,7 +105,7 @@ namespace TF.EX.Common
         {
             if (!_isUpdateAvailable)
             {
-                Console.WriteLine("No update found");
+                _logger.LogError<AutoUpdater>("No TF.EX mod update found");
                 return false;
             }
 
@@ -110,39 +123,38 @@ namespace TF.EX.Common
 
                 File.Move(file, destination);
 
+                _logger.LogDebug<AutoUpdater>($"Updated {fileName}");
             }
 
             Directory.Delete(UpdatePath, true);
+            _logger.LogDebug<AutoUpdater>("Deleted Update files");
             File.Delete(ZipPath);
+            _logger.LogDebug<AutoUpdater>("Deleted Update zip");
+
+            _logger.LogDebug<AutoUpdater>("Update complete! Please restart TowerFall");
 
             return true;
         }
 
-        private bool IsUpdateAvailable(string currentVersion, string newVersion)
+        private async Task<Version> GetLatestVersion()
         {
-            var currentVersionSplit = currentVersion.Split('.');
-            var newVersionSplit = newVersion.Split('.');
+            var client = new HttpClient();
+            client.DefaultRequestHeaders.Add("User-Agent", "Towerfall");
+            var response = await client.GetAsync("https://api.github.com/repos/fcornaire/tf.ex/tags");
+            var content = await response.Content.ReadAsStringAsync();
+            var tags = JsonConvert.DeserializeObject<List<GithubTag>>(content);
 
-            for (int i = 0; i < currentVersionSplit.Length; i++)
-            {
-                var currentVersionPart = int.Parse(currentVersionSplit[i]);
-                var newVersionPart = int.Parse(newVersionSplit[i]);
+            var regex = new Regex(@"v\d+\.\d+\.\d+");
+            var semverTags = tags.Select(t => t.Name).Where(tag => regex.IsMatch(tag)).ToList();
+            var latestSemverTag = semverTags.OrderByDescending(t => new Version(t.Substring(1))).FirstOrDefault();
 
-                if (newVersionPart > currentVersionPart)
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            return new Version(latestSemverTag.Substring(1));
         }
 
         private async Task DownloadLatest()
         {
             try
             {
-                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-
                 var downloadUrl = "https://github.com/FCornaire/TF.EX/releases/latest/download/TF.EX.zip";
 
                 var httpClient = new HttpClient();
@@ -154,17 +166,15 @@ namespace TF.EX.Common
                 }
                 Directory.CreateDirectory(DownloadPath);
 
-
                 File.WriteAllBytes($"{DownloadPath}/update.zip", fileBytes);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Exception while trying to download latest version: {ex.Message}");
-                Console.WriteLine(ex.StackTrace);
+                _logger.LogError<AutoUpdater>($"Exception while trying to download latest version", ex);
             }
         }
 
-        private string GetVersion(string jsonText)
+        private Version GetVersion(string jsonText)
         {
             string pattern = "\"version\": \"(.*?)\"";
 
@@ -172,10 +182,10 @@ namespace TF.EX.Common
             if (match.Success)
             {
                 string version = match.Groups[1].Value;
-                return version;
+                return new Version(version);
             }
 
-            return string.Empty;
+            throw new InvalidOperationException("Unable to get version from meta.json");
         }
 
         public bool IsUpdateAvailable()
