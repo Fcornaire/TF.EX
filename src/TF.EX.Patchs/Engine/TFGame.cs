@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Xna.Framework;
 using Monocle;
 using MonoMod.Utils;
+using System.Diagnostics;
 using System.Reflection;
 using System.Windows.Forms;
 using TF.EX.Common;
@@ -115,7 +116,22 @@ namespace TF.EX.Patchs.Engine
             var autoUpdater = ServiceCollections.ServiceProvider.GetRequiredService<IAutoUpdater>();
             if (autoUpdater.IsUpdateAvailable())
             {
+                if (!FortRise.RiseCore.DebugMode)
+                {
+                    FortRise.Logger.AttachConsole(new FortRise.WindowConsole());
+                }
+
+                var logger = ServiceCollections.ResolveLogger();
+                var stopWatch = new Stopwatch();
+
+                stopWatch.Start();
+                logger.LogDebug("TF.EX mod updating...");
                 autoUpdater.Update();
+                stopWatch.Stop();
+
+                var time = stopWatch.ElapsedMilliseconds / 1000 == 0 ? $"{stopWatch.ElapsedMilliseconds}ms" : $"{stopWatch.ElapsedMilliseconds / 1000}s";
+
+                logger.LogDebug($"TF.EX mod updated in {time}");
             }
         }
 
@@ -272,7 +288,7 @@ namespace TF.EX.Patchs.Engine
 
                         if (ServiceCollections.ServiceProvider.GetRequiredService<IAutoUpdater>().IsUpdateAvailable())
                         {
-                            var dialog = new Dialog("TF EX Update", "A TF EX mod update is available \n \nPlease close and restart the game", new Vector2(160f, 120f), () => { Environment.Exit(0); }, new Dictionary<string, Action>());
+                            var dialog = new Dialog("TF EX Update", "A TF EX mod update is available \n \nCancel this to start updating", new Vector2(160f, 120f), () => { Environment.Exit(0); }, new Dictionary<string, Action>());
                             var dynLayer = DynamicData.For((TFGame.Instance.Scene as TowerFall.MainMenu).GetMainLayer());
                             dynLayer.Invoke("Add", dialog, false);
                         }
