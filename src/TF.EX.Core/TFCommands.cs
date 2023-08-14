@@ -1,6 +1,8 @@
 ﻿using FortRise;
+using Monocle;
 using System.Net;
 using System.Net.Sockets;
+using TF.EX.Common.Extensions;
 using TF.EX.Domain;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Ports;
@@ -19,7 +21,8 @@ namespace TF.EX.Core
             var seed = args.Length > 2 ? int.Parse(args[2]) : 42;
             var checkDistance = args.Length > 3 ? Math.Min(int.Parse(args[3]), 7) : 2;
 
-            Console.WriteLine($"Launching test mode with mode: {mode}, startLevel: {startLevel}, seed: {seed}, checkDistance: {checkDistance}");
+            var logger = ServiceCollections.ResolveLogger();
+            logger.LogDebug<Commands>($"Launching test mode with mode: {mode}, startLevel: {startLevel}, seed: {seed}, checkDistance: {checkDistance}");
 
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var replayService = ServiceCollections.ResolveReplayService();

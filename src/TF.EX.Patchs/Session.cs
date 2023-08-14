@@ -1,5 +1,6 @@
-﻿using MonoMod.Utils;
-using TF.EX.Domain;
+﻿using Microsoft.Extensions.Logging;
+using MonoMod.Utils;
+using TF.EX.Common.Extensions;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
@@ -14,13 +15,19 @@ namespace TF.EX.Patchs
         private readonly INetplayManager _netplayManager;
         private readonly IInputService _inputService;
         private readonly IRngService _rngService;
+        private readonly ILogger _logger;
 
-        public SessionPatch(ISessionService sessionService, INetplayManager netplayManager, IInputService inputService, IRngService rngService)
+        public SessionPatch(ISessionService sessionService,
+            INetplayManager netplayManager,
+            IInputService inputService,
+            IRngService rngService,
+            ILogger logger)
         {
             _sessionService = sessionService;
             _netplayManager = netplayManager;
             _inputService = inputService;
             _rngService = rngService;
+            _logger = logger;
         }
 
         public void Load()
@@ -53,18 +60,18 @@ namespace TF.EX.Patchs
         /// <param name="self"></param>
         private void Session_GotoNextRound(On.TowerFall.Session.orig_GotoNextRound orig, Session self)
         {
-            var (_, mode) = ServiceCollections.ResolveStateMachineService();
+            var mode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
 
             if (mode.IsNetplay() && self.GetWinner() != -1)
             {
-                FortRise.Logger.Log("Skipping GotoNextRound since game ended");
+                _logger.LogDebug<Session>("Skipping GotoNextRound since game ended");
 
                 var vsRoundResult = self.CurrentLevel.Get<VersusRoundResults>();
                 var vsMatchResult = self.CurrentLevel.Get<VersusMatchResults>();
 
                 if (vsRoundResult != null && vsMatchResult != null)
                 {
-                    FortRise.Logger.Log("[Hack] Setting roundResults on matchResults");
+                    _logger.LogDebug<Session>("Hack! Setting roundResults on matchResults");
 
                     vsRoundResult.MatchResults = vsMatchResult;
                     var dynMatchResult = DynamicData.For(vsMatchResult);
@@ -97,7 +104,7 @@ namespace TF.EX.Patchs
 
             if (versusMatchResults != null)
             {
-                FortRise.Logger.Log("VersusMatchResults found, skipping CreateResults");
+                _logger.LogDebug<Session>("VersusMatchResults found, skipping CreateResults");
                 versusMatchResults.TweenIn();
 
                 ArcherData.Get(TFGame.Characters[self.GetWinner()], TFGame.AltSelect[self.GetWinner()]).PlayVictoryMusic();

@@ -83,7 +83,7 @@ namespace TF.EX.Patchs.PlayerInput
                 return orig(self);
             }
 
-            (_, var mode) = ServiceCollections.ResolveStateMachineService();
+            var mode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
 
             if (!mode.IsNetplay() && _netplayManager.GetNetplayMode() == Domain.Models.NetplayMode.Uninitialized)
             {

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Monocle;
+using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
 using TF.EX.Patchs.Engine;
@@ -11,12 +12,14 @@ namespace TF.EX.Patchs.Layer
     {
         private readonly INetplayManager _netplayManager;
         private readonly IInputService _inputService;
+        private readonly INetplayStateMachine _netplayStateMachine;
         private bool _hasShowedDesynch = false;
 
-        public GameplayLayerPatch(INetplayManager netplayManager, IInputService inputService)
+        public GameplayLayerPatch(INetplayManager netplayManager, IInputService inputService, INetplayStateMachine netplayStateMachine)
         {
             _netplayManager = netplayManager;
             _inputService = inputService;
+            _netplayStateMachine = netplayStateMachine;
         }
 
         public void Load()
@@ -49,39 +52,38 @@ namespace TF.EX.Patchs.Layer
                 return;
             }
 
-            var latency = _netplayManager.GetNetworkStats().ping;
-            Draw.OutlineTextCentered(TFGame.Font, $"{latency} MS", new Vector2(20f, 8f), GetColor(latency), 1f);
-
-            if (_netplayManager.GetNetplayMode() != TF.EX.Domain.Models.NetplayMode.Test)
+            if (TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay())
             {
-                if (_netplayManager.HasDesynchronized())
-                {
-                    Draw.OutlineTextCentered(TFGame.Font, "DESYNCH DETECTED!", new Vector2(160f, 20f), Color.Red, 2f);
+                var latency = _netplayManager.GetNetworkStats().ping;
+                Draw.OutlineTextCentered(TFGame.Font, $"{latency} MS", new Vector2(20f, 8f), GetColor(latency), 1f);
 
-                    if (!_hasShowedDesynch)
+                if (_netplayManager.GetNetplayMode() != TF.EX.Domain.Models.NetplayMode.Test)
+                {
+                    if (_netplayManager.HasDesynchronized())
                     {
-                        Sounds.ui_invalid.Play();
-                        _hasShowedDesynch = true;
-                    }
-                }
+                        Draw.OutlineTextCentered(TFGame.Font, "DESYNCH DETECTED!", new Vector2(160f, 20f), Color.Red, 2f);
 
-                if (_netplayManager.IsDisconnected())
-                {
-                    Draw.OutlineTextCentered(TFGame.Font, "DISCONNECTED", new Vector2(160f, 20f), Color.Red, 2f);
-                }
-                else if (!_netplayManager.IsSynchronized())
-                {
-                    if (_netplayManager.IsSynchronizing())
-                    {
-                        Draw.OutlineTextCentered(TFGame.Font, "SYNCHRONIZING", new Vector2(160f, 20f), Color.Green, 2f);
+                        if (!_hasShowedDesynch)
+                        {
+                            Sounds.ui_invalid.Play();
+                            _hasShowedDesynch = true;
+                        }
                     }
-                    else
+
+                    if (_netplayManager.IsDisconnected())
+                    {
+                        Draw.OutlineTextCentered(TFGame.Font, "DISCONNECTED", new Vector2(160f, 20f), Color.Red, 2f);
+                    }
+                    else if (_netplayManager.IsAttemptingToReconnect())
                     {
                         Draw.OutlineTextCentered(TFGame.Font, "TRYING TO SYNC", new Vector2(160f, 20f), Color.Yellow, 2f);
                     }
+                    else if (_netplayManager.IsSyncing())
+                    {
+                        Draw.OutlineTextCentered(TFGame.Font, "SYNCHRONIZING...", new Vector2(160f, 20f), Color.Green, 2f);
+                    }
                 }
             }
-
         }
 
         private Color GetColor(uint latency)

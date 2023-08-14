@@ -4,7 +4,6 @@ using TF.EX.Domain;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
-using TF.EX.Domain.Services.StateMachine;
 using TF.EX.TowerFallExtensions;
 using TowerFall;
 
@@ -281,9 +280,9 @@ namespace TF.EX.Patchs.PlayerInput
 
                 return actualInput;
             }
-            catch (Exception e)
+            catch
             {
-                Console.WriteLine("InterceptBack exception (Probabply game still loading ): " + e);
+                // The game is probably still loading here, so we don't care about the exception
                 return actualInput;
             }
         }
@@ -333,16 +332,6 @@ namespace TF.EX.Patchs.PlayerInput
             }
 
             return actualInput;
-        }
-
-        private void EnsureStateMachine()
-        {
-            if (_stateMachine is DefaultNetplayStateMachine || (TowerFall.MainMenu.VersusMatchSettings != null && _currerntMode != TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel()))
-            {
-                (var service, var mode) = ServiceCollections.ResolveStateMachineService();
-                _stateMachine = service;
-                _currerntMode = mode;
-            }
         }
 
         private bool IsLocalPlayerGamePad => TFGame.PlayerInputs[0] is XGamepadInput;

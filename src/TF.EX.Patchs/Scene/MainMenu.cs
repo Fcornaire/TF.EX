@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Monocle;
 using TF.EX.Domain;
+using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Ports;
 using TF.EX.TowerFallExtensions;
 using TowerFall;
@@ -60,7 +61,7 @@ namespace TF.EX.Patchs.Scene
 
             if (self.State == TowerFall.MainMenu.MenuState.VersusOptions)
             {
-                (_, var mode) = ServiceCollections.ResolveStateMachineService();
+                var mode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
 
                 if (TowerFall.MainMenu.VersusMatchSettings != null
                 && mode == Domain.Models.Modes.Netplay1v1QuickPlay

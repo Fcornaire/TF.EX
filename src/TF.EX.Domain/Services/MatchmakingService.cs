@@ -1,6 +1,8 @@
-﻿using Newtonsoft.Json;
+﻿using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using System.Diagnostics;
 using System.Net.WebSockets;
+using TF.EX.Common.Extensions;
 using TF.EX.Common.Handle;
 using TF.EX.Domain.Externals;
 using TF.EX.Domain.Models.WebSocket;
@@ -37,18 +39,20 @@ namespace TF.EX.Domain.Services
 
         private readonly IRngService _rngService;
         private readonly INetplayManager _netplayManager;
+        private readonly ILogger _logger;
 
         private CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         private CancellationToken cancellationToken;
         private CancellationTokenSource cancellationTokenSourceLobby = new CancellationTokenSource();
         private CancellationToken cancellationTokenLobby;
-        public MatchmakingService(IRngService rngService, INetplayManager netplayManager)
+        public MatchmakingService(IRngService rngService, INetplayManager netplayManager, ILogger logger)
         {
             _webSocket = new ClientWebSocket();
             _rngService = rngService;
             _netplayManager = netplayManager;
             cancellationToken = cancellationTokenSource.Token;
             cancellationTokenLobby = cancellationTokenSourceLobby.Token;
+            _logger = logger;
         }
 
         public bool ConnectToServerAndListen()
@@ -66,7 +70,7 @@ namespace TF.EX.Domain.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                _logger.LogError<MatchmakingService>("Error when connecting to server", e);
                 return false;
             }
 
@@ -87,7 +91,7 @@ namespace TF.EX.Domain.Services
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("Error while listenning to server message : " + ex.Message); //NOT KILLED
+                    _logger.LogError<MatchmakingService>("Error while listenning to server message", ex); //NOT KILLED
                     Reset();
                 }
             }, cancellationToken);
@@ -275,7 +279,7 @@ namespace TF.EX.Domain.Services
                 }
                 else
                 {
-                    Console.WriteLine("Accepting opponent on quick play failed. (Probably a decline)");
+                    _logger.LogDebug<MatchmakingService>("Accepting opponent on quick play failed. (Probably a decline)");
                     _hasFoundOpponentForQuickPlay = false;
                     _OpponentDeclined = true;
                     _ping = 0;
@@ -321,7 +325,7 @@ namespace TF.EX.Domain.Services
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine($"Exception lobby msg : {e}");
+                    _logger.LogError<MatchmakingService>($"Error when listenning to opponent message", e);
                     DisconnectFromLobby();
                     _OpponentDeclined = true;
                 }
@@ -394,14 +398,14 @@ namespace TF.EX.Domain.Services
                             MatchboxClientFFI.send_message(PeerMessageType.Ping.ToString(), peerMessage.PeerId.ToString());
                             break;
                         default:
-                            Console.WriteLine($"Unknown message type {peerMessage.Type}");
+                            _logger.LogError<MatchmakingService>($"Unknown message type received from opponent : {peerMessage.Type}");
                             break;
                     }
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Exception when receiving lobby msg : {e}");
+                _logger.LogError<MatchmakingService>($"Error when handling opponent msg", e);
                 DisconnectFromLobby();
                 _OpponentDeclined = true;
             }
@@ -420,7 +424,7 @@ namespace TF.EX.Domain.Services
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine(e);
+                        _logger.LogError<MatchmakingService>($"Error when registering for quick play", e);
                     }
                 });
             }

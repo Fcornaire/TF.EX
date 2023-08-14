@@ -75,13 +75,5 @@
                 _items.Add(_defaultItemFactory());
             }
         }
-
-        public void Print()
-        {
-            for (int i = 0; i < _items.Count; i++)
-            {
-                Console.WriteLine(_items[i].ToString());
-            }
-        }
     }
 }
