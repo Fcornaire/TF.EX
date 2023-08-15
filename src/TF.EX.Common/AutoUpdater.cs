@@ -57,6 +57,14 @@ namespace TF.EX.Common
 
                 if (latestVersion > currentVersion)
                 {
+                    var hasRelease = await HasARelease($"v{latestVersion}");
+
+                    if (!hasRelease)
+                    {
+                        _logger.LogDebug<AutoUpdater>("No TF.EX Mod release available");
+                        return;
+                    }
+
                     _logger.LogDebug<AutoUpdater>("TF.EX Mod Update available!");
                     await DownloadLatest();
                     ExtractUpdate();
@@ -138,7 +146,7 @@ namespace TF.EX.Common
 
         private async Task<Version> GetLatestVersion()
         {
-            var client = new HttpClient();
+            using var client = new HttpClient();
             client.DefaultRequestHeaders.Add("User-Agent", "Towerfall");
             var response = await client.GetAsync("https://api.github.com/repos/fcornaire/tf.ex/tags");
             var content = await response.Content.ReadAsStringAsync();
@@ -150,6 +158,15 @@ namespace TF.EX.Common
 
             return new Version(latestSemverTag.Substring(1));
         }
+
+        private async Task<bool> HasARelease(string tag)
+        {
+            using var client = new HttpClient();
+            client.DefaultRequestHeaders.Add("User-Agent", "Towerfall");
+            var response = await client.GetAsync($"https://api.github.com/repos/fcornaire/tf.ex/releases/tags/{tag}");
+            return response.IsSuccessStatusCode;
+        }
+
 
         private async Task DownloadLatest()
         {
