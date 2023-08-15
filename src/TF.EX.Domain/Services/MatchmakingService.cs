@@ -81,7 +81,7 @@ namespace TF.EX.Domain.Services
                     if (!_isListening)
                     {
                         _isListening = true;
-                        while (_isListening)
+                        while (!cancellationToken.IsCancellationRequested)
                         {
                             var segment = new ArraySegment<byte>(_buffer);
                             var result = await _webSocket.ReceiveAsync(segment, cancellationToken);
@@ -91,7 +91,7 @@ namespace TF.EX.Domain.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError<MatchmakingService>("Error while listenning to server message", ex); //NOT KILLED
+                    _logger.LogError<MatchmakingService>("Error while listening to server message", ex); //NOT KILLED
                     Reset();
                 }
             }, cancellationToken);
@@ -465,10 +465,6 @@ namespace TF.EX.Domain.Services
         /// <returns></returns>
         public async Task CloseAsync()
         {
-            if (_webSocket.State == WebSocketState.Open)
-            {
-                await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, null, CancellationToken.None);
-            }
 
             cancellationTokenSource.Cancel();
             cancellationTokenSource = new CancellationTokenSource();
