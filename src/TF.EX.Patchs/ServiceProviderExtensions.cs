@@ -69,6 +69,7 @@ namespace TF.EX.Patchs
             serviceCollection.AddSingleton<IHookable, MiasmaPatch>();
             serviceCollection.AddSingleton<IHookable, VersusPlayerMatchResultsPatch>();
             serviceCollection.AddSingleton<IHookable, ReplayViewerPatch>();
+            serviceCollection.AddSingleton<IHookable, MapScenePatch>();
         }
 
         public static void LoadPatchs(this IServiceProvider serviceProvider)

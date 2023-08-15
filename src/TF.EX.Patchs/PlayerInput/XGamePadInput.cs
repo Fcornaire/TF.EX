@@ -9,18 +9,18 @@ using TowerFall;
 
 namespace TF.EX.Patchs.PlayerInput
 {
+     //TODO: refactor
     public class XGamePadInputPatch : IHookable
     {
         private readonly IInputService _inputService;
         private INetplayManager _netplayManager;
-        private INetplayStateMachine _stateMachine;
-        private ISessionService _sessionService;
-        private TF.EX.Domain.Models.Modes _currerntMode;
 
         private delegate bool MenuConfirm_orig(XGamepadInput self);
         private delegate bool MenuBack_orig(XGamepadInput self);
         private delegate bool MenuLeft_orig(XGamepadInput self);
         private delegate bool MenuRight_orig(XGamepadInput self);
+        private delegate bool MenuUp_orig(XGamepadInput self);
+        private delegate bool MenuDown_orig(XGamepadInput self);
         private delegate bool MenuAlt_orig(XGamepadInput self);
         private delegate bool MenuSkipReplay_orig(XGamepadInput self);
         private delegate bool MenuSaveReplay_orig(XGamepadInput self);
@@ -29,18 +29,18 @@ namespace TF.EX.Patchs.PlayerInput
         private static IDetour MenuBack_hook;
         private static IDetour MenuLeft_hook;
         private static IDetour MenuRight_hook;
+        private static IDetour MenuUp_hook;
+        private static IDetour MenuDown_hook;
         private static IDetour MenuAlt_hook;
         private static IDetour MenuSkipReplay_hook;
         private static IDetour MenuSaveReplay_hook;
         private static IDetour MenuSaveReplayCheck_hook;
 
 
-        public XGamePadInputPatch(IInputService inputService, INetplayManager netplayManager, INetplayStateMachine stateMachine, ISessionService sessionService)
+        public XGamePadInputPatch(IInputService inputService, INetplayManager netplayManager)
         {
             _inputService = inputService;
             _netplayManager = netplayManager;
-            _stateMachine = stateMachine;
-            _sessionService = sessionService;
         }
 
         public void Load()
@@ -51,6 +51,8 @@ namespace TF.EX.Patchs.PlayerInput
             MenuBack_hook = new Hook(typeof(XGamepadInput).GetProperty("MenuBack").GetGetMethod(), MenuBack_patch);
             MenuLeft_hook = new Hook(typeof(XGamepadInput).GetProperty("MenuLeft").GetGetMethod(), MenuLR_patch);
             MenuRight_hook = new Hook(typeof(XGamepadInput).GetProperty("MenuRight").GetGetMethod(), MenuLR_patch);
+            MenuUp_hook = new Hook(typeof(XGamepadInput).GetProperty("MenuUp").GetGetMethod(), MenuUp_patch);
+            MenuDown_hook = new Hook(typeof(XGamepadInput).GetProperty("MenuDown").GetGetMethod(), MenuDown_patch);
             MenuAlt_hook = new Hook(typeof(XGamepadInput).GetProperty("MenuAlt").GetGetMethod(), MenuConfirm_patch);
             MenuSkipReplay_hook = new Hook(typeof(XGamepadInput).GetProperty("MenuSkipReplay").GetGetMethod(), MenuSkip_patch);
             MenuSaveReplay_hook = new Hook(typeof(XGamepadInput).GetProperty("MenuSaveReplay").GetGetMethod(), MenuSave_patch);
@@ -73,17 +75,45 @@ namespace TF.EX.Patchs.PlayerInput
 
         private static bool MenuConfirm_patch(MenuConfirm_orig orig, XGamepadInput self)
         {
-            return InterceptConfirm(orig(self));
+            return InterceptConfirm(self, orig(self));
         }
 
         private static bool MenuBack_patch(MenuConfirm_orig orig, XGamepadInput self)
         {
-            return InterceptBack(orig(self));
+            return InterceptBack(self, orig(self));
         }
 
         private static bool MenuLR_patch(MenuConfirm_orig orig, XGamepadInput self)
         {
-            return InterceptLR(orig(self));
+            return InterceptLR(self, orig(self));
+        }
+
+        private static bool MenuUp_patch(MenuConfirm_orig orig, XGamepadInput self)
+        {
+            var inputService = ServiceCollections.ResolveInputService();
+
+            if (TFGame.Instance.Scene is MainMenu
+               && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
+               && inputService.GetInputIndex(self) != 0)
+            {
+                return false;
+            }
+
+            return orig(self);
+        }
+
+        private static bool MenuDown_patch(MenuConfirm_orig orig, XGamepadInput self)
+        {
+            var inputService = ServiceCollections.ResolveInputService();
+
+            if (TFGame.Instance.Scene is MainMenu
+                && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
+                && inputService.GetInputIndex(self) != 0)
+            {
+                return false;
+            }
+
+            return orig(self);
         }
 
         private static bool MenuSkip_patch(MenuConfirm_orig orig, XGamepadInput self)
@@ -125,7 +155,7 @@ namespace TF.EX.Patchs.PlayerInput
             {
                 var polledInput = orig(self);
 
-                if (IsLocalPlayerGamePad)
+                if (IsLocalPlayerGamePad(self))
                 {
                     if (!_netplayManager.IsReplayMode())
                     {
@@ -146,16 +176,25 @@ namespace TF.EX.Patchs.PlayerInput
             }
         }
 
-        private static bool InterceptConfirm(bool actualInput)
+        //TODO: refactor to have a unique intercept for all inputs
+        private static bool InterceptConfirm(XGamepadInput self, bool actualInput)
         {
             (var state_machine, var mode) = ServiceCollections.ResolveStateMachineService();
             var netplayManager = ServiceCollections.ResolveNetplayManager();
+            var inputService = ServiceCollections.ResolveInputService();
 
             var init = state_machine.IsInitialized();
             var canStart = state_machine.CanStart();
             var isNetplayInit = netplayManager.IsInit();
             var isReplayMode = netplayManager.IsReplayMode();
             var isPaused = TFGame.Instance.Scene is TowerFall.Level && (TFGame.Instance.Scene as TowerFall.Level).Paused;
+
+            if (TFGame.Instance.Scene is MainMenu
+                && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
+                && inputService.GetInputIndex(self) != 0)
+            {
+                return false; //Ignore input for other players in netplay
+            }
 
             if (TFGame.Instance.Scene is MapScene)
             {
@@ -221,17 +260,25 @@ namespace TF.EX.Patchs.PlayerInput
             return actualInput;
         }
 
-        private static bool InterceptBack(bool actualInput)
+        private static bool InterceptBack(XGamepadInput self, bool actualInput)
         {
             try
             {
                 (var state_machine, _) = ServiceCollections.ResolveStateMachineService();
                 var netplayManager = ServiceCollections.ResolveNetplayManager();
+                var inputService = ServiceCollections.ResolveInputService();
 
                 var init = state_machine.IsInitialized();
                 var canStart = state_machine.CanStart();
                 var isNetplayInit = netplayManager.IsInit();
                 var isPaused = TFGame.Instance.Scene is TowerFall.Level && (TFGame.Instance.Scene as TowerFall.Level).Paused;
+
+                if (TFGame.Instance.Scene is MainMenu
+                && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
+                && inputService.GetInputIndex(self) != 0)
+                {
+                    return false; //Ignore input for other players in netplay
+                }
 
                 if (isPaused)
                 {
@@ -287,15 +334,23 @@ namespace TF.EX.Patchs.PlayerInput
             }
         }
 
-        private static bool InterceptLR(bool actualInput)
+        private static bool InterceptLR(XGamepadInput self, bool actualInput)
         {
             (var state_machine, _) = ServiceCollections.ResolveStateMachineService();
             var netplayManager = ServiceCollections.ResolveNetplayManager();
+            var inputService = ServiceCollections.ResolveInputService();
 
             var init = state_machine.IsInitialized();
             var canStart = state_machine.CanStart();
             var isNetplayInit = netplayManager.IsInit();
             var isPaused = TFGame.Instance.Scene is TowerFall.Level && (TFGame.Instance.Scene as TowerFall.Level).Paused;
+
+            if (TFGame.Instance.Scene is MainMenu
+                && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
+                && inputService.GetInputIndex(self) != 0)
+            {
+                return false;
+            }
 
             if (isPaused)
             {
@@ -334,6 +389,9 @@ namespace TF.EX.Patchs.PlayerInput
             return actualInput;
         }
 
-        private bool IsLocalPlayerGamePad => TFGame.PlayerInputs[0] is XGamepadInput;
+        private bool IsLocalPlayerGamePad(XGamepadInput self)
+        {
+            return _inputService.GetInputIndex(self) == 0;
+        }
     }
 }

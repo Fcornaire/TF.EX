@@ -79,6 +79,8 @@ namespace TF.EX.Patchs.Engine
                 _netplayManager.Reset();
                 _netplayManager.SetIsFirstInit(true);
 
+                TowerFall.PlayerInput.AssignInputs(); //Reset inputs
+
                 TFGame.Players[0] = false;
                 TFGame.Players[1] = false;
                 TFGame.Characters[0] = 0;
