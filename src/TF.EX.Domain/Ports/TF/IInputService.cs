@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using TowerFall;
+﻿using TowerFall;
 
 namespace TF.EX.Domain.Ports.TF
 {
@@ -15,5 +14,8 @@ namespace TF.EX.Domain.Ports.TF
         int GetLocalPlayerInputIndex();
         int GetRemotePlayerInputIndex();
         void ResetCurrentInput();
+        void EnsureRemoteController();
+
+        int GetInputIndex(PlayerInput input);
     }
 }

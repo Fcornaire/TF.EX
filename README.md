@@ -30,8 +30,6 @@ Also, this is project is super WIP !
 
 # Usage
 
-This mod assume you are playing with One controller (and letting the keyboard on player 2)
-
 It fairly easy to use the mod:
 
 1. Download and install [FortRise](https://github.com/Terria-K/FortRise) if not already
@@ -115,7 +113,7 @@ As you can guess, this project is still WIP and missing a lot of feature:
 
 - [ ] Automatically bump the version (meta + tag)
 - [ ] Refacto (There is a lot of thing i want to refactor)
-- [ ] Less restrictive controller (make a Netplay controller)
+- [x] Less restrictive controller
 - [ ] Fix bugs (Main focus right now as i need more people to play, test and report behavior)
 - [ ] Support for all versus map
 - [ ] Support all items

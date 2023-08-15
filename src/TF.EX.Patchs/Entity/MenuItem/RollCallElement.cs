@@ -111,7 +111,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
             _stateMachine = stateMachine; //making sure we have the right service (QP vs Direct)
             _stateMachine.Reset();
 
-            if (IsNetplay1v1())
+            if (IsNetplay1v1()) //TODO: only true 1v1
             {
                 TFGame.PlayerInputs[2] = null;
                 TFGame.PlayerInputs[3] = null;

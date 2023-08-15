@@ -13,6 +13,26 @@ namespace TF.EX.Domain.Services.TF
             _context = context;
         }
 
+        public int GetInputIndex(PlayerInput input)
+        {
+            var idx = TFGame.PlayerInputs
+                .Select((x, i) => new { Value = x, Index = i })
+                .FirstOrDefault(x => x.Value == input)?.Index;
+
+            return idx ?? -1;
+        }
+
+        /// <summary>
+        /// Used to add controller for remote players
+        /// </summary>
+        public void EnsureRemoteController() //TODO: Handle more than 2 players
+        {
+            if (TFGame.PlayerInputs[1] is null)
+            {
+                TFGame.PlayerInputs[1] = new KeyboardInput();
+            }
+        }
+
         public InputState GetCurrentInput(int characterIndex)
         {
             return _context.GetCurrentInput(characterIndex);
