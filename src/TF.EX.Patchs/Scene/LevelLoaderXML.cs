@@ -2,6 +2,7 @@
 using MonoMod.Utils;
 using TF.EX.Domain;
 using TF.EX.Domain.CustomComponent;
+using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models.State;
 using TF.EX.Domain.Ports;
 using TF.EX.TowerFallExtensions;
@@ -12,12 +13,10 @@ namespace TF.EX.Patchs.Scene
     public class LevelLoaderXMLPatch : IHookable
     {
         private readonly INetplayManager _netplayManager;
-        private readonly IMatchmakingService _matchmakingService;
 
-        public LevelLoaderXMLPatch(INetplayManager netplayManager, IMatchmakingService matchmakingService)
+        public LevelLoaderXMLPatch(INetplayManager netplayManager)
         {
             _netplayManager = netplayManager;
-            _matchmakingService = matchmakingService;
         }
 
         public void Load()
@@ -37,14 +36,15 @@ namespace TF.EX.Patchs.Scene
             orig(self);
 
             if (self.Finished
+                && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
                 && !_netplayManager.IsReplayMode()
                 && !_netplayManager.IsSynchronized()
                 && self.Level.Get<Dialog>() is null
                 && self.Level.Session.RoundIndex == 0
-                && _netplayManager.GetNetplayMode() is not Domain.Models.NetplayMode.Test)
+                )
             {
                 var dialog = new Dialog("Infos",
-                    "Etablishing a connection ...",
+                    "Establishing a connection ...",
                     new Vector2(160f, 120f),
                     null,
                     new Dictionary<string, Action>(),

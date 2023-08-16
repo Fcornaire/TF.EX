@@ -7,6 +7,7 @@ using TF.EX.Domain.Models.State;
 using TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows;
 using TF.EX.Domain.Models.State.Entity.LevelEntity.Chest;
 using TF.EX.Domain.Models.State.Layer;
+using TF.EX.TowerFallExtensions.Entity;
 using TF.EX.TowerFallExtensions.Entity.LevelEntity;
 using TF.EX.TowerFallExtensions.Layer;
 using TowerFall;
@@ -58,6 +59,11 @@ namespace TF.EX.TowerFallExtensions
         public static void SortGamePlayLayer(this Level level, Comparison<Monocle.Entity> comparison)
         {
             level.GetGameplayLayer().Entities.Sort(comparison);
+        }
+
+        public static void SortHUDLayer(this Level level, Comparison<Monocle.Entity> comparison)
+        {
+            level.GetHUDLayer().Entities.Sort(comparison);
         }
 
         public static Monocle.Layer GetGameplayLayer(this Level level)
@@ -280,7 +286,7 @@ namespace TF.EX.TowerFallExtensions
 
             if (gameState.Entities.Hud.VersusRoundResults.CoroutineState > 0)
             {
-                //var hudFade = new TowerFall.HUDFade(); //Properly track this
+                var hudFade = new TowerFall.HUDFade();
                 var versusRoundResults = new TowerFall.VersusRoundResults(level.Session, gameState.RoundLogic.EventLogs.ToTFModel());
                 var dynVersusRoundResults = DynamicData.For(versusRoundResults);
                 dynVersusRoundResults.Set("Scene", level);
@@ -288,13 +294,14 @@ namespace TF.EX.TowerFallExtensions
 
                 var hudLayer = level.Layers.FirstOrDefault(l => l.Value.Index == versusRoundResults.LayerIndex).Value;
                 hudLayer.Entities.Add(versusRoundResults);
-                //hudLayer.Entities.Add(hudFade);
+                hudLayer.Entities.Add(hudFade);
                 versusRoundResults.Added();
-                //hudFade.Added();
+                hudFade.Added();
 
                 for (int i = 0; i < gameState.Entities.Hud.VersusRoundResults.CoroutineState; i++)
                 {
                     versusRoundResults.Update();
+                    hudFade.Update();
                 }
             }
 
@@ -498,6 +505,7 @@ namespace TF.EX.TowerFallExtensions
             level.PostLoad(gameState);
 
             level.SortGamePlayLayer(CompareDepth);
+            level.SortHUDLayer(CompareDepth);
         }
 
         private static int CompareDepth(Monocle.Entity a, Monocle.Entity b)
