@@ -1,19 +1,15 @@
 ﻿using MonoMod.Utils;
-using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
-using TF.EX.Patchs.Engine;
 using TowerFall;
 
 namespace TF.EX.Patchs.Entity.HUD
 {
     public class VersusMatchResultsPatch : IHookable
     {
-        private readonly IReplayService _replayService;
         private readonly IRngService _rngService;
 
-        public VersusMatchResultsPatch(IReplayService replayService, IRngService rngService)
+        public VersusMatchResultsPatch(IRngService rngService)
         {
-            _replayService = replayService;
             _rngService = rngService;
         }
 
@@ -35,12 +31,6 @@ namespace TF.EX.Patchs.Entity.HUD
 
             var dynVersusMatchResults = DynamicData.For(self);
             dynVersusMatchResults.Add("HasReset", false);
-
-            if (!TFGamePatch.HasExported)
-            {
-                _replayService.Export();
-                TFGamePatch.HasExported = true;
-            }
 
             session.MatchSettings.RandomLevelSeed = _rngService.GetSeed();
 

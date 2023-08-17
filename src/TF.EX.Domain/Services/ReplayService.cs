@@ -39,9 +39,14 @@ namespace TF.EX.Domain.Services
         {
             var replay = _gameContext.GetReplay();
 
+            if (replay == null)
+            {
+                return;
+            }
+
             replay.Informations.PlayerDraw = _netplayManager.GetPlayerDraw();
 
-            var filename = $"{DateTime.Now.ToString("dd'-'MM'-'yyy'T'HH'-'mm'-'ss")}.tow";
+            var filename = $"{DateTime.UtcNow.ToString("dd'-'MM'-'yyy'T'HH'-'mm'-'ss")}.tow";
             //var filenameJson = $"{DateTime.Now.ToString("dd'-'MM'-'yyy'T'HH'-'mm'-'ss")}_players.json";
 
             Directory.CreateDirectory(REPLAYS_FOLDER);
@@ -57,6 +62,8 @@ namespace TF.EX.Domain.Services
             //File.WriteAllBytes(filePath, ToBytes(replay));
             using var fileStream = new FileStream(filePath, FileMode.Create);
             WriteToFile(replay, fileStream);
+
+            _gameContext.ResetReplay();
         }
 
         public void Initialize()
@@ -158,13 +165,12 @@ namespace TF.EX.Domain.Services
 
         private void WriteToFile(Replay replay, Stream stream)
         {
-            using (var gzipStream = new GZipStream(stream, CompressionMode.Compress))
-            using (var streamWriter = new StreamWriter(gzipStream, Encoding.UTF8))
-            using (var jsonWriter = new JsonTextWriter(streamWriter))
-            {
-                var serializer = new JsonSerializer();
-                serializer.Serialize(jsonWriter, replay);
-            }
+            using var gzipStream = new GZipStream(stream, CompressionMode.Compress);
+            using var streamWriter = new StreamWriter(gzipStream, Encoding.UTF8);
+            using var jsonWriter = new JsonTextWriter(streamWriter);
+
+            var serializer = new JsonSerializer();
+            serializer.Serialize(jsonWriter, replay);
         }
 
         private Replay ToReplay(string filePath)
