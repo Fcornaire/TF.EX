@@ -1,5 +1,6 @@
 ﻿using FortRise;
 using Monocle;
+using TF.EX.Domain;
 using TF.EX.Patchs;
 
 namespace TF.EX
@@ -27,6 +28,7 @@ namespace TF.EX
 
         public override void Unload()
         {
+            ServiceCollections.ResolveReplayService().Export();
             TF.EX.Domain.ServiceCollections.ServiceProvider.UnloadPatchs();
         }
 
