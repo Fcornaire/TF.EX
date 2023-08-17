@@ -5,7 +5,6 @@ using TF.EX.Common.Extensions;
 using TF.EX.Domain;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
-using TF.EX.Patchs.Engine;
 using TowerFall;
 
 namespace TF.EX.Core.RoundLogic
@@ -55,7 +54,6 @@ namespace TF.EX.Core.RoundLogic
                 _replayService.Initialize();
 
                 TowerFall.TFGame.ConsoleEnabled = false;
-                TFGamePatch.HasExported = false;
             }
             else
             {

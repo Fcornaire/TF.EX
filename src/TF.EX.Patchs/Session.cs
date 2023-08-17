@@ -4,6 +4,7 @@ using TF.EX.Common.Extensions;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
+using TF.EX.Patchs.Calc;
 using TF.EX.TowerFallExtensions;
 using TowerFall;
 
@@ -87,6 +88,7 @@ namespace TF.EX.Patchs
 
         private void Session_StartGame(On.TowerFall.Session.orig_StartGame orig, Session self)
         {
+            CalcPatch.Reset();
             _rngService.Get().ResetGenType();
             _rngService.Get().ResetRandom();
 

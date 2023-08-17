@@ -23,7 +23,6 @@ namespace TF.EX.Patchs.Engine
 {
     public class TFGamePatch : IHookable
     {
-        public static bool HasExported = false;
         public static InputRenderer[] ReplayInputRenderers = new InputRenderer[4];
 
         private bool _shouldShowUpdateDialog = true;
@@ -32,6 +31,7 @@ namespace TF.EX.Patchs.Engine
         private readonly IInputService _inputService;
         private readonly IReplayService _replayService;
         private readonly IMatchmakingService _matchmakingService;
+        private readonly IAutoUpdater _autoUpdater;
         private readonly ILogger _logger;
 
         private DateTime LastUpdate;
@@ -46,12 +46,14 @@ namespace TF.EX.Patchs.Engine
             IInputService inputService,
             IReplayService replayService,
             IMatchmakingService matchmakingService,
+            IAutoUpdater autoUpdater,
             ILogger logger)
         {
             _netplayManager = netplayManager;
             _inputService = inputService;
             _replayService = replayService;
             _matchmakingService = matchmakingService;
+            _autoUpdater = autoUpdater;
             _logger = logger;
         }
 
@@ -60,6 +62,7 @@ namespace TF.EX.Patchs.Engine
             On.TowerFall.TFGame.Update += TFGameUpdate_Patch;
             On.TowerFall.TFGame.Load += TFGame_Load;
             On.TowerFall.TFGame.OnSceneTransition += TFGame_OnSceneTransition;
+            On.TowerFall.TFGame.OnExiting += TFGame_OnExiting;
         }
 
         public void Unload()
@@ -67,6 +70,34 @@ namespace TF.EX.Patchs.Engine
             On.TowerFall.TFGame.Update -= TFGameUpdate_Patch;
             On.TowerFall.TFGame.Load -= TFGame_Load;
             On.TowerFall.TFGame.OnSceneTransition -= TFGame_OnSceneTransition;
+            On.TowerFall.TFGame.OnExiting -= TFGame_OnExiting;
+        }
+
+        private void TFGame_OnExiting(On.TowerFall.TFGame.orig_OnExiting orig, TFGame self, object sender, EventArgs args)
+        {
+            _replayService.Export();
+
+            if (_autoUpdater.IsUpdateAvailable())
+            {
+                if (!FortRise.RiseCore.DebugMode)
+                {
+                    FortRise.Logger.AttachConsole(new FortRise.WindowConsole());
+                }
+
+                var logger = ServiceCollections.ResolveLogger();
+                var stopWatch = new Stopwatch();
+
+                stopWatch.Start();
+                logger.LogDebug("TF.EX mod updating...");
+                _autoUpdater.Update();
+                stopWatch.Stop();
+
+                var time = stopWatch.ElapsedMilliseconds / 1000 == 0 ? $"{stopWatch.ElapsedMilliseconds}ms" : $"{stopWatch.ElapsedMilliseconds / 1000}s";
+
+                logger.LogDebug($"TF.EX mod updated in {time}");
+            }
+
+            orig(self, sender, args);
         }
 
         private void TFGame_OnSceneTransition(On.TowerFall.TFGame.orig_OnSceneTransition orig, TFGame self)
@@ -92,7 +123,6 @@ namespace TF.EX.Patchs.Engine
         {
             orig();
 
-            AppDomain.CurrentDomain.ProcessExit += new EventHandler(OnProcessExit);
             LastUpdate = DateTime.Now;
             Accumulator = TimeSpan.Zero;
 
@@ -106,35 +136,6 @@ namespace TF.EX.Patchs.Engine
         {
             var autoUpdate = ServiceCollections.ServiceProvider.GetRequiredService<IAutoUpdater>();
             await autoUpdate.CheckForUpdate();
-        }
-
-        static void OnProcessExit(object sender, EventArgs e)
-        {
-            if (ServiceCollections.ResolveNetplayManager().IsInit() && !TFGamePatch.HasExported)
-            {
-                ServiceCollections.ResolveReplayService().Export();
-            }
-
-            var autoUpdater = ServiceCollections.ServiceProvider.GetRequiredService<IAutoUpdater>();
-            if (autoUpdater.IsUpdateAvailable())
-            {
-                if (!FortRise.RiseCore.DebugMode)
-                {
-                    FortRise.Logger.AttachConsole(new FortRise.WindowConsole());
-                }
-
-                var logger = ServiceCollections.ResolveLogger();
-                var stopWatch = new Stopwatch();
-
-                stopWatch.Start();
-                logger.LogDebug("TF.EX mod updating...");
-                autoUpdater.Update();
-                stopWatch.Stop();
-
-                var time = stopWatch.ElapsedMilliseconds / 1000 == 0 ? $"{stopWatch.ElapsedMilliseconds}ms" : $"{stopWatch.ElapsedMilliseconds / 1000}s";
-
-                logger.LogDebug($"TF.EX mod updated in {time}");
-            }
         }
 
         private void TFGameUpdate_Patch(On.TowerFall.TFGame.orig_Update orig, TowerFall.TFGame self, GameTime gameTime)
@@ -290,7 +291,12 @@ namespace TF.EX.Patchs.Engine
 
                         if (ServiceCollections.ServiceProvider.GetRequiredService<IAutoUpdater>().IsUpdateAvailable())
                         {
-                            var dialog = new Dialog("TF EX Update", "A TF EX mod update is available \n \nCancel this to start updating", new Vector2(160f, 120f), () => { Environment.Exit(0); }, new Dictionary<string, Action>());
+                            var dialog = new Dialog(
+                                "TF EX Update",
+                                "A TF EX mod update is available \n \nCancel this to start updating",
+                                new Vector2(160f, 120f),
+                                self.Exit,
+                                new Dictionary<string, Action>());
                             var dynLayer = DynamicData.For((TFGame.Instance.Scene as TowerFall.MainMenu).GetMainLayer());
                             dynLayer.Invoke("Add", dialog, false);
                         }
