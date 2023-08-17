@@ -8,10 +8,12 @@ namespace TF.EX.Patchs.Entity.HUD
     internal class HUDPatch : IHookable
     {
         private readonly IReplayService _replayService;
+        private readonly INetplayManager _netplayManager;
 
-        public HUDPatch(IReplayService replayService)
+        public HUDPatch(IReplayService replayService, INetplayManager netplayManager)
         {
             _replayService = replayService;
+            _netplayManager = netplayManager;
         }
 
         public void Load()
@@ -28,7 +30,7 @@ namespace TF.EX.Patchs.Entity.HUD
         {
             orig(self);
 
-            if (self is VersusMatchResults)
+            if (self is VersusMatchResults && !_netplayManager.IsReplayMode())
             {
                 var dynVersusMatchResults = DynamicData.For(self);
                 var finished = dynVersusMatchResults.Get<bool>("finished");

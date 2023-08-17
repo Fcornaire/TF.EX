@@ -1,4 +1,5 @@
-﻿using TF.EX.Domain.Ports.TF;
+﻿using TF.EX.Domain;
+using TF.EX.Domain.Ports.TF;
 
 namespace TF.EX.Patchs.Scene
 {
@@ -26,6 +27,7 @@ namespace TF.EX.Patchs.Scene
             orig(self);
 
             _inputService.EnsureRemoteController();
+            ServiceCollections.PurgeCache();
         }
     }
 }

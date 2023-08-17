@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using TF.EX.Domain.Models;
+﻿using TF.EX.Domain.Models;
 using TF.EX.Domain.Models.State;
 
 namespace TF.EX.Domain.Ports
@@ -11,14 +10,13 @@ namespace TF.EX.Domain.Ports
         void AddRecord(GameState gameState, bool shouldSwapPlayer);
         void RemovePredictedRecords(int frame);
         void Export();
-        void LoadAndStart(string pathWithReplayToLoad);
+        Task LoadAndStart(string pathWithReplayToLoad);
         void RunFrame();
         Replay GetReplay();
 
         Record GetCurrentRecord();
         void GoTo(int numbreOfFrames);
         void Reset();
-
-        List<string> GetReplays();
+        IEnumerable<Replay> LoadAndGetReplays();
     }
 }

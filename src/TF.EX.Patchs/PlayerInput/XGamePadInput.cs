@@ -9,7 +9,7 @@ using TowerFall;
 
 namespace TF.EX.Patchs.PlayerInput
 {
-     //TODO: refactor
+    //TODO: refactor
     public class XGamePadInputPatch : IHookable
     {
         private readonly IInputService _inputService;
@@ -128,7 +128,6 @@ namespace TF.EX.Patchs.PlayerInput
 
         private InputState XGamepadInput_GetState(On.TowerFall.XGamepadInput.orig_GetState orig, XGamepadInput self)
         {
-
             if (_netplayManager.GetNetplayMode() != Domain.Models.NetplayMode.Test
                 && _netplayManager.GetNetplayMode() != Domain.Models.NetplayMode.Replay
                 && !_netplayManager.IsSynchronized())

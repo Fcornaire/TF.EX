@@ -1,10 +1,12 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
 using TF.EX.Common;
 using TF.EX.Common.Logging;
 using TF.EX.Domain.Context;
 using TF.EX.Domain.Extensions;
+using TF.EX.Domain.Models;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
 using TF.EX.Domain.Services;
@@ -19,6 +21,8 @@ namespace TF.EX.Domain
         public static ServiceCollection ServiceCollection;
         public static IServiceProvider ServiceProvider;
         private static HashSet<double> _cachedPickupEntries = new HashSet<double>();
+        private static CancellationTokenSource _resetCacheToken = new CancellationTokenSource();
+        public static readonly ReplayVersion CurrentVersion = ReplayVersion.V1;
 
         public static void RegisterServices()
         {
@@ -66,12 +70,18 @@ namespace TF.EX.Domain
             ServiceProvider = ServiceCollection.BuildServiceProvider();
         }
 
-        public static void AddToCache(double actualDepth, Monocle.Entity entity)
+        public static void AddEntityToCache(double actualDepth, Monocle.Entity entity)
         {
             var cache = ServiceProvider.GetService<IMemoryCache>();
             if (!cache.TryGetValue(actualDepth, out Monocle.Entity _))
             {
-                cache.Set(actualDepth, entity);
+                cache.Set(actualDepth, entity, new MemoryCacheEntryOptions
+                {
+                    Priority = CacheItemPriority.Normal,
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5),
+                    ExpirationTokens = { new CancellationChangeToken(_resetCacheToken.Token) }
+                });
+
                 if (entity is Pickup)
                 {
                     _cachedPickupEntries.Add(actualDepth);
@@ -79,11 +89,37 @@ namespace TF.EX.Domain
             }
         }
 
-        public static T GetCached<T>(double actualDepth) where T : Monocle.Entity
+        public static void AddToCache<K, V>(K key, V value)
+        {
+            var cache = ServiceProvider.GetService<IMemoryCache>();
+            lock (cache)
+            {
+                cache.Set(key, value, new MemoryCacheEntryOptions
+                {
+                    Priority = CacheItemPriority.High,
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5),
+                    ExpirationTokens = { new CancellationChangeToken(_resetCacheToken.Token) }
+                });
+            }
+        }
+
+        public static T GetCachedEntity<T>(double actualDepth) where T : Monocle.Entity
         {
             var cache = ServiceProvider.GetService<IMemoryCache>();
 
             if (cache.TryGetValue(actualDepth, out T cached))
+            {
+                return cached;
+            }
+
+            return null;
+        }
+
+        public static T GetCached<K, T>(K key) where T : class
+        {
+            var cache = ServiceProvider.GetService<IMemoryCache>();
+
+            if (cache.TryGetValue(key, out T cached))
             {
                 return cached;
             }
@@ -137,10 +173,22 @@ namespace TF.EX.Domain
         {
             var cache = ServiceProvider.GetService<IMemoryCache>();
 
-            foreach (var cachedPickup in _cachedPickupEntries)
+            foreach (var cachedPickup in _cachedPickupEntries) //TODO: Should also remove the cached pickup from the cache 
             {
                 cache.Remove(cachedPickup);
             }
+        }
+
+        public static void PurgeCache()
+        {
+            if (_resetCacheToken != null && !_resetCacheToken.IsCancellationRequested && _resetCacheToken.Token.CanBeCanceled)
+            {
+                _resetCacheToken.Cancel();
+                _resetCacheToken.Dispose();
+            }
+
+            _resetCacheToken = new CancellationTokenSource();
+            _cachedPickupEntries.Clear();
         }
     }
 }

@@ -202,7 +202,7 @@ namespace TF.EX.Domain.Context
             {
                 _replay = new Replay
                 {
-                    Informations = new Info
+                    Informations = new ReplayInfo
                     {
                         Id = towerId,
                         PlayerDraw = PlayerDraw.Unkown,

@@ -28,7 +28,11 @@ namespace TF.EX
 
         public override void Unload()
         {
-            ServiceCollections.ResolveReplayService().Export();
+            if (!ServiceCollections.ResolveNetplayManager().IsReplayMode())
+            {
+                ServiceCollections.ResolveReplayService().Export();
+            }
+
             TF.EX.Domain.ServiceCollections.ServiceProvider.UnloadPatchs();
         }
 
