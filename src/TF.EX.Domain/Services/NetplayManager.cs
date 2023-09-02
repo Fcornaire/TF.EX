@@ -730,5 +730,40 @@ namespace TF.EX.Domain.Services
         {
             return _isSyncing;
         }
+
+        //TODO: Refactor this to handle more than 2 players
+        public ICollection<ArcherInfo> GetArchersInfo()
+        {
+            var archersInfo = new List<ArcherInfo>();
+
+            if (TFGame.Instance.Scene is not Level)
+            {
+                _logger.LogError<NetplayManager>($"Scene is not a Level, it is a {TFGame.Instance.Scene.GetType().Name}");
+                return new List<ArcherInfo>();
+            }
+
+            var level = TFGame.Instance.Scene as Level;
+
+            archersInfo.Add(new ArcherInfo
+            {
+                NetplayName = NetplayMeta.Name,
+                Index = TFGame.Characters[(int)GetPlayerDraw()],
+                HasWon = level.Session.MatchStats[(int)GetPlayerDraw()].Won,
+                Score = level.Session.Scores[ShouldSwapPlayer() ? _inputService.GetRemotePlayerInputIndex() : _inputService.GetLocalPlayerInputIndex()], //Huh...Score are swapped
+                Type = TFGame.AltSelect[(int)GetPlayerDraw()],
+            });
+
+            archersInfo.Add(new ArcherInfo
+            {
+                NetplayName = _player2Name,
+                Index = TFGame.Characters[((int)GetPlayerDraw() + 1) % 2],
+                HasWon = level.Session.MatchStats[((int)GetPlayerDraw() + 1) % 2].Won,
+                Score = level.Session.Scores[ShouldSwapPlayer() ? _inputService.GetLocalPlayerInputIndex() : _inputService.GetRemotePlayerInputIndex()],
+                Type = TFGame.AltSelect[((int)GetPlayerDraw() + 1) % 2],
+            });
+
+
+            return archersInfo;
+        }
     }
 }

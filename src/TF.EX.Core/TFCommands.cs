@@ -4,9 +4,9 @@ using System.Net;
 using System.Net.Sockets;
 using TF.EX.Common.Extensions;
 using TF.EX.Domain;
+using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Ports;
-using TF.EX.Patchs.Engine;
 using TowerFall;
 
 namespace TF.EX.Core
@@ -116,10 +116,24 @@ namespace TF.EX.Core
 
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var replayService = ServiceCollections.ResolveReplayService();
+            Music.Stop();
+            Sounds.ui_mapZoom.Play();
 
-            netplayManager.SetReplayMode();
-            replayService.LoadAndStart(replayName);
-            TFGamePatch.SetupReplayInputRenderer();
+            Task.Run(async () =>
+            {
+                TFGame.Instance.Commands.Open = false;
+
+                var loader = new Loader(true);
+                Loader.Message = "LOADING REPLAY...";
+                TFGame.Instance.Scene.Add(new Fader());
+                TFGame.Instance.Scene.Add(loader);
+
+                await replayService.LoadAndStart(replayName);
+
+                netplayManager.SetReplayMode();
+
+                TFGame.Instance.Scene.Remove(loader);
+            });
         }
 
         [Command("online")]

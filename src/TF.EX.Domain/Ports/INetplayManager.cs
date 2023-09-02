@@ -86,5 +86,6 @@ namespace TF.EX.Domain.Ports
 
         void SetIsFirstInit(bool isFirstInit);
         bool IsSyncing();
+        ICollection<ArcherInfo> GetArchersInfo();
     }
 }

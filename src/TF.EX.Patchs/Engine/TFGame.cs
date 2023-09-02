@@ -23,7 +23,7 @@ namespace TF.EX.Patchs.Engine
 {
     public class TFGamePatch : IHookable
     {
-        public static InputRenderer[] ReplayInputRenderers = new InputRenderer[4];
+        public static InputRenderer[] ReplayInputRenderers;
 
         private bool _shouldShowUpdateDialog = true;
 
@@ -75,7 +75,10 @@ namespace TF.EX.Patchs.Engine
 
         private void TFGame_OnExiting(On.TowerFall.TFGame.orig_OnExiting orig, TFGame self, object sender, EventArgs args)
         {
-            _replayService.Export();
+            if (!_netplayManager.IsReplayMode())
+            {
+                _replayService.Export();
+            }
 
             if (_autoUpdater.IsUpdateAvailable())
             {
@@ -107,10 +110,19 @@ namespace TF.EX.Patchs.Engine
             if (self.PreviousScene is Level && self.Scene is TowerFall.MainMenu)
             {
                 CalcPatch.Reset();
-                _netplayManager.Reset();
-                _netplayManager.SetIsFirstInit(true);
 
-                TowerFall.PlayerInput.AssignInputs(); //Reset inputs
+                ReplayInputRenderers = null;
+
+                if (_netplayManager.IsInit() && !_netplayManager.IsTestMode())
+                {
+                    _netplayManager.Reset();
+                    _netplayManager.SetIsFirstInit(true);
+                    ServiceCollections.PurgeCache();
+
+                    TowerFall.PlayerInput.AssignInputs(); //Reset inputs
+                }
+
+                _netplayManager.ResetMode();
 
                 TFGame.Players[0] = false;
                 TFGame.Players[1] = false;
@@ -146,13 +158,6 @@ namespace TF.EX.Patchs.Engine
             }
 
             ManageTimeStep(self);
-
-            //TODO: export replay when disconnected
-            //if (_netplayManager.IsDisconnected() && !HasExported)
-            //{
-            //    _replayService.Export();
-            //    HasExported = true;
-            //}
 
             if (_netplayManager.IsReplayMode())
             {
@@ -357,7 +362,11 @@ namespace TF.EX.Patchs.Engine
                         var gameState = level.GetState();
 
                         _netplayManager.SaveGameState(gameState);
-                        _replayService.AddRecord(gameState, _netplayManager.ShouldSwapPlayer());
+
+                        if (!_netplayManager.IsReplayMode())
+                        {
+                            _replayService.AddRecord(gameState, _netplayManager.ShouldSwapPlayer());
+                        }
                         break;
                     case NetplayRequest.LoadGameState:
                         _netplayManager.SetIsRollbackFrame(true);
@@ -384,6 +393,8 @@ namespace TF.EX.Patchs.Engine
         {
             var replayService = ServiceCollections.ResolveReplayService();
             var replay = replayService.GetReplay();
+
+            ReplayInputRenderers = new InputRenderer[replay.Record[0].Inputs.Count];
 
             if (replay.Record.Count > 0)
             {

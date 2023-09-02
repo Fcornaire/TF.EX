@@ -32,8 +32,6 @@ namespace TF.EX.Patchs
             var jump = dynInputRender.Get<Subtexture>("jump");
             var shoot = dynInputRender.Get<Subtexture>("shoot");
             var dodge = dynInputRender.Get<Subtexture>("dodge");
-            //var bg = dynInputRender.Get<Rectangle>("bg");
-            //var bg2 = dynInputRender.Get<Rectangle>("bg2");
 
             //TODO: Save controller to state to have the corresponding icon ?
             dynInputRender.Set("jump", TFGame.MenuAtlas["controls/xb360/a"]);
@@ -46,7 +44,7 @@ namespace TF.EX.Patchs
             Vector2 vector = new Vector2(widthSoFar + (float)(self.Width / 2), 226f);
             Vector2 moveAt = vector + Vector2.UnitX * (-self.Width / 2 + 6 + move.Width / 2);
             dynInputRender.Set("jumpAt", vector + Vector2.UnitX * (-self.Width / 2 + 25 + jump.Width / 2));
-            dynInputRender.Set("shootAt", vector + Vector2.UnitX * (self.Width / 2 - 25 - shoot.Width / 2));
+            dynInputRender.Set("shootAt", vector + Vector2.UnitX * (self.Width / 2 - 25 - dodge.Width + 15 - shoot.Width / 2));
             dynInputRender.Set("dodgeAt", vector + Vector2.UnitX * (self.Width / 2 - 6 - dodge.Width / 2));
 
             Vector2 moveAtReference = moveAt;
@@ -88,10 +86,10 @@ namespace TF.EX.Patchs
                     extraX = Vector2.Zero;
                     break;
                 case 1:
-                    extraX = Vector2.UnitX * 3;
+                    extraX = Vector2.UnitX * 4;
                     break;
                 case -1:
-                    extraX = -Vector2.UnitX * 3;
+                    extraX = -Vector2.UnitX * 4;
                     break;
             }
 
@@ -101,10 +99,10 @@ namespace TF.EX.Patchs
                     extraY = Vector2.Zero;
                     break;
                 case 1:
-                    extraY = Vector2.UnitX * 3;
+                    extraY = Vector2.UnitX * 4;
                     break;
                 case -1:
-                    extraY = -Vector2.UnitX * 3;
+                    extraY = -Vector2.UnitX * 4;
                     break;
             }
 

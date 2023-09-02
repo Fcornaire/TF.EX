@@ -1,4 +1,6 @@
-﻿using TF.EX.Domain.Context;
+﻿using Microsoft.Extensions.Logging;
+using TF.EX.Common.Extensions;
+using TF.EX.Domain.Context;
 using TF.EX.Domain.Ports.TF;
 using TowerFall;
 
@@ -7,10 +9,13 @@ namespace TF.EX.Domain.Services.TF
     public class InputService : IInputService
     {
         private readonly IGameContext _context;
+        private readonly ILogger _logger;
+        private PlayerInput[] _originalPlayersInput;
 
-        public InputService(IGameContext context)
+        public InputService(IGameContext context, ILogger logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         public int GetInputIndex(PlayerInput input)
@@ -101,6 +106,26 @@ namespace TF.EX.Domain.Services.TF
             };
 
             _context.UpdatePolledInput(newInput);
+        }
+
+        public void DisableAllController()
+        {
+            _originalPlayersInput = TFGame.PlayerInputs;
+            TFGame.PlayerInputs = new PlayerInput[4];
+            MenuInput.MenuInputs = new PlayerInput[5];
+        }
+
+        public void EnableAllController()
+        {
+            if (_originalPlayersInput != null)
+            {
+                TFGame.PlayerInputs = _originalPlayersInput;
+                MenuInput.UpdateInputs();
+            }
+            else
+            {
+                _logger.LogDebug<InputService>("No players input found");
+            }
         }
     }
 }

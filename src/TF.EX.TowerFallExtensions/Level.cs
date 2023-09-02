@@ -7,7 +7,6 @@ using TF.EX.Domain.Models.State;
 using TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows;
 using TF.EX.Domain.Models.State.Entity.LevelEntity.Chest;
 using TF.EX.Domain.Models.State.Layer;
-using TF.EX.TowerFallExtensions.Entity;
 using TF.EX.TowerFallExtensions.Entity.LevelEntity;
 using TF.EX.TowerFallExtensions.Layer;
 using TowerFall;
@@ -16,6 +15,7 @@ namespace TF.EX.TowerFallExtensions
 {
     public static class LevelExtensions
     {
+        //TODO: remove and use Scene extension instead
         public static void Delete<T>(this Level level) where T : Monocle.Entity
         {
             var entity = level.Layers.SelectMany(layer => layer.Value.Entities)
@@ -28,6 +28,7 @@ namespace TF.EX.TowerFallExtensions
             }
         }
 
+        //TODO: remove and use Scene extension instead
         public static void DeleteAll<T>(this Level level) where T : Monocle.Entity
         {
             var entities = level.Layers.SelectMany(layer => layer.Value.Entities)
@@ -43,12 +44,14 @@ namespace TF.EX.TowerFallExtensions
             }
         }
 
+        //TODO: remove and use Scene extension instead
         public static T Get<T>(this Level level) where T : Monocle.Entity
         {
             return level.Layers.SelectMany(layer => layer.Value.Entities)
                 .FirstOrDefault(ent => ent is T) as T;
         }
 
+        //TODO: remove and use Scene extension instead
         public static IEnumerable<T> GetAll<T>(this Level level) where T : Monocle.Entity
         {
             return level.Layers.SelectMany(layer => layer.Value.Entities)
@@ -357,7 +360,7 @@ namespace TF.EX.TowerFallExtensions
 
             foreach (Domain.Models.State.Entity.LevelEntity.Player.PlayerCorpse toLoad in corpsesToLoad)
             {
-                var cachedPlayerCorpse = ServiceCollections.GetCached<TowerFall.PlayerCorpse>(toLoad.ActualDepth);
+                var cachedPlayerCorpse = ServiceCollections.GetCachedEntity<TowerFall.PlayerCorpse>(toLoad.ActualDepth);
 
                 cachedPlayerCorpse.LoadState(toLoad);
 
@@ -413,7 +416,7 @@ namespace TF.EX.TowerFallExtensions
 
                 foreach (var chestToLoad in gameState.Entities.Chests.ToArray())
                 {
-                    var cachedChest = ServiceCollections.GetCached<TreasureChest>(chestToLoad.ActualDepth);
+                    var cachedChest = ServiceCollections.GetCachedEntity<TreasureChest>(chestToLoad.ActualDepth);
 
                     cachedChest.LoadState(chestToLoad);
 
@@ -426,7 +429,7 @@ namespace TF.EX.TowerFallExtensions
 
             foreach (var pickupToLoad in gameState.Entities.Pickups.ToArray())
             {
-                var cachedPickup = ServiceCollections.GetCached<TowerFall.Pickup>(pickupToLoad.ActualDepth);
+                var cachedPickup = ServiceCollections.GetCachedEntity<TowerFall.Pickup>(pickupToLoad.ActualDepth);
 
                 if (cachedPickup == null)
                 {
@@ -636,7 +639,7 @@ namespace TF.EX.TowerFallExtensions
                 {
                     var pc = playerCorpse.GetState();
                     gameState.Entities.PlayerCorpses.Add(pc);
-                    ServiceCollections.AddToCache(pc.ActualDepth, playerCorpse);
+                    ServiceCollections.AddEntityToCache(pc.ActualDepth, playerCorpse);
                 }
             }
         }
@@ -674,7 +677,7 @@ namespace TF.EX.TowerFallExtensions
                 {
                     var che = chest.GetState();
                     gameState.Entities.Chests.Add(che);
-                    ServiceCollections.AddToCache(che.ActualDepth, chest);
+                    ServiceCollections.AddEntityToCache(che.ActualDepth, chest);
                 }
             }
         }
@@ -688,7 +691,7 @@ namespace TF.EX.TowerFallExtensions
                 {
                     var pick = pickup.GetState();
                     gameState.Entities.Pickups.Add(pick);
-                    ServiceCollections.AddToCache(pick.ActualDepth, pickup);
+                    ServiceCollections.AddEntityToCache(pick.ActualDepth, pickup);
                 }
             }
         }

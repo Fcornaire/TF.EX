@@ -1,6 +1,10 @@
-﻿using Newtonsoft.Json;
+﻿using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.IO.Compression;
 using System.Text;
+using TF.EX.Common.Extensions;
 using TF.EX.Domain.Context;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Models.State;
@@ -17,22 +21,33 @@ namespace TF.EX.Domain.Services
         private readonly IInputService _inputService;
         private readonly IRngService _rngService;
         private readonly INetplayManager _netplayManager;
+        private readonly ILogger _logger;
         private int currentReplayFrame = 1;
 
         private string REPLAYS_FOLDER => $"{Directory.GetCurrentDirectory()}\\Replays";
 
 
-        public ReplayService(IGameContext gameContext, IInputService inputService, IRngService rngService, INetplayManager netplayManager)
+        public ReplayService(IGameContext gameContext,
+            IInputService inputService,
+            IRngService rngService,
+            INetplayManager netplayManager,
+            ILogger logger)
         {
             _gameContext = gameContext;
             _inputService = inputService;
             _rngService = rngService;
             _netplayManager = netplayManager;
+            _logger = logger;
         }
 
         public void AddRecord(GameState gameState, bool shouldSwapPlayer)
         {
             _gameContext.AddRecord(gameState, shouldSwapPlayer);
+        }
+
+        private static TimeSpan FrameToTimestamp(int frame)
+        {
+            return TimeSpan.FromSeconds(frame / 60);
         }
 
         public void Export()
@@ -46,8 +61,15 @@ namespace TF.EX.Domain.Services
 
             replay.Informations.PlayerDraw = _netplayManager.GetPlayerDraw();
 
+            replay.Informations.Mode = TowerFall.Modes.LastManStanding;
+            replay.Informations.MatchLenght = FrameToTimestamp(replay.Record.Count);
+            replay.Informations.Archers = _netplayManager.GetArchersInfo();
+            replay.Informations.Version = ReplayVersion.V1;
+
             var filename = $"{DateTime.UtcNow.ToString("dd'-'MM'-'yyy'T'HH'-'mm'-'ss")}.tow";
             //var filenameJson = $"{DateTime.Now.ToString("dd'-'MM'-'yyy'T'HH'-'mm'-'ss")}_players.json";
+
+            replay.Informations.Name = filename;
 
             Directory.CreateDirectory(REPLAYS_FOLDER);
 
@@ -76,33 +98,52 @@ namespace TF.EX.Domain.Services
             _gameContext.RemovePredictedRecords(frame);
         }
 
-        public void LoadAndStart(string replayFilename)
+        public async Task LoadAndStart(string replayFilename)
         {
-            var replaysFolder = $"{Directory.GetCurrentDirectory()}\\Replays";
+            await Task.Run(() =>
+           {
+               var replaysFolder = $"{Directory.GetCurrentDirectory()}\\Replays";
 
-            var filePath = $"{replaysFolder}\\{replayFilename}";
+               var filePath = $"{replaysFolder}\\{replayFilename}";
 
-            var replay = ToReplay(filePath);
+               Replay replay = ServiceCollections.GetCached<string, Replay>(filePath);
+               if (replay == null || replay.Record == null || replay.Record.Count == 0)
+               {
+                   replay = ToReplay(filePath);
+                   if (string.IsNullOrEmpty(replay.Informations.Name))
+                   {
+                       replay.Informations.Name = replayFilename;
+                   }
+                   ServiceCollections.AddToCache(filePath, replay);
+               }
 
-            _gameContext.LoadReplay(replay);
+               if (replay.Record.Any())
+               {
+                   _gameContext.LoadReplay(replay);
 
-            _netplayManager.SetPlayersIndex((int)replay.Informations.PlayerDraw);
+                   _netplayManager.SetPlayersIndex((int)replay.Informations.PlayerDraw);
+                   _netplayManager.UpdatePlayer2Name(replay.Informations.Archers.ToArray()[1].NetplayName);
 
-            if (replay.Record.Any())
-            {
-                var firstRecord = replay.Record.First(rec => rec.GameState.Entities.Players.Count > 0);
-                _rngService.SetSeed(firstRecord.GameState.Rng.Seed);
+                   TFGame.Characters[0] = replay.Informations.Archers.ToArray()[0].Index; //TODO: number of players dependent
+                   TFGame.Characters[1] = replay.Informations.Archers.ToArray()[1].Index;
+                   TFGame.AltSelect[0] = replay.Informations.Archers.ToArray()[0].Type;
+                   TFGame.AltSelect[1] = replay.Informations.Archers.ToArray()[1].Type;
 
-                for (int i = 0; i < firstRecord.GameState.Entities.Players.Count(); i++)
-                {
-                    TFGame.Players[i] = true;
-                }
+                   currentReplayFrame = 1;
+                   var firstRecord = replay.Record.First(rec => rec.GameState.Entities.Players.Count > 0);
+                   _rngService.SetSeed(firstRecord.GameState.Rng.Seed);
 
-                MatchSettings matchSettings = new MatchSettings(GameData.VersusTowers[replay.Informations.Id].GetLevelSystem(), TowerFall.Modes.LastManStanding, MatchLengths.Standard);
-                MainMenu.VersusMatchSettings = matchSettings;
+                   for (int i = 0; i < firstRecord.GameState.Entities.Players.Count(); i++)
+                   {
+                       TFGame.Players[i] = true;
+                   }
 
-                new TowerFall.Session(matchSettings).StartGame();
-            }
+                   MatchSettings matchSettings = new MatchSettings(GameData.VersusTowers[replay.Informations.Id].GetLevelSystem(), TowerFall.Modes.LastManStanding, MatchLengths.Standard);
+                   MainMenu.VersusMatchSettings = matchSettings;
+
+                   new TowerFall.Session(matchSettings).StartGame();
+               }
+           });
         }
 
         //TODO: Properly implement this
@@ -173,14 +214,19 @@ namespace TF.EX.Domain.Services
             serializer.Serialize(jsonWriter, replay);
         }
 
-        private Replay ToReplay(string filePath)
+        private Replay ToReplay(string filePath, bool shouldInfoOnly = false)
         {
             using var fileStream = new FileStream(filePath, FileMode.Open);
             using var gzip = new GZipStream(fileStream, CompressionMode.Decompress);
             using var sr = new StreamReader(gzip, Encoding.UTF8);
             using var reader = new JsonTextReader(sr);
 
-            var serializer = JsonSerializer.CreateDefault();
+            var serializer = shouldInfoOnly ?
+                JsonSerializer.Create(new JsonSerializerSettings
+                {
+                    ContractResolver = new ReplayContractResolver()
+                }) :
+                JsonSerializer.CreateDefault();
             return serializer.Deserialize<Replay>(reader);
         }
 
@@ -189,11 +235,72 @@ namespace TF.EX.Domain.Services
             _gameContext.ResetReplay();
         }
 
-        public List<string> GetReplays()
+        public IEnumerable<Replay> LoadAndGetReplays()
         {
-            var replays = Directory.GetFiles(REPLAYS_FOLDER).Select(f => Path.GetFileName(f)).ToList();
-            replays.Sort();
-            return replays;
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
+
+            var replays = Directory.EnumerateFiles(REPLAYS_FOLDER)
+                .Where(f => f.EndsWith(".tow"))
+                .Select(f => Path.GetFileName(f)).ToList();
+
+            var res = new ConcurrentBag<Replay>();
+
+            int i = 0;
+            int obsoleteReplays = 0;
+            Loader.Message = $"LOADING REPLAYS... \n\n                {i}/{replays.Count}";
+
+            Parallel.ForEach(replays, replay =>
+            {
+                var replayPath = $"{REPLAYS_FOLDER}\\{replay}";
+
+                var replayWithInfo = ServiceCollections.GetCached<string, Replay>(replayPath);
+                if (replayWithInfo == null)
+                {
+                    try
+                    {
+                        replayWithInfo = ToReplay(replayPath, true);
+                        if (replayWithInfo.Informations.Version != ServiceCollections.CurrentVersion)
+                        {
+                            _logger.LogDebug<ReplayService>($"Replay {replay} is obsolete, will be renamed and ignored");
+                            Interlocked.Increment(ref obsoleteReplays);
+
+                            File.Move(replayPath, $"{replayPath}.obsolete");
+
+                            return;
+                        }
+
+                        replayWithInfo.Informations.Name = replay;
+
+                        ServiceCollections.AddToCache(replayPath, replayWithInfo);
+
+                        res.Add(replayWithInfo);
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError<ReplayService>($"Error while loading replay {replay} , replay will be deleted", e);
+                        File.Delete(replayPath);
+                    }
+                }
+                else
+                {
+                    res.Add(replayWithInfo);
+                }
+
+                Interlocked.Increment(ref i);
+                Interlocked.Exchange(ref Loader.Message, $"LOADING REPLAYS... \n\n                {i}/{replays.Count}");
+            });
+
+            stopwatch.Stop();
+
+            _logger.LogDebug<ReplayService>($"Loading replay took {stopwatch.ElapsedMilliseconds / 1000}s");
+
+            if (obsoleteReplays > 0)
+            {
+                _logger.LogDebug<ReplayService>($"{obsoleteReplays} replays are obsolete. A future update might add the ability to migrate from earlier version");
+            }
+
+            return res.OrderBy(replay => replay.Informations.Name);
         }
     }
 }

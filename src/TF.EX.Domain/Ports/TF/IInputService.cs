@@ -17,5 +17,7 @@ namespace TF.EX.Domain.Ports.TF
         void EnsureRemoteController();
 
         int GetInputIndex(PlayerInput input);
+        void DisableAllController();
+        void EnableAllController();
     }
 }

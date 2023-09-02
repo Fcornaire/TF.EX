@@ -38,6 +38,11 @@ namespace TF.EX.Patchs.Layer
 
             if (_netplayManager.IsReplayMode() && TFGame.GameLoaded)
             {
+                if (TFGamePatch.ReplayInputRenderers == null)
+                {
+                    TFGamePatch.SetupReplayInputRenderer();
+                }
+
                 var inputRenderers = TFGamePatch.ReplayInputRenderers;
 
                 for (int i = 0; i < inputRenderers.Length; i++)

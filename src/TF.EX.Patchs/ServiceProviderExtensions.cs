@@ -70,6 +70,8 @@ namespace TF.EX.Patchs
             serviceCollection.AddSingleton<IHookable, VersusPlayerMatchResultsPatch>();
             serviceCollection.AddSingleton<IHookable, ReplayViewerPatch>();
             serviceCollection.AddSingleton<IHookable, MapScenePatch>();
+            serviceCollection.AddSingleton<IHookable, ScreenTitlePatch>();
+            serviceCollection.AddSingleton<IHookable, LoaderPatch>();
         }
 
         public static void LoadPatchs(this IServiceProvider serviceProvider)
