@@ -116,7 +116,6 @@ namespace TF.EX.Patchs.Engine
                 if (_netplayManager.IsInit() && !_netplayManager.IsTestMode())
                 {
                     _netplayManager.Reset();
-                    _netplayManager.SetIsFirstInit(true);
                     ServiceCollections.PurgeCache();
 
                     TowerFall.PlayerInput.AssignInputs(); //Reset inputs

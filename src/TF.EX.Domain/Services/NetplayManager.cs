@@ -572,6 +572,9 @@ namespace TF.EX.Domain.Services
             (var stateMachine, _) = ServiceCollections.ResolveStateMachineService();
             stateMachine.Reset();
             ServiceCollections.ResolveReplayService().Reset();
+
+            _originalSelection = new (int, ArcherData.ArcherTypes)[4];
+            _isFirstInit = true;
         }
 
         public NetplayMeta GetNetplayMeta()
@@ -719,11 +722,6 @@ namespace TF.EX.Domain.Services
         public bool HasFailedInitialConnection()
         {
             return _hasFailedInitialConnection;
-        }
-
-        public void SetIsFirstInit(bool isFirstInit)
-        {
-            _isFirstInit = isFirstInit;
         }
 
         public bool IsSyncing()
