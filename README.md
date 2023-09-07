@@ -20,13 +20,36 @@
 
 # About The Project
 
+TF EX is a mod that attempt to bring netplay to TowerFall (EX as a Fighting game EX move, usually costing meter). It use [FortRise](https://github.com/Terria-K/FortRise) + Rollback netcode as infrastructure.
+Due to the nature of the project, the mod is also able to record + view precedents matchs.
+Also, this is project is still super WIP !
+
+# Feature
+
+- Online Netplay
+
 <p align="center">
   <img src="images/demo.gif" alt="animated" />
 </p>
 
-TF EX is a mod that attempt to bring netplay to TowerFall (EX as a Fighting game EX move, usually costing meter). It use [FortRise](https://github.com/Terria-K/FortRise) + Rollback netcode as infrastructure.
-Due to the nature of the project, the mod is also able to record + view precedents matchs.
-Also, this is project is super WIP !
+2 new modes available, `Netplay Quickplay` and `Netplay Direct`
+
+   <p align="center">
+    <img src="images/modes.gif" alt="animated" />
+  </p>
+
+- Replays
+
+  Replay is "Normally" automatically exported at the end of a game.
+  Use the `replays` menu to watch precedent games
+
+  <p align="center">
+    <img src="images/replays.gif" alt="animated" />
+  </p>
+
+  <p align="center">
+    <img src="images/replay_play.gif" alt="animated" />
+  </p>
 
 # Usage
 
@@ -41,7 +64,7 @@ It fairly easy to use the mod:
 You have the option to change your tag in the in game option.
 You can also change the input delay but leaving it 2 is a good start.
 
-You should also be able to see 2 new versus mode:
+You should also be able to see 2 new versus mode (All the way to the right):
 
 1. Netplay Quickplay : Play against a randomly choosed opponent 'close' to your location. Choose the mode and wait until the game find an opponent, then choose a character and play
 2. Netplay Direct: Play against someone in particular (by exchanging code connection).
@@ -63,10 +86,6 @@ whith {replay_name} being something like "20-06-2023T22-17-46" (No file extensio
 I advise to not use this mod with mods that do other thing than cosmetics/skins.
 For eample [WiderSetMod](https://github.com/Terria-K/WiderSetMod) have been reported to break the mod
 I will try to investigate why it's happening but for now,only use the TF EX mod as standalone
-
-## I can't find anyone / i can't accept a game in quickplay mode
-
-This is a bug with the server i believe, i'm already investigating it. Use Direct mode if QP not working
 
 ## There is a blank screen when i try to rematch
 
@@ -114,11 +133,11 @@ As you can guess, this project is still WIP and missing a lot of feature:
 - [ ] Automatically bump the version (meta + tag)
 - [ ] Refacto (There is a lot of thing i want to refactor)
 - [x] Less restrictive controller
-- [ ] Fix bugs (Main focus right now as i need more people to play, test and report behavior)
+- [ ] Fix bugs (There is one (last?) desynchronization issue)
 - [ ] Support for all versus map
 - [ ] Support all items
 - [ ] Support 4 players (FFA and 2V2 teams )
-- [ ] Integrate the replay viewer in the menu
+- [x] Integrate the replay viewer in the menu
 
 ## Contributing
 
