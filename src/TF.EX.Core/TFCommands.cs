@@ -215,6 +215,7 @@ namespace TF.EX.Core
             {
                 case "LMS": return TowerFall.Modes.LastManStanding;
                 case "HH": return TowerFall.Modes.HeadHunters;
+                case "TDM": return TowerFall.Modes.TeamDeathmatch;
                 default: return TowerFall.Modes.LastManStanding;
             }
         }

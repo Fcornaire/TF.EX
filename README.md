@@ -135,6 +135,7 @@ As you can guess, this project is still WIP and missing a lot of feature:
 - [x] Less restrictive controller
 - [ ] Fix bugs (There is one (last?) desynchronization issue)
 - [ ] Support for all versus map
+- [ ] Check Twiligh Spear CrackedWall with teams on level 7
 - [ ] Support all items
 - [ ] Support 4 players (FFA and 2V2 teams )
 - [x] Integrate the replay viewer in the menu
