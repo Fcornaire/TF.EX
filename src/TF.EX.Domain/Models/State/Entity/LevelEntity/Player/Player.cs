@@ -45,5 +45,7 @@
         public float LastAimDir { get; set; }
 
         public int Cling { get; set; }
+
+        public bool HasSpeedBoots { get; set; }
     }
 }

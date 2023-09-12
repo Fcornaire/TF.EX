@@ -109,6 +109,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 Animations = playerAnimations,
                 Cling = entity.Cling,
                 LastAimDir = lastAimDirection,
+                HasSpeedBoots = entity.HasSpeedBoots,
             };
         }
 
@@ -268,6 +269,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 
             dynPlayer.Set("Cling", toLoad.Cling);
             dynPlayer.Set("lastAimDirection", toLoad.LastAimDir);
+            entity.HasSpeedBoots = toLoad.HasSpeedBoots;
         }
 
         public static void LoadDeathArrow(this TowerFall.Player self, double deathArrowActualDepth)
