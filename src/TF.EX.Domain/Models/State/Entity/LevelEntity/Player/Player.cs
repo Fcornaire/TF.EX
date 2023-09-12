@@ -47,5 +47,6 @@
         public int Cling { get; set; }
 
         public bool HasSpeedBoots { get; set; }
+        public bool IsInvisible { get; set; }
     }
 }
