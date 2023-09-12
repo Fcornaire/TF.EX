@@ -128,6 +128,7 @@ namespace TF.EX.TowerFallExtensions
                 self.Session.MatchStats[0], self.Session.MatchStats[1],
             };
             gameState.AddCrackedPlatform(self);
+            gameState.AddSpikeball(self);
 
             return gameState;
         }
@@ -487,6 +488,9 @@ namespace TF.EX.TowerFallExtensions
 
             //CrackedPlatform load
             gameState.LoadCrackedPlatform(level);
+
+            //SpikeBall load
+            gameState.LoadSpikeBall(level);
 
             //Background load
             foreach (BackgroundElement toLoad in gameState.Layer.BackgroundElements.ToArray())
@@ -888,6 +892,16 @@ namespace TF.EX.TowerFallExtensions
             }
         }
 
+        public static void AddSpikeball(this GameState gameState, TowerFall.Level self)
+        {
+            var spikeball = self.Get<Spikeball>();
+
+            if (spikeball != null)
+            {
+                gameState.Entities.Spikeball = spikeball.GetState();
+            }
+        }
+
         private static void LoadLavaControl(this GameState gameState, Level level)
         {
             var gameLavaControl = level.Get<LavaControl>();
@@ -984,6 +998,17 @@ namespace TF.EX.TowerFallExtensions
                         crackedPlatform.LoadState(currentCrackedPlatform);
                     }
                 }
+            }
+        }
+
+        public static void LoadSpikeBall(this GameState gameState, TowerFall.Level level)
+        {
+            var spikeball = level.Get<Spikeball>();
+
+            if (spikeball != null)
+            {
+                var spikeballState = gameState.Entities.Spikeball;
+                spikeball.LoadState(spikeballState);
             }
         }
 

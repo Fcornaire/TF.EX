@@ -2,7 +2,7 @@
 {
     public class Time : IOrbLogic
     {
-        public Counter Counter { get; set; }
+        public CounterOrb Counter { get; set; }
         public float EngineTimeRate { get; set; }
         public float EngineTimeMult { get; set; }
         public float GameRateTarget { get; set; }
@@ -10,13 +10,13 @@
 
         public static Time Default => new Time
         {
-            Counter = Counter.Default,
+            Counter = CounterOrb.Default,
             EngineTimeRate = 1f,
             EngineTimeMult = 1f,
             GameRateTarget = Constants.INITIAL_GAME_RATE_TARGET,
             GameRateEased = false
         };
 
-        public bool IsDefault() => Counter.Start == Counter.Default.Start && Counter.End == Counter.Default.End;
+        public bool IsDefault() => Counter.Start == CounterOrb.Default.Start && Counter.End == CounterOrb.Default.End;
     }
 }

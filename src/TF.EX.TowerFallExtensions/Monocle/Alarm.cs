@@ -1,7 +1,6 @@
 ﻿using MonoMod.Utils;
 using TF.EX.Domain.Models.State.Monocle;
 
-
 namespace TF.EX.TowerFallExtensions.MonocleExtensions
 {
     public static class AlarmExtensions
