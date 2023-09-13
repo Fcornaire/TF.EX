@@ -9,14 +9,14 @@
     {
         public Time Time { get; set; } = Time.Default;
         public Dark Dark { get; set; } = Dark.Default;
-        public CounterOrb Space { get; set; } = CounterOrb.Default;
+        public Space Space { get; set; } = Space.Default;
         public CounterOrb Chaos { get; set; } = CounterOrb.Default;
 
         public static OrbLogic Default => new OrbLogic
         {
             Time = Time.Default,
             Dark = Dark.Default,
-            Space = CounterOrb.Default,
+            Space = Space.Default,
             Chaos = CounterOrb.Default
         };
 

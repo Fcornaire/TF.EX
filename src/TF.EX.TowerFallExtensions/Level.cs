@@ -120,6 +120,7 @@ namespace TF.EX.TowerFallExtensions
             gameState.AddLanternState(self);
             gameState.AddChainState(self);
             gameState.AddLayerState(self);
+            gameState.ScreenOffset = TFGame.Instance.Screen.Offset.ToModel();
             gameState.AddOrbsState(self);
             gameState.AddLavaControlState(self);
             gameState.Rng = rngService.Get();
@@ -453,6 +454,8 @@ namespace TF.EX.TowerFallExtensions
 
                 level.GetGameplayLayer().Entities.Insert(0, cachedPickup);
             }
+
+            TFGame.Instance.Screen.Offset = gameState.ScreenOffset.ToTFVector();
 
             //Orbs load
             var orb = gameState.Entities.OrbLogic;

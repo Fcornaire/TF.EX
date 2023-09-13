@@ -120,7 +120,8 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 tween.OnComplete = delegate
                 {
                     light.Visible = (light.Active = false);
-                    dynTreasureChest.Set("state", States.Opened);
+                    var dynChest = DynamicData.For(entity);
+                    dynChest.Set("State", States.Opened);
                 };
                 entity.Add(tween);
             }

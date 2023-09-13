@@ -1,6 +1,6 @@
 using TF.EX.Domain;
-using TF.EX.Domain.Ports.TF;
 using TF.EX.Domain.Ports;
+using TF.EX.Domain.Ports.TF;
 using TF.EX.TowerFallExtensions;
 using TowerFall;
 
@@ -14,7 +14,8 @@ namespace TF.EX.Patchs.Scene
 
         private static readonly IEnumerable<string> NETPLAY_SAFE_MAP = new List<string>
         {
-            "SACRED GROUND"
+            "SACRED GROUND",
+            "TWILIGHT SPIRE"
         };
 
         public MapScenePatch(IInputService inputService, INetplayManager netplayManager)
@@ -98,6 +99,7 @@ namespace TF.EX.Patchs.Scene
 
             var shuffled = CalcExtensions.OwnMapButtonShuffle(list).ToArray();
             return shuffled[0];
+            // return shuffled.SingleOrDefault(b => b.Data.ID.X == 1); //Usefull for debug
         }
 
         private bool IsNetplaySafe(string title)

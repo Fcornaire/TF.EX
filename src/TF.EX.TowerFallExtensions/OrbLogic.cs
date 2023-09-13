@@ -1,5 +1,8 @@
-﻿using Monocle;
+﻿using Microsoft.Xna.Framework;
+using Monocle;
 using MonoMod.Utils;
+using TF.EX.Domain.Extensions;
+using TF.EX.TowerFallExtensions.MonocleExtensions;
 using TowerFall;
 
 namespace TF.EX.TowerFallExtensions
@@ -18,6 +21,18 @@ namespace TF.EX.TowerFallExtensions
             var darknessEndCounter = dynOrb.Get<Counter>("darknessEndCounter");
             var darkened = dynOrb.Get<bool>("darkened");
             var oldDarkAlpha = dynOrb.Get<float>("oldDarkAlpha");
+            var spaceCounter = dynOrb.Get<Counter>("spaceCounter");
+            var spaceTween = dynOrb.Get<Tween>("spaceTween");
+            var targetSpaceSpeed = dynOrb.Get<Vector2>("targetSpaceSpeed");
+            var spaceSpeed = dynOrb.Get<Vector2>("spaceSpeed");
+            var screenOffsetStart = Vector2.Zero;
+            var screenOffsetEnd = Vector2.Zero;
+            if (spaceTween != null && spaceTween.FramesLeft > 0)
+            {
+                var dynSpaceTween = DynamicData.For(spaceTween);
+                screenOffsetStart = dynSpaceTween.Get<Vector2>("ScreenOffsetStart");
+                screenOffsetEnd = dynSpaceTween.Get<Vector2>("ScreenOffsetEnd");
+            }
 
             orb.Time.Counter.End = slowTimeEndCounter.Value;
             orb.Time.Counter.Start = slowTimeStartCounter.Value;
@@ -30,6 +45,12 @@ namespace TF.EX.TowerFallExtensions
             orb.Dark.IsDarkened = darkened;
             orb.Dark.OldDarkAlpha = oldDarkAlpha;
             orb.Dark.LightingTartgetAlpha = self.Level.LightingLayer.TargetAlpha;
+            orb.Space.SpaceCounter = spaceCounter.GetState();
+            orb.Space.SpaceTweenTimer = spaceTween != null ? spaceTween.FramesLeft : 0;
+            orb.Space.TargetSpaceSpeed = targetSpaceSpeed.ToModel();
+            orb.Space.SpaceSpeed = spaceSpeed.ToModel();
+            orb.Space.ScreenOffsetStart = screenOffsetStart.ToModel();
+            orb.Space.ScreenOffsetEnd = screenOffsetEnd.ToModel();
 
             return orb;
         }
@@ -56,6 +77,38 @@ namespace TF.EX.TowerFallExtensions
             dynTFGame.Set("TimeMult", orb.Time.EngineTimeMult);
             dynTFGame.Set("TimeRate", orb.Time.EngineTimeRate);
 
+            var spaceCounter = dynOrb.Get<Counter>("spaceCounter");
+            spaceCounter.LoadState(orb.Space.SpaceCounter);
+
+            if (orb.Space.SpaceTweenTimer > 0)
+            {
+                dynOrb.Set("targetSpaceSpeed", orb.Space.TargetSpaceSpeed.ToTFVector());
+                dynOrb.Set("spaceSpeed", orb.Space.SpaceSpeed.ToTFVector());
+
+
+                var spaceTween = dynOrb.Get<Tween>("spaceTween");
+                var dynSpaceTween = DynamicData.For(spaceTween);
+
+                dynSpaceTween.Set("FramesLeft", orb.Space.SpaceTweenTimer);
+
+                spaceTween.OnUpdate = delegate (Tween t)
+                {
+                    Engine.Instance.Screen.Offset = Vector2.Lerp(orb.Space.ScreenOffsetStart.ToTFVector(), orb.Space.ScreenOffsetEnd.ToTFVector(), t.Eased);
+                };
+
+                dynSpaceTween.Set("ScreenOffsetStart", orb.Space.ScreenOffsetStart.ToTFVector());
+                dynSpaceTween.Set("ScreenOffsetEnd", orb.Space.ScreenOffsetEnd.ToTFVector());
+                dynOrb.Set("spaceTween", spaceTween);
+            }
+            else
+            {
+                var spaceTween = dynOrb.Get<Tween>("spaceTween");
+                if (spaceTween != null)
+                {
+                    spaceTween.Stop();
+                    dynOrb.Set("spaceTween", null);
+                }
+            }
         }
     }
 }

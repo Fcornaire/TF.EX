@@ -22,6 +22,8 @@
         public IEnumerable<TowerFall.MatchStats> MatchStats { get; set; } = new List<TowerFall.MatchStats>();
         public IEnumerable<SFX> SFXs { get; set; } = new List<SFX>();
 
+        public Vector2f ScreenOffset { get; set; } = new Vector2f(-1, -1);
+
         public int Frame { get; set; }
     }
 }
