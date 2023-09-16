@@ -18,15 +18,20 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             var position = entity.Position.ToModel();
             var targetPosition = dynPickup.Get<Vector2>("TargetPosition").ToModel();
             var type = dynPickup.Get<TowerFall.Pickups>("PickupType");
-            var sine = dynPickup.Get<Monocle.SineWave>("sine");
+            var sine = dynPickup.Get<SineWave>("sine");
             var markedForRemoval = dynPickup.Get<bool>("MarkedForRemoval");
 
-            TF.EX.Domain.Models.State.Sprite<int> shieldSprite = null;
+            var finishUnpack = dynPickup.Get<bool>("FinishedUnpack");
+
+            TF.EX.Domain.Models.State.Sprite<int> sprite = null;
 
             if (type == TowerFall.Pickups.Shield)
             {
-                var sprite = dynPickup.Get<Monocle.Sprite<int>>("sprite");
-                shieldSprite = sprite.GetState();
+                sprite = dynPickup.Get<Sprite<int>>("sprite").GetState();
+            }
+            else if (type == TowerFall.Pickups.Bomb)
+            {
+                sprite = dynPickup.Get<Sprite<int>>("image").GetState();
             }
 
             return new Pickup
@@ -36,12 +41,13 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 TargetPosition = targetPosition,
                 Type = type.ToModel(),
                 //player_index = additionnalInfo.player_index,
-                TargetPositionTimer = tween != null ? tween.FramesLeft : 0,
+                TweenTimer = tween != null ? tween.FramesLeft : 0,
                 CollidableTimer = alarm != null ? alarm.FramesLeft : 0,
                 IsCollidable = entity.Collidable,
                 SineCounter = sine.Counter,
                 MarkedForRemoval = markedForRemoval,
-                ShieldSprite = shieldSprite
+                Sprite = sprite,
+                FinishedUnpack = finishUnpack,
             };
         }
 
@@ -52,6 +58,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             entity.Added();
 
             dynPickup.Add("TargetPosition", toLoad.TargetPosition.ToTFVector());
+            dynPickup.Add("FinishedUnpack", toLoad.FinishedUnpack);
 
             //dynPickup.Set("TargetPosition", toLoad.TargetPosition.ToTFVector());
             dynPickup.Set("PickupType", toLoad.Type.ToTFModel());
@@ -59,7 +66,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             entity.Position = toLoad.Position.ToTFVector();
             entity.Collidable = toLoad.IsCollidable;
 
-            var sine = dynPickup.Get<Monocle.SineWave>("sine");
+            var sine = dynPickup.Get<SineWave>("sine");
             sine.UpdateAttributes(toLoad.SineCounter);
 
             dynPickup.Set("MarkedForRemoval", toLoad.MarkedForRemoval);
@@ -69,24 +76,53 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 
             if (toLoad.Type == PickupState.Shield)
             {
-                var sprite = dynPickup.Get<Monocle.Sprite<int>>("sprite");
-                sprite.LoadState(toLoad.ShieldSprite);
+                var sprite = dynPickup.Get<Sprite<int>>("sprite");
+                sprite.LoadState(toLoad.Sprite);
+            }
+            else if (toLoad.Type == PickupState.Bomb)
+            {
+                var sprite = dynPickup.Get<Sprite<int>>("image");
+                sprite.LoadState(toLoad.Sprite);
             }
 
-            if (toLoad.TargetPositionTimer > 0)
+            if (toLoad.TweenTimer > 0)
             {
-                Tween tween = Tween.Create(Tween.TweenMode.Oneshot, Ease.BackOut, 30, start: true);
-                var dynTween = DynamicData.For(tween);
-                dynTween.Set("FramesLeft", toLoad.TargetPositionTimer);
-
-                tween.OnUpdate = delegate (Tween t)
+                if (!toLoad.FinishedUnpack)
                 {
-                    entity.TweenUpdate(t.Eased);
-                    entity.Position = Vector2.Lerp(entity.Position, toLoad.TargetPosition.ToTFVector(), t.Eased);
+                    //TargetPosition tween
+                    Tween tween = Tween.Create(Tween.TweenMode.Oneshot, Ease.BackOut, 30, start: true);
+                    var dynTween = DynamicData.For(tween);
+                    dynTween.Set("FramesLeft", toLoad.TweenTimer);
 
-                };
-                tween.OnComplete = entity.FinishUnpack;
-                entity.Add(tween);
+                    tween.OnUpdate = delegate (Tween t)
+                    {
+                        entity.TweenUpdate(t.Eased);
+                        entity.Position = Vector2.Lerp(entity.Position, toLoad.TargetPosition.ToTFVector(), t.Eased);
+
+                    };
+                    tween.OnComplete = entity.FinishUnpack;
+                    entity.Add(tween);
+                }
+                else
+                {
+                    var bombPickup = entity as TowerFall.BombPickup;
+                    var dynBombPickup = DynamicData.For(bombPickup);
+
+                    Tween tween = Tween.Create(Tween.TweenMode.Oneshot, Ease.CubeIn, 40, start: true);
+                    var dynTween = DynamicData.For(tween);
+                    dynTween.Set("FramesLeft", toLoad.TweenTimer);
+
+                    var image = dynBombPickup.Get<Sprite<int>>("image");
+
+                    tween.OnUpdate = delegate (Tween t)
+                    {
+                        image.Scale = Vector2.One * MathHelper.Lerp(1f, 3f, t.Eased);
+                        image.Rate = MathHelper.Lerp(1f, 4f, t.Eased);
+                        image.Rotation = MathHelper.Lerp(0f, (float)Math.PI * 2f, t.Eased);
+                    };
+                    tween.OnComplete = (tween) => dynBombPickup.Invoke("Explode", tween);
+                    entity.Add(tween);
+                }
             }
 
             if (toLoad.CollidableTimer > 0)

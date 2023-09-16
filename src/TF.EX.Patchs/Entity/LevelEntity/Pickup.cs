@@ -10,11 +10,20 @@ namespace TF.EX.Patchs.Entity.LevelEntity
         public void Load()
         {
             On.TowerFall.Pickup.ctor += Pickup_ctor;
+            On.TowerFall.Pickup.FinishUnpack += Pickup_FinishUnpack;
         }
 
         public void Unload()
         {
             On.TowerFall.Pickup.ctor -= Pickup_ctor;
+            On.TowerFall.Pickup.FinishUnpack -= Pickup_FinishUnpack;
+        }
+
+        private void Pickup_FinishUnpack(On.TowerFall.Pickup.orig_FinishUnpack orig, TowerFall.Pickup self, Tween t)
+        {
+            orig(self, t);
+            var dynPickup = DynamicData.For(self);
+            dynPickup.Set("FinishedUnpack", true);
         }
 
         private void Pickup_ctor(On.TowerFall.Pickup.orig_ctor orig, TowerFall.Pickup self, Vector2 position, Vector2 targetPosition)
@@ -22,6 +31,7 @@ namespace TF.EX.Patchs.Entity.LevelEntity
             orig(self, position, targetPosition);
             var dynPickup = DynamicData.For(self);
             dynPickup.Add("TargetPosition", targetPosition);
+            dynPickup.Add("FinishedUnpack", false);
 
             ProperlySetTween(self, targetPosition);
         }

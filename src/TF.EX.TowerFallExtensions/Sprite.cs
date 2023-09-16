@@ -1,4 +1,5 @@
 ﻿using MonoMod.Utils;
+using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models.State;
 
 namespace TF.EX.TowerFallExtensions
@@ -17,7 +18,10 @@ namespace TF.EX.TowerFallExtensions
                 AnimationFrame = sprite.AnimationFrame,
                 Timer = timer,
                 Finished = sprite.Finished,
-                Playing = sprite.Playing
+                Playing = sprite.Playing,
+                Rate = sprite.Rate,
+                Rotation = sprite.Rotation,
+                Scale = sprite.Scale.ToModel(),
             };
         }
 
@@ -37,6 +41,9 @@ namespace TF.EX.TowerFallExtensions
             dynSprite.Set("timer", toLoad.Timer);
             dynSprite.Set("Playing", toLoad.Playing);
             dynSprite.Set("Finished", toLoad.Finished);
+            dynSprite.Set("Rate", toLoad.Rate);
+            dynSprite.Set("Rotation", toLoad.Rotation);
+            dynSprite.Set("Scale", toLoad.Scale.ToTFVector());
         }
     }
 }

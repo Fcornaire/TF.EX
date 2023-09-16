@@ -7,6 +7,7 @@ using TF.EX.Domain.Externals;
 using TF.EX.Domain.Models.State;
 using TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows;
 using TF.EX.Domain.Models.State.Entity.LevelEntity.Chest;
+using TF.EX.Domain.Models.State.Entity.LevelEntity.Player;
 using TF.EX.Domain.Models.State.Layer;
 using TF.EX.TowerFallExtensions.Entity.LevelEntity;
 using TF.EX.TowerFallExtensions.Layer;
@@ -131,6 +132,7 @@ namespace TF.EX.TowerFallExtensions
             };
             gameState.AddCrackedPlatform(self);
             gameState.AddSpikeball(self);
+            gameState.AddExplosions(self);
 
             return gameState;
         }
@@ -496,6 +498,9 @@ namespace TF.EX.TowerFallExtensions
             //SpikeBall load
             gameState.LoadSpikeBall(level);
 
+            //Explosion load
+            gameState.LoadExplosions(level);
+
             //Background load
             foreach (BackgroundElement toLoad in gameState.Layer.BackgroundElements.ToArray())
             {
@@ -647,7 +652,10 @@ namespace TF.EX.TowerFallExtensions
 
                 foreach (TowerFall.Player player in players)
                 {
-                    gameState.Entities.Players.Add(player.GetState());
+                    if (!player.Dead)
+                    {
+                        gameState.Entities.Players.Add(player.GetState());
+                    }
                 }
             }
         }
@@ -902,6 +910,20 @@ namespace TF.EX.TowerFallExtensions
             }
         }
 
+        private static void AddExplosions(this GameState game, Level level)
+        {
+            var explosions = level.GetAll<TowerFall.Explosion>().ToArray();
+            if (explosions != null && explosions.Length > 0)
+            {
+                foreach (TowerFall.Explosion explosion in explosions)
+                {
+                    var exp = explosion.GetState();
+                    game.Entities.Explosions.Add(exp);
+                    ServiceCollections.AddEntityToCache(exp.ActualDepth, explosion);
+                }
+            }
+        }
+
         private static void LoadLavaControl(this GameState gameState, Level level)
         {
             var gameLavaControl = level.Get<LavaControl>();
@@ -1009,6 +1031,22 @@ namespace TF.EX.TowerFallExtensions
             {
                 var spikeballState = gameState.Entities.Spikeball;
                 spikeball.LoadState(spikeballState);
+            }
+        }
+
+        public static void LoadExplosions(this GameState gameState, TowerFall.Level level)
+        {
+            level.DeleteAll<TowerFall.Explosion>();
+
+            var explosionsToLoad = gameState.Entities.Explosions.ToArray();
+
+            foreach (var toLoad in explosionsToLoad)
+            {
+                var cachedExplosion = ServiceCollections.GetCachedEntity<TowerFall.Explosion>(toLoad.ActualDepth);
+
+                cachedExplosion.LoadState(toLoad);
+
+                level.GetGameplayLayer().Entities.Insert(0, cachedExplosion);
             }
         }
 

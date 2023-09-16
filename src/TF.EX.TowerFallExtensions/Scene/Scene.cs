@@ -33,16 +33,16 @@ namespace TF.EX.TowerFallExtensions.Scene
                 .FirstOrDefault(ent => ent is T) as T;
         }
 
-        public static void DeleteAll<T>(this Monocle.Scene level) where T : Monocle.Entity
+        public static void DeleteAll<T>(this Monocle.Scene scene) where T : Monocle.Entity
         {
-            var entities = level.Layers.SelectMany(layer => layer.Value.Entities)
+            var entities = scene.Layers.SelectMany(layer => layer.Value.Entities)
                 .Where(ent => ent is T).Select(ent => ent as T).ToList();
 
             if (entities.Count > 0)
             {
                 entities.ForEach(entity =>
                 {
-                    level.Layers.FirstOrDefault(layer => layer.Value.Index == entity.LayerIndex).Value.Entities.Remove(entity);
+                    scene.Layers.FirstOrDefault(layer => layer.Value.Index == entity.LayerIndex).Value.Entities.Remove(entity);
                     entity.Removed();
                 });
             }

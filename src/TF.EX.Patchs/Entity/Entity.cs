@@ -1,5 +1,6 @@
 ﻿using MonoMod.Utils;
 using TF.EX.Domain.Ports;
+using TowerFall;
 
 namespace TF.EX.Patchs.Entity
 {
@@ -39,6 +40,13 @@ namespace TF.EX.Patchs.Entity
         {
             if (!_netplayManager.IsUpdating()) //This is mainly to prevent arrowCushion deleting arrow on RBF but should be usefull for all entities/scenario
             {
+                if (self is Explosion)  //Hack because cache i think
+                {
+                    var dynExplosion = DynamicData.For(self);
+                    dynExplosion.Set("Scene", TowerFall.TFGame.Instance.Scene);
+                    dynExplosion.Set("Level", TowerFall.TFGame.Instance.Scene as Level);
+                }
+
                 orig(self);
             }
         }

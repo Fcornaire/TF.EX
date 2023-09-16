@@ -13,5 +13,9 @@
         public bool Finished { get; set; }
 
         public bool Playing { get; set; }
+
+        public Vector2f Scale { get; set; }
+        public float Rate { get; set; }
+        public float Rotation { get; set; }
     }
 }

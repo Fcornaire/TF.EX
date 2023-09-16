@@ -5,6 +5,7 @@ using System.Reflection;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models.State.Entity.LevelEntity;
 using TF.EX.Domain.Models.State.Entity.LevelEntity.Player;
+using TF.EX.TowerFallExtensions.CompositeComponent;
 
 namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 {
@@ -48,7 +49,6 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             var head = dynPlayer.Get<Monocle.Sprite<string>>("headSprite");
             var headBack = dynPlayer.Get<Monocle.Sprite<string>>("headBackSprite");
             var bow = dynPlayer.Get<Monocle.Sprite<string>>("bowSprite");
-            var shieldSprite = DynamicData.For(shield).Get<Monocle.SpritePart<int>>("sprite");
             var wingsSprite = DynamicData.For(wings).Get<Monocle.Sprite<string>>("sprite");
 
             var playerAnimations = new PlayerAnimations
@@ -57,7 +57,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 Head = head.GetState(),
                 HeadBack = headBack != null ? headBack.GetState() : null,
                 Bow = bow.GetState(),
-                Shield = shield != null ? shieldSprite.GetState() : null,
+                Shield = shield != null ? shield.GetState() : null,
                 Wings = wings != null ? wingsSprite.GetState() : null
             };
 
@@ -133,7 +133,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 
             dynPlayer.Set("actualDepth", toLoad.ActualDepth);
             entity.Collidable = toLoad.IsCollidable;
-            dynPlayer.Set("dead", toLoad.IsDead);
+            dynPlayer.Set("Dead", toLoad.IsDead);
             entity.Position = toLoad.Position.ToTFVector();
             dynPlayer.Set("counter", toLoad.PositionCounter.ToTFVector());
             dynPlayer.Set("Facing", (TowerFall.Facing)toLoad.Facing);
@@ -174,7 +174,8 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             dynStateMachine.Set("state", (int)toLoad.State.CurrentState.ToTFModel());
             dynStateMachine.Set("PreviousState", (int)toLoad.State.PreviousState.ToTFModel());
 
-            var dynShield = DynamicData.For(dynPlayer.Get<TowerFall.PlayerShield>("shield"));
+            var shield = dynPlayer.Get<TowerFall.PlayerShield>("shield");
+            var dynShield = DynamicData.For(shield);
             dynShield.Set("Visible", toLoad.IsShieldVisible);
 
             dynPlayer.Set("DrawSelf", toLoad.ShouldDrawSelf);
@@ -259,9 +260,9 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 headBack.LoadState(toLoad.Animations.HeadBack);
             }
             bow.LoadState(toLoad.Animations.Bow);
-            if (shieldSprite != null)
+            if (shield != null)
             {
-                shieldSprite.LoadState(toLoad.Animations.Shield);
+                shield.LoadState(toLoad.Animations.Shield);
             }
             if (wingsSprite != null)
             {
