@@ -9,23 +9,23 @@ namespace TF.EX.Domain.Models
     [StructLayout(LayoutKind.Sequential)]
     public struct Input
     {
-        public bool jump_check { get; set; }
+        public int jump_check { get; set; }
 
-        public bool jump_pressed { get; set; }
+        public int jump_pressed { get; set; }
 
-        public bool shoot_check { get; set; }
+        public int shoot_check { get; set; }
 
-        public bool shoot_pressed { get; set; }
+        public int shoot_pressed { get; set; }
 
-        public bool alt_shoot_check { get; set; }
+        public int alt_shoot_check { get; set; }
 
-        public bool alt_shoot_pressed { get; set; }
+        public int alt_shoot_pressed { get; set; }
 
-        public bool dodge_check { get; set; }
+        public int dodge_check { get; set; }
 
-        public bool dodge_pressed { get; set; }
+        public int dodge_pressed { get; set; }
 
-        public bool arrow_pressed { get; set; }
+        public int arrow_pressed { get; set; }
 
         public int move_x { get; set; }
 
@@ -106,22 +106,25 @@ namespace TF.EX.Domain.Models
     {
         public static InputsImpl ToModel(this Inputs inputs) => new InputsImpl(inputs);
 
+        private static int ToInt(this bool value) => value ? 1 : 0;
+        private static bool ToBool(this int value) => value == 1;
+
         public static Input ToModel(this InputState input)
         {
             return new Input
             {
                 aim_axis = input.AimAxis.ToModel(),
-                alt_shoot_check = input.AltShootCheck,
-                alt_shoot_pressed = input.AltShootPressed,
-                arrow_pressed = input.ArrowsPressed,
-                dodge_check = input.DodgeCheck,
-                dodge_pressed = input.DodgePressed,
-                jump_check = input.JumpCheck,
-                jump_pressed = input.JumpPressed,
+                alt_shoot_check = input.AltShootCheck.ToInt(),
+                alt_shoot_pressed = input.AltShootPressed.ToInt(),
+                arrow_pressed = input.ArrowsPressed.ToInt(),
+                dodge_check = input.DodgeCheck.ToInt(),
+                dodge_pressed = input.DodgePressed.ToInt(),
+                jump_check = input.JumpCheck.ToInt(),
+                jump_pressed = input.JumpPressed.ToInt(),
                 move_x = input.MoveX,
                 move_y = input.MoveY,
-                shoot_check = input.ShootCheck,
-                shoot_pressed = input.ShootPressed
+                shoot_check = input.ShootCheck.ToInt(),
+                shoot_pressed = input.ShootPressed.ToInt()
             };
         }
 
@@ -130,17 +133,17 @@ namespace TF.EX.Domain.Models
             return new InputState
             {
                 AimAxis = input.aim_axis.ToTFVector(),
-                AltShootCheck = input.alt_shoot_check,
-                AltShootPressed = input.alt_shoot_pressed,
-                ArrowsPressed = input.arrow_pressed,
-                DodgeCheck = input.dodge_check,
-                DodgePressed = input.dodge_pressed,
-                JumpCheck = input.jump_check,
-                JumpPressed = input.jump_pressed,
+                AltShootCheck = input.alt_shoot_check.ToBool(),
+                AltShootPressed = input.alt_shoot_pressed.ToBool(),
+                ArrowsPressed = input.arrow_pressed.ToBool(),
+                DodgeCheck = input.dodge_check.ToBool(),
+                DodgePressed = input.dodge_pressed.ToBool(),
+                JumpCheck = input.jump_check.ToBool(),
+                JumpPressed = input.jump_pressed.ToBool(),
                 MoveX = input.move_x,
                 MoveY = input.move_y,
-                ShootCheck = input.shoot_check,
-                ShootPressed = input.shoot_pressed
+                ShootCheck = input.shoot_check.ToBool(),
+                ShootPressed = input.shoot_pressed.ToBool()
             };
         }
     }

@@ -717,6 +717,12 @@ namespace TF.EX.Domain.Services
 
         public void ResetMode()
         {
+            if (_netplayMode == NetplayMode.Replay)
+            {
+                _isFirstInit = true;
+                _originalSelection = new (int, ArcherData.ArcherTypes)[4];
+            }
+
             _netplayMode = NetplayMode.Uninitialized;
         }
 

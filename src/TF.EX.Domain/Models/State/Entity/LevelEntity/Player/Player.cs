@@ -5,7 +5,7 @@
         public bool IsCollidable { get; set; }
         public bool IsDead { get; set; }
         public Vector2f Position { get; set; }
-        public Vector2f Position_counter { get; set; }
+        public Vector2f PositionCounter { get; set; }
         public int Facing { get; set; }
         public PlayerArrowsInventory ArrowsInventory { get; set; }
         public float WallStickMax { get; set; }

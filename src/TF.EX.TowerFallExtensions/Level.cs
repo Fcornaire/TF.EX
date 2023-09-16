@@ -3,6 +3,7 @@ using Monocle;
 using MonoMod.Utils;
 using TF.EX.Domain;
 using TF.EX.Domain.Extensions;
+using TF.EX.Domain.Externals;
 using TF.EX.Domain.Models.State;
 using TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows;
 using TF.EX.Domain.Models.State.Entity.LevelEntity.Chest;
@@ -124,7 +125,7 @@ namespace TF.EX.TowerFallExtensions
             gameState.AddOrbsState(self);
             gameState.AddLavaControlState(self);
             gameState.Rng = rngService.Get();
-            gameState.Frame = (int)self.FrameCounter;
+            gameState.Frame = GGRSFFI.netplay_current_frame();
             gameState.MatchStats = new MatchStats[] {
                 self.Session.MatchStats[0], self.Session.MatchStats[1],
             };
@@ -612,10 +613,6 @@ namespace TF.EX.TowerFallExtensions
             var dynLevelSystem = DynamicData.For(level.Session.MatchSettings.LevelSystem);
             var levels = dynLevelSystem.Get<List<string>>("levels");
             var lastLevel = dynLevelSystem.Get<string>("lastLevel");
-            if (levels.Count > 0 && levels[0].Contains("00.oel"))
-            {
-                levels.RemoveAt(0);
-            }
 
             gameState.RoundLogic.RoundLevels.Nexts = levels.ToList();
             gameState.RoundLogic.RoundLevels.Last = lastLevel;

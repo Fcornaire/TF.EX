@@ -22,7 +22,7 @@ namespace TF.EX.Domain
         public static IServiceProvider ServiceProvider;
         private static HashSet<double> _cachedPickupEntries = new HashSet<double>();
         private static CancellationTokenSource _resetCacheToken = new CancellationTokenSource();
-        public static readonly ReplayVersion CurrentVersion = ReplayVersion.V1;
+        public static readonly ReplayVersion CurrentReplayVersion = ReplayVersion.V2;
 
         public static void RegisterServices()
         {

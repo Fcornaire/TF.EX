@@ -71,7 +71,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 IsCollidable = entity.Collidable,
                 IsDead = entity.Dead,
                 Position = entity.Position.ToModel(),
-                Position_counter = dynPlayer.Get<Vector2>("counter").ToModel(),
+                PositionCounter = dynPlayer.Get<Vector2>("counter").ToModel(),
                 Facing = (int)entity.Facing,
                 WallStickMax = dynPlayer.Get<float>("wallStickMax"),
                 ArrowsInventory = entity.Arrows.Arrows.ToModel(),
@@ -135,7 +135,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             entity.Collidable = toLoad.IsCollidable;
             dynPlayer.Set("dead", toLoad.IsDead);
             entity.Position = toLoad.Position.ToTFVector();
-            dynPlayer.Set("counter", toLoad.Position_counter.ToTFVector());
+            dynPlayer.Set("counter", toLoad.PositionCounter.ToTFVector());
             dynPlayer.Set("Facing", (TowerFall.Facing)toLoad.Facing);
             dynPlayer.Set("wallStickMax", toLoad.WallStickMax);
             entity.Arrows.Arrows.Update(toLoad.ArrowsInventory);

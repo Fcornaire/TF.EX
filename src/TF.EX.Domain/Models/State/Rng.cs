@@ -41,6 +41,26 @@ namespace TF.EX.Domain.Models.State
                 }
             }
         }
+
+        public string Debug()
+        {
+            var counterInt = 0;
+            var counterDouble = 0;
+            foreach (var gen in Gen_type)
+            {
+                switch (gen)
+                {
+                    case RngGenType.Integer:
+                        counterInt++;
+                        break;
+                    case RngGenType.Double:
+                        counterDouble++;
+                        break;
+                }
+            }
+
+            return $"SEED: {Seed}, GEN TYPE: INT {counterInt} - DOUBLE {counterDouble}";
+        }
     }
 
     public enum RngGenType

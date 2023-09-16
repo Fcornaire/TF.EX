@@ -1,5 +1,6 @@
 ﻿using FortRise;
 using Monocle;
+using MonoMod.Utils;
 using System.Net;
 using System.Net.Sockets;
 using TF.EX.Common.Extensions;
@@ -240,7 +241,12 @@ namespace TF.EX.Core
             MatchSettings matchSettings = MatchSettings.GetDefaultVersus();
             matchSettings.LevelSystem = GameData.VersusTowers[map].GetLevelSystem();
             matchSettings.Mode = mode;
+
+            var levels = (matchSettings.LevelSystem as VersusLevelSystem).OwnGenLevel(matchSettings, GameData.VersusTowers[map], null, ServiceCollections.ResolveRngService());
+            var dynVersusLevelSystem = DynamicData.For(matchSettings.LevelSystem);
+            dynVersusLevelSystem.Set("levels", levels);
             (matchSettings.LevelSystem as VersusLevelSystem).StartOnLevel(startLevel);
+
             var session = new Session(matchSettings);
 
             if (netplayManager != null)

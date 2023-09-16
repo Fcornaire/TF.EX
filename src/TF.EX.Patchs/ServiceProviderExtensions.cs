@@ -74,6 +74,7 @@ namespace TF.EX.Patchs
             serviceCollection.AddSingleton<IHookable, LoaderPatch>();
             serviceCollection.AddSingleton<IHookable, MapScenePatch>();
             serviceCollection.AddSingleton<IHookable, OrbPatch>();
+            serviceCollection.AddSingleton<IHookable, SpikeballPatch>();
         }
 
         public static LavaPatch GetLavaPatch(this IServiceProvider serviceProvider)

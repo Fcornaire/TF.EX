@@ -1,6 +1,9 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using Monocle;
 using MonoMod.Utils;
+using System.Xml;
+using TF.EX.Domain;
 using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Externals;
 using TF.EX.Domain.Ports;
@@ -27,12 +30,36 @@ namespace TF.EX.Patchs.Scene
         {
             On.TowerFall.Level.HandlePausing += Level_HandlePausing;
             On.TowerFall.Level.Update += Level_Update;
+            On.TowerFall.Level.ctor += Level_ctor;
+            On.TowerFall.Level.CoreRender += Level_CoreRender;
         }
 
         public void Unload()
         {
             On.TowerFall.Level.HandlePausing -= Level_HandlePausing;
             On.TowerFall.Level.Update -= Level_Update;
+            On.TowerFall.Level.ctor -= Level_ctor;
+            On.TowerFall.Level.CoreRender -= Level_CoreRender;
+        }
+
+        private void Level_CoreRender(On.TowerFall.Level.orig_CoreRender orig, Level self, RenderTarget2D canvas)
+        {
+            orig(self, canvas);
+            var dynLevel = DynamicData.For(self);
+            var debugLayer = dynLevel.Get<DebugLayer>("DebugLayer");
+            if (debugLayer.Visible)
+            {
+                debugLayer.Render();
+            }
+        }
+
+        private void Level_ctor(On.TowerFall.Level.orig_ctor orig, Level self, Session session, XmlElement xml)
+        {
+            orig(self, session, xml);
+            var debugLayer = new DebugLayer();
+            var dynLevel = DynamicData.For(self);
+            dynLevel.Add("DebugLayer", debugLayer);
+            self.SetLayer(42, debugLayer);
         }
 
         private void Level_Update(On.TowerFall.Level.orig_Update orig, Level self)
@@ -42,11 +69,6 @@ namespace TF.EX.Patchs.Scene
                 var dynTFGame = DynamicData.For(TFGame.Instance);
                 dynTFGame.Set("TimeMult", TFGame.TimeRate); //In fixed timestep, TimeMult = TimeRate
             }
-
-            //if (_netplayManager.IsTestMode())
-            //{
-            //    Console.WriteLine(self.FrameCounter);
-            //}
 
             AddPlayersIndicators(self);
 
