@@ -41,6 +41,8 @@ namespace TF.EX.Patchs.Engine
         private const double SLOW_RATIO = 1.1;
         private readonly MethodInfo _mInputUpdate = typeof(MInput).GetMethod("Update", BindingFlags.NonPublic | BindingFlags.Static); //Minput Update is an internal static method...
 
+        private bool frameByFrame { get; set; } = false;
+
         public TFGamePatch(
             INetplayManager netplayManager,
             IInputService inputService,
@@ -158,6 +160,11 @@ namespace TF.EX.Patchs.Engine
 
             ManageTimeStep(self);
 
+            if (!HandleFrameByFrame())
+            {
+                return;
+            }
+
             if (_netplayManager.IsReplayMode())
             {
                 var dynTFGame = DynamicData.For(self);
@@ -168,6 +175,8 @@ namespace TF.EX.Patchs.Engine
                     _replayService.RunFrame();
                 }
                 orig(self, gameTime);
+                self.Screen.Offset = Vector2.Zero; //Ignore camera offset on replay mode (used by some orb)
+
                 return;
             }
 
@@ -278,6 +287,36 @@ namespace TF.EX.Patchs.Engine
                 }
             }
 
+        }
+
+        private bool HandleFrameByFrame()
+        {
+            if (!_netplayManager.IsReplayMode())
+            {
+                return true;
+            }
+
+            if (MInput.Keyboard.Pressed(Microsoft.Xna.Framework.Input.Keys.F2))
+            {
+                frameByFrame = !frameByFrame;
+            }
+
+            if (frameByFrame)
+            {
+                _mInputUpdate.Invoke(null, null);
+
+                if (!MInput.Keyboard.Pressed(Microsoft.Xna.Framework.Input.Keys.F3) && !MInput.Keyboard.Check(Microsoft.Xna.Framework.Input.Keys.F4))
+                {
+                    return false;
+                }
+
+                if (MInput.Keyboard.Pressed(Microsoft.Xna.Framework.Input.Keys.F5))
+                {
+                    frameByFrame = false;
+                }
+            }
+
+            return true;
         }
 
         private void HandleMenuAction(TFGame self)

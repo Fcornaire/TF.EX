@@ -68,6 +68,8 @@ namespace TF.EX.Patchs.Scene
         /// <param name="session"></param>
         private void Reset(TowerFall.Session session)
         {
+            TFGame.Instance.Screen.Offset = Vector2.Zero;
+
             ServiceCollections.ResetState();
 
             if (TFGame.Instance.Scene != null && TFGame.Instance.Scene is TowerFall.Level)

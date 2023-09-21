@@ -1,6 +1,8 @@
 ﻿using Microsoft.Xna.Framework;
 using Monocle;
 using MonoMod.Utils;
+using TF.EX.Common.Extensions;
+using TF.EX.Domain;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models.State.Entity.LevelEntity.Chest;
 using TowerFall;
@@ -42,92 +44,101 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 
         public static void LoadState(this TreasureChest entity, Chest toLoad)
         {
-            var dynTreasureChest = DynamicData.For(entity);
-            dynTreasureChest.Set("Scene", TFGame.Instance.Scene);
-
-            entity.Added();
-
-            dynTreasureChest.Set("actualDepth", toLoad.ActualDepth);
-            var counter = dynTreasureChest.Get<Counter>("appearCounter");
-            var appearCounter = DynamicData.For(counter);
-            appearCounter.Set("counter", toLoad.AppearCounter);
-            entity.Position = toLoad.Position.ToTFVector();
-
-            var pickups = dynTreasureChest.Get<List<Pickups>>("pickups");
-            pickups[0] = toLoad.Pickups.ToTFModel();
-            dynTreasureChest.Set("pickups", pickups);
-
-            dynTreasureChest.Set("counter", toLoad.PositionCounter.ToTFVector());
-            dynTreasureChest.Set("vSpeed", toLoad.VSpeed);
-            dynTreasureChest.Set("State", toLoad.State.ToTFModel());
-
-            entity.Collidable = toLoad.IsCollidable;
-            entity.LightVisible = toLoad.IsLightVisible;
-            entity.Visible = toLoad.IsLightVisible;
-
-            var sprite = dynTreasureChest.Get<Sprite<int>>("sprite");
-            sprite.Play(toLoad.CurrentAnimId);
-
-            entity.DeleteComponent<Alarm>();
-            entity.DeleteComponent<Tween>();
-
-            if (entity.State == States.Appearing)
+            try
             {
-                entity.LightVisible = true;
-                entity.Visible = true;
-                Alarm.Set(entity, (int)toLoad.AppearTimer, delegate
+                var dynTreasureChest = DynamicData.For(entity);
+                dynTreasureChest.Set("Scene", TFGame.Instance.Scene);
+
+                entity.Added();
+
+                dynTreasureChest.Set("actualDepth", toLoad.ActualDepth);
+                var counter = dynTreasureChest.Get<Counter>("appearCounter");
+                var appearCounter = DynamicData.For(counter);
+                appearCounter.Set("counter", toLoad.AppearCounter);
+                entity.Position = toLoad.Position.ToTFVector();
+
+                var pickups = dynTreasureChest.Get<List<Pickups>>("pickups");
+                pickups[0] = toLoad.Pickups.ToTFModel();
+                dynTreasureChest.Set("pickups", pickups);
+
+                dynTreasureChest.Set("counter", toLoad.PositionCounter.ToTFVector());
+                dynTreasureChest.Set("vSpeed", toLoad.VSpeed);
+                dynTreasureChest.Set("State", toLoad.State.ToTFModel());
+
+                entity.Collidable = toLoad.IsCollidable;
+                entity.LightVisible = toLoad.IsLightVisible;
+                entity.Visible = toLoad.IsLightVisible;
+
+                var sprite = dynTreasureChest.Get<Sprite<int>>("sprite");
+                sprite.Play(toLoad.CurrentAnimId);
+
+                entity.DeleteComponent<Alarm>();
+                entity.DeleteComponent<Tween>();
+
+                if (entity.State == States.Appearing)
                 {
-                    var dynTreasureChestAlarm = DynamicData.For(entity);
-
-                    dynTreasureChestAlarm.Set("State", States.Closed);
-                    entity.Seek = entity.Level.Session.MatchSettings.SoloMode;
-                    entity.Collidable = true;
-
-                    var type = dynTreasureChestAlarm.Get<Types>("type");
-
-                    if (type == Types.Large)
+                    entity.LightVisible = true;
+                    entity.Visible = true;
+                    Alarm.Set(entity, (int)toLoad.AppearTimer, delegate
                     {
-                        Sounds.sfx_chestAppearBig.Stop();
-                    }
-                });
-            }
+                        var dynTreasureChestAlarm = DynamicData.For(entity);
 
-            if (entity.State <= States.Closed)
-            {
-                if (!entity.Tags.Contains(GameTags.PlayerCollider))
+                        dynTreasureChestAlarm.Set("State", States.Closed);
+                        entity.Seek = entity.Level.Session.MatchSettings.SoloMode;
+                        entity.Collidable = true;
+
+                        var type = dynTreasureChestAlarm.Get<Types>("type");
+
+                        if (type == Types.Large)
+                        {
+                            Sounds.sfx_chestAppearBig.Stop();
+                        }
+                    });
+                }
+
+                if (entity.State <= States.Closed)
                 {
-                    entity.Tag(GameTags.PlayerCollider, GameTags.PlayerGhostCollider);
+                    if (!entity.Tags.Contains(GameTags.PlayerCollider))
+                    {
+                        entity.Tag(GameTags.PlayerCollider, GameTags.PlayerGhostCollider);
+                    }
+                }
+
+                if (entity.State == States.Opening)
+                {
+                    entity.LightVisible = false;
+                    entity.Visible = true;
+                    Tween tween = Tween.Create(Tween.TweenMode.Oneshot, Ease.CubeIn, 40, start: true); //TODO: Tween.Set
+                    var dynTween = DynamicData.For(tween);
+                    dynTween.Set("FramesLeft", toLoad.OpeningTimer);
+
+                    var light = dynTreasureChest.Get<Sprite<int>>("light");
+
+                    tween.OnUpdate = delegate (Tween t)
+                    {
+                        light.Color = Color.Lerp(Color.White, Color.Transparent, t.Eased);
+                        float amount = Ease.BackIn(t.Percent);
+                        sprite.Scale.X = MathHelper.Lerp(0.8f, 1f, amount);
+                        sprite.Scale.Y = MathHelper.Lerp(1.2f, 1f, amount);
+                    };
+                    tween.OnComplete = delegate
+                    {
+                        light.Visible = (light.Active = false);
+                        var dynChest = DynamicData.For(entity);
+                        dynChest.Set("State", States.Opened);
+                    };
+                    entity.Add(tween);
+                }
+
+                if (entity.State == States.Opened)
+                {
+                    entity.Visible = true;
                 }
             }
-
-            if (entity.State == States.Opening)
+            catch (Exception e)
             {
-                entity.LightVisible = false;
-                entity.Visible = true;
-                Tween tween = Tween.Create(Tween.TweenMode.Oneshot, Ease.CubeIn, 40, start: true); //TODO: Tween.Set
-                var dynTween = DynamicData.For(tween);
-                dynTween.Set("FramesLeft", toLoad.OpeningTimer);
-
-                var light = dynTreasureChest.Get<Sprite<int>>("light");
-
-                tween.OnUpdate = delegate (Tween t)
-                {
-                    light.Color = Color.Lerp(Color.White, Color.Transparent, t.Eased);
-                    float amount = Ease.BackIn(t.Percent);
-                    sprite.Scale.X = MathHelper.Lerp(0.8f, 1f, amount);
-                    sprite.Scale.Y = MathHelper.Lerp(1.2f, 1f, amount);
-                };
-                tween.OnComplete = delegate
-                {
-                    light.Visible = (light.Active = false);
-                    dynTreasureChest.Set("state", States.Opened);
-                };
-                entity.Add(tween);
-            }
-
-            if (entity.State == States.Opened)
-            {
-                entity.Visible = true;
+                var logger = ServiceCollections.ResolveLogger();
+                logger.LogError<TreasureChest>("Error while loading state for a chest", e);
             }
         }
     }

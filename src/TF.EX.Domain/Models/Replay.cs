@@ -53,7 +53,8 @@ namespace TF.EX.Domain.Models
     public enum ReplayVersion
     {
         Unknown,
-        V1
+        V1,
+        V2 //changed input struct to use int instead of bool
     }
 
 }

@@ -42,11 +42,17 @@ namespace TF.EX.Patchs.RoundLogic
 
         private int RoundLogic_SpawnPlayersFFA(On.TowerFall.RoundLogic.orig_SpawnPlayersFFA orig, TowerFall.RoundLogic self)
         {
+            if (!_netplayManager.IsInit() && !_netplayManager.IsReplayMode())
+            {
+                return orig(self);
+            }
+
             Vector2[] array = new Vector2[4];
             List<Vector2> xMLPositions = self.Session.CurrentLevel.GetXMLPositions("PlayerSpawn");
 
             _rngService.Get().ResetRandom();
-            xMLPositions = CalcExtensions.OwnVectorShuffle(xMLPositions.ToArray());
+
+            xMLPositions = CalcExtensions.OwnVectorShuffle(xMLPositions).ToList();
             int num;
             if (!self.Session.IsInOvertime)
             {

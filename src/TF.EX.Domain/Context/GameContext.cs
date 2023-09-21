@@ -4,7 +4,6 @@ using TF.EX.Domain.Externals;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Models.State;
 using TF.EX.Domain.Models.State.Entity.HUD;
-using TF.EX.Domain.Models.State.Orb;
 using TF.EX.Domain.Utils;
 
 namespace TF.EX.Domain.Context
@@ -20,9 +19,6 @@ namespace TF.EX.Domain.Context
 
         Session GetSession();
         void UpdateSession(Session session);
-        Orb GetOrb();
-        void SaveOrb(Orb orb);
-        void ClearOrb();
         void SetSeed(int seed);
 
         int GetSeed();
@@ -69,7 +65,6 @@ namespace TF.EX.Domain.Context
         private readonly AttributeManager<TowerFall.InputState> CurrentInputs;
         private TowerFall.InputState PolledInput;
         private Session Session;
-        private Orb Orb;
         private Rng _rng = Rng.Default;
         private Replay _replay;
         private Dictionary<int, double> _gamePlayerLayerActualDepthLookup = new Dictionary<int, double>();
@@ -95,7 +90,6 @@ namespace TF.EX.Domain.Context
                 Miasma = Miasma.Default(),
                 RoundStarted = false
             };
-            Orb = Orb.Default;
             _hudState = new HUD();
         }
 
@@ -157,21 +151,6 @@ namespace TF.EX.Domain.Context
         public void UpdateSession(Session session)
         {
             Session = session;
-        }
-
-        public Orb GetOrb()
-        {
-            return Orb;
-        }
-
-        public void SaveOrb(Orb orb)
-        {
-            Orb = orb;
-        }
-
-        public void ClearOrb()
-        {
-            Orb = Orb.Default;
         }
 
         public void SetSeed(int seed)

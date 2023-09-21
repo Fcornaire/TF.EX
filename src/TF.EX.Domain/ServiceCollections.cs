@@ -22,7 +22,7 @@ namespace TF.EX.Domain
         public static IServiceProvider ServiceProvider;
         private static HashSet<double> _cachedPickupEntries = new HashSet<double>();
         private static CancellationTokenSource _resetCacheToken = new CancellationTokenSource();
-        public static readonly ReplayVersion CurrentVersion = ReplayVersion.V1;
+        public static readonly ReplayVersion CurrentReplayVersion = ReplayVersion.V2;
 
         public static void RegisterServices()
         {
@@ -50,7 +50,6 @@ namespace TF.EX.Domain
             ServiceCollection.AddTransient<IInputService, InputService>();
             ServiceCollection.AddTransient<IArrowService, ArrowService>();
             ServiceCollection.AddTransient<ISessionService, SessionService>();
-            ServiceCollection.AddTransient<IOrbService, OrbService>();
             ServiceCollection.AddTransient<IRngService, RngService>();
             ServiceCollection.AddTransient<IHUDService, HUDService>();
         }
@@ -141,8 +140,6 @@ namespace TF.EX.Domain
         public static IHUDService ResolveHUDService() { return ServiceProvider.GetRequiredService<IHUDService>(); }
 
         public static IArrowService ResolveArrowService() { return ServiceProvider.GetRequiredService<IArrowService>(); }
-        public static IOrbService ResolveOrbService() { return ServiceProvider.GetRequiredService<IOrbService>(); }
-
         public static ISFXService ResolveSFXService() { return ServiceProvider.GetRequiredService<ISFXService>(); }
 
         public static ILogger ResolveLogger() { return ServiceProvider.GetRequiredService<ILogger>(); }

@@ -1,4 +1,6 @@
-﻿using MonoMod.Utils;
+﻿using Microsoft.Extensions.Logging;
+using MonoMod.Utils;
+using TF.EX.Common.Extensions;
 using TF.EX.Domain;
 using TF.EX.Domain.Ports.TF;
 
@@ -7,10 +9,12 @@ namespace TF.EX.Patchs
     public class VersusLevelSystemPatch : IHookable
     {
         private readonly IRngService _rngService;
+        private readonly ILogger _logger;
 
-        public VersusLevelSystemPatch(IRngService rngService)
+        public VersusLevelSystemPatch(IRngService rngService, ILogger logger)
         {
             _rngService = rngService;
+            _logger = logger;
         }
 
         public void Load()
@@ -32,6 +36,8 @@ namespace TF.EX.Patchs
             var lastLevel = dynVersusLevelSystem.Get<string>("lastLevel");
             var levels = self.OwnGenLevel(matchSettings, self.VersusTowerData, lastLevel, _rngService);
 
+            _logger.LogDebug<VersusLevelSystemPatch>($"Generated levels: {string.Join("\n", levels)}");
+
             dynVersusLevelSystem.Set("levels", levels);
         }
 
@@ -43,8 +49,5 @@ namespace TF.EX.Patchs
             dynVersusLevelSystem.Set("ShowControls", false);
             dynVersusLevelSystem.Set("ShowTriggerControls", false);
         }
-
-
-
     }
 }

@@ -119,7 +119,7 @@ To be able to add feature or fix things, you will need to :
 4. Launch Towefall and on the main screen, open the Dev console wih the key ² (If not opening, ensure you enabled dev console in the game settings) and enter the following command
 
 ```
-test LMS 0 42 2
+test LMS 0 1 42 2
 ```
 
 A LastManStanding game should be running in a GGRS [SyncTestSession](https://github.com/gschup/ggrs/wiki/2.-Sessions#sessionbuilder)
@@ -135,6 +135,7 @@ As you can guess, this project is still WIP and missing a lot of feature:
 - [x] Less restrictive controller
 - [ ] Fix bugs (There is one (last?) desynchronization issue)
 - [ ] Support for all versus map
+- [ ] Check Twiligh Spear CrackedWall with teams on level 7
 - [ ] Support all items
 - [ ] Support 4 players (FFA and 2V2 teams )
 - [x] Integrate the replay viewer in the menu

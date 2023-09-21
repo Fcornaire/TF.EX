@@ -220,7 +220,7 @@ namespace TF.EX.Domain.Services
                     var roomUrl = $"{ROOM_URL}/{matchResponse.MatchWithDirectCodeResponse.RoomId}";
                     var roomChatUrl = $"{ROOM_URL}/{matchResponse.MatchWithDirectCodeResponse.RoomChatId}";
 
-                    _netplayManager.SetRoom(roomUrl);
+                    _netplayManager.SetRoomAndServerMode(roomUrl);
                     ConnectAndListenToLobby(roomChatUrl);
 
                     _rngService.SetSeed(matchResponse.MatchWithDirectCodeResponse.Seed);
@@ -258,7 +258,7 @@ namespace TF.EX.Domain.Services
                     var roomUrl = $"{ROOM_URL}/{matchResponse.QuickPlayPossibleMatch.RoomId}";
                     var roomChatUrl = $"{ROOM_URL}/{matchResponse.QuickPlayPossibleMatch.RoomChatId}";
 
-                    _netplayManager.SetRoom(roomUrl);
+                    _netplayManager.SetRoomAndServerMode(roomUrl);
                     ConnectAndListenToLobby(roomChatUrl);
 
                     _netplayManager.UpdatePlayer2Name(matchResponse.QuickPlayPossibleMatch.OpponentName);
