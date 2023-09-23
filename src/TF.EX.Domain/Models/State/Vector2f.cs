@@ -13,5 +13,7 @@ namespace TF.EX.Domain.Models.State
             this.x = x;
             this.y = y;
         }
+
+        public override string ToString() => $"({x}, {y})";
     }
 }

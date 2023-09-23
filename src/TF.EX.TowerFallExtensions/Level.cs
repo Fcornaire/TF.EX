@@ -109,7 +109,14 @@ namespace TF.EX.TowerFallExtensions
             var sfxService = ServiceCollections.ResolveSFXService();
 
             gameState.AddJumpPadsState(self);
-            gameState.SFXs = sfxService.Get();
+            gameState.SFXs = sfxService.Get().Select(sfx => new SFXState
+            {
+                Frame = sfx.Frame,
+                Name = sfx.Name,
+                Pan = sfx.Pan,
+                Pitch = sfx.Pitch,
+                Volume = sfx.Volume,
+            });
             gameState.AddRoundLogicState(self);
             gameState.Entities.Hud = hudService.Get();
             gameState.AddPlayersState(self);
@@ -127,8 +134,8 @@ namespace TF.EX.TowerFallExtensions
             gameState.AddLavaControlState(self);
             gameState.Rng = rngService.Get();
             gameState.Frame = GGRSFFI.netplay_current_frame();
-            gameState.MatchStats = new MatchStats[] {
-                self.Session.MatchStats[0], self.Session.MatchStats[1],
+            gameState.MatchStats = new TF.EX.Domain.Models.State.MatchStats[] {
+                self.Session.MatchStats[0].ToDomain(), self.Session.MatchStats[1].ToDomain(),
             };
             gameState.AddCrackedPlatform(self);
             gameState.AddSpikeball(self);
@@ -148,7 +155,15 @@ namespace TF.EX.TowerFallExtensions
             var currentMode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
 
             sfxService.UpdateLastRollbackFrame(gameState.Frame);
-            sfxService.Load(gameState.SFXs);
+            sfxService.Load(gameState.SFXs.Select(sfx => new Domain.Models.State.SFX
+            {
+                Frame = sfx.Frame,
+                Name = sfx.Name,
+                Pan = sfx.Pan,
+                Pitch = sfx.Pitch,
+                Volume = sfx.Volume,
+                Data = null,
+            }));
 
             //JumpPads load
             var inGamejumpPads = level.GetAll<TowerFall.JumpPad>();
@@ -299,7 +314,9 @@ namespace TF.EX.TowerFallExtensions
             //Event logs
             dynRoundLogic.Set("Events", gameState.RoundLogic.EventLogs.ToTFModel());
 
+            //HUD (VersusRoundResults && VersusStart)
             hudService.Update(new Domain.Models.State.Entity.HUD.HUD());
+
             //VersusRoundResults
             level.Delete<VersusRoundResults>();
             level.Delete<HUDFade>();
@@ -343,6 +360,8 @@ namespace TF.EX.TowerFallExtensions
                     versusStart.Update();
                 }
             }
+
+            hudService.Update(gameState.Entities.Hud);
 
             //Players
             foreach (Domain.Models.State.Entity.LevelEntity.Player.Player toLoad in gameState.Entities.Players.ToArray())
@@ -529,12 +548,12 @@ namespace TF.EX.TowerFallExtensions
 
             //Rng
             var rng = gameState.Rng;
-            rng.ResetRandom();
+            rng.ResetRandom(ref Monocle.Calc.Random);
             rngService.UpdateState(rng.Gen_type);
 
             var matchStats = gameState.MatchStats.ToArray();
-            level.Session.MatchStats[0] = matchStats[0];
-            level.Session.MatchStats[1] = matchStats[1];
+            level.Session.MatchStats[0] = matchStats[0].ToTF();
+            level.Session.MatchStats[1] = matchStats[1].ToTF();
 
             level.PostLoad(gameState);
 
@@ -961,7 +980,7 @@ namespace TF.EX.TowerFallExtensions
                 }
                 else
                 {
-                    var lavaC = new LavaControl(lavaControl.Mode, lavaControl.OwnerIndex);
+                    var lavaC = new LavaControl((TowerFall.LavaControl.LavaMode)lavaControl.Mode, lavaControl.OwnerIndex);
                     var dynLavaC = DynamicData.For(lavaC);
                     var lavas = dynLavaC.Get<TowerFall.Lava[]>("lavas");
                     lavas = new TowerFall.Lava[lavaControl.Lavas.Count()];
@@ -969,7 +988,7 @@ namespace TF.EX.TowerFallExtensions
                     int ind = 0;
                     foreach (var lava in lavaControl.Lavas)
                     {
-                        var lavaToAdd = new TowerFall.Lava(lavaC, lava.Side);
+                        var lavaToAdd = new TowerFall.Lava(lavaC, (TowerFall.Lava.LavaSide)lava.Side);
                         var dynLavaToAdd = DynamicData.For(lavaToAdd);
                         dynLavaToAdd.Set("Scene", level);
 

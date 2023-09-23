@@ -12,16 +12,19 @@ namespace TF.EX.Patchs.Scene
 
         private readonly INetplayManager _netplayManager;
 
+        private readonly IRngService _rngService;
+
         private static readonly IEnumerable<string> NETPLAY_SAFE_MAP = new List<string>
         {
             "SACRED GROUND",
             "TWILIGHT SPIRE"
         };
 
-        public MapScenePatch(IInputService inputService, INetplayManager netplayManager)
+        public MapScenePatch(IInputService inputService, INetplayManager netplayManager, IRngService rngService)
         {
             _inputService = inputService;
             _netplayManager = netplayManager;
+            _rngService = rngService;
         }
 
         public void Load()
@@ -42,6 +45,7 @@ namespace TF.EX.Patchs.Scene
         {
             orig(self);
 
+            _rngService.Reset();
             _inputService.EnsureRemoteController();
             ServiceCollections.PurgeCache();
         }
@@ -97,9 +101,10 @@ namespace TF.EX.Patchs.Scene
                 }
             }
 
+            _rngService.Get().ResetRandom(ref Monocle.Calc.Random);
             var shuffled = CalcExtensions.OwnMapButtonShuffle(list).ToArray();
             return shuffled[0];
-            // return shuffled.SingleOrDefault(b => b.Data.ID.X == 1); //Usefull for debug
+            //return shuffled.SingleOrDefault(b => b.Data.ID.X == 1); //Usefull for debug
         }
 
         private bool IsNetplaySafe(string title)

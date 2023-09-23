@@ -1,6 +1,4 @@
-﻿using Microsoft.Xna.Framework;
-using TF.EX.Domain.Extensions;
-using TF.EX.Domain.Models.State.Monocle;
+﻿using TF.EX.Domain.Models.State.Monocle;
 
 namespace TF.EX.Domain.Models.State.OrbLogic
 {
@@ -26,8 +24,8 @@ namespace TF.EX.Domain.Models.State.OrbLogic
             TargetSpaceSpeed = new Vector2f(-1, -1),
             SpaceSpeed = new Vector2f(-1, -1),
             SpaceTweenTimer = -1,
-            ScreenOffsetStart = Vector2.Zero.ToModel(),
-            ScreenOffsetEnd = Vector2.Zero.ToModel()
+            ScreenOffsetStart = new Vector2f(0, 0),
+            ScreenOffsetEnd = new Vector2f(0, 0)
         };
 
     }

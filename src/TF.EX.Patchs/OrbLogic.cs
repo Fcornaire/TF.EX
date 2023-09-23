@@ -41,7 +41,7 @@ namespace TF.EX.Patchs
         {
             if (!self.Level.Ending)
             {
-                _rngService.Get().ResetRandom();
+                _rngService.Get().ResetRandom(ref Monocle.Calc.Random);
 
                 Vector2 start = TFGame.Instance.Screen.Offset;
                 Vector2 end = start;

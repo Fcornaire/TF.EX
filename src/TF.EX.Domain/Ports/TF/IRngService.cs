@@ -10,7 +10,7 @@ namespace TF.EX.Domain.Ports.TF
         int GetSeed();
         void UpdateState(ICollection<RngGenType> genTypes);
         void AddGen(RngGenType genType);
+        void Reset();
 
-        void ResetGenType();
     }
 }

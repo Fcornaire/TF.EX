@@ -48,5 +48,7 @@
 
         public bool HasSpeedBoots { get; set; }
         public bool IsInvisible { get; set; }
+
+        public bool ShouldAutoBounce { get; set; }
     }
 }

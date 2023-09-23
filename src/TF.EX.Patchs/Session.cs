@@ -89,8 +89,7 @@ namespace TF.EX.Patchs
         private void Session_StartGame(On.TowerFall.Session.orig_StartGame orig, Session self)
         {
             CalcPatch.Reset();
-            _rngService.Get().ResetGenType();
-            _rngService.Get().ResetRandom();
+            _rngService.Reset();
 
             orig(self);
         }

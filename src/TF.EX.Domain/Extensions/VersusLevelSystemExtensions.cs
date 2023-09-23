@@ -15,6 +15,13 @@ namespace TF.EX.Domain
             )
         {
             var levels = versusTowerData.GetLevels(matchSettings);
+
+            //useful for debug only
+            // for (int i = 0; i < levels.Count; i++)
+            // {
+            //     levels[i] = $"Content\\Levels\\Versus\\01 - Twilight Spire\\04.oel";
+            // }
+
             if (versusTowerData.FixedFirst && lastLevel == null)
             {
                 string item = levels[0];

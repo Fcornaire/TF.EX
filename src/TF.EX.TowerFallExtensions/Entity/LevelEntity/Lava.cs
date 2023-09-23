@@ -14,7 +14,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 
             return new Lava
             {
-                Side = entity.Side,
+                Side = (LavaSide)entity.Side,
                 IsCollidable = entity.Collidable,
                 Position = entity.Position.ToModel(),
                 Percent = entity.Percent,

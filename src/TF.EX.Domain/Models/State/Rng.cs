@@ -1,5 +1,4 @@
-﻿using Monocle;
-
+﻿
 namespace TF.EX.Domain.Models.State
 {
     public class Rng
@@ -20,10 +19,10 @@ namespace TF.EX.Domain.Models.State
             Gen_type = new List<RngGenType>();
         }
 
-        public void ResetRandom()
+        public void ResetRandom(ref Random random)
         {
-            Calc.Random = new Random(Seed);
-            Reset(Calc.Random);
+            random = new Random(Seed);
+            Reset(random);
         }
 
         private void Reset(Random r)

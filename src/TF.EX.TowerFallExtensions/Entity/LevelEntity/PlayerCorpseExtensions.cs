@@ -40,7 +40,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             return new PlayerCorpse
             {
                 ActualDepth = actualDepth,
-                Facing = facing,
+                Facing = (Facing)facing,
                 Position = entity.Position.ToModel(),
                 PositionCounter = counter.ToModel(),
                 KillerIndex = entity.KillerIndex,
@@ -65,7 +65,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             dynPlayerCorpse.Set("Scene", TowerFall.TFGame.Instance.Scene);
             entity.Added();
 
-            dynPlayerCorpse.Set("Facing", toLoad.Facing);
+            dynPlayerCorpse.Set("Facing", (TowerFall.Facing)toLoad.Facing);
             dynPlayerCorpse.Set("actualDepth", toLoad.ActualDepth);
 
             entity.Position = toLoad.Position.ToTFVector();

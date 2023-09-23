@@ -1,7 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System.ComponentModel;
 using TF.EX.Domain.Models.State;
-using TowerFall;
 
 namespace TF.EX.Domain.Models
 {
@@ -25,7 +24,7 @@ namespace TF.EX.Domain.Models
 
         public string Name { get; set; }
 
-        public TowerFall.Modes Mode { get; set; }
+        public Modes Mode { get; set; }
 
         public IEnumerable<ArcherInfo> Archers { get; set; } = Enumerable.Empty<ArcherInfo>();
 
@@ -35,7 +34,7 @@ namespace TF.EX.Domain.Models
     public class ArcherInfo
     {
         public int Index { get; set; }
-        public ArcherData.ArcherTypes Type { get; set; }
+        public ArcherTypes Type { get; set; }
         public bool HasWon { get; set; }
         public int Score { get; set; }
 
@@ -57,4 +56,10 @@ namespace TF.EX.Domain.Models
         V2 //changed input struct to use int instead of bool
     }
 
+    public enum ArcherTypes
+    {
+        Normal,
+        Alt,
+        Secret
+    }
 }

@@ -44,9 +44,12 @@ namespace TF.EX.Domain.Services.TF
             _gameContext.UpdateRng(rng);
         }
 
-        public void ResetGenType()
+        public void Reset()
         {
-            Get().ResetGenType();
+            var rng = Get();
+            rng.ResetGenType();
+            rng.ResetRandom(ref Monocle.Calc.Random);
+            _gameContext.UpdateRng(rng);
         }
     }
 }
