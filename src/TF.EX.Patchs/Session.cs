@@ -115,12 +115,6 @@ namespace TF.EX.Patchs
             }
 
             orig(self);
-
-            if (_netplayManager.IsInit() && _netplayManager.HaveFramesToReSimulate())
-            {
-                self.CurrentLevel.UpdateEntityLists();
-                self.CurrentLevel.Layers.FirstOrDefault(layer => layer.Value.Index == 3).Value.Update(); //Update to trigger coroutine
-            }
         }
 
 
