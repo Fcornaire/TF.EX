@@ -4,7 +4,6 @@ using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Ports;
 using TowerFall;
-using static TowerFall.ArcherData;
 
 namespace TF.EX.Patchs.Entity.MenuItem
 {
@@ -130,7 +129,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
             var playerIndex = rollcallElement.Get<int>("playerIndex");
             rollcallElement.Set("archerType", TFGame.AltSelect[playerIndex]);
             var portrait = rollcallElement.Get<ArcherPortrait>("portrait");
-            var archerType = rollcallElement.Get<ArcherTypes>("archerType");
+            var archerType = rollcallElement.Get<ArcherData.ArcherTypes>("archerType");
 
             portrait.SetCharacter(TFGame.Characters[playerIndex], archerType, 1);
             portrait.Join(unlock: false);

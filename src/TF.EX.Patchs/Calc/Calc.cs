@@ -77,7 +77,7 @@ namespace TF.EX.Patchs.Calc
         {
             var rngService = ServiceCollections.ResolveRngService();
 
-            rngService.Get().ResetRandom();
+            rngService.Get().ResetRandom(ref Monocle.Calc.Random);
             int length = toShuffle.Count();
             while (--length > 0)
             {
@@ -89,7 +89,7 @@ namespace TF.EX.Patchs.Calc
         {
             if (_shouldRegisterRng && !_shouldIgnoreToRegisterRng)
             {
-                _rngService.Get().ResetRandom();
+                _rngService.Get().ResetRandom(ref Monocle.Calc.Random);
                 random = Monocle.Calc.Random;
                 _rngService.AddGen(RngGenType.Double);
             }
@@ -101,7 +101,7 @@ namespace TF.EX.Patchs.Calc
         {
             if (_shouldRegisterRng && !_shouldIgnoreToRegisterRng)
             {
-                _rngService.Get().ResetRandom();
+                _rngService.Get().ResetRandom(ref Monocle.Calc.Random);
                 random = Monocle.Calc.Random;
                 _rngService.AddGen(RngGenType.Integer);
             }

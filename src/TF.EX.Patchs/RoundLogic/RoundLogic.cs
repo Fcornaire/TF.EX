@@ -50,7 +50,7 @@ namespace TF.EX.Patchs.RoundLogic
             Vector2[] array = new Vector2[4];
             List<Vector2> xMLPositions = self.Session.CurrentLevel.GetXMLPositions("PlayerSpawn");
 
-            _rngService.Get().ResetRandom();
+            _rngService.Get().ResetRandom(ref Monocle.Calc.Random);
 
             xMLPositions = CalcExtensions.OwnVectorShuffle(xMLPositions).ToList();
             int num;

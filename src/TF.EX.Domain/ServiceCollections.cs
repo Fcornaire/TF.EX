@@ -88,17 +88,23 @@ namespace TF.EX.Domain
             }
         }
 
-        public static void AddToCache<K, V>(K key, V value)
+        public static void AddToCache<K, V>(K key, V value, TimeSpan expires = default)
         {
             var cache = ServiceProvider.GetService<IMemoryCache>();
             lock (cache)
             {
-                cache.Set(key, value, new MemoryCacheEntryOptions
+                var memoryOptions = new MemoryCacheEntryOptions
                 {
                     Priority = CacheItemPriority.High,
-                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5),
                     ExpirationTokens = { new CancellationChangeToken(_resetCacheToken.Token) }
-                });
+                };
+
+                if (expires != default)
+                {
+                    memoryOptions.AbsoluteExpirationRelativeToNow = expires;
+                }
+
+                cache.Set(key, value, memoryOptions);
             }
         }
 
@@ -114,16 +120,18 @@ namespace TF.EX.Domain
             return null;
         }
 
-        public static T GetCached<K, T>(K key) where T : class
+        public static bool GetCached<K, T>(K key, out T cached) where T : class
         {
             var cache = ServiceProvider.GetService<IMemoryCache>();
 
-            if (cache.TryGetValue(key, out T cached))
+            if (cache.TryGetValue(key, out T c))
             {
-                return cached;
+                cached = c;
+                return true;
             }
 
-            return null;
+            cached = null;
+            return false;
         }
 
         public static INetplayManager ResolveNetplayManager() { return ServiceProvider.GetRequiredService<INetplayManager>(); }

@@ -25,7 +25,7 @@ namespace TF.EX.Patchs.Entity.LevelEntity
 
         private void Chain_ctor_Vector2_int(On.TowerFall.Chain.orig_ctor_Vector2_int orig, TowerFall.Chain self, Vector2 position, int height)
         {
-            _rngService.Get().ResetRandom();
+            _rngService.Get().ResetRandom(ref Monocle.Calc.Random);
             orig(self, position, height);
             _rngService.AddGen(RngGenType.Integer);
         }

@@ -110,7 +110,8 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 Cling = entity.Cling,
                 LastAimDir = lastAimDirection,
                 HasSpeedBoots = entity.HasSpeedBoots,
-                IsInvisible = entity.Invisible
+                IsInvisible = entity.Invisible,
+                ShouldAutoBounce = dynPlayer.Get<bool>("autoBounce")
             };
         }
 
@@ -250,7 +251,6 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             var head = dynPlayer.Get<Monocle.Sprite<string>>("headSprite");
             var headBack = dynPlayer.Get<Monocle.Sprite<string>>("headBackSprite");
             var bow = dynPlayer.Get<Monocle.Sprite<string>>("bowSprite");
-            var shieldSprite = dynShield.Get<Monocle.SpritePart<int>>("sprite");
             var wingsSprite = dynWings.Get<Monocle.Sprite<string>>("sprite");
 
             body.LoadState(toLoad.Animations.Body);
@@ -273,6 +273,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             dynPlayer.Set("lastAimDirection", toLoad.LastAimDir);
             entity.HasSpeedBoots = toLoad.HasSpeedBoots;
             entity.Invisible = toLoad.IsInvisible;
+            dynPlayer.Set("autoBounce", toLoad.ShouldAutoBounce);
         }
 
         public static void LoadDeathArrow(this TowerFall.Player self, double deathArrowActualDepth)

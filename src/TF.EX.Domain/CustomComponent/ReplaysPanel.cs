@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework;
 using Monocle;
 using TF.EX.Common.Extensions;
+using TF.EX.Domain.Extensions;
 using TowerFall;
 
 namespace TF.EX.Domain.CustomComponent
@@ -120,7 +121,7 @@ namespace TF.EX.Domain.CustomComponent
 
             UpdateMapIcon(replayInfo.Id);
             UpdateTitle(replayInfo.Id);
-            UpdateMode(replayInfo.Mode);
+            UpdateMode(replayInfo.Mode.ToTF());
             UpdatePlayersPortrait(replayInfo);
             UpdateVs();
             UpdateReplayLength(replayInfo.MatchLenght);
@@ -158,7 +159,7 @@ namespace TF.EX.Domain.CustomComponent
             {
                 var archerInfo = replayInfo.Archers.ElementAt(i);
 
-                ArcherData archerData = ArcherData.Get(archerInfo.Index, archerInfo.Type);
+                ArcherData archerData = ArcherData.Get(archerInfo.Index, (ArcherData.ArcherTypes)archerInfo.Type);
                 if (archerInfo.HasWon)
                 {
                     _portraits[i] = new Image(archerData.Portraits.Win);

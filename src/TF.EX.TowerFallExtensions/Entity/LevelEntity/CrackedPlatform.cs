@@ -29,7 +29,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 PositionCounter = positionCounter.ToModel(),
                 Shake = shakeAlarm.GetState(),
                 Respawn = respawnAlarm.GetState(),
-                State = state,
+                State = (CrackedPlatformStates)state,
                 Flash = new Flash(entity.Flashing, flashCounter, flashInterval)
             };
         }
@@ -38,10 +38,10 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
         {
             var dynCrackedPlatform = DynamicData.For(entity);
 
-            dynCrackedPlatform.Set("Collidable", toLoad.IsCollidable);
+            entity.Collidable = toLoad.IsCollidable;
             entity.Position = toLoad.Position.ToTFVector();
             dynCrackedPlatform.Set("counter", toLoad.PositionCounter.ToTFVector());
-            dynCrackedPlatform.Set("state", toLoad.State);
+            dynCrackedPlatform.Set("state", (TowerFall.CrackedPlatform.States)toLoad.State);
 
             var shakeAlarm = dynCrackedPlatform.Get<Alarm>("shakeAlarm");
             shakeAlarm.LoadState(toLoad.Shake);

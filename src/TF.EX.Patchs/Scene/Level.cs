@@ -47,8 +47,21 @@ namespace TF.EX.Patchs.Scene
             orig(self, canvas);
             var dynLevel = DynamicData.For(self);
             var debugLayer = dynLevel.Get<DebugLayer>("DebugLayer");
+
             if (debugLayer.Visible)
             {
+                var playerColliders = self[GameTags.PlayerCollider].ToList();
+                if (playerColliders.Count > 0 && self.Layers.TryGetValue(0, out var layer))
+                {
+                    Draw.SpriteBatch.Begin(SpriteSortMode.Deferred, layer.BlendState, layer.SamplerState, DepthStencilState.None, RasterizerState.CullNone, layer.Effect, Matrix.Lerp(Matrix.Identity, self.Camera.Matrix, layer.CameraMultiplier));
+                    foreach (var collidable in playerColliders)
+                    {
+                        collidable.DebugRender();
+                    }
+                    Draw.SpriteBatch.End();
+                }
+
+
                 debugLayer.Render();
             }
         }

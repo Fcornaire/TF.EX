@@ -36,7 +36,7 @@ namespace TF.EX.Patchs.Entity.LevelEntity
         {
             orig(self, position, pivot, exploding);
 
-            _rngService.Get().ResetRandom();
+            _rngService.Get().ResetRandom(ref Monocle.Calc.Random);
             var dynSpikeball = DynamicData.For(self);
             dynSpikeball.Set("spinDir", Monocle.Calc.Random.Choose(1, -1));
             _rngService.AddGen(Domain.Models.State.RngGenType.Integer);

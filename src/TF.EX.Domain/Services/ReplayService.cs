@@ -62,11 +62,11 @@ namespace TF.EX.Domain.Services
             //Clear every sfx in record to reduce replay size
             foreach (var record in replay.Record)
             {
-                record.GameState.SFXs = Enumerable.Empty<SFX>();
+                record.GameState.SFXs = Enumerable.Empty<SFXState>();
             }
 
             replay.Informations.PlayerDraw = _netplayManager.GetPlayerDraw();
-            replay.Informations.Mode = TowerFall.Modes.LastManStanding;
+            replay.Informations.Mode = Models.Modes.LastManStanding;
             replay.Informations.MatchLenght = FrameToTimestamp(replay.Record.Count);
             replay.Informations.Archers = _netplayManager.GetArchersInfo();
             replay.Informations.Version = ServiceCollections.CurrentReplayVersion;
@@ -78,8 +78,6 @@ namespace TF.EX.Domain.Services
             Directory.CreateDirectory(REPLAYS_FOLDER);
 
             var filePath = $"{REPLAYS_FOLDER}\\{filename}";
-
-            var players = replay.Record.SelectMany(r => r.GameState.Entities.Players).ToList();
 
             using var fileStream = new FileStream(filePath, FileMode.Create);
             WriteToFile(replay, fileStream);
@@ -107,15 +105,15 @@ namespace TF.EX.Domain.Services
 
                    var filePath = $"{replaysFolder}\\{replayFilename}";
 
-                   Replay replay = ServiceCollections.GetCached<string, Replay>(filePath);
-                   if (replay == null || replay.Record == null || replay.Record.Count == 0)
+                   var isCached = ServiceCollections.GetCached<string, Replay>(filePath, out Replay replay);
+                   if (!isCached || replay.Record == null || replay.Record.Count == 0)
                    {
                        replay = ToReplay(filePath);
                        if (string.IsNullOrEmpty(replay.Informations.Name))
                        {
                            replay.Informations.Name = replayFilename;
                        }
-                       ServiceCollections.AddToCache(filePath, replay);
+                       ServiceCollections.AddToCache(filePath, replay, TimeSpan.FromMinutes(5));
                    }
 
                    if (replay.Record.Any())
@@ -127,8 +125,8 @@ namespace TF.EX.Domain.Services
 
                        TFGame.Characters[0] = replay.Informations.Archers.ToArray()[0].Index; //TODO: number of players dependent
                        TFGame.Characters[1] = replay.Informations.Archers.ToArray()[1].Index;
-                       TFGame.AltSelect[0] = replay.Informations.Archers.ToArray()[0].Type;
-                       TFGame.AltSelect[1] = replay.Informations.Archers.ToArray()[1].Type;
+                       TFGame.AltSelect[0] = (ArcherData.ArcherTypes)replay.Informations.Archers.ToArray()[0].Type;
+                       TFGame.AltSelect[1] = (ArcherData.ArcherTypes)replay.Informations.Archers.ToArray()[1].Type;
 
                        currentReplayFrame = 0;
                        var firstRecord = replay.Record.First(rec => rec.GameState.Entities.Players.Count > 0);
@@ -175,6 +173,8 @@ namespace TF.EX.Domain.Services
 
         public void RunFrame()
         {
+            currentReplayFrame++;
+
             Record record = _gameContext.GetCurrentReplayFrame(currentReplayFrame);
 
             if (record != null)
@@ -182,7 +182,6 @@ namespace TF.EX.Domain.Services
                 _inputService.UpdateCurrent(record.Inputs.Select(input => input.ToTFInput()));
                 //_gameStateService.LoadState(Engine.Instance.Scene, record.GameState);
             }
-            currentReplayFrame++;
         }
 
         public Replay GetReplay()
@@ -197,19 +196,6 @@ namespace TF.EX.Domain.Services
             return replay.Record.FirstOrDefault(r => r.GameState.Frame == currentReplayFrame);
         }
 
-        //private byte[] ToBytes(Replay replay)
-        //{
-        //    using (var memoryStream = new MemoryStream())
-        //    using (var gzipStream = new GZipStream(memoryStream, CompressionMode.Compress))
-        //    using (var streamWriter = new StreamWriter(gzipStream, Encoding.UTF8))
-        //    using (var jsonWriter = new JsonTextWriter(streamWriter))
-        //    {
-        //        var serializer = new JsonSerializer();
-        //        serializer.Serialize(jsonWriter, replay);
-        //        return memoryStream.ToArray();
-        //    }
-        //}
-
         private void WriteToFile(Replay replay, Stream stream)
         {
             using var gzipStream = new GZipStream(stream, CompressionMode.Compress);
@@ -220,7 +206,7 @@ namespace TF.EX.Domain.Services
             serializer.Serialize(jsonWriter, replay);
         }
 
-        private Replay ToReplay(string filePath, bool shouldInfoOnly = false)
+        public static Replay ToReplay(string filePath, bool shouldInfoOnly = false)
         {
             using var fileStream = new FileStream(filePath, FileMode.Open);
             using var gzip = new GZipStream(fileStream, CompressionMode.Decompress);
@@ -260,8 +246,8 @@ namespace TF.EX.Domain.Services
             {
                 var replayPath = $"{REPLAYS_FOLDER}\\{replay}";
 
-                var replayWithInfo = ServiceCollections.GetCached<string, Replay>(replayPath);
-                if (replayWithInfo == null)
+                var isCached = ServiceCollections.GetCached<string, Replay>(replayPath, out var replayWithInfo);
+                if (!isCached)
                 {
                     try
                     {
@@ -278,7 +264,7 @@ namespace TF.EX.Domain.Services
 
                         replayWithInfo.Informations.Name = replay;
 
-                        ServiceCollections.AddToCache(replayPath, replayWithInfo);
+                        ServiceCollections.AddToCache(replayPath, replayWithInfo, TimeSpan.FromMinutes(5));
 
                         res.Add(replayWithInfo);
                     }

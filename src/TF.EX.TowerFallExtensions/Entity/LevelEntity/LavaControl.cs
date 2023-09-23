@@ -32,7 +32,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 
             return new LavaControl
             {
-                Mode = mode,
+                Mode = (LavaMode)mode,
                 OwnerIndex = ownerIndex,
                 TargetCounter = targetCounter.Value,
                 Target = target,

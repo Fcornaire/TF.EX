@@ -129,6 +129,8 @@ namespace TF.EX.Domain.Services
                                     _logger.LogError<NetplayManager>($"Failed to etablish a connexion to the opponent, aborting session...");
                                     TowerFall.Sounds.ui_invalid.Play();
 
+                                    Reset();
+
                                     (TFGame.Instance.Scene as Level).GoToVersusOptions();
                                     return;
                                 }
@@ -755,7 +757,7 @@ namespace TF.EX.Domain.Services
                 Index = TFGame.Characters[(int)GetPlayerDraw()],
                 HasWon = level.Session.MatchStats[(int)GetPlayerDraw()].Won,
                 Score = level.Session.Scores[ShouldSwapPlayer() ? _inputService.GetRemotePlayerInputIndex() : _inputService.GetLocalPlayerInputIndex()], //Huh...Score are swapped
-                Type = TFGame.AltSelect[(int)GetPlayerDraw()],
+                Type = (ArcherTypes)TFGame.AltSelect[(int)GetPlayerDraw()],
             });
 
             archersInfo.Add(new ArcherInfo
@@ -764,11 +766,16 @@ namespace TF.EX.Domain.Services
                 Index = TFGame.Characters[((int)GetPlayerDraw() + 1) % 2],
                 HasWon = level.Session.MatchStats[((int)GetPlayerDraw() + 1) % 2].Won,
                 Score = level.Session.Scores[ShouldSwapPlayer() ? _inputService.GetLocalPlayerInputIndex() : _inputService.GetRemotePlayerInputIndex()],
-                Type = TFGame.AltSelect[((int)GetPlayerDraw() + 1) % 2],
+                Type = (ArcherTypes)TFGame.AltSelect[((int)GetPlayerDraw() + 1) % 2],
             });
 
 
             return archersInfo;
+        }
+
+        public Record GetLastRecord()
+        {
+            return _gameContext.GetReplay()?.Record?.LastOrDefault();
         }
     }
 }

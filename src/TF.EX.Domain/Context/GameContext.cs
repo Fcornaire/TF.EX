@@ -166,7 +166,9 @@ namespace TF.EX.Domain.Context
 
         public Rng GetRng()
         {
-            return _rng;
+            var rng = new Rng(_rng.Seed);
+            rng.Gen_type = rng.Gen_type.ToList();
+            return rng;
         }
 
         public void UpdateRng(Rng rng)
@@ -317,8 +319,15 @@ namespace TF.EX.Domain.Context
         {
             return new HUD
             {
-                VersusStart = _hudState.VersusStart,
-                VersusRoundResults = _hudState.VersusRoundResults,
+                VersusStart = new VersusStart
+                {
+                    CoroutineState = _hudState.VersusStart.CoroutineState,
+                    TweenState = _hudState.VersusStart.TweenState,
+                },
+                VersusRoundResults = new VersusRoundResults
+                {
+                    CoroutineState = _hudState.VersusRoundResults.CoroutineState,
+                }
             };
         }
 
@@ -326,8 +335,15 @@ namespace TF.EX.Domain.Context
         {
             _hudState = new HUD
             {
-                VersusStart = toLoad.VersusStart,
-                VersusRoundResults = toLoad.VersusRoundResults,
+                VersusStart = new VersusStart
+                {
+                    CoroutineState = toLoad.VersusStart.CoroutineState,
+                    TweenState = toLoad.VersusStart.TweenState,
+                },
+                VersusRoundResults = new VersusRoundResults
+                {
+                    CoroutineState = toLoad.VersusRoundResults.CoroutineState,
+                }
             };
         }
 

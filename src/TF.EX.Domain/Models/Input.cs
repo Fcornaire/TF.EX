@@ -106,8 +106,8 @@ namespace TF.EX.Domain.Models
     {
         public static InputsImpl ToModel(this Inputs inputs) => new InputsImpl(inputs);
 
-        private static int ToInt(this bool value) => value ? 1 : 0;
-        private static bool ToBool(this int value) => value == 1;
+        public static int ToInt(this bool value) => value ? 1 : 0;
+        public static bool ToBool(this int value) => value == 1;
 
         public static Input ToModel(this InputState input)
         {

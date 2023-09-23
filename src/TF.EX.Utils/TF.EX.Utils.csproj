@@ -1,0 +1,36 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+	  <TargetFramework>net472</TargetFramework>
+	  <LangVersion>11</LangVersion>
+	  <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DeepEqual" Version="4.2.1" />
+    <PackageReference Include="xunit" Version="2.5.1" />
+	<PackageReference Include="xunit.runner.visualstudio" Version="2.3.1" />
+  </ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\TF.EX.Domain\TF.EX.Domain.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Reference Include="FNA">
+			<HintPath>..\..\libs\FNA.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+
+		<Reference Include="TowerFall" Condition=" '$(Configuration)' == 'Release'">
+			<HintPath>..\..\libs\TowerFall-publicized.exe</HintPath>
+			<Private>False</Private>
+		</Reference>
+
+		<Reference Include="TowerFall" Condition=" '$(Configuration)' == 'Debug'">
+			<HintPath>..\..\libs\TowerFall.exe</HintPath>
+			<Private>False</Private>
+		</Reference>
+	</ItemGroup>
+	
+</Project>

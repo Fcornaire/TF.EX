@@ -1,6 +1,4 @@
-﻿using static TowerFall.Lava;
-
-namespace TF.EX.Domain.Models.State.Entity.LevelEntity
+﻿namespace TF.EX.Domain.Models.State.Entity.LevelEntity
 {
     public class Lava
     {
