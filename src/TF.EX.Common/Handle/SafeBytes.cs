@@ -1,8 +1,8 @@
 ﻿using Microsoft.Win32.SafeHandles;
-using Newtonsoft.Json;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Json;
 
 namespace TF.EX.Common.Handle
 {
@@ -65,7 +65,7 @@ namespace TF.EX.Common.Handle
 
         private byte[] ToBytes(T obj, bool useCompression)
         {
-            var json = JsonConvert.SerializeObject(obj);
+            var json = JsonSerializer.Serialize(obj);
             var bytes = Encoding.UTF8.GetBytes(json);
 
             if (!useCompression)
@@ -87,7 +87,7 @@ namespace TF.EX.Common.Handle
             }
 
             var json = Encoding.UTF8.GetString(bytes);
-            return JsonConvert.DeserializeObject<T>(json);
+            return JsonSerializer.Deserialize<T>(json);
         }
 
         private byte[] Compress(byte[] data)

@@ -5,15 +5,10 @@ namespace TF.EX.Domain.Models.State
     [StructLayout(LayoutKind.Sequential)]
     public struct Vector2f
     {
-        public float x;
-        public float y;
+        public float X { get; set; }
+        public float Y { get; set; }
 
-        public Vector2f(float x, float y)
-        {
-            this.x = x;
-            this.y = y;
-        }
 
-        public override string ToString() => $"({x}, {y})";
+        public override string ToString() => $"({X}, {Y})";
     }
 }

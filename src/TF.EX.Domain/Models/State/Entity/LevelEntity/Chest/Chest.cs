@@ -20,9 +20,9 @@
             return new Chest
             {
                 CurrentAnimId = 0,
-                Position = new Vector2f { x = -1, y = -1 },
+                Position = new Vector2f { X = -1, Y = -1 },
                 AppearCounter = 0,
-                PositionCounter = new Vector2f { x = -1, y = -1 },
+                PositionCounter = new Vector2f { X = -1, Y = -1 },
                 State = ChestState.WaitingToAppear,
                 VSpeed = 0f,
                 AppearTimer = -1,

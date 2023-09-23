@@ -31,7 +31,7 @@ namespace TF.EX.Domain.Models
 
         public int move_y { get; set; }
 
-        public Vector2f aim_axis;
+        public Vector2f aim_axis { get; set; }
     }
 
     [StructLayout(LayoutKind.Sequential)]

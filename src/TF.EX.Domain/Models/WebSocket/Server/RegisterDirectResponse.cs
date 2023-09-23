@@ -1,19 +1,19 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace TF.EX.Domain.Models.WebSocket.Server
 {
     public class RegisterDirectResponseMessage
     {
-        [JsonProperty("RegisterDirectResponse")]
+        [JsonPropertyName("RegisterDirectResponse")]
         public RegisterDirectResponse RegisterDirectResponse { get; set; } = new RegisterDirectResponse();
     }
 
     public class RegisterDirectResponse
     {
-        [JsonProperty("success")]
+        [JsonPropertyName("success")]
         public bool Success { get; set; }
 
-        [JsonProperty("code")]
+        [JsonPropertyName("code")]
         public string Code { get; set; }
     }
 

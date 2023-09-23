@@ -2,130 +2,68 @@
 {
     public struct MatchStats
     {
-        public bool Won;
-
-        public bool GotWin;
-
-        public int PointsFromGoal;
-
-        public uint SpamShots;
-
-        public uint ArrowsShot;
-
-        public uint ArrowsCollected;
-
-        public uint ArrowsCaught;
-
-        public uint OwnArrowsCaught;
-
-        public uint ShieldsBroken;
-
-        public uint TreasuresTaken;
-
-        public uint Dodges;
-
-        public uint Jumps;
-
-        public uint CrownSpawns;
-
-        public uint FailedShots;
-
-        public uint ExplosionsSurvived;
-
-        public uint DeathsDuringDodgeCooldown;
-
-        public uint HatsShotOff;
-
-        public uint LedgeGrabbedKills;
-
-        public uint WinnerKills;
-
-        public uint BombMultiKill;
-
-        public uint ScreenWraps;
-
-        public uint ArrowScreenWraps;
-
-        public uint KillsWhileDead;
-
-        public uint CrownsPickedUp;
-
-        public uint HatsPickedUp;
-
-        public uint ArrowsStolen;
-
-        public uint RoundSweeps;
-
-        public uint FurthestBehind;
-
-        public uint MostBouncesLaserKill;
-
-        public uint DrillHits;
-
-        public uint DodgesTooLate;
-
-        public uint GracePeriodCatches;
-
-        public uint SelfLaserKills;
-
-        public long FastestKill;
-
-        public uint MostBoltTurns;
-
-        public uint DodgeStomps;
-
-        public uint TeamArrowCatches;
-
-        public uint KillsAsGhost;
-
-        public uint GhostKills;
-
-        public uint SurvivedWithNoKills;
-
-        public uint Revives;
-
-        public uint TriggerBombKills;
-
-        public uint TriggerBombsLost;
-
-        public uint DroppedArrowKills;
-
-        public uint HyperArrowKills;
-
-        public uint HyperDeaths;
-
-        public uint HyperSelfKills;
-
-        public uint HyperStomps;
-
-        public uint BombsDefused;
-
-        public uint EnemyInPrismKills;
-
-        public uint SelfInPrismKills;
-
-        public uint EnemyInTeamPrismKills;
-
-        public uint BombTrapKills;
-
-        public uint CrushOthersKills;
-
-        public uint KillsDuringMiasma;
-
-        public uint DuckDances;
-
-        public float LongestShot;
-
-        public float FastFallFrames;
-
-        public float DuckFrames;
-
-        public float LedgeFrames;
-
-        public float FramesAlive;
-
-        public KillStats Kills;
-
-        public KillStats Deaths;
+        public bool Won { get; set; }
+        public bool GotWin { get; set; }
+        public int PointsFromGoal { get; set; }
+        public uint SpamShots { get; set; }
+        public uint ArrowsShot { get; set; }
+        public uint ArrowsCollected { get; set; }
+        public uint ArrowsCaught { get; set; }
+        public uint OwnArrowsCaught { get; set; }
+        public uint ShieldsBroken { get; set; }
+        public uint TreasuresTaken { get; set; }
+        public uint Dodges { get; set; }
+        public uint Jumps { get; set; }
+        public uint CrownSpawns { get; set; }
+        public uint FailedShots { get; set; }
+        public uint ExplosionsSurvived { get; set; }
+        public uint DeathsDuringDodgeCooldown { get; set; }
+        public uint HatsShotOff { get; set; }
+        public uint LedgeGrabbedKills { get; set; }
+        public uint WinnerKills { get; set; }
+        public uint BombMultiKill { get; set; }
+        public uint ScreenWraps { get; set; }
+        public uint ArrowScreenWraps { get; set; }
+        public uint KillsWhileDead { get; set; }
+        public uint CrownsPickedUp { get; set; }
+        public uint HatsPickedUp { get; set; }
+        public uint ArrowsStolen { get; set; }
+        public uint RoundSweeps { get; set; }
+        public uint FurthestBehind { get; set; }
+        public uint MostBouncesLaserKill { get; set; }
+        public uint DrillHits { get; set; }
+        public uint DodgesTooLate { get; set; }
+        public uint GracePeriodCatches { get; set; }
+        public uint SelfLaserKills { get; set; }
+        public long FastestKill { get; set; }
+        public uint MostBoltTurns { get; set; }
+        public uint DodgeStomps { get; set; }
+        public uint TeamArrowCatches { get; set; }
+        public uint KillsAsGhost { get; set; }
+        public uint GhostKills { get; set; }
+        public uint SurvivedWithNoKills { get; set; }
+        public uint Revives { get; set; }
+        public uint TriggerBombKills { get; set; }
+        public uint TriggerBombsLost { get; set; }
+        public uint DroppedArrowKills { get; set; }
+        public uint HyperArrowKills { get; set; }
+        public uint HyperDeaths { get; set; }
+        public uint HyperSelfKills { get; set; }
+        public uint HyperStomps { get; set; }
+        public uint BombsDefused { get; set; }
+        public uint EnemyInPrismKills { get; set; }
+        public uint SelfInPrismKills { get; set; }
+        public uint EnemyInTeamPrismKills { get; set; }
+        public uint BombTrapKills { get; set; }
+        public uint CrushOthersKills { get; set; }
+        public uint KillsDuringMiasma { get; set; }
+        public uint DuckDances { get; set; }
+        public float LongestShot { get; set; }
+        public float FastFallFrames { get; set; }
+        public float DuckFrames { get; set; }
+        public float LedgeFrames { get; set; }
+        public float FramesAlive { get; set; }
+        public KillStats Kills { get; set; }
+        public KillStats Deaths { get; set; }
     }
 }

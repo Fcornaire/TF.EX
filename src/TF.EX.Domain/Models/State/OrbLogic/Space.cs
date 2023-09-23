@@ -21,11 +21,11 @@ namespace TF.EX.Domain.Models.State.OrbLogic
             {
                 CounterValue = -1
             },
-            TargetSpaceSpeed = new Vector2f(-1, -1),
-            SpaceSpeed = new Vector2f(-1, -1),
+            TargetSpaceSpeed = new Vector2f { X = -1, Y = -1 },
+            SpaceSpeed = new Vector2f { X = -1, Y = -1 },
             SpaceTweenTimer = -1,
-            ScreenOffsetStart = new Vector2f(0, 0),
-            ScreenOffsetEnd = new Vector2f(0, 0)
+            ScreenOffsetStart = new Vector2f { X = 0, Y = 0 },
+            ScreenOffsetEnd = new Vector2f { X = 0, Y = 0 }
         };
 
     }

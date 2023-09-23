@@ -1,5 +1,5 @@
 ﻿using Microsoft.Xna.Framework.Audio;
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace TF.EX.Domain.Models.State
 {

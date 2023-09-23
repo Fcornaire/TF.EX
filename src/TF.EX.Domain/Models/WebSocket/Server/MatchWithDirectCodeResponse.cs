@@ -1,28 +1,28 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace TF.EX.Domain.Models.WebSocket.Server
 {
     public class MatchWithDirectCodeResponseMessage
     {
-        [JsonProperty("MatchWithDirectCodeResponse")]
+        [JsonPropertyName("MatchWithDirectCodeResponse")]
         public MatchWithDirectCodeResponse MatchWithDirectCodeResponse { get; set; } = new MatchWithDirectCodeResponse();
     }
 
     public class MatchWithDirectCodeResponse
     {
-        [JsonProperty("success")]
+        [JsonPropertyName("success")]
         public bool Success { get; set; }
 
-        [JsonProperty("opponent_name")]
+        [JsonPropertyName("opponent_name")]
         public string OpponentName { get; set; }
 
-        [JsonProperty("room_id")]
+        [JsonPropertyName("room_id")]
         public string RoomId { get; set; }
 
-        [JsonProperty("room_chat_id")]
+        [JsonPropertyName("room_chat_id")]
         public string RoomChatId { get; set; }
 
-        [JsonProperty("seed")]
+        [JsonPropertyName("seed")]
         public int Seed { get; set; }
     }
 }

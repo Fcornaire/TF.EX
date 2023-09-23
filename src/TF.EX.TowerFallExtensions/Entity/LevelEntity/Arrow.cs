@@ -39,7 +39,12 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 IsFrozen = entity.Frozen,
                 IsVisible = entity.Visible,
                 MarkedForRemoval = entity.MarkedForRemoval,
-                Flash = new Domain.Models.State.Entity.LevelEntity.Flash(entity.Flashing, flashCounter, flashInterval),
+                Flash = new Domain.Models.State.Entity.LevelEntity.Flash
+                {
+                    IsFlashing = entity.Flashing,
+                    FlashCounter = flashCounter,
+                    FlashInterval = flashInterval
+                },
                 HasUnhittableEntity = entity.CannotHit != null
             };
         }

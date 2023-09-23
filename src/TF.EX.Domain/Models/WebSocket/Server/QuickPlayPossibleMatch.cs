@@ -1,22 +1,22 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace TF.EX.Domain.Models.WebSocket.Server
 {
     public class QuickPlayPossibleMatchMessage
     {
-        [JsonProperty("QuickPlayPossibleMatch")]
+        [JsonPropertyName("QuickPlayPossibleMatch")]
         public QuickPlayPossibleMatch QuickPlayPossibleMatch { get; set; } = new QuickPlayPossibleMatch();
     }
 
     public class QuickPlayPossibleMatch
     {
-        [JsonProperty("room_id")]
+        [JsonPropertyName("room_id")]
         public string RoomId { get; set; }
 
-        [JsonProperty("room_chat_id")]
+        [JsonPropertyName("room_chat_id")]
         public string RoomChatId { get; set; }
 
-        [JsonProperty("opponent_name")]
+        [JsonPropertyName("opponent_name")]
         public string OpponentName { get; set; }
     }
 }

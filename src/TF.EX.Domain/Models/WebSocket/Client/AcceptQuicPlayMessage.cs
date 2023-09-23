@@ -1,11 +1,10 @@
-﻿
-using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace TF.EX.Domain.Models.WebSocket.Client
 {
     public class AcceptQuickPlayMessage
     {
-        [JsonProperty("AcceptQuickPlay")]
+        [JsonPropertyName("AcceptQuickPlay")]
         public AcceptQuickPlay AcceptQuickPlay { get; set; } = new AcceptQuickPlay();
     }
 

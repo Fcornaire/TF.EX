@@ -30,7 +30,12 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 Shake = shakeAlarm.GetState(),
                 Respawn = respawnAlarm.GetState(),
                 State = (CrackedPlatformStates)state,
-                Flash = new Flash(entity.Flashing, flashCounter, flashInterval)
+                Flash = new Flash
+                {
+                    IsFlashing = entity.Flashing,
+                    FlashCounter = flashCounter,
+                    FlashInterval = flashInterval
+                }
             };
         }
 

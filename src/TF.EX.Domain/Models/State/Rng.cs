@@ -3,16 +3,8 @@ namespace TF.EX.Domain.Models.State
 {
     public class Rng
     {
-        public int Seed;
-        public ICollection<RngGenType> Gen_type;
-
-        public Rng(int seed)
-        {
-            this.Seed = seed;
-            this.Gen_type = new List<RngGenType>();
-        }
-
-        public static Rng Default => new Rng(-1);
+        public int Seed { get; set; } = -1;
+        public ICollection<RngGenType> Gen_type { get; set; } = new List<RngGenType>();
 
         public void ResetGenType()
         {

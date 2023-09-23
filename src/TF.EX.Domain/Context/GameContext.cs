@@ -65,7 +65,7 @@ namespace TF.EX.Domain.Context
         private readonly AttributeManager<TowerFall.InputState> CurrentInputs;
         private TowerFall.InputState PolledInput;
         private Session Session;
-        private Rng _rng = Rng.Default;
+        private Rng _rng = new Rng();
         private Replay _replay;
         private Dictionary<int, double> _gamePlayerLayerActualDepthLookup = new Dictionary<int, double>();
         private HUD _hudState;
@@ -155,9 +155,12 @@ namespace TF.EX.Domain.Context
 
         public void SetSeed(int seed)
         {
-            _rng = new Rng(seed);
+            _rng = new Rng
+            {
+                Seed = seed,
+                Gen_type = new List<RngGenType>()
+            };
         }
-
 
         public int GetSeed()
         {
@@ -166,15 +169,13 @@ namespace TF.EX.Domain.Context
 
         public Rng GetRng()
         {
-            var rng = new Rng(_rng.Seed);
-            rng.Gen_type = rng.Gen_type.ToList();
+            var rng = new Rng { Seed = _rng.Seed, Gen_type = _rng.Gen_type.ToList() };
             return rng;
         }
 
         public void UpdateRng(Rng rng)
         {
-            _rng = new Rng(rng.Seed);
-            _rng.Gen_type = rng.Gen_type.ToList();
+            _rng = new Rng { Seed = rng.Seed, Gen_type = rng.Gen_type.ToList() };
         }
 
         public void InitializeReplay(int towerId)

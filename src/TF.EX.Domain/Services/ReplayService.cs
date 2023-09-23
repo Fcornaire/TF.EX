@@ -1,9 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO.Compression;
-using System.Text;
+using System.Text.Json;
 using TF.EX.Common.Extensions;
 using TF.EX.Domain.Context;
 using TF.EX.Domain.Models;
@@ -25,7 +24,6 @@ namespace TF.EX.Domain.Services
         private int currentReplayFrame = 0;
 
         private string REPLAYS_FOLDER => $"{Directory.GetCurrentDirectory()}\\Replays";
-
 
         public ReplayService(IGameContext gameContext,
             IInputService inputService,
@@ -105,14 +103,10 @@ namespace TF.EX.Domain.Services
 
                    var filePath = $"{replaysFolder}\\{replayFilename}";
 
-                   var isCached = ServiceCollections.GetCached<string, Replay>(filePath, out Replay replay);
-                   if (!isCached || replay.Record == null || replay.Record.Count == 0)
+                   var isCached = ServiceCollections.GetCached(filePath, out Replay replay);
+                   if (!isCached)
                    {
                        replay = ToReplay(filePath);
-                       if (string.IsNullOrEmpty(replay.Informations.Name))
-                       {
-                           replay.Informations.Name = replayFilename;
-                       }
                        ServiceCollections.AddToCache(filePath, replay, TimeSpan.FromMinutes(5));
                    }
 
@@ -173,8 +167,6 @@ namespace TF.EX.Domain.Services
 
         public void RunFrame()
         {
-            currentReplayFrame++;
-
             Record record = _gameContext.GetCurrentReplayFrame(currentReplayFrame);
 
             if (record != null)
@@ -182,6 +174,8 @@ namespace TF.EX.Domain.Services
                 _inputService.UpdateCurrent(record.Inputs.Select(input => input.ToTFInput()));
                 //_gameStateService.LoadState(Engine.Instance.Scene, record.GameState);
             }
+
+            currentReplayFrame++;
         }
 
         public Replay GetReplay()
@@ -199,27 +193,21 @@ namespace TF.EX.Domain.Services
         private void WriteToFile(Replay replay, Stream stream)
         {
             using var gzipStream = new GZipStream(stream, CompressionMode.Compress);
-            using var streamWriter = new StreamWriter(gzipStream, Encoding.UTF8);
-            using var jsonWriter = new JsonTextWriter(streamWriter);
-
-            var serializer = new JsonSerializer();
-            serializer.Serialize(jsonWriter, replay);
+            JsonSerializer.Serialize(gzipStream, replay);
         }
 
-        public static Replay ToReplay(string filePath, bool shouldInfoOnly = false)
+        public static Replay ToReplay(string filePath)
         {
             using var fileStream = new FileStream(filePath, FileMode.Open);
             using var gzip = new GZipStream(fileStream, CompressionMode.Decompress);
-            using var sr = new StreamReader(gzip, Encoding.UTF8);
-            using var reader = new JsonTextReader(sr);
+            return JsonSerializer.Deserialize<Replay>(gzip);
+        }
 
-            var serializer = shouldInfoOnly ?
-                JsonSerializer.Create(new JsonSerializerSettings
-                {
-                    ContractResolver = new ReplayContractResolver()
-                }) :
-                JsonSerializer.CreateDefault();
-            return serializer.Deserialize<Replay>(reader);
+        public static ReplayRecordless ToReplayRecordless(string filePath)
+        {
+            using var fileStream = new FileStream(filePath, FileMode.Open);
+            using var gzip = new GZipStream(fileStream, CompressionMode.Decompress);
+            return JsonSerializer.Deserialize<ReplayRecordless>(gzip);
         }
 
         public void Reset()
@@ -227,7 +215,7 @@ namespace TF.EX.Domain.Services
             _gameContext.ResetReplay();
         }
 
-        public IEnumerable<Replay> LoadAndGetReplays()
+        public IEnumerable<ReplayRecordless> LoadAndGetReplays()
         {
             var stopwatch = new Stopwatch();
             stopwatch.Start();
@@ -236,7 +224,7 @@ namespace TF.EX.Domain.Services
                 .Where(f => f.EndsWith(".tow"))
                 .Select(f => Path.GetFileName(f)).ToList();
 
-            var res = new ConcurrentBag<Replay>();
+            var res = new ConcurrentBag<ReplayRecordless>();
 
             int i = 0;
             int obsoleteReplays = 0;
@@ -246,13 +234,13 @@ namespace TF.EX.Domain.Services
             {
                 var replayPath = $"{REPLAYS_FOLDER}\\{replay}";
 
-                var isCached = ServiceCollections.GetCached<string, Replay>(replayPath, out var replayWithInfo);
+                var isCached = ServiceCollections.GetCached<string, ReplayRecordless>($"{replayPath}-recordless", out var replayRecordless);
                 if (!isCached)
                 {
                     try
                     {
-                        replayWithInfo = ToReplay(replayPath, true);
-                        if (replayWithInfo.Informations.Version != ServiceCollections.CurrentReplayVersion)
+                        replayRecordless = ToReplayRecordless(replayPath);
+                        if (replayRecordless.Informations.Version != ServiceCollections.CurrentReplayVersion)
                         {
                             _logger.LogDebug<ReplayService>($"Replay {replay} is obsolete, will be renamed and ignored");
                             Interlocked.Increment(ref obsoleteReplays);
@@ -262,11 +250,11 @@ namespace TF.EX.Domain.Services
                             return;
                         }
 
-                        replayWithInfo.Informations.Name = replay;
+                        replayRecordless.Informations.Name = replay;
 
-                        ServiceCollections.AddToCache(replayPath, replayWithInfo, TimeSpan.FromMinutes(5));
+                        ServiceCollections.AddToCache($"{replayPath}-recordless", replayRecordless, TimeSpan.FromMinutes(15));
 
-                        res.Add(replayWithInfo);
+                        res.Add(replayRecordless);
                     }
                     catch (Exception e)
                     {
@@ -276,7 +264,7 @@ namespace TF.EX.Domain.Services
                 }
                 else
                 {
-                    res.Add(replayWithInfo);
+                    res.Add(replayRecordless);
                 }
 
                 Interlocked.Increment(ref i);

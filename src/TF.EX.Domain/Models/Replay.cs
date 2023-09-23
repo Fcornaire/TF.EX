@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using TF.EX.Domain.Models.State;
 
 namespace TF.EX.Domain.Models
@@ -18,7 +17,6 @@ namespace TF.EX.Domain.Models
         public int Id { get; set; }
         public PlayerDraw PlayerDraw { get; set; }
 
-        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
         [DefaultValue(ReplayVersion.Unknown)]
         public ReplayVersion Version { get; set; }
 
@@ -47,6 +45,11 @@ namespace TF.EX.Domain.Models
         public List<Input> Inputs { get; set; }
 
         public GameState GameState { get; set; }
+    }
+
+    public class ReplayRecordless
+    {
+        public ReplayInfo Informations { get; set; }
     }
 
     public enum ReplayVersion
