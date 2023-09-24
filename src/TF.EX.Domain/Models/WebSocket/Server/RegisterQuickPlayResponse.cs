@@ -1,16 +1,16 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace TF.EX.Domain.Models.WebSocket.Server
 {
     public class RegisterQuickPlayResponseMessage
     {
-        [JsonProperty("RegisterQuickPlayResponse")]
+        [JsonPropertyName("RegisterQuickPlayResponse")]
         public RegisterQuickPlayResponse RegisterQuickPlayResponse { get; set; } = new RegisterQuickPlayResponse();
     }
 
     public class RegisterQuickPlayResponse
     {
-        [JsonProperty("success")]
+        [JsonPropertyName("success")]
         public bool Success { get; set; }
     }
 }

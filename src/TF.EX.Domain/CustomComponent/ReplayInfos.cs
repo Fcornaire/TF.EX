@@ -73,7 +73,7 @@ namespace TF.EX.Domain.CustomComponent
                 image.Color = Color.Lerp(Color.White, SelectedColor, selectionLerp);
             }
         }
-        
+
         public override void Render()
         {
             base.Render();

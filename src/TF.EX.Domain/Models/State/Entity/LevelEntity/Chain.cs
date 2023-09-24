@@ -13,7 +13,7 @@
         {
             return new Chain
             {
-                Position = new Vector2f { x = -1, y = -1 },
+                Position = new Vector2f { X = -1, Y = -1 },
                 CannotHitCounter = -1,
                 Speeds = new float[0],
                 Rotations = new float[0],

@@ -85,7 +85,11 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 DodgeCatchCounter = dynPlayer.Get<Counter>("dodgeCatchCounter").Value,
                 DyingCounter = dynPlayer.Get<Counter>("dyingCounter").Value,
                 FlapBounceCounter = dynPlayer.Get<Counter>("flapBounceCounter").Value,
-                DodgeSlide = new DodgeSlide(entity.DodgeSliding, dynPlayer.Get<bool>("wasDodgeSliding")),
+                DodgeSlide = new DodgeSlide
+                {
+                    IsDodgeSliding = entity.DodgeSliding,
+                    WasDodgeSliding = dynPlayer.Get<bool>("wasDodgeSliding")
+                },
                 Hitbox = GetHitbox(entity),
                 DodgeStallCounter = dynPlayer.Get<Counter>("dodgeStallCounter").Value,
                 DodgeCooldown = dynPlayer.Get<bool>("dodgeCooldown"),
@@ -93,15 +97,21 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 CanVarJump = dynPlayer.Get<bool>("canVarJump"),
                 IsOnGround = entity.OnGround,
                 DuckSlipCounter = dynPlayer.Get<float>("duckSlipCounter"),
-                State = new PlayerState(
-                    ((TowerFall.Player.PlayerStates)stateMachine.State).ToModel(),
-                    ((TowerFall.Player.PlayerStates)stateMachine.PreviousState).ToModel()
-                ),
+                State = new PlayerState
+                {
+                    CurrentState = ((TowerFall.Player.PlayerStates)stateMachine.State).ToModel(),
+                    PreviousState = ((TowerFall.Player.PlayerStates)stateMachine.PreviousState).ToModel()
+                },
                 Index = entity.PlayerIndex,
                 Scheduler = schedulerState,
                 IsShieldVisible = shield.Visible,
                 IsWingsVisible = wings.Visible,
-                Flash = new Flash(entity.Flashing, dynPlayer.Get<float>("flashCounter"), dynPlayer.Get<float>("flashInterval")),
+                Flash = new Flash
+                {
+                    IsFlashing = entity.Flashing,
+                    FlashCounter = dynPlayer.Get<float>("flashCounter"),
+                    FlashInterval = dynPlayer.Get<float>("flashInterval")
+                },
                 ShouldDrawSelf = entity.DrawSelf,
                 ShouldStartAimingDown = dynPlayer.Get<bool>("startAimingDown"),
                 GraceLedgeDir = dynPlayer.Get<int>("graceLedgeDir"),

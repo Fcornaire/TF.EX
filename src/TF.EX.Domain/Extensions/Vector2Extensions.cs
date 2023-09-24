@@ -11,8 +11,8 @@ namespace TF.EX.Domain.Extensions
         {
             return new Vector2f
             {
-                x = vector2.X,
-                y = vector2.Y
+                X = vector2.X,
+                Y = vector2.Y
             };
         }
 
@@ -28,7 +28,7 @@ namespace TF.EX.Domain.Extensions
 
         public static Vector2 ToTFVector(this Vector2f vector2)
         {
-            return new Vector2(vector2.x, vector2.y);
+            return new Vector2(vector2.X, vector2.Y);
         }
 
         public static Vector2 GetPositionByPlayerDraw(this List<Vector2> positions, bool shouldSwapPlayer, int originalIndex)

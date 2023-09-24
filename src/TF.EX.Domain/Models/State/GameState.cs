@@ -14,7 +14,7 @@
             RoundStarted = false,
             IsDone = false
         };
-        public Rng Rng { get; set; } = new Rng(-1);
+        public Rng Rng { get; set; } = new Rng { Seed = -1, Gen_type = new List<RngGenType>() };
 
         public bool IsLevelFrozen { get; set; } = false;
         public RoundLogic RoundLogic { get; set; } = new RoundLogic();
@@ -22,7 +22,7 @@
         public IEnumerable<MatchStats> MatchStats { get; set; } = new List<MatchStats>();
         public IEnumerable<SFXState> SFXs { get; set; } = new List<SFXState>();
 
-        public Vector2f ScreenOffset { get; set; } = new Vector2f(-1, -1);
+        public Vector2f ScreenOffset { get; set; } = new Vector2f { X = -1, Y = -1 };
 
         public int Frame { get; set; }
     }

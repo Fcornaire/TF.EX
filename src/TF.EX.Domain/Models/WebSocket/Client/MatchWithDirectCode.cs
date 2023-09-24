@@ -1,16 +1,16 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace TF.EX.Domain.Models.WebSocket.Client
 {
     public class MatchWithDirectCodeMessage
     {
-        [JsonProperty("MatchWithDirectCode")]
+        [JsonPropertyName("MatchWithDirectCode")]
         public MatchWithDirectCode MatchWithDirectCode { get; set; } = new MatchWithDirectCode();
     }
 
     public class MatchWithDirectCode
     {
-        [JsonProperty("code")]
+        [JsonPropertyName("code")]
         public string Code { get; set; }
     }
 }

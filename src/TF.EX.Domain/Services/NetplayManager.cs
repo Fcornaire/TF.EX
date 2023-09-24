@@ -1,8 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
 using MonoMod.Utils;
-using Newtonsoft.Json;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using TF.EX.Common.Extensions;
 using TF.EX.Common.Handle;
 using TF.EX.Domain.Context;
@@ -591,7 +591,10 @@ namespace TF.EX.Domain.Services
 
         public void SaveConfig()
         {
-            var jsonToSave = JsonConvert.SerializeObject(NetplayMeta, Formatting.Indented);
+            var jsonToSave = JsonSerializer.Serialize(NetplayMeta, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
             File.WriteAllText($"{Directory.GetCurrentDirectory()}\\netplay_meta.json", jsonToSave);
         }
 
@@ -611,7 +614,7 @@ namespace TF.EX.Domain.Services
                 };
 
                 var json = File.ReadAllText("netplay_meta.json");
-                NetplayMeta = JsonConvert.DeserializeObject<NetplayMeta>(json);
+                NetplayMeta = JsonSerializer.Deserialize<NetplayMeta>(json);
                 if (NetplayMeta.InputDelay == 0)
                 {
                     NetplayMeta.InputDelay = 2;

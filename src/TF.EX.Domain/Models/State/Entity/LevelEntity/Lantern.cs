@@ -15,8 +15,8 @@
         {
             return new Lantern
             {
-                Position = new Vector2f { x = -1, y = -1 },
-                PositionCounter = new Vector2f { x = -1, y = -1 },
+                Position = new Vector2f { X = -1, Y = -1 },
+                PositionCounter = new Vector2f { X = -1, Y = -1 },
                 IsFalling = false,
                 IsDead = false,
                 VSpeed = 0f,

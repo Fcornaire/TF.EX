@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Caching.Memory;
+﻿using LazyCache;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
@@ -33,7 +34,7 @@ namespace TF.EX.Domain
 
             ServiceCollection = new ServiceCollection();
 
-            ServiceCollection.AddMemoryCache();
+            ServiceCollection.AddLazyCache();
 
             ServiceCollection.AddSingleton<IAutoUpdater, AutoUpdater>();
             ServiceCollection.AddSingleton<ILogger, Logger>();
@@ -71,10 +72,10 @@ namespace TF.EX.Domain
 
         public static void AddEntityToCache(double actualDepth, Monocle.Entity entity)
         {
-            var cache = ServiceProvider.GetService<IMemoryCache>();
-            if (!cache.TryGetValue(actualDepth, out Monocle.Entity _))
+            var cache = ServiceProvider.GetService<IAppCache>();
+            if (!cache.TryGetValue(actualDepth.ToString(), out Monocle.Entity _)) //TODO: use GetOrAdd
             {
-                cache.Set(actualDepth, entity, new MemoryCacheEntryOptions
+                cache.Add(actualDepth.ToString(), () => entity, new MemoryCacheEntryOptions
                 {
                     Priority = CacheItemPriority.Normal,
                     AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5),
@@ -88,31 +89,28 @@ namespace TF.EX.Domain
             }
         }
 
-        public static void AddToCache<K, V>(K key, V value, TimeSpan expires = default)
+        public static void AddToCache<V>(string key, V value, TimeSpan expires = default)
         {
-            var cache = ServiceProvider.GetService<IMemoryCache>();
-            lock (cache)
+            var cache = ServiceProvider.GetService<IAppCache>();
+            var memoryOptions = new MemoryCacheEntryOptions
             {
-                var memoryOptions = new MemoryCacheEntryOptions
-                {
-                    Priority = CacheItemPriority.High,
-                    ExpirationTokens = { new CancellationChangeToken(_resetCacheToken.Token) }
-                };
+                Priority = CacheItemPriority.High,
+                ExpirationTokens = { new CancellationChangeToken(_resetCacheToken.Token) }
+            };
 
-                if (expires != default)
-                {
-                    memoryOptions.AbsoluteExpirationRelativeToNow = expires;
-                }
-
-                cache.Set(key, value, memoryOptions);
+            if (expires != default)
+            {
+                memoryOptions.AbsoluteExpirationRelativeToNow = expires;
             }
+
+            cache.Add(key, value, memoryOptions);
         }
 
         public static T GetCachedEntity<T>(double actualDepth) where T : Monocle.Entity
         {
-            var cache = ServiceProvider.GetService<IMemoryCache>();
+            var cache = ServiceProvider.GetService<IAppCache>();
 
-            if (cache.TryGetValue(actualDepth, out T cached))
+            if (cache.TryGetValue(actualDepth.ToString(), out T cached))
             {
                 return cached;
             }
@@ -120,9 +118,9 @@ namespace TF.EX.Domain
             return null;
         }
 
-        public static bool GetCached<K, T>(K key, out T cached) where T : class
+        public static bool GetCached<T>(string key, out T cached) where T : class
         {
-            var cache = ServiceProvider.GetService<IMemoryCache>();
+            var cache = ServiceProvider.GetService<IAppCache>();
 
             if (cache.TryGetValue(key, out T c))
             {
@@ -176,11 +174,11 @@ namespace TF.EX.Domain
         /// </summary>
         private static void PurgeCachedPickup()
         {
-            var cache = ServiceProvider.GetService<IMemoryCache>();
+            var cache = ServiceProvider.GetService<IAppCache>();
 
             foreach (var cachedPickup in _cachedPickupEntries) //TODO: Should also remove the cached pickup from the cache 
             {
-                cache.Remove(cachedPickup);
+                cache.Remove(cachedPickup.ToString());
             }
         }
 

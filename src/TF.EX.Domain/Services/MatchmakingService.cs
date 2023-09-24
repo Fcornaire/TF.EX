@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using System.Diagnostics;
 using System.Net.WebSockets;
+using System.Text.Json;
 using TF.EX.Common.Extensions;
 using TF.EX.Common.Handle;
 using TF.EX.Domain.Externals;
@@ -134,7 +134,7 @@ namespace TF.EX.Domain.Services
             var registerMessage = new RegisterDirectMessage();
             registerMessage.RegisterDirect.Name = _netplayManager.GetNetplayMeta().Name;
 
-            var message = JsonConvert.SerializeObject(registerMessage);
+            var message = JsonSerializer.Serialize(registerMessage);
             var segment = new ArraySegment<byte>(System.Text.Encoding.UTF8.GetBytes(message));
             await _webSocket.SendAsync(segment, WebSocketMessageType.Binary, true, cancellationToken);
         }
@@ -143,7 +143,7 @@ namespace TF.EX.Domain.Services
         {
             var matchWithDirectMsg = new MatchWithDirectCodeMessage();
             matchWithDirectMsg.MatchWithDirectCode.Code = text;
-            var message = JsonConvert.SerializeObject(matchWithDirectMsg);
+            var message = JsonSerializer.Serialize(matchWithDirectMsg);
             var segment = new ArraySegment<byte>(System.Text.Encoding.UTF8.GetBytes(message));
             await _webSocket.SendAsync(segment, WebSocketMessageType.Binary, true, cancellationToken);
         }
@@ -153,7 +153,7 @@ namespace TF.EX.Domain.Services
             var registerMessage = new RegisterQuickPlayMessage();
             registerMessage.Register.Name = _netplayManager.GetNetplayMeta().Name;
 
-            var message = JsonConvert.SerializeObject(registerMessage);
+            var message = JsonSerializer.Serialize(registerMessage);
             var segment = new ArraySegment<byte>(System.Text.Encoding.UTF8.GetBytes(message));
             await _webSocket.SendAsync(segment, WebSocketMessageType.Binary, true, cancellationToken);
         }
@@ -162,7 +162,7 @@ namespace TF.EX.Domain.Services
         {
             var cancelMessage = new CancelQuickPlayMessage();
 
-            var message = JsonConvert.SerializeObject(cancelMessage);
+            var message = JsonSerializer.Serialize(cancelMessage);
             var segment = new ArraySegment<byte>(System.Text.Encoding.UTF8.GetBytes(message));
             await _webSocket.SendAsync(segment, WebSocketMessageType.Binary, true, cancellationToken);
         }
@@ -171,7 +171,7 @@ namespace TF.EX.Domain.Services
         {
             var acceptMessage = new AcceptQuickPlayMessage();
 
-            var message = JsonConvert.SerializeObject(acceptMessage);
+            var message = JsonSerializer.Serialize(acceptMessage);
             var segment = new ArraySegment<byte>(System.Text.Encoding.UTF8.GetBytes(message));
             await _webSocket.SendAsync(segment, WebSocketMessageType.Binary, true, cancellationToken);
         }
@@ -198,7 +198,7 @@ namespace TF.EX.Domain.Services
         {
             if (message.Contains("RegisterDirectResponse"))
             {
-                var registerResponse = JsonConvert.DeserializeObject<RegisterDirectResponseMessage>(message);
+                var registerResponse = JsonSerializer.Deserialize<RegisterDirectResponseMessage>(message);
 
                 if (registerResponse.RegisterDirectResponse.Success)
                 {
@@ -212,7 +212,7 @@ namespace TF.EX.Domain.Services
 
             if (message.Contains("MatchWithDirectCodeResponse"))
             {
-                var matchResponse = JsonConvert.DeserializeObject<MatchWithDirectCodeResponseMessage>(message);
+                var matchResponse = JsonSerializer.Deserialize<MatchWithDirectCodeResponseMessage>(message);
                 if (matchResponse.MatchWithDirectCodeResponse.Success)
                 {
                     _hasMatched = true;
@@ -236,7 +236,7 @@ namespace TF.EX.Domain.Services
 
             if (message.Contains("RegisterQuickPlayResponse"))
             {
-                var registerResponse = JsonConvert.DeserializeObject<RegisterQuickPlayResponseMessage>(message);
+                var registerResponse = JsonSerializer.Deserialize<RegisterQuickPlayResponseMessage>(message);
 
                 if (registerResponse.RegisterQuickPlayResponse.Success)
                 {
@@ -253,7 +253,7 @@ namespace TF.EX.Domain.Services
                 if (!_hasFoundOpponentForQuickPlay)
                 {
                     _OpponentDeclined = false;
-                    var matchResponse = JsonConvert.DeserializeObject<QuickPlayPossibleMatchMessage>(message);
+                    var matchResponse = JsonSerializer.Deserialize<QuickPlayPossibleMatchMessage>(message);
 
                     var roomUrl = $"{ROOM_URL}/{matchResponse.QuickPlayPossibleMatch.RoomId}";
                     var roomChatUrl = $"{ROOM_URL}/{matchResponse.QuickPlayPossibleMatch.RoomChatId}";
@@ -268,7 +268,7 @@ namespace TF.EX.Domain.Services
 
             if (message.Contains("AcceptQuickPlayResponse"))
             {
-                var matchResponse = JsonConvert.DeserializeObject<AcceptQuickPlayResponseMessage>(message);
+                var matchResponse = JsonSerializer.Deserialize<AcceptQuickPlayResponseMessage>(message);
 
                 if (matchResponse.AcceptQuickPlayResponse.Success)
                 {
@@ -295,7 +295,7 @@ namespace TF.EX.Domain.Services
 
             if (message.Contains("TotalAvailablePlayersInQuickPlayQueue"))
             {
-                var response = JsonConvert.DeserializeObject<TotalAvailablePlayersInQuickPlayQueueMessage>(message);
+                var response = JsonSerializer.Deserialize<TotalAvailablePlayersInQuickPlayQueueMessage>(message);
                 _totalAvailablePlayersInQuickPlayQueue = response.TotalAvailablePlayersInQuickPlayQueue.Total;
             }
         }

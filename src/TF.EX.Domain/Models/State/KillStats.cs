@@ -2,56 +2,56 @@
 {
     public class KillStats
     {
-        public ulong Kills;
+        public ulong Kills { get; set; }
 
-        public ulong TeamKills;
+        public ulong TeamKills { get; set; }
 
-        public ulong SelfKills;
+        public ulong SelfKills { get; set; }
 
-        public ulong Environment;
+        public ulong Environment { get; set; }
 
-        public ulong Green;
+        public ulong Green { get; set; }
 
-        public ulong Blue;
+        public ulong Blue { get; set; }
 
-        public ulong Pink;
+        public ulong Pink { get; set; }
 
-        public ulong Orange;
+        public ulong Orange { get; set; }
 
-        public ulong White;
+        public ulong White { get; set; }
 
-        public ulong Yellow;
+        public ulong Yellow { get; set; }
 
-        public ulong Cyan;
+        public ulong Cyan { get; set; }
 
-        public ulong Purple;
+        public ulong Purple { get; set; }
 
-        public ulong Red;
+        public ulong Red { get; set; }
 
-        public ulong ArrowKills;
+        public ulong ArrowKills { get; set; }
 
-        public ulong ShockKills;
+        public ulong ShockKills { get; set; }
 
-        public ulong ExplosionKills;
+        public ulong ExplosionKills { get; set; }
 
-        public ulong BramblesKills;
+        public ulong BramblesKills { get; set; }
 
-        public ulong JumpedOnKills;
+        public ulong JumpedOnKills { get; set; }
 
-        public ulong LavaKills;
+        public ulong LavaKills { get; set; }
 
-        public ulong SpikeBallKills;
+        public ulong SpikeBallKills { get; set; }
 
-        public ulong OrbKills;
+        public ulong OrbKills { get; set; }
 
-        public ulong SquishKills;
+        public ulong SquishKills { get; set; }
 
-        public ulong CursedBowKills;
+        public ulong CursedBowKills { get; set; }
 
-        public ulong MiasmaKills;
+        public ulong MiasmaKills { get; set; }
 
-        public ulong EnemyKills;
+        public ulong EnemyKills { get; set; }
 
-        public ulong ChaliceKills;
+        public ulong ChaliceKills { get; set; }
     }
 }
