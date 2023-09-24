@@ -133,7 +133,8 @@ As you can guess, this project is still WIP and missing a lot of feature:
 - [ ] Automatically bump the version (meta + tag)
 - [ ] Refacto (There is a lot of thing i want to refactor)
 - [x] Less restrictive controller
-- [ ] Fix bugs (There is one (last?) desynchronization issue)
+- [ ] Fix bugs
+- [x] Fix desynchronization (Atleat netplay code wise should be fine)
 - [ ] Support for all versus map
 - [ ] Check Twiligh Spear CrackedWall with teams on level 7
 - [ ] Support all items
