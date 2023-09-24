@@ -10,7 +10,7 @@ namespace TF.EX.Domain.CustomComponent
     {
         public static readonly Color SelectedColor = Calc.HexToColor("FFDA9B");
 
-        private ReplayRecordless _replay;
+        private Replay _replay;
 
         private Action confirm;
 
@@ -30,7 +30,7 @@ namespace TF.EX.Domain.CustomComponent
         public string _name = "";
         public string OriginalName => _replay.Informations.Name;
 
-        public ReplayInfos(MainMenu mainMenu, Vector2 position, ReplayRecordless replay, Action confirmAction) : base(position)
+        public ReplayInfos(MainMenu mainMenu, Vector2 position, Replay replay, Action confirmAction) : base(position)
         {
             var dynSelf = DynamicData.For(this);
             dynSelf.Set("MainMenu", mainMenu);
@@ -49,7 +49,7 @@ namespace TF.EX.Domain.CustomComponent
             Add(image);
         }
 
-        public ReplayInfos(MainMenu mainMenu, Vector2 position, ReplayRecordless replay, Action confirmAction, ReplaysPanel entity) : this(mainMenu, position, replay, confirmAction)
+        public ReplayInfos(MainMenu mainMenu, Vector2 position, Replay replay, Action confirmAction, ReplaysPanel entity) : this(mainMenu, position, replay, confirmAction)
         {
             _panel = entity;
         }

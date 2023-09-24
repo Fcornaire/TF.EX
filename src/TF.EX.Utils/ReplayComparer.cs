@@ -11,13 +11,13 @@ namespace TF.EX.Utils
 
 
         [Fact]
-        public void TestReplayComparison()
+        public async Task TestReplayComparison()
         {
             string replayFilePath1 = Path.Combine(_replaysFolder, "23-09-2023T14-34-47.tow");
             string replayFilePath2 = Path.Combine(_replaysFolder, "23-09-2023T14-34-40_laptop.tow");
 
-            List<TF.EX.Domain.Models.Record> record1 = ReplayService.ToReplay(replayFilePath1).Record;
-            List<TF.EX.Domain.Models.Record> record2 = ReplayService.ToReplay(replayFilePath2).Record;
+            List<TF.EX.Domain.Models.Record> record1 = (await ReplayService.ToReplay(replayFilePath1)).Record;
+            List<TF.EX.Domain.Models.Record> record2 = (await ReplayService.ToReplay(replayFilePath2)).Record;
 
             StringBuilder msgBuilder = new StringBuilder();
             Parallel.ForEach(Enumerable.Range(0, Math.Min(record1.Count(), record2.Count())), i =>
@@ -44,13 +44,13 @@ namespace TF.EX.Utils
 
         [Theory]
         [InlineData(7682)]
-        public void TestReplayComparisonAtSpecificFrame(int frame)
+        public async Task TestReplayComparisonAtSpecificFrame(int frame)
         {
             string replayFilePath1 = Path.Combine(_replaysFolder, "23-09-2023T14-34-47.tow");
             string replayFilePath2 = Path.Combine(_replaysFolder, "23-09-2023T14-34-40_laptop.tow");
 
-            List<TF.EX.Domain.Models.Record> record1 = ReplayService.ToReplay(replayFilePath1).Record;
-            List<TF.EX.Domain.Models.Record> record2 = ReplayService.ToReplay(replayFilePath2).Record;
+            List<TF.EX.Domain.Models.Record> record1 = (await ReplayService.ToReplay(replayFilePath1)).Record;
+            List<TF.EX.Domain.Models.Record> record2 = (await ReplayService.ToReplay(replayFilePath2)).Record;
 
             try
             {

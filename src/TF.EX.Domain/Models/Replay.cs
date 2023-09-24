@@ -47,11 +47,6 @@ namespace TF.EX.Domain.Models
         public GameState GameState { get; set; }
     }
 
-    public class ReplayRecordless
-    {
-        public ReplayInfo Informations { get; set; }
-    }
-
     public enum ReplayVersion
     {
         Unknown,

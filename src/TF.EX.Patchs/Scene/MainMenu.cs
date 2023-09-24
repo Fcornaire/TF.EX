@@ -105,7 +105,7 @@ namespace TF.EX.Patchs.Scene
             Loader.Message = "LOADING REPLAYS...";
             self.Add(loader);
 
-            Task.Run(() =>
+            Task.Run(async () =>
             {
                 try
                 {
@@ -114,7 +114,7 @@ namespace TF.EX.Patchs.Scene
 
                     var maxY = 50.0f;
 
-                    var replays = _replayService.LoadAndGetReplays().ToArray();
+                    var replays = (await _replayService.LoadAndGetReplays()).ToArray();
 
                     self.BackState = TowerFall.MainMenu.MenuState.Main;
 

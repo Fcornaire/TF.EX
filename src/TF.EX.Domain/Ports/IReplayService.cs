@@ -17,6 +17,6 @@ namespace TF.EX.Domain.Ports
         Record GetCurrentRecord();
         void GoTo(int numbreOfFrames);
         void Reset();
-        IEnumerable<ReplayRecordless> LoadAndGetReplays();
+        Task<IEnumerable<Replay>> LoadAndGetReplays();
     }
 }

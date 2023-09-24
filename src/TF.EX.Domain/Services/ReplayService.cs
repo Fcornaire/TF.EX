@@ -3,12 +3,14 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using TF.EX.Common.Extensions;
 using TF.EX.Domain.Context;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Models.State;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
+using TF.EX.Domain.Utils;
 using TowerFall;
 using static TowerFall.MatchSettings;
 
@@ -97,16 +99,16 @@ namespace TF.EX.Domain.Services
         {
             try
             {
-                await Task.Run(() =>
+                await Task.Run(async () =>
                {
                    var replaysFolder = $"{Directory.GetCurrentDirectory()}\\Replays";
 
                    var filePath = $"{replaysFolder}\\{replayFilename}";
 
                    var isCached = ServiceCollections.GetCached(filePath, out Replay replay);
-                   if (!isCached)
+                   if (!isCached || replay == null || replay.Record.Count == 0)
                    {
-                       replay = ToReplay(filePath);
+                       replay = await ToReplay(filePath);
                        ServiceCollections.AddToCache(filePath, replay, TimeSpan.FromMinutes(5));
                    }
 
@@ -196,18 +198,23 @@ namespace TF.EX.Domain.Services
             JsonSerializer.Serialize(gzipStream, replay);
         }
 
-        public static Replay ToReplay(string filePath)
+        public static async Task<Replay> ToReplay(string filePath, bool shouldIgnoreRecord = false)
         {
-            using var fileStream = new FileStream(filePath, FileMode.Open);
-            using var gzip = new GZipStream(fileStream, CompressionMode.Decompress);
-            return JsonSerializer.Deserialize<Replay>(gzip);
-        }
+            JsonSerializerOptions options = new JsonSerializerOptions();
 
-        public static ReplayRecordless ToReplayRecordless(string filePath)
-        {
+            if (shouldIgnoreRecord)
+            {
+                var modifier = new IgnorePropertiesWithType(typeof(List<Record>));
+
+                options.TypeInfoResolver = new DefaultJsonTypeInfoResolver
+                {
+                    Modifiers = { modifier.ModifyTypeInfo }
+                };
+            }
+
             using var fileStream = new FileStream(filePath, FileMode.Open);
             using var gzip = new GZipStream(fileStream, CompressionMode.Decompress);
-            return JsonSerializer.Deserialize<ReplayRecordless>(gzip);
+            return await JsonSerializer.DeserializeAsync<Replay>(gzip, options);
         }
 
         public void Reset()
@@ -215,7 +222,7 @@ namespace TF.EX.Domain.Services
             _gameContext.ResetReplay();
         }
 
-        public IEnumerable<ReplayRecordless> LoadAndGetReplays()
+        public async Task<IEnumerable<Replay>> LoadAndGetReplays()
         {
             var stopwatch = new Stopwatch();
             stopwatch.Start();
@@ -224,42 +231,64 @@ namespace TF.EX.Domain.Services
                 .Where(f => f.EndsWith(".tow"))
                 .Select(f => Path.GetFileName(f)).ToList();
 
-            var res = new ConcurrentBag<ReplayRecordless>();
+            var res = new ConcurrentBag<Replay>();
 
-            int i = 0;
+            int loaded = 0;
             int obsoleteReplays = 0;
-            Loader.Message = $"LOADING REPLAYS... \n\n                {i}/{replays.Count}";
+            int impossibleToLoad = 0;
+            Loader.Message = $"LOADING REPLAYS... \n\n                {loaded}/{replays.Count}";
 
-            Parallel.ForEach(replays, replay =>
+            //TODO: There should be a better way to load replays
+            await replays.ForEachAsync(3, async replay =>
             {
                 var replayPath = $"{REPLAYS_FOLDER}\\{replay}";
 
-                var isCached = ServiceCollections.GetCached<string, ReplayRecordless>($"{replayPath}-recordless", out var replayRecordless);
+                var isCached = ServiceCollections.GetCached<Replay>(replayPath, out var replayRecordless);
                 if (!isCached)
                 {
-                    try
+                    var attempt = 1;
+                    bool loadedReplay = false;
+                    while (!loadedReplay)
                     {
-                        replayRecordless = ToReplayRecordless(replayPath);
-                        if (replayRecordless.Informations.Version != ServiceCollections.CurrentReplayVersion)
+                        try
                         {
-                            _logger.LogDebug<ReplayService>($"Replay {replay} is obsolete, will be renamed and ignored");
-                            Interlocked.Increment(ref obsoleteReplays);
+                            _logger.LogDebug<ReplayService>($"Loading replay {replay} (attemp {attempt})");
+                            replayRecordless = await ToReplay(replayPath, true);
 
-                            File.Move(replayPath, $"{replayPath}.obsolete");
+                            loadedReplay = true;
 
-                            return;
+                            if (replayRecordless.Informations.Version != ServiceCollections.CurrentReplayVersion)
+                            {
+                                _logger.LogDebug<ReplayService>($"Replay {replay} is obsolete, will be renamed and ignored");
+
+                                Interlocked.Increment(ref obsoleteReplays);
+
+                                File.Move(replayPath, $"{replayPath}.obsolete");
+
+                                return;
+                            }
+
+                            ServiceCollections.AddToCache(replayPath, replayRecordless, TimeSpan.FromMinutes(15));
+
+                            res.Add(replayRecordless);
                         }
-
-                        replayRecordless.Informations.Name = replay;
-
-                        ServiceCollections.AddToCache($"{replayPath}-recordless", replayRecordless, TimeSpan.FromMinutes(15));
-
-                        res.Add(replayRecordless);
+                        catch (OutOfMemoryException e)
+                        {
+                            attempt++;
+                            _logger.LogError<ReplayService>($"Error while loading replay {replay}", e);
+                            await Task.Delay(500);
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.LogError<ReplayService>($"Error while loading replay {replay}", e);
+                            break;
+                        }
                     }
-                    catch (Exception e)
+
+                    if (!loadedReplay)
                     {
-                        _logger.LogError<ReplayService>($"Error while loading replay {replay} , replay will be deleted", e);
-                        File.Delete(replayPath);
+                        _logger.LogError<ReplayService>($"Impossible to load replay {replay}");
+                        Interlocked.Increment(ref impossibleToLoad);
                     }
                 }
                 else
@@ -267,17 +296,22 @@ namespace TF.EX.Domain.Services
                     res.Add(replayRecordless);
                 }
 
-                Interlocked.Increment(ref i);
-                Interlocked.Exchange(ref Loader.Message, $"LOADING REPLAYS... \n\n                {i}/{replays.Count}");
+                Interlocked.Increment(ref loaded);
+                Interlocked.Exchange(ref Loader.Message, $"LOADING REPLAYS... \n\n                {loaded}/{replays.Count}");
             });
 
             stopwatch.Stop();
 
-            _logger.LogDebug<ReplayService>($"Loading replay took {stopwatch.ElapsedMilliseconds / 1000}s");
+            _logger.LogDebug<ReplayService>($"Loading replays took {stopwatch.ElapsedMilliseconds / 1000}s");
 
             if (obsoleteReplays > 0)
             {
                 _logger.LogDebug<ReplayService>($"{obsoleteReplays} replays are obsolete. A future update might add the ability to migrate from earlier version");
+            }
+
+            if (impossibleToLoad > 0)
+            {
+                _logger.LogDebug<ReplayService>($"{impossibleToLoad} replays could not be loaded");
             }
 
             return res.OrderBy(replay => replay.Informations.Name);

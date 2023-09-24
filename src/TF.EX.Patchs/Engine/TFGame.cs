@@ -175,7 +175,7 @@ namespace TF.EX.Patchs.Engine
                     _replayService.RunFrame();
                 }
                 orig(self, gameTime);
-                self.Screen.Offset = Vector2.Zero; //Ignore camera offset on replay mode (used by some orb)
+                //self.Screen.Offset = Vector2.Zero; //Ignore camera offset on replay mode (used by some orb)
 
                 return;
             }
