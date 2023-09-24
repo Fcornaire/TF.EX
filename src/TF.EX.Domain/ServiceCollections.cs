@@ -73,20 +73,19 @@ namespace TF.EX.Domain
         public static void AddEntityToCache(double actualDepth, Monocle.Entity entity)
         {
             var cache = ServiceProvider.GetService<IAppCache>();
-            if (!cache.TryGetValue(actualDepth.ToString(), out Monocle.Entity _)) //TODO: use GetOrAdd
-            {
-                cache.Add(actualDepth.ToString(), () => entity, new MemoryCacheEntryOptions
-                {
-                    Priority = CacheItemPriority.Normal,
-                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5),
-                    ExpirationTokens = { new CancellationChangeToken(_resetCacheToken.Token) }
-                });
 
-                if (entity is Pickup)
-                {
-                    _cachedPickupEntries.Add(actualDepth);
-                }
+            cache.Add(actualDepth.ToString(), entity, new MemoryCacheEntryOptions
+            {
+                Priority = CacheItemPriority.Normal,
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5),
+                ExpirationTokens = { new CancellationChangeToken(_resetCacheToken.Token) }
+            });
+
+            if (entity is Pickup)
+            {
+                _cachedPickupEntries.Add(actualDepth);
             }
+
         }
 
         public static void AddToCache<V>(string key, V value, TimeSpan expires = default)
@@ -110,12 +109,9 @@ namespace TF.EX.Domain
         {
             var cache = ServiceProvider.GetService<IAppCache>();
 
-            if (cache.TryGetValue(actualDepth.ToString(), out T cached))
-            {
-                return cached;
-            }
+            var cached = cache.Get<T>(actualDepth.ToString());
 
-            return null;
+            return cached;
         }
 
         public static bool GetCached<T>(string key, out T cached) where T : class
