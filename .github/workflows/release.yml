@@ -3,25 +3,24 @@
 
 name: Release
 
-on:  
+on:
   push:
     tags:
-      - '*'
+      - "*"
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: 6.0.x
-    - name: Check if Config exists
-      id: check-config
-      run: |
+      - uses: actions/checkout@v3
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 6.0.x
+      - name: Check if Config exists
+        id: check-config
+        run: |
           if [[ -f ./src/TF.EX.Domain/Config.cs ]]; then
             echo "Config file exists!"
             echo "::set-output name=config-existing::true"
@@ -29,9 +28,9 @@ jobs:
             echo "File does not exist"
             echo "::set-output name=config-existing::false"
           fi
-    - name: Replace Config file
-      if: steps.check-config.outputs.config-existing == 'true'
-      run: |
+      - name: Replace Config file
+        if: steps.check-config.outputs.config-existing == 'true'
+        run: |
           echo 'namespace TF.EX.Domain
           {
               public static class Config
@@ -40,36 +39,36 @@ jobs:
               }
           }' > ./src/TF.EX.Domain/Config.cs
           echo "Existing Config file replaced"
-    - name: Restore dependencies
-      run: dotnet restore
-    - name: Build
-      run: dotnet build --no-restore --configuration Release
-    - name: Publish
-      run: dotnet publish --no-restore --configuration Release --output ./TF.EX
-    - name: Download ggrs-ffi lib
-      uses: robinraju/release-downloader@v1.8
-      with:
-        repository: "Fcornaire/ggrs-ffi"
-        latest: true
-        out-file-path: "TF.EX/Native"
-        fileName: "ggrs_ffi.dll"
-    - name: Download matchbox-client-ffi lib
-      uses: robinraju/release-downloader@v1.8
-      with:
-        repository: "Fcornaire/matchbox-client-ffi"
-        latest: true
-        out-file-path: "TF.EX/Native"
-        fileName: "matchbox_client_ffi.dll"
-    - name: Archive Release
-      uses: thedoctor0/zip-release@0.7.1
-      with:
-        type: 'zip'
-        filename: 'TF.EX.zip'
-        path: './TF.EX'
-        exclusions: '**/*Mono* **/*.pdb'
-    - name: Upload Release
-      uses: ncipollo/release-action@v1.12.0
-      with:
-        artifacts: "TF.EX.zip"
-        generateReleaseNotes: true
-        token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Restore dependencies
+        run: dotnet restore
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+      - name: Publish
+        run: dotnet publish --no-restore --configuration Release --output ./TF.EX
+      - name: Download ggrs-ffi lib
+        uses: robinraju/release-downloader@v1.8
+        with:
+          repository: "Fcornaire/ggrs-ffi"
+          latest: true
+          out-file-path: "TF.EX/Native"
+          fileName: "ggrs_ffi.dll"
+      - name: Download matchbox-client-ffi lib
+        uses: robinraju/release-downloader@v1.8
+        with:
+          repository: "Fcornaire/matchbox-client-ffi"
+          latest: true
+          out-file-path: "TF.EX/Native"
+          fileName: "matchbox_client_ffi.dll"
+      - name: Archive Release
+        uses: thedoctor0/zip-release@0.7.1
+        with:
+          type: "zip"
+          filename: "TF.EX.zip"
+          path: "./TF.EX"
+          exclusions: "**/*Mono* **/*.pdb xunit.** TF.EX.Utils.** DeepEqual.dll"
+      - name: Upload Release
+        uses: ncipollo/release-action@v1.12.0
+        with:
+          artifacts: "TF.EX.zip"
+          generateReleaseNotes: true
+          token: ${{ secrets.GITHUB_TOKEN }}
