@@ -2,18 +2,15 @@
 using System.IO.Compression;
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using TF.EX.Common.Extensions;
 
 namespace TF.EX.Common
 {
-    internal class Meta
-    {
-        public string Version { get; set; }
-    }
-
     internal class GithubTag
     {
+        [JsonPropertyName("name")]
         public string Name { get; set; }
     }
 
