@@ -11,11 +11,13 @@ namespace TF.EX.Patchs.Entity.MenuItem
     {
         private INetplayStateMachine _stateMachine;
         private readonly IMatchmakingService _matchmakingService;
+        private readonly IArcherService _archerService;
 
-        public RollCallElementPatch(INetplayStateMachine stateMachine, IMatchmakingService matchmakingService)
+        public RollCallElementPatch(INetplayStateMachine stateMachine, IMatchmakingService matchmakingService, IArcherService archerService)
         {
             _stateMachine = stateMachine;
             _matchmakingService = matchmakingService;
+            _archerService = archerService;
         }
 
         public void Load()
@@ -104,6 +106,8 @@ namespace TF.EX.Patchs.Entity.MenuItem
         private void RollcallElement_ctor(On.TowerFall.RollcallElement.orig_ctor orig, TowerFall.RollcallElement self, int playerIndex)
         {
             orig(self, playerIndex);
+
+            _archerService.Reset();
 
             (var stateMachine, _) = ServiceCollections.ResolveStateMachineService();
 

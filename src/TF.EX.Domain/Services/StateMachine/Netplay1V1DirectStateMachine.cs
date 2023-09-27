@@ -2,7 +2,6 @@
 using System.Windows.Forms;
 using TF.EX.Domain.Models.State;
 using TF.EX.Domain.Ports;
-using TF.EX.Domain.Ports.TF;
 using TowerFall;
 
 namespace TF.EX.Domain.Services.StateMachine
@@ -13,13 +12,11 @@ namespace TF.EX.Domain.Services.StateMachine
         private bool _isDoingTask = false;
         private string _clipped;
         private string _current_code = string.Empty;
-        private readonly IRngService _rngService;
 
-        public Netplay1V1DirectStateMachine(IMatchmakingService matchmakingService, IRngService rngService) : base(matchmakingService)
+        public Netplay1V1DirectStateMachine(IMatchmakingService matchmakingService, IArcherService archerService) : base(matchmakingService, archerService)
         {
             _text = string.Empty;
             _isDoingTask = false;
-            _rngService = rngService;
         }
 
         public override string GetClipped()

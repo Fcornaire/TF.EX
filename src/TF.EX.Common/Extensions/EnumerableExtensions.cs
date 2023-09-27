@@ -10,11 +10,11 @@
             using var semaphore = new SemaphoreSlim(degreeOfParallelism);
             var tasks = source.Select(async item =>
             {
-                await semaphore.WaitAsync().ConfigureAwait(false);
+                await semaphore.WaitAsync();
 
                 try
                 {
-                    await asyncAction(item).ConfigureAwait(false);
+                    await asyncAction(item);
                 }
                 finally
                 {
@@ -22,7 +22,7 @@
                 }
             });
 
-            await Task.WhenAll(tasks).ConfigureAwait(false);
+            await Task.WhenAll(tasks);
         }
     }
 }

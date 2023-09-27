@@ -8,12 +8,14 @@ namespace TF.EX.Domain.Services.StateMachine
     {
         protected Netplay1V1State _state;
         protected readonly IMatchmakingService _matchmakingService;
+        protected readonly IArcherService _archerService;
         protected bool _hasLocalPlayerChoosed = false;
 
-        public NetplayStateMachine(IMatchmakingService matchmakingService)
+        public NetplayStateMachine(IMatchmakingService matchmakingService, IArcherService archerService)
         {
             _state = Netplay1V1State.None;
             _matchmakingService = matchmakingService;
+            _archerService = archerService;
         }
 
         public bool CanStart()
@@ -54,6 +56,8 @@ namespace TF.EX.Domain.Services.StateMachine
                 var archer_alt = $"Archer : {TFGame.Characters[0]}-{TFGame.AltSelect[0]}";
                 MatchboxClientFFI.send_message(archer_alt, _matchmakingService.GetOpponentPeerId().ToString());
                 _hasLocalPlayerChoosed = true;
+
+                _archerService.AddArcher(0, $"{TFGame.Characters[0]}-{TFGame.AltSelect[0]}");
             }
         }
     }

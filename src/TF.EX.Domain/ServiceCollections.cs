@@ -53,6 +53,7 @@ namespace TF.EX.Domain
             ServiceCollection.AddTransient<ISessionService, SessionService>();
             ServiceCollection.AddTransient<IRngService, RngService>();
             ServiceCollection.AddTransient<IHUDService, HUDService>();
+            ServiceCollection.AddTransient<IArcherService, ArcherService>();
         }
 
         public static void Build()
