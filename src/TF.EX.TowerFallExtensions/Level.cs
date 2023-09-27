@@ -107,6 +107,8 @@ namespace TF.EX.TowerFallExtensions
             var hudService = ServiceCollections.ResolveHUDService();
             var rngService = ServiceCollections.ResolveRngService();
             var sfxService = ServiceCollections.ResolveSFXService();
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            var inputService = ServiceCollections.ResolveInputService();
 
             gameState.AddJumpPadsState(self);
             gameState.SFXs = sfxService.Get().Select(sfx => new SFXState
@@ -134,9 +136,23 @@ namespace TF.EX.TowerFallExtensions
             gameState.AddLavaControlState(self);
             gameState.Rng = rngService.Get();
             gameState.Frame = GGRSFFI.netplay_current_frame();
-            gameState.MatchStats = new TF.EX.Domain.Models.State.MatchStats[] {
-                self.Session.MatchStats[0].ToDomain(), self.Session.MatchStats[1].ToDomain(),
-            };
+
+            if (netplayManager.IsTestMode())
+            {
+                gameState.MatchStats = new TF.EX.Domain.Models.State.MatchStats[]
+                {
+                    self.Session.MatchStats[0].ToDomain(), self.Session.MatchStats[1].ToDomain(),
+                };
+            }
+            else
+            {
+                gameState.MatchStats = new TF.EX.Domain.Models.State.MatchStats[]
+               {
+                   self.Session.MatchStats[inputService.GetLocalPlayerInputIndex()].ToDomain(),
+                   self.Session.MatchStats[inputService.GetRemotePlayerInputIndex()].ToDomain(),
+               };
+            }
+
             gameState.AddCrackedPlatform(self);
             gameState.AddSpikeball(self);
             gameState.AddExplosions(self);
@@ -153,6 +169,7 @@ namespace TF.EX.TowerFallExtensions
             var rngService = ServiceCollections.ResolveRngService();
             var sfxService = ServiceCollections.ResolveSFXService();
             var currentMode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
+            var inputService = ServiceCollections.ResolveInputService();
 
             sfxService.UpdateLastRollbackFrame(gameState.Frame);
             sfxService.Load(gameState.SFXs.Select(sfx => new Domain.Models.State.SFX
@@ -552,8 +569,17 @@ namespace TF.EX.TowerFallExtensions
             rngService.UpdateState(rng.Gen_type);
 
             var matchStats = gameState.MatchStats.ToArray();
-            level.Session.MatchStats[0] = matchStats[0].ToTF();
-            level.Session.MatchStats[1] = matchStats[1].ToTF();
+
+            if (netplayManager.IsTestMode())
+            {
+                level.Session.MatchStats[0] = matchStats[0].ToTF();
+                level.Session.MatchStats[1] = matchStats[1].ToTF();
+            }
+            else
+            {
+                level.Session.MatchStats[0] = matchStats[inputService.GetLocalPlayerInputIndex()].ToTF();
+                level.Session.MatchStats[1] = matchStats[inputService.GetRemotePlayerInputIndex()].ToTF();
+            }
 
             level.PostLoad(gameState);
 

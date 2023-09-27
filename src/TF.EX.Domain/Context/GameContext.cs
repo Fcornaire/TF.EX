@@ -55,6 +55,9 @@ namespace TF.EX.Domain.Context
         void AddPlayedSfx(SoundEffectPlaying sfx);
         bool HasSfxBeenPlayed(SFX sfx);
         void ClearDesiredSfx();
+        IEnumerable<(int, string)> GetArchers();
+        void AddArcher(int index, string archer_alt);
+        void ResetArcherSelections();
     }
 
     internal class GameContext : IGameContext
@@ -73,6 +76,7 @@ namespace TF.EX.Domain.Context
         private ICollection<SoundEffectPlaying> _currentSfxs = new List<SoundEffectPlaying>();
         private ICollection<SoundEffectPlaying> _playedSfxs = new List<SoundEffectPlaying>();
         private Dictionary<string, SoundEffect> _soundEffects = new Dictionary<string, SoundEffect>();
+        private Dictionary<int, string> ArcherSelections = new Dictionary<int, string>();
         private int _lastRollbackFrame = 0;
 
         private int _localPlayerIndex = -1;
@@ -412,6 +416,21 @@ namespace TF.EX.Domain.Context
         public bool HasSfxBeenPlayed(SFX sfx)
         {
             return _playedSfxs.Any(sfxPlayed => sfxPlayed.Name == sfx.Name && sfxPlayed.Frame == sfx.Frame);
+        }
+
+        public IEnumerable<(int, string)> GetArchers()
+        {
+            return ArcherSelections.Select(kvp => (kvp.Key, kvp.Value));
+        }
+
+        public void AddArcher(int index, string archer_alt)
+        {
+            ArcherSelections.Add(index, archer_alt);
+        }
+
+        public void ResetArcherSelections()
+        {
+            ArcherSelections.Clear();
         }
     }
 }

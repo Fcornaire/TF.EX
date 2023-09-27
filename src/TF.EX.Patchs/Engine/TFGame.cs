@@ -77,7 +77,7 @@ namespace TF.EX.Patchs.Engine
 
         private void TFGame_OnExiting(On.TowerFall.TFGame.orig_OnExiting orig, TFGame self, object sender, EventArgs args)
         {
-            if (!_netplayManager.IsReplayMode())
+            if (self.Scene is Level && _netplayManager.IsServerMode())
             {
                 _replayService.Export();
             }

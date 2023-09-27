@@ -6,7 +6,7 @@ namespace TF.EX.Domain.Services.StateMachine
 {
     public class Netplay1V1QuickPlayStateMachine : NetplayStateMachine
     {
-        public Netplay1V1QuickPlayStateMachine(IMatchmakingService matchmakingService) : base(matchmakingService)
+        public Netplay1V1QuickPlayStateMachine(IMatchmakingService matchmakingService, IArcherService archerService) : base(matchmakingService, archerService)
         {
         }
 

@@ -2,6 +2,7 @@
 using Monocle;
 using TF.EX.Domain;
 using TF.EX.Patchs;
+using TowerFall;
 
 namespace TF.EX
 {
@@ -28,7 +29,7 @@ namespace TF.EX
 
         public override void Unload()
         {
-            if (!ServiceCollections.ResolveNetplayManager().IsReplayMode())
+            if (TFGame.Instance.Scene is Level && ServiceCollections.ResolveNetplayManager().IsServerMode())
             {
                 ServiceCollections.ResolveReplayService().Export();
             }

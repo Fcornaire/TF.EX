@@ -26,12 +26,11 @@ namespace TF.EX.Domain.Services
         private bool _isRollbackFrame;
         private double _framesAhead;
         private bool _isUpdating = false;
-        private bool _isFirstInit = true;
         private bool _hasFailedInitialConnection = false;
-        private (int, ArcherData.ArcherTypes)[] _originalSelection = new (int, ArcherData.ArcherTypes)[4];
 
         private readonly IInputService _inputService;
         private readonly IGameContext _gameContext;
+        private readonly IArcherService _archerService;
         private readonly ILogger _logger;
 
         private List<string> _events;
@@ -48,6 +47,7 @@ namespace TF.EX.Domain.Services
         public NetplayManager(
             IInputService inputService,
             IGameContext gameContext,
+            IArcherService archerService,
             ILogger logger)
         {
             _isInit = false;
@@ -65,6 +65,7 @@ namespace TF.EX.Domain.Services
 
             _inputService = inputService;
             _logger = logger;
+            _archerService = archerService;
         }
 
         public void Init(TowerFall.RoundLogic roundLogic)
@@ -138,44 +139,19 @@ namespace TF.EX.Domain.Services
                                 _logger.LogDebug<NetplayManager>($"Netplay session etablished with {_player2Name}");
                                 ServiceCollections.ResolveMatchmakingService().DisconnectFromLobby();
 
-                                if (_isFirstInit)
+                                foreach ((var index, var archer_alt) in _archerService.GetFinalArchers())
                                 {
-                                    _originalSelection[0] = (TFGame.Characters[0], TFGame.AltSelect[0]);
-                                    _originalSelection[1] = (TFGame.Characters[1], TFGame.AltSelect[1]);
+                                    var splitted = archer_alt.Split('-');
 
-                                    var (char0, alt0) = _originalSelection[0];
-                                    var (char1, alt1) = _originalSelection[1];
+                                    Enum.TryParse(splitted[1], out ArcherData.ArcherTypes alt);
 
-                                    if (ShouldSwapPlayer())
-                                    {
-                                        TFGame.Characters[0] = char1;
-                                        TFGame.AltSelect[0] = alt1;
-                                        TFGame.Characters[1] = char0;
-                                        TFGame.AltSelect[1] = alt0;
-                                    }
-                                }
-                                else
-                                {
-                                    var (char0, alt0) = _originalSelection[0];
-                                    var (char1, alt1) = _originalSelection[1];
+                                    var archer = int.Parse(splitted[0]);
 
-                                    if (ShouldSwapPlayer())
-                                    {
-                                        TFGame.Characters[0] = char1;
-                                        TFGame.AltSelect[0] = alt1;
-                                        TFGame.Characters[1] = char0;
-                                        TFGame.AltSelect[1] = alt0;
-                                    }
-                                    else
-                                    {
-                                        TFGame.Characters[0] = char0;
-                                        TFGame.AltSelect[0] = alt0;
-                                        TFGame.Characters[1] = char1;
-                                        TFGame.AltSelect[1] = alt1;
-                                    }
+                                    TFGame.Characters[index] = archer;
+                                    TFGame.AltSelect[index] = alt;
+                                    TFGame.Players[index] = true;
                                 }
 
-                                _isFirstInit = false;
                                 var dynRoundLogic = DynamicData.For(roundLogic);
 
                                 roundLogic.Session.CurrentLevel.Add(new VersusStart(roundLogic.Session));
@@ -574,9 +550,6 @@ namespace TF.EX.Domain.Services
             (var stateMachine, _) = ServiceCollections.ResolveStateMachineService();
             stateMachine.Reset();
             ServiceCollections.ResolveReplayService().Reset();
-
-            _originalSelection = new (int, ArcherData.ArcherTypes)[4];
-            _isFirstInit = true;
         }
 
         public NetplayMeta GetNetplayMeta()
@@ -722,12 +695,6 @@ namespace TF.EX.Domain.Services
 
         public void ResetMode()
         {
-            if (_netplayMode == NetplayMode.Replay)
-            {
-                _isFirstInit = true;
-                _originalSelection = new (int, ArcherData.ArcherTypes)[4];
-            }
-
             _netplayMode = NetplayMode.Uninitialized;
         }
 
@@ -754,22 +721,32 @@ namespace TF.EX.Domain.Services
 
             var level = TFGame.Instance.Scene as Level;
 
+            var archers = _archerService.GetArchers();
+            var archer_alt_0 = archers.First((archer) => archer.Item1 == 0).Item2;
+            var archer_alt_1 = archers.First((archer) => archer.Item1 == 1).Item2;
+            var splitted_0 = archer_alt_0.Split('-');
+            var splitted_1 = archer_alt_1.Split('-');
+            Enum.TryParse(splitted_0[1], out ArcherData.ArcherTypes alt_0);
+            Enum.TryParse(splitted_1[1], out ArcherData.ArcherTypes alt_1);
+            var archer_0 = int.Parse(splitted_0[0]);
+            var archer_1 = int.Parse(splitted_1[0]);
+
             archersInfo.Add(new ArcherInfo
             {
                 NetplayName = NetplayMeta.Name,
-                Index = TFGame.Characters[(int)GetPlayerDraw()],
-                HasWon = level.Session.MatchStats[(int)GetPlayerDraw()].Won,
-                Score = level.Session.Scores[ShouldSwapPlayer() ? _inputService.GetRemotePlayerInputIndex() : _inputService.GetLocalPlayerInputIndex()], //Huh...Score are swapped
-                Type = (ArcherTypes)TFGame.AltSelect[(int)GetPlayerDraw()],
+                Index = archer_0,
+                HasWon = level.Session.MatchStats[_gameContext.GetLocalPlayerIndex()].Won,
+                Score = level.Session.Scores[0],
+                Type = (ArcherTypes)alt_0,
             });
 
             archersInfo.Add(new ArcherInfo
             {
                 NetplayName = _player2Name,
-                Index = TFGame.Characters[((int)GetPlayerDraw() + 1) % 2],
-                HasWon = level.Session.MatchStats[((int)GetPlayerDraw() + 1) % 2].Won,
-                Score = level.Session.Scores[ShouldSwapPlayer() ? _inputService.GetLocalPlayerInputIndex() : _inputService.GetRemotePlayerInputIndex()],
-                Type = (ArcherTypes)TFGame.AltSelect[((int)GetPlayerDraw() + 1) % 2],
+                Index = archer_1,
+                HasWon = level.Session.MatchStats[_gameContext.GetRemotePlayerIndex()].Won,
+                Score = level.Session.Scores[1],
+                Type = (ArcherTypes)alt_1,
             });
 
 
@@ -779,6 +756,11 @@ namespace TF.EX.Domain.Services
         public Record GetLastRecord()
         {
             return _gameContext.GetReplay()?.Record?.LastOrDefault();
+        }
+
+        public bool IsServerMode()
+        {
+            return _netplayMode == NetplayMode.Server;
         }
     }
 }

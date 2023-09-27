@@ -39,13 +39,14 @@ namespace TF.EX.Domain.Services
 
         private readonly IRngService _rngService;
         private readonly INetplayManager _netplayManager;
+        private readonly IArcherService _archerService;
         private readonly ILogger _logger;
 
         private CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         private CancellationToken cancellationToken;
         private CancellationTokenSource cancellationTokenSourceLobby = new CancellationTokenSource();
         private CancellationToken cancellationTokenLobby;
-        public MatchmakingService(IRngService rngService, INetplayManager netplayManager, ILogger logger)
+        public MatchmakingService(IRngService rngService, INetplayManager netplayManager, IArcherService archerService, ILogger logger)
         {
             _webSocket = new ClientWebSocket();
             _rngService = rngService;
@@ -53,6 +54,7 @@ namespace TF.EX.Domain.Services
             cancellationToken = cancellationTokenSource.Token;
             cancellationTokenLobby = cancellationTokenSourceLobby.Token;
             _logger = logger;
+            _archerService = archerService;
         }
 
         public bool ConnectToServerAndListen()
@@ -367,6 +369,8 @@ namespace TF.EX.Domain.Services
                             break;
                         case PeerMessageType.Archer:
                             var archerMessage = peerMessage.Message.Split(':')[1];
+
+                            _archerService.AddArcher(1, archerMessage);
 
                             var splitted = archerMessage.Split('-');
 

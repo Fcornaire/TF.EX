@@ -119,10 +119,15 @@ namespace TF.EX.Domain.Services
                        _netplayManager.SetPlayersIndex((int)replay.Informations.PlayerDraw);
                        _netplayManager.UpdatePlayer2Name(replay.Informations.Archers.ToArray()[1].NetplayName);
 
-                       TFGame.Characters[0] = replay.Informations.Archers.ToArray()[0].Index; //TODO: number of players dependent
-                       TFGame.Characters[1] = replay.Informations.Archers.ToArray()[1].Index;
-                       TFGame.AltSelect[0] = (ArcherData.ArcherTypes)replay.Informations.Archers.ToArray()[0].Type;
-                       TFGame.AltSelect[1] = (ArcherData.ArcherTypes)replay.Informations.Archers.ToArray()[1].Type;
+                       var player1Index = replay.Informations.PlayerDraw == PlayerDraw.Player1 ? 0 : 1;
+                       var player2Index = replay.Informations.PlayerDraw == PlayerDraw.Player1 ? 1 : 0;
+
+                       var archers = replay.Informations.Archers.ToArray();
+
+                       TFGame.Characters[0] = archers[player1Index].Index; //TODO: number of players dependent
+                       TFGame.Characters[1] = archers[player2Index].Index;
+                       TFGame.AltSelect[0] = (ArcherData.ArcherTypes)archers[player1Index].Type;
+                       TFGame.AltSelect[1] = (ArcherData.ArcherTypes)archers[player2Index].Type;
 
                        currentReplayFrame = 0;
                        var firstRecord = replay.Record.First(rec => rec.GameState.Entities.Players.Count > 0);
@@ -239,7 +244,7 @@ namespace TF.EX.Domain.Services
             Loader.Message = $"LOADING REPLAYS... \n\n                {loaded}/{replays.Count}";
 
             //TODO: There should be a better way to load replays
-            await replays.ForEachAsync(3, async replay =>
+            await replays.ForEachAsync(4, async replay =>
             {
                 var replayPath = $"{REPLAYS_FOLDER}\\{replay}";
 

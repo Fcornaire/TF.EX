@@ -87,5 +87,6 @@ namespace TF.EX.Domain.Ports
         bool IsSyncing();
         ICollection<ArcherInfo> GetArchersInfo();
         Record GetLastRecord();
+        bool IsServerMode();
     }
 }
