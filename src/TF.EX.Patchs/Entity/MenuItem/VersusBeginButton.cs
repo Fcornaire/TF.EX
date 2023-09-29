@@ -14,6 +14,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
 
         private readonly IMatchmakingService _matchmakingService;
         private readonly INetplayManager _netplayManager;
+        private readonly IArcherService _archerService;
 
         private bool _isRegistering = false;
         private bool _isWaitingForPlayerChoice = false;
@@ -23,10 +24,11 @@ namespace TF.EX.Patchs.Entity.MenuItem
         private Dialog _dialog = null;
         private bool _hasError = false;
 
-        public VersusBeginButtonPatch(IMatchmakingService matchmakingService, INetplayManager netplayManager)
+        public VersusBeginButtonPatch(IMatchmakingService matchmakingService, INetplayManager netplayManager, IArcherService archerService)
         {
             _matchmakingService = matchmakingService;
             _netplayManager = netplayManager;
+            _archerService = archerService;
         }
 
         public void Load()
@@ -84,6 +86,8 @@ namespace TF.EX.Patchs.Entity.MenuItem
         private void VersusBeginButton_ctor(On.TowerFall.VersusBeginButton.orig_ctor orig, TowerFall.VersusBeginButton self, Vector2 position, Vector2 tweenFrom)
         {
             orig(self, position, tweenFrom);
+
+            _archerService.Reset();
 
             var hasConnected = _matchmakingService.ConnectToServerAndListen();
             if (!hasConnected)

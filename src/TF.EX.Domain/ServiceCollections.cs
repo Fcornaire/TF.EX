@@ -39,6 +39,7 @@ namespace TF.EX.Domain
             ServiceCollection.AddSingleton<IAutoUpdater, AutoUpdater>();
             ServiceCollection.AddSingleton<ILogger, Logger>();
 
+            //TODO: refactor , only game context should be registered as singleton
             ServiceCollection.AddSingleton<IGameContext, GameContext>();
             ServiceCollection.AddSingleton<INetplayManager, NetplayManager>();
             ServiceCollection.AddSingleton<IMatchmakingService, MatchmakingService>();

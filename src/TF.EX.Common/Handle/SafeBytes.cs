@@ -87,6 +87,12 @@ namespace TF.EX.Common.Handle
             }
 
             var json = Encoding.UTF8.GetString(bytes);
+
+            if (string.IsNullOrEmpty(json))
+            {
+                return default;
+            }
+
             return JsonSerializer.Deserialize<T>(json);
         }
 
