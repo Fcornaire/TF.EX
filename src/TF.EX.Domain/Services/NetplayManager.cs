@@ -83,6 +83,8 @@ namespace TF.EX.Domain.Services
                 if (_netplayMode != NetplayMode.Test && _netplayMode != NetplayMode.Replay)
                 {
                     Task.Run(async () =>
+                        {
+                            try
                             {
                                 using var handle = new SafeBytes<GGRSConfig>(GGRSConfig, false);
                                 GGRSFFI.IsInInit = true;
@@ -137,7 +139,10 @@ namespace TF.EX.Domain.Services
                                 }
 
                                 _logger.LogDebug<NetplayManager>($"Netplay session etablished with {_player2Name}");
+                                ServiceCollections.ResolveMatchmakingService().DisconnectFromServer();
                                 ServiceCollections.ResolveMatchmakingService().DisconnectFromLobby();
+
+                                _gameContext.ResetPlayersIndex();
 
                                 foreach ((var index, var archer_alt) in _archerService.GetFinalArchers())
                                 {
@@ -156,7 +161,14 @@ namespace TF.EX.Domain.Services
 
                                 roundLogic.Session.CurrentLevel.Add(new VersusStart(roundLogic.Session));
                                 dynRoundLogic.Set("Players", dynRoundLogic.Invoke("SpawnPlayersFFA"));
-                            }, _cancellationToken);
+                            }
+                            catch (Exception e)
+                            {
+                                _logger.LogError<NetplayManager>($"Error when initializing netplay session : {e.Message}");
+                                _hasFailedInitialConnection = true;
+                                TowerFall.Sounds.ui_invalid.Play();
+                            }
+                        }, _cancellationToken);
                 }
                 else
                 {

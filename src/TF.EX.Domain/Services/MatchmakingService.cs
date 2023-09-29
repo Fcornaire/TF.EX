@@ -322,7 +322,7 @@ namespace TF.EX.Domain.Services
                                 HandleLobbyMessage(data);
                             }
                         }
-                        await Task.Delay(10);
+                        await Task.Delay(TFGame.FrameTime);
                     }
                 }
                 catch (Exception e)

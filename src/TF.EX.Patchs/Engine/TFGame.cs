@@ -231,11 +231,6 @@ namespace TF.EX.Patchs.Engine
             if (!_netplayManager.GetNetplayMode().Equals(NetplayMode.Test))
             {
                 _netplayManager.Poll();
-
-                if (_netplayManager.IsSynchronized())
-                {
-                    _matchmakingService.DisconnectFromServer();
-                }
             }
 
             if (!_netplayManager.IsDisconnected())
