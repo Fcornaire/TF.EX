@@ -115,7 +115,7 @@ namespace TF.EX.Patchs.Engine
 
                 ReplayInputRenderers = null;
 
-                if (_netplayManager.IsInit() && !_netplayManager.IsTestMode())
+                if (!_netplayManager.IsTestMode())
                 {
                     _netplayManager.Reset();
                     ServiceCollections.PurgeCache();

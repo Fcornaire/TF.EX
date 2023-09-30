@@ -18,6 +18,7 @@ namespace TF.EX.Domain.Services
 {
     public class NetplayManager : INetplayManager
     {
+        //TODO: refactor this to only use native GGRSFFI
         private bool _isInit;
         private bool _isAttemptingToReconnect;
         private bool _isSyncing = false;
@@ -269,8 +270,6 @@ namespace TF.EX.Domain.Services
                 //    }
                 //}
             }
-
-            _events.ForEach(evt => _logger.LogDebug<NetplayManager>($"Event {DateTime.UtcNow} : {evt}"));
         }
 
         private void UpdateNetworkStats()
@@ -434,7 +433,7 @@ namespace TF.EX.Domain.Services
             _framesToReSimulate = frame;
         }
 
-        bool INetplayManager.IsInit()
+        public bool IsInit()
         {
             return _isInit && !IsDisconnected();
         }
@@ -524,44 +523,47 @@ namespace TF.EX.Domain.Services
 
         public void Reset()
         {
-            using var status = GGRSFFI.netplay_reset().ToModelGGrsFFI();
-
-            if (!status.IsOk)
+            if (_isInit)
             {
-                if (status.Info.AsString().Contains("No session found"))
+                using var status = GGRSFFI.netplay_reset().ToModelGGrsFFI();
+
+                if (!status.IsOk)
                 {
-                    _logger.LogError<NetplayManager>($"Netplay error when reseting : {status.Info.AsString()}, skipping netplay reset");
+                    if (status.Info.AsString().Contains("No session found"))
+                    {
+                        _logger.LogError<NetplayManager>($"Netplay error when reseting : {status.Info.AsString()}, skipping netplay reset");
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException($"Reset error : {status.Info.AsString()}");
+                    }
                 }
-                else
-                {
-                    throw new InvalidOperationException($"Reset error : {status.Info.AsString()}");
-                }
+
+                ServiceCollections.ResolveMatchmakingService().DisconnectFromServer();
+                ServiceCollections.ResolveMatchmakingService().DisconnectFromLobby();
+                ServiceCollections.ResolveSessionService().Reset();
+
+                _isInit = false;
+                _netplayRequests = new List<NetplayRequest>();
+                _events = new List<string>();
+                _framesToReSimulate = 0;
+                _networkStats = new NetworkStats();
+                _isRollbackFrame = false;
+                _framesAhead = 0;
+                _hasDesynch = false;
+                _isAttemptingToReconnect = false;
+                _isUpdating = false;
+                _gameContext.ResetPlayersIndex();
+
+                _cancellationTokenSource.Cancel();
+                GGRSFFI.IsInInit = false;
+                _cancellationTokenSource = new CancellationTokenSource();
+                _cancellationToken = _cancellationTokenSource.Token;
+
+                (var stateMachine, _) = ServiceCollections.ResolveStateMachineService();
+                stateMachine.Reset();
+                ServiceCollections.ResolveReplayService().Reset();
             }
-
-            ServiceCollections.ResolveMatchmakingService().DisconnectFromServer();
-            ServiceCollections.ResolveMatchmakingService().DisconnectFromLobby();
-            ServiceCollections.ResolveSessionService().Reset();
-
-            _isInit = false;
-            _netplayRequests = new List<NetplayRequest>();
-            _events = new List<string>();
-            _framesToReSimulate = 0;
-            _networkStats = new NetworkStats();
-            _isRollbackFrame = false;
-            _framesAhead = 0;
-            _hasDesynch = false;
-            _isAttemptingToReconnect = false;
-            _isUpdating = false;
-            _gameContext.ResetPlayersIndex();
-
-            _cancellationTokenSource.Cancel();
-            GGRSFFI.IsInInit = false;
-            _cancellationTokenSource = new CancellationTokenSource();
-            _cancellationToken = _cancellationTokenSource.Token;
-
-            (var stateMachine, _) = ServiceCollections.ResolveStateMachineService();
-            stateMachine.Reset();
-            ServiceCollections.ResolveReplayService().Reset();
         }
 
         public NetplayMeta GetNetplayMeta()
