@@ -32,6 +32,7 @@ namespace TF.EX.Patchs.Engine
         private readonly IReplayService _replayService;
         private readonly IMatchmakingService _matchmakingService;
         private readonly IAutoUpdater _autoUpdater;
+        private readonly ISyncTestUtilsService _syncTestUtilsService;
         private readonly ILogger _logger;
 
         private DateTime LastUpdate;
@@ -49,7 +50,9 @@ namespace TF.EX.Patchs.Engine
             IReplayService replayService,
             IMatchmakingService matchmakingService,
             IAutoUpdater autoUpdater,
-            ILogger logger)
+            ISyncTestUtilsService syncTestUtilsService,
+            ILogger logger
+            )
         {
             _netplayManager = netplayManager;
             _inputService = inputService;
@@ -57,6 +60,7 @@ namespace TF.EX.Patchs.Engine
             _matchmakingService = matchmakingService;
             _autoUpdater = autoUpdater;
             _logger = logger;
+            _syncTestUtilsService = syncTestUtilsService;
         }
 
         public void Load()
@@ -400,6 +404,12 @@ namespace TF.EX.Patchs.Engine
                         {
                             _replayService.AddRecord(gameState, _netplayManager.ShouldSwapPlayer());
                         }
+
+                        if (_netplayManager.IsTestMode())
+                        {
+                            _syncTestUtilsService.AddFrame(gameState.Frame, gameState);
+                        }
+
                         break;
                     case NetplayRequest.LoadGameState:
                         _netplayManager.SetIsRollbackFrame(true);
@@ -409,6 +419,12 @@ namespace TF.EX.Patchs.Engine
                         level.LoadState(gameStateToLoad);
                         _netplayManager.SetIsUpdating(false);
                         _replayService.RemovePredictedRecords(gameStateToLoad.Frame);
+
+                        if (_netplayManager.IsTestMode())
+                        {
+                            _syncTestUtilsService.Remove(gameStateToLoad.Frame);
+                        }
+
                         break;
                     case NetplayRequest.AdvanceFrame:
                         _netplayManager.AdvanceGameState();

@@ -48,6 +48,7 @@ namespace TF.EX.Domain
             ServiceCollection.AddSingleton<INetplayStateMachine, Netplay1V1DirectStateMachine>();
             ServiceCollection.AddSingleton<IReplayService, ReplayService>();
             ServiceCollection.AddSingleton<ISFXService, SFXService>();
+            ServiceCollection.AddSingleton<ISyncTestUtilsService, SyncTestUtilsService>();
 
             ServiceCollection.AddTransient<IInputService, InputService>();
             ServiceCollection.AddTransient<IArrowService, ArrowService>();

@@ -3,6 +3,7 @@ using MonoMod.Utils;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using TF.EX.Common.Extensions;
 using TF.EX.Common.Handle;
 using TF.EX.Domain.Context;
@@ -32,6 +33,7 @@ namespace TF.EX.Domain.Services
         private readonly IInputService _inputService;
         private readonly IGameContext _gameContext;
         private readonly IArcherService _archerService;
+        private readonly ISyncTestUtilsService _syncTestUtilsService;
         private readonly ILogger _logger;
 
         private List<string> _events;
@@ -49,6 +51,7 @@ namespace TF.EX.Domain.Services
             IInputService inputService,
             IGameContext gameContext,
             IArcherService archerService,
+            ISyncTestUtilsService syncTestUtilsService,
             ILogger logger)
         {
             _isInit = false;
@@ -67,6 +70,7 @@ namespace TF.EX.Domain.Services
             _inputService = inputService;
             _logger = logger;
             _archerService = archerService;
+            _syncTestUtilsService = syncTestUtilsService;
         }
 
         public void Init(TowerFall.RoundLogic roundLogic)
@@ -108,7 +112,7 @@ namespace TF.EX.Domain.Services
                                     }
                                     else
                                     {
-                                        throw new InvalidOperationException($"Init error : {status.Info.AsString()}");
+                                        throw new InvalidOperationException($"Init error : {info}");
                                     }
                                 }
 
@@ -290,16 +294,33 @@ namespace TF.EX.Domain.Services
 
             if (!status.IsOk)
             {
-                if (status.Info.AsString().Contains("Peer Disconnected!") || status.Info.AsString().Contains("No session found"))
+                var info = status.Info.AsString();
+
+                if (info.Contains("Peer Disconnected!") || info.Contains("No session found"))
                 {
-                    _logger.LogError<NetplayManager>($"Error when advancing frame : {status.Info.AsString()}");
+                    _logger.LogError<NetplayManager>($"Error when advancing frame : {info}");
 
                     return status;
                 }
-
-                if (!status.Info.AsString().Equals("PredictionThreshold"))
+                else if (info.Contains("Detected checksum mismatch"))
                 {
-                    throw new InvalidOperationException($"AdvanceFrame error : {status.Info.AsString()}");
+                    string mismatch = "";
+                    string patternToFindTheLastNumber = @"\b(\d+)\b";
+                    Match match = Regex.Match(info, patternToFindTheLastNumber);
+
+                    if (match.Success)
+                    {
+                        string lastNumber = match.Value;
+                        int frame = int.Parse(lastNumber);
+
+                        mismatch = $"\n\n {_syncTestUtilsService.Compare(frame)}";
+                    }
+
+                    throw new InvalidOperationException($"AdvanceFrame error : {info} {mismatch}");
+                }
+                else if (!info.Equals("PredictionThreshold"))
+                {
+                    throw new InvalidOperationException($"AdvanceFrame error : {info}");
                 }
             }
 
