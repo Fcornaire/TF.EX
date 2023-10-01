@@ -49,7 +49,6 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             var head = dynPlayer.Get<Monocle.Sprite<string>>("headSprite");
             var headBack = dynPlayer.Get<Monocle.Sprite<string>>("headBackSprite");
             var bow = dynPlayer.Get<Monocle.Sprite<string>>("bowSprite");
-            var wingsSprite = DynamicData.For(wings).Get<Monocle.Sprite<string>>("sprite");
 
             var playerAnimations = new PlayerAnimations
             {
@@ -58,7 +57,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 HeadBack = headBack != null ? headBack.GetState() : null,
                 Bow = bow.GetState(),
                 Shield = shield != null ? shield.GetState() : null,
-                Wings = wings != null ? wingsSprite.GetState() : null
+                Wings = wings != null ? wings.GetState() : null
             };
 
             var lastAimDirection = dynPlayer.Get<float>("lastAimDirection");
@@ -192,7 +191,8 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             dynPlayer.Set("DrawSelf", toLoad.ShouldDrawSelf);
             dynShield.Set("Active", toLoad.IsShieldVisible);
 
-            var dynWings = DynamicData.For(dynPlayer.Get<TowerFall.PlayerWings>("wings"));
+            var wings = dynPlayer.Get<TowerFall.PlayerWings>("wings");
+            var dynWings = DynamicData.For(wings);
             if (dynWings.Get<bool>("Visible") || dynWings.Get<bool>("Active"))
             {
                 TowerFall.Sounds.pu_wingFly.Stop();
@@ -274,9 +274,9 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             {
                 shield.LoadState(toLoad.Animations.Shield);
             }
-            if (wingsSprite != null)
+            if (wings != null)
             {
-                wingsSprite.LoadState(toLoad.Animations.Wings);
+                wings.LoadState(toLoad.Animations.Wings);
             }
 
             dynPlayer.Set("Cling", toLoad.Cling);

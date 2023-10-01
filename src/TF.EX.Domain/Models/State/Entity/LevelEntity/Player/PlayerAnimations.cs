@@ -7,6 +7,6 @@
         public Sprite<string> HeadBack { get; set; }
         public Sprite<string> Bow { get; set; }
         public PlayerShield Shield { get; set; }
-        public Sprite<string> Wings { get; set; }
+        public PlayerWings Wings { get; set; }
     }
 }
