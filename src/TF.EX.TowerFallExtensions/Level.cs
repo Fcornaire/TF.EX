@@ -134,6 +134,7 @@ namespace TF.EX.TowerFallExtensions
             gameState.ScreenOffset = TFGame.Instance.Screen.Offset.ToModel();
             gameState.AddOrbsState(self);
             gameState.AddLavaControlState(self);
+            gameState.AddBGTorches(self);
             gameState.Rng = rngService.Get();
             gameState.Frame = GGRSFFI.netplay_current_frame();
 
@@ -537,6 +538,9 @@ namespace TF.EX.TowerFallExtensions
             //Explosion load
             gameState.LoadExplosions(level);
 
+            //BGTorches load
+            gameState.LoadBGTorches(level);
+
             //Background load
             foreach (BackgroundElement toLoad in gameState.Layer.BackgroundElements.ToArray())
             {
@@ -880,6 +884,17 @@ namespace TF.EX.TowerFallExtensions
 
         }
 
+        private static void AddBGTorches(this GameState gameState, Level level)
+        {
+            var bgTorches = level.GetAll<TowerFall.BGTorch>().ToArray();
+
+            foreach (TowerFall.BGTorch torch in bgTorches)
+            {
+                var torchState = torch.GetState();
+                gameState.Entities.BGTorches.Add(torchState);
+            }
+        }
+
         private static void AddLayerState(this GameState gameState, Level level)
         {
             var sessionService = ServiceCollections.ResolveSessionService();
@@ -1092,6 +1107,25 @@ namespace TF.EX.TowerFallExtensions
                 cachedExplosion.LoadState(toLoad);
 
                 level.GetGameplayLayer().Entities.Insert(0, cachedExplosion);
+            }
+        }
+
+        private static void LoadBGTorches(this GameState gameState, Level level)
+        {
+            var gameBGTorches = level.GetAll<TowerFall.BGTorch>().ToArray();
+            if (gameBGTorches != null && gameBGTorches.Length > 0)
+            {
+                foreach (TowerFall.BGTorch torch in gameBGTorches)
+                {
+                    var dynTorch = DynamicData.For(torch);
+                    var actualDepth = dynTorch.Get<double>("actualDepth");
+
+                    var currentTorch = gameState.Entities.BGTorches.FirstOrDefault(cp => cp.ActualDepth == actualDepth);
+                    if (currentTorch != null)
+                    {
+                        torch.LoadState(currentTorch);
+                    }
+                }
             }
         }
 

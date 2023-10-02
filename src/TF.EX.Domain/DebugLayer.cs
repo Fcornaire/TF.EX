@@ -25,7 +25,7 @@ namespace TF.EX.Domain
         public override void Update()
         {
             base.Update();
-            if (MInput.Keyboard.Pressed(Microsoft.Xna.Framework.Input.Keys.F1))
+            if (MInput.Keyboard.Pressed(Microsoft.Xna.Framework.Input.Keys.F1) && (_netplayManager.IsReplayMode() || _netplayManager.IsTestMode()))
             {
                 Visible = !Visible;
             }
