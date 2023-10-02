@@ -18,6 +18,7 @@ namespace TF.EX.Domain.Models.State.Entity
         public ICollection<Orb> Orbs { get; set; } = new List<Orb>();
         public ICollection<CrackedPlatform> CrackedPlatforms { get; set; } = new List<CrackedPlatform>();
         public ICollection<Explosion> Explosions { get; set; } = new List<Explosion>();
+        public ICollection<BGTorch> BGTorches { get; set; } = new List<BGTorch>();
         public Spikeball Spikeball { get; set; } //TODO: are there map with multiple spikeballs?
 
         public LavaControl LavaControl { get; set; }

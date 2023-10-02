@@ -2,7 +2,7 @@
 using Monocle;
 using MonoMod.Utils;
 using TF.EX.Domain.Extensions;
-using TF.EX.TowerFallExtensions.MonocleExtensions;
+using TF.EX.TowerFallExtensions.ComponentExtensions;
 using TowerFall;
 
 namespace TF.EX.TowerFallExtensions

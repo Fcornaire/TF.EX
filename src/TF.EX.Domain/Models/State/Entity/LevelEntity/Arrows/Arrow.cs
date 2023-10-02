@@ -1,4 +1,6 @@
-﻿namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
+﻿using TF.EX.Domain.Models.State.Component;
+
+namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
 {
     public class Arrow
     {
@@ -21,6 +23,7 @@
         public bool HasUnhittableEntity { get; set; }
         public double ActualDepth { get; set; }
         public bool MarkedForRemoval { get; set; }
+        public FireControl FireControl { get; set; }
         public static Arrow EmptyArrow()
         {
             var arrow = new Arrow()

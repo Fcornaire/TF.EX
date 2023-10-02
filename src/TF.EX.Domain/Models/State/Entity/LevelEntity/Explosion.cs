@@ -1,4 +1,4 @@
-﻿using TF.EX.Domain.Models.State.Monocle;
+﻿using TF.EX.Domain.Models.State.Component;
 
 namespace TF.EX.Domain.Models.State.Entity.LevelEntity
 {

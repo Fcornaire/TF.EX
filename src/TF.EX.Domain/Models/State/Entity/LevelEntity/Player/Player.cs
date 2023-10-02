@@ -1,4 +1,6 @@
-﻿namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Player
+﻿using TF.EX.Domain.Models.State.Component;
+
+namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Player
 {
     public class Player
     {
@@ -20,6 +22,8 @@
         public float DodgeCatchCounter { get; set; }
         public float DyingCounter { get; set; }
         public float FlapBounceCounter { get; set; }
+        public Counter WingsFireCounter { get; set; }
+        public FireControl FireControl { get; set; }
         public DodgeSlide DodgeSlide { get; set; }
         public bool DodgeCooldown { get; set; }
         public Scheduler Scheduler { get; set; }

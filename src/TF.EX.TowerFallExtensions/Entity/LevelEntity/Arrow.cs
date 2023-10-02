@@ -3,6 +3,7 @@ using Monocle;
 using MonoMod.Utils;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows;
+using TF.EX.TowerFallExtensions.ComponentExtensions;
 
 namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 {
@@ -39,6 +40,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 IsFrozen = entity.Frozen,
                 IsVisible = entity.Visible,
                 MarkedForRemoval = entity.MarkedForRemoval,
+                FireControl = entity.Fire.GetState(),
                 Flash = new Domain.Models.State.Entity.LevelEntity.Flash
                 {
                     IsFlashing = entity.Flashing,
@@ -85,6 +87,9 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             dynArrow.Set("flashCounter", toLoad.Flash.FlashCounter);
             dynArrow.Set("flashInterval", toLoad.Flash.FlashInterval);
             dynArrow.Set("onFinish", () => { entity.RemoveSelf(); });
+
+            var fireControl = dynArrow.Get<TowerFall.FireControl>("Fire");
+            fireControl.LoadState(toLoad.FireControl);
 
             if (!toLoad.HasUnhittableEntity)
             {

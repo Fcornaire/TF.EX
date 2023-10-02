@@ -3,7 +3,7 @@ using Monocle;
 using MonoMod.Utils;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models.State.Entity.LevelEntity;
-using TF.EX.TowerFallExtensions.MonocleExtensions;
+using TF.EX.TowerFallExtensions.ComponentExtensions;
 
 namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 {

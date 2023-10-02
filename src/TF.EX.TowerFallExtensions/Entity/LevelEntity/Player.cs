@@ -5,6 +5,7 @@ using System.Reflection;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models.State.Entity.LevelEntity;
 using TF.EX.Domain.Models.State.Entity.LevelEntity.Player;
+using TF.EX.TowerFallExtensions.ComponentExtensions;
 using TF.EX.TowerFallExtensions.CompositeComponent;
 
 namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
@@ -61,6 +62,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             };
 
             var lastAimDirection = dynPlayer.Get<float>("lastAimDirection");
+            var wingsFireCounter = dynPlayer.Get<Counter>("wingsFireCounter");
 
             return new TF.EX.Domain.Models.State.Entity.LevelEntity.Player.Player
             {
@@ -84,6 +86,8 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 DodgeCatchCounter = dynPlayer.Get<Counter>("dodgeCatchCounter").Value,
                 DyingCounter = dynPlayer.Get<Counter>("dyingCounter").Value,
                 FlapBounceCounter = dynPlayer.Get<Counter>("flapBounceCounter").Value,
+                WingsFireCounter = wingsFireCounter.GetState(),
+                FireControl = entity.Fire.GetState(),
                 DodgeSlide = new DodgeSlide
                 {
                     IsDodgeSliding = entity.DodgeSliding,
@@ -166,6 +170,10 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             dyingCounter.Set("counter", toLoad.DyingCounter);
             var flapBounceCounter = DynamicData.For(dynPlayer.Get<Counter>("flapBounceCounter"));
             flapBounceCounter.Set("counter", toLoad.FlapBounceCounter);
+            var wingsFireCounter = dynPlayer.Get<Counter>("wingsFireCounter");
+            wingsFireCounter.LoadState(toLoad.WingsFireCounter);
+
+            entity.Fire.LoadState(toLoad.FireControl);
 
             dynPlayer.Set("DodgeSliding", toLoad.DodgeSlide.IsDodgeSliding);
             dynPlayer.Set("wasDodgeSliding", toLoad.DodgeSlide.WasDodgeSliding);
