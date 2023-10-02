@@ -2,6 +2,7 @@
 {
     public static class Constants //TODO: move ton Common project
     {
+        public static readonly int MAX_SFX_DELAY = 10;
         public static readonly int GAMEPLAY_LAYER = 0;
         public static readonly float INITIAL_END_COUNTER = 90.0f;
         public static readonly float DEFAULT_MIASMA_COUNTER = 1500.0f;

@@ -103,7 +103,7 @@ namespace TF.EX.Patchs.Scene
 
             if (!_netplayManager.HaveFramesToReSimulate() && _netplayManager.IsSynchronized())
             {
-                _sfxService.Synchronize((int)self.FrameCounter - 1, _netplayManager.IsTestMode());
+                _sfxService.Synchronize(GGRSFFI.netplay_current_frame(), _netplayManager.IsTestMode());
             }
 
             SkipLevelLoaderIfNeeded();

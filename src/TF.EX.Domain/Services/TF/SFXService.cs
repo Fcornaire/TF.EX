@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework.Audio;
+using System.Collections.Immutable;
 using TF.EX.Domain.Context;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models.State;
@@ -85,10 +86,6 @@ namespace TF.EX.Domain.Services.TF
                         if (toDel != null)
                         {
                             desiredSfxs.Remove(toDel);
-                            if (!_gameContext.HasSfxBeenPlayed(toDel))
-                            {
-                                _gameContext.AddPlayedSfx(sfx);
-                            }
                         }
                     }
                 }
@@ -109,7 +106,7 @@ namespace TF.EX.Domain.Services.TF
                 .ToList()
                 .ForEach(sfx =>
                 {
-                    if (!IsSfxSynchedToCurrent(sfx) && !_gameContext.HasSfxBeenPlayed(sfx) && sfx.Frame <= currentFrame && sfx.Frame >= _gameContext.GetLastRollbackFrame())
+                    if (!IsSfxSynchedToCurrent(sfx) && sfx.Frame <= currentFrame && sfx.Frame >= _gameContext.GetLastRollbackFrame())
                     {
                         var toPlay = sfx.ToSoundEffectInstance();
 
@@ -126,9 +123,21 @@ namespace TF.EX.Domain.Services.TF
                 });
         }
 
+        /// <summary>
+        /// Check if the sfx is already been played
+        /// </summary>
+        /// <param name="sfx"></param>
+        /// <returns></returns>
         private bool IsSfxSynchedToCurrent(SFX sfx)
         {
-            return _gameContext.GetCurrentSfxs().Any(curr => curr.Name == sfx.Name && sfx.Frame == curr.Frame);
+            var current = _gameContext.GetCurrentSfxs().Where(curr => curr.Name == sfx.Name).ToImmutableSortedDictionary(sfx => sfx.Frame, sfx => sfx).LastOrDefault().Value;
+
+            if (current == null)
+            {
+                return false;
+            }
+
+            return current.Frame + Constants.MAX_SFX_DELAY >= sfx.Frame;
         }
 
         public void Clear()
