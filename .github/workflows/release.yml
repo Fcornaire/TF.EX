@@ -65,7 +65,7 @@ jobs:
           type: "zip"
           filename: "TF.EX.zip"
           path: "./TF.EX"
-          exclusions: "**/*Mono* **/*.pdb **/xunit.** **/TF.EX.Utils.** **/DeepEqual.dll **/System.Collections.Immutable.dll"
+          exclusions: "**/*Mono* **/*.pdb **/xunit.** **/TF.EX.Utils.** **/DeepEqual.dll"
       - name: Upload Release
         uses: ncipollo/release-action@v1.12.0
         with:
