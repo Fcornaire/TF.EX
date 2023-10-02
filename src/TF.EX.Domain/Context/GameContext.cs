@@ -52,8 +52,6 @@ namespace TF.EX.Domain.Context
         void LoadDesiredSfx(IEnumerable<SFX> sFXes);
         void UpdateLastRollbackFrame(int frame);
         void AddSoundEffect(SoundEffect data, string filename);
-        void AddPlayedSfx(SoundEffectPlaying sfx);
-        bool HasSfxBeenPlayed(SFX sfx);
         void ClearDesiredSfx();
         IEnumerable<(int, string)> GetArchers();
         void AddArcher(int index, string archer_alt);
@@ -74,7 +72,6 @@ namespace TF.EX.Domain.Context
         private HUD _hudState;
         private ICollection<SFX> _desiredSfxs = new List<SFX>();
         private ICollection<SoundEffectPlaying> _currentSfxs = new List<SoundEffectPlaying>();
-        private ICollection<SoundEffectPlaying> _playedSfxs = new List<SoundEffectPlaying>();
         private Dictionary<string, SoundEffect> _soundEffects = new Dictionary<string, SoundEffect>();
         private Dictionary<int, string> ArcherSelections = new Dictionary<int, string>();
         private int _lastRollbackFrame = 0;
@@ -406,16 +403,6 @@ namespace TF.EX.Domain.Context
         public int GetLastRollbackFrame()
         {
             return _lastRollbackFrame;
-        }
-
-        public void AddPlayedSfx(SoundEffectPlaying sfx)
-        {
-            _playedSfxs.Add(sfx);
-        }
-
-        public bool HasSfxBeenPlayed(SFX sfx)
-        {
-            return _playedSfxs.Any(sfxPlayed => sfxPlayed.Name == sfx.Name && sfxPlayed.Frame == sfx.Frame);
         }
 
         public IEnumerable<(int, string)> GetArchers()
