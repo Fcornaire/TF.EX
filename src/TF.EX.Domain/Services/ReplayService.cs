@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using TF.EX.Common.Extensions;
 using TF.EX.Domain.Context;
+using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Models.State;
 using TF.EX.Domain.Ports;
@@ -66,10 +67,8 @@ namespace TF.EX.Domain.Services
             }
 
             replay.Informations.PlayerDraw = _netplayManager.GetPlayerDraw();
-            replay.Informations.Mode = Models.Modes.LastManStanding;
             replay.Informations.MatchLenght = FrameToTimestamp(replay.Record.Count);
             replay.Informations.Archers = _netplayManager.GetArchersInfo();
-            replay.Informations.Version = ServiceCollections.CurrentReplayVersion;
 
             var filename = $"{DateTime.UtcNow.ToString("dd'-'MM'-'yyy'T'HH'-'mm'-'ss")}.tow";
 
@@ -85,9 +84,9 @@ namespace TF.EX.Domain.Services
             _gameContext.ResetReplay();
         }
 
-        public void Initialize()
+        public void Initialize(Domain.Models.WebSocket.GameData gameData = null)
         {
-            _gameContext.InitializeReplay(MainMenu.VersusMatchSettings.LevelSystem.ID.X);
+            _gameContext.InitializeReplay(MainMenu.VersusMatchSettings.LevelSystem.ID.X, gameData);
         }
 
         public void RemovePredictedRecords(int frame)
@@ -139,6 +138,8 @@ namespace TF.EX.Domain.Services
                        }
 
                        MatchSettings matchSettings = new MatchSettings(GameData.VersusTowers[replay.Informations.Id].GetLevelSystem(), TowerFall.Modes.LastManStanding, MatchLengths.Standard);
+                       matchSettings.Variants.ApplyVariants(replay.Informations.Variants);
+                       matchSettings.MatchLength = (MatchSettings.MatchLengths)replay.Informations.VersusMatchLength;
                        MainMenu.VersusMatchSettings = matchSettings;
 
                        new TowerFall.Session(matchSettings).StartGame();

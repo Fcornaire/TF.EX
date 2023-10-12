@@ -1,15 +1,16 @@
 ﻿using Microsoft.Extensions.Logging;
+using MonoMod.Utils;
 using System.Diagnostics;
 using System.Net.WebSockets;
 using System.Text.Json;
 using TF.EX.Common.Extensions;
 using TF.EX.Common.Handle;
+using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Externals;
 using TF.EX.Domain.Models.WebSocket;
 using TF.EX.Domain.Models.WebSocket.Client;
 using TF.EX.Domain.Models.WebSocket.Server;
 using TF.EX.Domain.Ports;
-using TF.EX.Domain.Ports.TF;
 using TowerFall;
 
 namespace TF.EX.Domain.Services
@@ -18,26 +19,22 @@ namespace TF.EX.Domain.Services
     {
         private readonly string SERVER_URL = Config.SERVER;
         private string MATCHMAKING_URL => $"{SERVER_URL}/ws";
-        private string ROOM_URL => $"{SERVER_URL}/room";
 
         private ClientWebSocket _webSocket;
         private byte[] _buffer = new byte[1056];
-        private string _directCode = string.Empty;
-        private bool _hasDirectResponse = false;
-        private bool _hasMatched = false;
 
-        private bool _hasRegisteredForQuickPlay = false;
-        private bool _hasFoundOpponentForQuickPlay = false;
-        private bool _hasAcceptedOpponentInQuickPlay = false;
-        private bool _OpponentDeclined = false;
         private bool _isListening = false;
-        private int _totalAvailablePlayersInQuickPlayQueue = 0;
         private int _ping = 0;
         private Stopwatch _stopwatch = new Stopwatch();
         private Guid _opponentPeerId = Guid.Empty;
-        private bool _hasOpponentChoosed = false;
 
-        private readonly IRngService _rngService;
+        private ICollection<Lobby> _lobbies = null;
+        private Lobby ownLobby = new Lobby();
+        private string peerId = string.Empty;
+        private string roomChatPeerId = string.Empty;
+
+        private Dictionary<string, Action> onResult = new Dictionary<string, Action>();
+
         private readonly INetplayManager _netplayManager;
         private readonly IArcherService _archerService;
         private readonly ILogger _logger;
@@ -46,10 +43,9 @@ namespace TF.EX.Domain.Services
         private CancellationToken cancellationToken;
         private CancellationTokenSource cancellationTokenSourceLobby = new CancellationTokenSource();
         private CancellationToken cancellationTokenLobby;
-        public MatchmakingService(IRngService rngService, INetplayManager netplayManager, IArcherService archerService, ILogger logger)
+        public MatchmakingService(INetplayManager netplayManager, IArcherService archerService, ILogger logger)
         {
             _webSocket = new ClientWebSocket();
-            _rngService = rngService;
             _netplayManager = netplayManager;
             cancellationToken = cancellationTokenSource.Token;
             cancellationTokenLobby = cancellationTokenSourceLobby.Token;
@@ -86,8 +82,26 @@ namespace TF.EX.Domain.Services
                         while (!cancellationToken.IsCancellationRequested)
                         {
                             var segment = new ArraySegment<byte>(_buffer);
-                            var result = await _webSocket.ReceiveAsync(segment, cancellationToken);
-                            await HandleMessage(result);
+                            using (var ms = new MemoryStream())
+                            {
+                                WebSocketReceiveResult result;
+                                do
+                                {
+                                    result = await _webSocket.ReceiveAsync(segment, cancellationToken);
+                                    if (result.MessageType == WebSocketMessageType.Close)
+                                    {
+                                        await CloseAsync();
+                                        return;
+                                    }
+
+                                    ms.Write(_buffer, 0, result.Count);
+                                } while (!result.EndOfMessage);
+
+                                var data = ms.ToArray();
+                                var message = System.Text.Encoding.UTF8.GetString(data, 0, data.Length);
+
+                                HandleMessageContents(message);
+                            }
                         }
                     }
                 }
@@ -101,209 +115,230 @@ namespace TF.EX.Domain.Services
             return true;
         }
 
-        public void RegisterForDirect()
+        private async Task SendGetLobbies()
         {
-            Task.Run(async () =>
+            var getLobbiesMessage = new GetLobbiesMessage();
+
+            var message = JsonSerializer.Serialize(getLobbiesMessage);
+            await Send(message);
+        }
+
+        private async Task SendCreateLobby()
+        {
+            var createLobbyMessage = new CreateLobbyMessage
             {
-                EnsureConnection();
-                await SendRegisterMessage();
-            });
+                CreateLobby = new CreateLobby
+                {
+                    Lobby = ownLobby
+                }
+            };
+
+            var message = JsonSerializer.Serialize(createLobbyMessage);
+            await Send(message);
         }
 
-        public async Task<bool> SendOpponentCode(string text)
+        private async Task SendJoinLobby(string roomId)
         {
-            EnsureConnection();
-            await SendCode(text);
-
-            _hasDirectResponse = false;
-
-            while (!_hasDirectResponse)
+            var joinLobbyMessage = new JoinLobbyMessage
             {
-                await Task.Delay(500);
-            }
+                JoinLobby = new JoinLobby
+                {
+                    RoomId = roomId,
+                    Name = _netplayManager.GetNetplayMeta().Name
+                }
+            };
 
-            return _hasMatched;
+            var message = JsonSerializer.Serialize(joinLobbyMessage);
+            await Send(message);
         }
 
-
-        public string GetDirectCode()
+        private async Task SendUpdatePlayer(Models.WebSocket.Player player)
         {
-            return _directCode;
-        }
-
-        private async Task SendRegisterMessage()
-        {
-            var registerMessage = new RegisterDirectMessage();
-            registerMessage.RegisterDirect.Name = _netplayManager.GetNetplayMeta().Name;
-
-            var message = JsonSerializer.Serialize(registerMessage);
-            var segment = new ArraySegment<byte>(System.Text.Encoding.UTF8.GetBytes(message));
-            await _webSocket.SendAsync(segment, WebSocketMessageType.Binary, true, cancellationToken);
-        }
-
-        private async Task SendCode(string text)
-        {
-            var matchWithDirectMsg = new MatchWithDirectCodeMessage();
-            matchWithDirectMsg.MatchWithDirectCode.Code = text;
-            var message = JsonSerializer.Serialize(matchWithDirectMsg);
-            var segment = new ArraySegment<byte>(System.Text.Encoding.UTF8.GetBytes(message));
-            await _webSocket.SendAsync(segment, WebSocketMessageType.Binary, true, cancellationToken);
-        }
-
-        private async Task SendRegisterQuickPlayMessage()
-        {
-            var registerMessage = new RegisterQuickPlayMessage();
-            registerMessage.Register.Name = _netplayManager.GetNetplayMeta().Name;
-
-            var message = JsonSerializer.Serialize(registerMessage);
-            var segment = new ArraySegment<byte>(System.Text.Encoding.UTF8.GetBytes(message));
-            await _webSocket.SendAsync(segment, WebSocketMessageType.Binary, true, cancellationToken);
-        }
-
-        private async Task SendCancelQuickPlayMessage()
-        {
-            var cancelMessage = new CancelQuickPlayMessage();
-
-            var message = JsonSerializer.Serialize(cancelMessage);
-            var segment = new ArraySegment<byte>(System.Text.Encoding.UTF8.GetBytes(message));
-            await _webSocket.SendAsync(segment, WebSocketMessageType.Binary, true, cancellationToken);
-        }
-
-        private async Task SendAcceptQuickPlayMessage()
-        {
-            var acceptMessage = new AcceptQuickPlayMessage();
-
-            var message = JsonSerializer.Serialize(acceptMessage);
-            var segment = new ArraySegment<byte>(System.Text.Encoding.UTF8.GetBytes(message));
-            await _webSocket.SendAsync(segment, WebSocketMessageType.Binary, true, cancellationToken);
-        }
-
-        private async Task HandleMessage(WebSocketReceiveResult result)
-        {
-            switch (result.MessageType)
+            var updatePlayerMessage = new UpdatePlayerMessage
             {
-                case WebSocketMessageType.Text:
-                    break;
-                case WebSocketMessageType.Binary:
-                    var message = System.Text.Encoding.UTF8.GetString(_buffer, 0, result.Count);
-                    HandleMessageContents(message);
-                    break;
-                case WebSocketMessageType.Close:
-                    await CloseAsync();
-                    break;
-                default:
-                    break;
-            }
+                UpdatePlayer = new UpdatePlayer
+                {
+                    Player = player
+                }
+            };
+
+            var message = JsonSerializer.Serialize(updatePlayerMessage);
+            await Send(message);
         }
+
+        private async Task SendLeaveLobby()
+        {
+            var leaveLobbyMessage = new LeaveLobbyMessage { };
+
+            var message = JsonSerializer.Serialize(leaveLobbyMessage);
+            await Send(message);
+        }
+
+        private async Task Send(string msg)
+        {
+            var segment = new ArraySegment<byte>(System.Text.Encoding.UTF8.GetBytes(msg));
+            await _webSocket.SendAsync(segment, WebSocketMessageType.Binary, true, cancellationToken);
+        }
+
 
         private void HandleMessageContents(string message)
         {
-            if (message.Contains("RegisterDirectResponse"))
+            if (message.Contains("GetLobbiesResponse"))
             {
-                var registerResponse = JsonSerializer.Deserialize<RegisterDirectResponseMessage>(message);
+                var response = JsonSerializer.Deserialize<GetLobbiesResponseMessage>(message);
+                _lobbies = response.GetLobbiesResponse.Lobbies;
+                onResult["GetLobbiesResponse-success"]();
+            }
 
-                if (registerResponse.RegisterDirectResponse.Success)
+            if (message.Contains("CreateLobbyResponse"))
+            {
+                var response = JsonSerializer.Deserialize<CreateLobbyResponseMessage>(message);
+                if (response.CreateLobbyResponse.Success)
                 {
-                    _directCode = registerResponse.RegisterDirectResponse.Code;
+                    _logger.LogDebug<MatchmakingService>("Lobby created!");
+                    ownLobby = response.CreateLobbyResponse.Lobby;
+                    onResult["CreateLobbyResponse-success"]();
                 }
                 else
                 {
-                    throw new InvalidOperationException("Registering to server failed");
+                    _logger.LogDebug<MatchmakingService>($"Lobby creation failed! : {response.CreateLobbyResponse.Message}");
+                    onResult["CreateLobbyResponse-fail"]();
                 }
-            }
+            };
 
-            if (message.Contains("MatchWithDirectCodeResponse"))
+            if (message.Contains("JoinLobbyResponse"))
             {
-                var matchResponse = JsonSerializer.Deserialize<MatchWithDirectCodeResponseMessage>(message);
-                if (matchResponse.MatchWithDirectCodeResponse.Success)
+                var response = JsonSerializer.Deserialize<JoinLobbyResponseMessage>(message);
+                if (response.JoinLobbyResponse.Success)
                 {
-                    _hasMatched = true;
+                    _logger.LogDebug<MatchmakingService>("Lobby joined!");
 
-                    var roomUrl = $"{ROOM_URL}/{matchResponse.MatchWithDirectCodeResponse.RoomId}";
-                    var roomChatUrl = $"{ROOM_URL}/{matchResponse.MatchWithDirectCodeResponse.RoomChatId}";
+                    peerId = response.JoinLobbyResponse.RoomPeerId.ToString();
+                    roomChatPeerId = response.JoinLobbyResponse.RoomChatPeerId.ToString();
 
-                    _netplayManager.SetRoomAndServerMode(roomUrl);
-                    ConnectAndListenToLobby(roomChatUrl);
-
-                    _rngService.SetSeed(matchResponse.MatchWithDirectCodeResponse.Seed);
-                    _netplayManager.UpdatePlayer2Name(matchResponse.MatchWithDirectCodeResponse.OpponentName);
+                    onResult["JoinLobbyResponse-success"]();
                 }
                 else
                 {
-                    throw new InvalidOperationException("Matching with direct code failed");
+                    _logger.LogDebug<MatchmakingService>($"Lobby join failed! : {response.JoinLobbyResponse.Message}");
+                    onResult["JoinLobbyResponse-fail"]();
                 }
+            };
 
-                _hasDirectResponse = true;
+            if (message.Contains("LobbyUpdate"))
+            {
+                _logger.LogDebug<MatchmakingService>("Lobby updated!");
+
+                var response = JsonSerializer.Deserialize<LobbyUpdateMessage>(message);
+
+                var lobby = response.LobbyUpdate.Lobby;
+
+                HandleLobbyUpdate(lobby);
             }
 
-            if (message.Contains("RegisterQuickPlayResponse"))
+            if (message.Contains("LeaveLobbyResponse"))
             {
-                var registerResponse = JsonSerializer.Deserialize<RegisterQuickPlayResponseMessage>(message);
-
-                if (registerResponse.RegisterQuickPlayResponse.Success)
+                var response = JsonSerializer.Deserialize<LeaveLobbyResponseMessage>(message);
+                if (response.LeaveLobbyResponse.Success)
                 {
-                    _hasRegisteredForQuickPlay = registerResponse.RegisterQuickPlayResponse.Success;
+                    _logger.LogDebug<MatchmakingService>("Lobby left!");
+                    onResult["LeaveLobbyResponse-success"]();
                 }
                 else
                 {
-                    throw new InvalidOperationException("Registering to server failed");
+                    _logger.LogDebug<MatchmakingService>($"Lobby leave failed! : {response.LeaveLobbyResponse.Message}");
+                    onResult["LeaveLobbyResponse-fail"]();
                 }
-            }
-
-            if (message.Contains("QuickPlayPossibleMatch"))
-            {
-                if (!_hasFoundOpponentForQuickPlay)
-                {
-                    _OpponentDeclined = false;
-                    var matchResponse = JsonSerializer.Deserialize<QuickPlayPossibleMatchMessage>(message);
-
-                    var roomUrl = $"{ROOM_URL}/{matchResponse.QuickPlayPossibleMatch.RoomId}";
-                    var roomChatUrl = $"{ROOM_URL}/{matchResponse.QuickPlayPossibleMatch.RoomChatId}";
-
-                    _netplayManager.SetRoomAndServerMode(roomUrl);
-                    ConnectAndListenToLobby(roomChatUrl);
-
-                    _netplayManager.UpdatePlayer2Name(matchResponse.QuickPlayPossibleMatch.OpponentName);
-                    _hasFoundOpponentForQuickPlay = true;
-                }
-            }
-
-            if (message.Contains("AcceptQuickPlayResponse"))
-            {
-                var matchResponse = JsonSerializer.Deserialize<AcceptQuickPlayResponseMessage>(message);
-
-                if (matchResponse.AcceptQuickPlayResponse.Success)
-                {
-                    _hasMatched = true;
-                    _rngService.SetSeed(matchResponse.AcceptQuickPlayResponse.Seed);
-                    _netplayManager.UpdatePlayer2Name(matchResponse.AcceptQuickPlayResponse.OpponentName);
-                    _hasAcceptedOpponentInQuickPlay = true;
-                }
-                else
-                {
-                    _logger.LogDebug<MatchmakingService>("Accepting opponent on quick play failed. (Probably a decline)");
-                    _hasFoundOpponentForQuickPlay = false;
-                    _OpponentDeclined = true;
-                    _ping = 0;
-                }
-            }
-
-            if (message.Contains("DeniedQuickPlay"))
-            {
-                DisconnectFromLobby();
-                _hasFoundOpponentForQuickPlay = false;
-                _OpponentDeclined = true;
-            }
-
-            if (message.Contains("TotalAvailablePlayersInQuickPlayQueue"))
-            {
-                var response = JsonSerializer.Deserialize<TotalAvailablePlayersInQuickPlayQueueMessage>(message);
-                _totalAvailablePlayersInQuickPlayQueue = response.TotalAvailablePlayersInQuickPlayQueue.Total;
             }
         }
 
+        private void HandleLobbyUpdate(Lobby lobby)
+        {
+            Sounds.ui_altCostumeShift.Play();
 
-        private void ConnectAndListenToLobby(string roomUrl)
+            //Leave if host left
+            if (!lobby.Players.Any(pl => pl.IsHost))
+            {
+                if (TFGame.Instance.Scene is MainMenu)
+                {
+                    (TFGame.Instance.Scene as MainMenu).State = Domain.Models.MenuState.LobbyBrowser.ToTFModel();
+                }
+                ResetPeer();
+                DisconnectFromLobby();
+                return;
+            }
+
+            var scene = TFGame.Instance.Scene;
+
+            var rollCalls = scene.Layers.SelectMany(layer => layer.Value.Entities)
+                .Where(ent => ent is RollcallElement).Select(ent => ent as RollcallElement);
+
+            if (TFGame.Instance.Scene is MainMenu && (TFGame.Instance.Scene as MainMenu).State == MainMenu.MenuState.Rollcall && rollCalls.Any())
+            {
+                int playerIndex = 1;
+                foreach (var player in lobby.Players.Where(pl => pl.RoomChatPeerId != roomChatPeerId))
+                {
+                    var rollCall = rollCalls.First(rc =>
+                    {
+                        var dyn = DynamicData.For(rc);
+                        var index = dyn.Get<int>("playerIndex");
+
+                        return index == playerIndex;
+                    });
+
+                    var dynRollCall = DynamicData.For(rollCall);
+                    Monocle.StateMachine state = dynRollCall.Get<Monocle.StateMachine>("state");
+
+                    if (player.Ready)
+                    {
+                        if (state.State == 0)
+                        {
+                            TFGame.Characters[playerIndex] = player.ArcherIndex;
+                            TFGame.AltSelect[playerIndex] = (ArcherData.ArcherTypes)player.ArcherAltIndex;
+                            _archerService.AddArcher(playerIndex, player);
+
+                            state.State = 1;
+                        }
+                    }
+                    else
+                    {
+                        if (state.State == 1)
+                        {
+                            _archerService.RemoveArcher(playerIndex);
+
+                            var portrait = dynRollCall.Get<ArcherPortrait>("portrait");
+                            portrait.Leave();
+                            TFGame.Players[playerIndex] = false;
+
+                            state.State = 0;
+                        }
+                    }
+
+                    playerIndex++;
+                }
+            }
+
+            //True for 2 player...
+            if (lobby.Players.Count == 1)
+            {
+                //This is to trigger portrait update on disconnected player
+                foreach (var rollCall in rollCalls)
+                {
+                    rollCall.HandleControlChange();
+                }
+            }
+
+
+            UpdateOwnLobby(lobby);
+        }
+
+        public void ResetPeer()
+        {
+            roomChatPeerId = "";
+            peerId = "";
+        }
+
+        public void ConnectAndListenToLobby(string roomUrl)
         {
             MatchboxClientFFI.initialize(roomUrl);
 
@@ -329,7 +364,6 @@ namespace TF.EX.Domain.Services
                 {
                     _logger.LogError<MatchmakingService>($"Error when listenning to opponent message", e);
                     DisconnectFromLobby();
-                    _OpponentDeclined = true;
                 }
             }, cancellationTokenLobby);
 
@@ -344,14 +378,14 @@ namespace TF.EX.Domain.Services
                     switch (peerMessage.Type)
                     {
                         case PeerMessageType.Ping:
-                            if (_opponentPeerId == null)
+                            if (_opponentPeerId == Guid.Empty)
                             {
                                 _opponentPeerId = peerMessage.PeerId;
                             }
                             MatchboxClientFFI.send_message(PeerMessageType.Pong.ToString(), peerMessage.PeerId.ToString());
                             break;
                         case PeerMessageType.Pong:
-                            if (_opponentPeerId == null)
+                            if (_opponentPeerId == Guid.Empty)
                             {
                                 _opponentPeerId = peerMessage.PeerId;
                             }
@@ -368,33 +402,6 @@ namespace TF.EX.Domain.Services
 
                             break;
                         case PeerMessageType.Archer:
-                            var archerMessage = peerMessage.Message.Split(':')[1];
-
-                            _archerService.AddArcher(1, archerMessage);
-
-                            var splitted = archerMessage.Split('-');
-
-                            Enum.TryParse(splitted[1], out ArcherData.ArcherTypes alt);
-
-                            var archer = int.Parse(splitted[0]);
-                            TFGame.Characters[1] = archer;
-                            TFGame.AltSelect[1] = alt;
-
-                            if (archer == TFGame.Characters[0])
-                            {
-                                if (TFGame.AltSelect[1] == ArcherData.ArcherTypes.Alt)
-                                {
-                                    TFGame.AltSelect[0] = ArcherData.ArcherTypes.Normal;
-                                }
-
-                                if (TFGame.AltSelect[1] == ArcherData.ArcherTypes.Normal)
-                                {
-                                    TFGame.AltSelect[0] = ArcherData.ArcherTypes.Alt;
-                                }
-                            }
-
-                            _hasOpponentChoosed = true;
-
                             break;
                         case PeerMessageType.Greetings:
                             _opponentPeerId = peerMessage.PeerId;
@@ -411,56 +418,7 @@ namespace TF.EX.Domain.Services
             {
                 _logger.LogError<MatchmakingService>($"Error when handling opponent msg", e);
                 DisconnectFromLobby();
-                _OpponentDeclined = true;
             }
-        }
-
-        public void RegisterForQuickPlay()
-        {
-            if (!_hasRegisteredForQuickPlay)
-            {
-                Task.Run(async () =>
-                {
-                    try
-                    {
-                        EnsureConnection();
-                        await SendRegisterQuickPlayMessage();
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogError<MatchmakingService>($"Error when registering for quick play", e);
-                    }
-                });
-            }
-        }
-
-        public void AcceptOpponentInQuickPlay()
-        {
-            Task.Run(async () =>
-            {
-                EnsureConnection();
-                await SendAcceptQuickPlayMessage();
-            });
-        }
-
-        public bool HasRegisteredForQuickPlay()
-        {
-            return _hasRegisteredForQuickPlay;
-        }
-
-        public bool HasFoundOpponentForQuickPlay()
-        {
-            return _hasFoundOpponentForQuickPlay;
-        }
-
-        public void CancelQuickPlay()
-        {
-            Task.Run(async () =>
-            {
-                EnsureConnection();
-                await SendCancelQuickPlayMessage();
-            }).GetAwaiter().GetResult();
-
         }
 
         /// <summary>
@@ -469,7 +427,6 @@ namespace TF.EX.Domain.Services
         /// <returns></returns>
         public async Task CloseAsync()
         {
-
             cancellationTokenSource.Cancel();
             cancellationTokenSource = new CancellationTokenSource();
             cancellationToken = cancellationTokenSource.Token;
@@ -482,22 +439,12 @@ namespace TF.EX.Domain.Services
             Reset();
         }
 
-        public bool HasAcceptedOpponentForQuickPlay()
-        {
-            return _hasAcceptedOpponentInQuickPlay;
-        }
-
         private void EnsureConnection()
         {
             if (_webSocket.State != WebSocketState.Open)
             {
                 ConnectToServerAndListen();
             }
-        }
-
-        public bool HasOpponentDeclined()
-        {
-            return _OpponentDeclined;
         }
 
         public void DisconnectFromServer()
@@ -507,21 +454,10 @@ namespace TF.EX.Domain.Services
 
         private void Reset()
         {
-            _hasDirectResponse = false;
-            _hasMatched = false;
-            _hasFoundOpponentForQuickPlay = false;
-            _hasAcceptedOpponentInQuickPlay = false;
-            _hasOpponentChoosed = false;
-            _OpponentDeclined = false;
-            _hasRegisteredForQuickPlay = false;
             _isListening = false;
             _stopwatch.Reset();
+            _opponentPeerId = Guid.Empty;
             _ping = 0;
-        }
-
-        public int GetTotalAvailablePlayersInQuickPlayQueue()
-        {
-            return _totalAvailablePlayersInQuickPlayQueue;
         }
 
         public bool IsConnectedToServer()
@@ -529,6 +465,7 @@ namespace TF.EX.Domain.Services
             return _webSocket.State == WebSocketState.Open;
         }
 
+        //TODO: refactor to handle multiple opponent
         public int GetPingToOpponent()
         {
             return _ping;
@@ -539,11 +476,6 @@ namespace TF.EX.Domain.Services
             return _opponentPeerId;
         }
 
-        public bool HasOpponentChoosed()
-        {
-            return _hasOpponentChoosed;
-        }
-
         public void DisconnectFromLobby()
         {
             MatchboxClientFFI.disconnect();
@@ -552,6 +484,135 @@ namespace TF.EX.Domain.Services
             cancellationTokenLobby = cancellationTokenSourceLobby.Token;
             _ping = 0;
             _stopwatch.Reset();
+            _opponentPeerId = Guid.Empty;
+        }
+
+        public async Task RetrieveLobbies(Action onSuccess)
+        {
+            if (onResult.ContainsKey("GetLobbiesResponse-success"))
+            {
+                onResult["GetLobbiesResponse-success"] = onSuccess;
+            }
+            else
+            {
+                onResult.Add("GetLobbiesResponse-success", onSuccess);
+            }
+
+            EnsureConnection();
+            _lobbies = null;
+            await SendGetLobbies();
+        }
+
+        public IEnumerable<Lobby> GetLobbies()
+        {
+            return _lobbies;
+        }
+
+
+
+        public Lobby GetOwnLobby()
+        {
+            return ownLobby;
+        }
+
+        public void UpdateOwnLobby(Domain.Models.WebSocket.Lobby lobby)
+        {
+            ownLobby = new Lobby
+            {
+                Name = lobby.Name,
+                RoomId = lobby.RoomId,
+                RoomChatId = lobby.RoomChatId,
+                Players = lobby.Players,
+                GameData = lobby.GameData
+            };
+        }
+
+        public async Task CreateLobby(Action onSucess, Action onFail)
+        {
+            if (onResult.ContainsKey("CreateLobbyResponse-success"))
+            {
+                onResult["CreateLobbyResponse-success"] = onSucess;
+            }
+            else
+            {
+                onResult.Add("CreateLobbyResponse-success", onSucess);
+            }
+
+            if (onResult.ContainsKey("CreateLobbyResponse-fail"))
+            {
+                onResult["CreateLobbyResponse-fail"] = onFail;
+            }
+            else
+            {
+                onResult.Add("CreateLobbyResponse-fail", onFail);
+            }
+
+            EnsureConnection();
+            await SendCreateLobby();
+        }
+
+        public async Task JoinLobby(string roomId, Action onSucess, Action onFail)
+        {
+            if (onResult.ContainsKey("JoinLobbyResponse-success"))
+            {
+                onResult["JoinLobbyResponse-success"] = onSucess;
+            }
+            else
+            {
+                onResult.Add("JoinLobbyResponse-success", onSucess);
+            }
+
+            if (onResult.ContainsKey("JoinLobbyResponse-fail"))
+            {
+                onResult["JoinLobbyResponse-fail"] = onFail;
+            }
+            else
+            {
+                onResult.Add("JoinLobbyResponse-fail", onFail);
+            }
+
+            EnsureConnection();
+            await SendJoinLobby(roomId);
+        }
+
+        public string GetRoomChatPeerId()
+        {
+            return roomChatPeerId;
+        }
+
+        public async Task UpdatePlayer(Models.WebSocket.Player player)
+        {
+            EnsureConnection();
+            await SendUpdatePlayer(player);
+        }
+
+        public async Task LeaveLobby(Action onSucess, Action onFail)
+        {
+            if (onResult.ContainsKey("LeaveLobbyResponse-success"))
+            {
+                onResult["LeaveLobbyResponse-success"] = onSucess;
+            }
+            else
+            {
+                onResult.Add("LeaveLobbyResponse-success", onSucess);
+            }
+
+            if (onResult.ContainsKey("LeaveLobbyResponse-fail"))
+            {
+                onResult["LeaveLobbyResponse-fail"] = onFail;
+            }
+            else
+            {
+                onResult.Add("LeaveLobbyResponse-fail", onFail);
+            }
+
+            EnsureConnection();
+            await SendLeaveLobby();
+        }
+
+        public bool IsLobbyReady()
+        {
+            return ownLobby.Players.Count >= 2 && ownLobby.Players.All(pl => pl.Ready);
         }
     }
 }

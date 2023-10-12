@@ -1,4 +1,5 @@
 ﻿using MonoMod.Utils;
+using TF.EX.Domain.Extensions;
 using TowerFall;
 
 namespace TF.EX.Patchs.Entity
@@ -17,7 +18,10 @@ namespace TF.EX.Patchs.Entity
 
         private void ScreenTitle_ChangeState(On.TowerFall.ScreenTitle.orig_ChangeState orig, TowerFall.ScreenTitle self, TowerFall.MainMenu.MenuState state)
         {
-            if (state == (MainMenu.MenuState)18)
+            var currentState = state.ToDomainModel();
+            if (currentState == Domain.Models.MenuState.ReplaysBrowser
+                || currentState == Domain.Models.MenuState.LobbyBrowser
+                || currentState == Domain.Models.MenuState.LobbyBuilder)
             {
                 var dynScreenTitle = DynamicData.For(self);
                 dynScreenTitle.Set("targetTexture", TFGame.MenuAtlas["menuTitles/fight"]);

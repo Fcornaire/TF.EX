@@ -9,35 +9,38 @@ using TowerFall;
 
 namespace TF.EX.Core.RoundLogic
 {
-    //TODO: Refactor this class to a Netplay1v1RoundLogic
-    [CustomRoundLogic("Netplay1v1QuickPlayRoundLogic")]
-    public class Netplay1v1QuickPlayRoundLogic : CustomVersusRoundLogic
+    [CustomRoundLogic("Netplay")]
+    internal class Netplay : CustomVersusRoundLogic
     {
+        private readonly INetplayManager netplayManager;
+        private readonly IInputService inputInputService;
+        private readonly IReplayService replayService;
+        private readonly IMatchmakingService matchmakingService;
+        private readonly ILogger logger;
+        private TowerFall.Modes mode;
+
         private RoundEndCounter roundEndCounter;
 
         private bool done;
 
         private bool wasFinalKill;
 
-        private readonly INetplayManager _netplayManager;
-        private readonly IInputService _inputInputService;
-        private readonly IReplayService _replayService;
-        private readonly ILogger _logger;
-
-        public Netplay1v1QuickPlayRoundLogic(Session session, bool canHaveMiasma) : base(session, true)
+        public Netplay(Session session, bool canHaveMiasma) : base(session, true)
         {
             roundEndCounter = new RoundEndCounter(session);
-            _netplayManager = ServiceCollections.ResolveNetplayManager();
-            _inputInputService = ServiceCollections.ResolveInputService();
-            _replayService = ServiceCollections.ResolveReplayService();
-            _logger = ServiceCollections.ResolveLogger();
+            netplayManager = ServiceCollections.ResolveNetplayManager();
+            inputInputService = ServiceCollections.ResolveInputService();
+            replayService = ServiceCollections.ResolveReplayService();
+            matchmakingService = ServiceCollections.ResolveMatchmakingService();
+            logger = ServiceCollections.ResolveLogger();
+            mode = TowerFall.Modes.LastManStanding;
         }
 
         public static RoundLogicInfo Create()
         {
             return new RoundLogicInfo
             {
-                Name = "Netplay Quickplay",
+                Name = "Netplay",
                 Icon = TFEXModModule.Atlas["gameModes/netplay"],
                 RoundType = RoundLogicType.FFA,
             };
@@ -47,11 +50,14 @@ namespace TF.EX.Core.RoundLogic
         {
             base.OnLevelLoadFinish();
 
-            if (!_netplayManager.IsInit())
+            if (!netplayManager.IsInit())
             {
-                _logger.LogDebug<Netplay1v1QuickPlayRoundLogic>("Configuring and initializing current netplay session");
-                _netplayManager.Init(this);
-                _replayService.Initialize();
+                logger.LogDebug<Netplay>("Configuring and initializing current netplay session");
+                netplayManager.Init(this);
+
+                var lobby = matchmakingService.GetOwnLobby();
+                replayService.Initialize(lobby.GameData);
+                mode = (TowerFall.Modes)lobby.GameData.Mode;
 
                 TowerFall.TFGame.ConsoleEnabled = false;
             }
@@ -70,8 +76,21 @@ namespace TF.EX.Core.RoundLogic
 
         public override void OnUpdate()
         {
-            SessionStats.TimePlayed += Engine.DeltaTicks;
             base.OnUpdate();
+
+            switch (mode)
+            {
+                case TowerFall.Modes.LastManStanding:
+                    HandleLastManStandingUpdate();
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        private void HandleLastManStandingUpdate()
+        {
+            SessionStats.TimePlayed += Engine.DeltaTicks;
             if (!base.RoundStarted || done || !base.Session.CurrentLevel.Ending || !base.Session.CurrentLevel.CanEnd)
             {
                 return;
@@ -88,15 +107,15 @@ namespace TF.EX.Core.RoundLogic
             {
                 var playerIndex = base.Session.CurrentLevel.Player.PlayerIndex;
 
-                if (_netplayManager.ShouldSwapPlayer())
+                if (netplayManager.ShouldSwapPlayer())
                 {
                     if (playerIndex == 0)
                     {
-                        AddScore(_inputInputService.GetLocalPlayerInputIndex(), 1);
+                        AddScore(inputInputService.GetLocalPlayerInputIndex(), 1);
                     }
                     else
                     {
-                        AddScore(_inputInputService.GetRemotePlayerInputIndex(), 1);
+                        AddScore(inputInputService.GetRemotePlayerInputIndex(), 1);
                     }
                 }
                 else
@@ -112,6 +131,20 @@ namespace TF.EX.Core.RoundLogic
         public override void OnPlayerDeath(Player player, PlayerCorpse corpse, int playerIndex, DeathCause deathType, Vector2 position, int killerIndex)
         {
             base.OnPlayerDeath(player, corpse, playerIndex, deathType, position, killerIndex);
+
+            switch (mode)
+            {
+                case TowerFall.Modes.LastManStanding:
+                    HandleLastManStandingPlayerDeath(player, corpse, playerIndex, deathType, position, killerIndex);
+                    break;
+                default:
+                    break;
+            }
+
+        }
+
+        public void HandleLastManStandingPlayerDeath(Player player, PlayerCorpse corpse, int playerIndex, DeathCause deathType, Vector2 position, int killerIndex)
+        {
             if (wasFinalKill && base.Session.CurrentLevel.LivingPlayers == 0)
             {
                 CancelFinalKill();
@@ -133,15 +166,15 @@ namespace TF.EX.Core.RoundLogic
                     }
                 }
 
-                if (_netplayManager.ShouldSwapPlayer())
+                if (netplayManager.ShouldSwapPlayer())
                 {
                     if (num == 0)
                     {
-                        num = _inputInputService.GetLocalPlayerInputIndex();
+                        num = inputInputService.GetLocalPlayerInputIndex();
                     }
                     else
                     {
-                        num = _inputInputService.GetRemotePlayerInputIndex();
+                        num = inputInputService.GetRemotePlayerInputIndex();
                     }
                 }
 

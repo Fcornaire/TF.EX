@@ -1,5 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Monocle;
+using TF.EX.Domain.Extensions;
+using TF.EX.Domain.Models;
 using TowerFall;
 
 namespace TF.EX.Domain.CustomComponent
@@ -58,7 +60,7 @@ namespace TF.EX.Domain.CustomComponent
 
         protected override void MenuAction()
         {
-            base.MainMenu.State = (MainMenu.MenuState)18;
+            base.MainMenu.State = MenuState.ReplaysBrowser.ToTFModel();
         }
 
         public override void Render()

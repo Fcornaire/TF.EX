@@ -27,6 +27,11 @@ namespace TF.EX.Domain.Models
         public IEnumerable<ArcherInfo> Archers { get; set; } = Enumerable.Empty<ArcherInfo>();
 
         public TimeSpan MatchLenght { get; set; } = TimeSpan.Zero;
+
+        public int VersusMatchLength { get; set; } = 2;
+
+        public ICollection<string> Variants { get; set; } = new List<string>();
+
     }
 
     public class ArcherInfo
@@ -51,7 +56,8 @@ namespace TF.EX.Domain.Models
     {
         Unknown,
         V1,
-        V2 //changed input struct to use int instead of bool
+        V2, //changed input struct to use int instead of bool
+        V3, //added variants
     }
 
     public enum ArcherTypes

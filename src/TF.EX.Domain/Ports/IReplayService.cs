@@ -1,11 +1,12 @@
 ﻿using TF.EX.Domain.Models;
 using TF.EX.Domain.Models.State;
+using TF.EX.Domain.Models.WebSocket;
 
 namespace TF.EX.Domain.Ports
 {
     public interface IReplayService
     {
-        void Initialize();
+        void Initialize(GameData gameData = null);
 
         void AddRecord(GameState gameState, bool shouldSwapPlayer);
         void RemovePredictedRecords(int frame);

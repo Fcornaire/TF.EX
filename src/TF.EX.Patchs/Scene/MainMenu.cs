@@ -6,6 +6,7 @@ using TF.EX.Common.Extensions;
 using TF.EX.Domain;
 using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Extensions;
+using TF.EX.Domain.Models;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
 using TF.EX.TowerFallExtensions;
@@ -20,24 +21,41 @@ namespace TF.EX.Patchs.Scene
         private readonly INetplayManager _netplayManager;
         private readonly IReplayService _replayService;
         private readonly IInputService _inputService;
+        private readonly IRngService rngService;
         private readonly ILogger _logger;
 
         private OptionsButton _netplayName;
 
         private List<ReplayInfos> replays = new List<ReplayInfos>();
         private ReplaysPanel _replaysPanel = null;
-        private Text _noReplayTitle;
+
+        private List<LobbyInfos> lobbies = new List<LobbyInfos>();
+        private LobbyPanel lobbyPanel = null;
+        private Monocle.Entity spectateEntityButton = null;
+        private Monocle.Entity createEntityButton = null;
+
+        private LobbyVersusModeButton lobbyVersusModeButton = null;
+        private LobbyVersusCoinButton lobbyVersusCoinButton = null;
+        private LobbyVersusMapButton lobbyVersusMapButton = null;
+        private LobbyVarianText lobbyVarianText = null;
+        private List<VariantItem> variants = new List<VariantItem>();
+
+        private DateTime nextServerPull = DateTime.UtcNow;
+
+        private Text noMsg;
 
         public MainMenuPatch(IMatchmakingService matchmakingService,
             INetplayManager netplayManager,
             IReplayService replayService,
             IInputService inputService,
+            IRngService rngService,
             ILogger logger)
         {
             _matchmakingService = matchmakingService;
             _netplayManager = netplayManager;
             _replayService = replayService;
             _inputService = inputService;
+            this.rngService = rngService;
             _logger = logger;
         }
 
@@ -63,38 +81,228 @@ namespace TF.EX.Patchs.Scene
 
         private void MainMenu_CallStateFunc(On.TowerFall.MainMenu.orig_CallStateFunc orig, MainMenu self, string name, MainMenu.MenuState state)
         {
-            switch (state)
+            switch (state.ToDomainModel())
             {
-                case (MainMenu.MenuState)18:
-                    if (name == "Destroy")
-                    {
-                        self.DeleteAll<ReplayInfos>();
-
-                        if (_replaysPanel != null)
-                        {
-                            _replaysPanel.RemoveSelf();
-                        }
-
-                        if (replays != null)
-                        {
-                            replays.Clear();
-                        }
-
-                        if (_noReplayTitle != null)
-                        {
-                            _noReplayTitle.RemoveSelf();
-                            _noReplayTitle = null;
-                        }
-                    }
-                    else
-                    {
-                        CreateReplay(self);
-                    }
+                case Domain.Models.MenuState.ReplaysBrowser:
+                    HandleReplayBrowser(self, name);
+                    break;
+                case Domain.Models.MenuState.LobbyBrowser:
+                    HandleLobbyBrowser(self, name);
+                    break;
+                case Domain.Models.MenuState.LobbyBuilder:
+                    HandleLobbyBuilder(self, name);
                     break;
                 default:
                     orig(self, name, state);
                     break;
             }
+        }
+
+        private void HandleLobbyBuilder(MainMenu self, string name)
+        {
+            if (name == "Destroy")
+            {
+                if (lobbyVersusModeButton != null)
+                {
+                    lobbyVersusModeButton.RemoveSelf();
+                    lobbyVersusModeButton = null;
+                }
+
+                if (lobbyVersusCoinButton != null)
+                {
+                    lobbyVersusCoinButton.RemoveSelf();
+                    lobbyVersusCoinButton = null;
+                }
+
+                if (lobbyVersusMapButton != null)
+                {
+                    lobbyVersusMapButton.RemoveSelf();
+                    lobbyVersusMapButton = null;
+                }
+
+                if (lobbyVarianText != null)
+                {
+                    lobbyVarianText.RemoveSelf();
+                    lobbyVarianText = null;
+                }
+
+                if (variants != null)
+                {
+                    foreach (var variant in variants)
+                    {
+                        variant.RemoveSelf();
+                    }
+
+                    variants.Clear();
+                }
+
+                if (createEntityButton != null)
+                {
+                    createEntityButton.RemoveSelf();
+                    createEntityButton = null;
+                }
+            }
+            else
+            {
+                CreateLobbyBuilder(self);
+            }
+        }
+
+        private void CreateLobbyBuilder(MainMenu self)
+        {
+            self.BackState = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
+
+            lobbyVersusModeButton = new LobbyVersusModeButton(new Vector2(160f, 90f), new Vector2(-100f, 90f));
+            self.Add(lobbyVersusModeButton);
+
+            lobbyVersusMapButton = new LobbyVersusMapButton(new Vector2(160f, 130f), new Vector2(-100f, 210f));
+            self.Add(lobbyVersusMapButton);
+
+            lobbyVersusCoinButton = new LobbyVersusCoinButton(new Vector2(160f, 190f), new Vector2(420f, 135f));
+            self.Add(lobbyVersusCoinButton);
+
+            lobbyVarianText = new LobbyVarianText(new Vector2(160f, 220f), new Vector2(-120f, 135f));
+            self.Add(lobbyVarianText);
+
+            foreach (var variant in variants)
+            {
+                variant.Position.Y += 200;
+            }
+
+            self.MaxUICameraY += 230;
+
+            var dynMainMenu = DynamicData.For(self);
+            dynMainMenu.Invoke("TweenBGCameraToY", 3);
+            dynMainMenu.Set("ToStartSelected", lobbyVersusModeButton);
+            lobbyVersusModeButton.DownItem = lobbyVersusMapButton;
+            lobbyVersusMapButton.UpItem = lobbyVersusModeButton;
+            lobbyVersusMapButton.DownItem = lobbyVersusCoinButton;
+            lobbyVersusCoinButton.UpItem = lobbyVersusMapButton;
+            lobbyVersusCoinButton.DownItem = variants[0];
+            variants[0].UpItem = lobbyVersusCoinButton;
+            variants[1].UpItem = lobbyVersusCoinButton;
+            variants[2].UpItem = lobbyVersusCoinButton;
+            variants[3].UpItem = lobbyVersusCoinButton;
+
+            self.Add(variants);
+
+            createEntityButton = new Monocle.Entity();
+            var createButton = new MenuButtonGuide(4);
+            createButton.SetDetails(MenuButtonGuide.ButtonModes.Start, "CREATE LOBBY");
+            createEntityButton.Add(createButton);
+            self.Add(createEntityButton);
+
+            self.ButtonGuideA.SetDetails(MenuButtonGuide.ButtonModes.Confirm, "VARIANT SELECT");
+            self.ButtonGuideB.SetDetails(MenuButtonGuide.ButtonModes.Back, "CANCEL");
+
+            Sounds.ui_startGame.Play();
+        }
+
+        private void HandleLobbyBrowser(MainMenu self, string name)
+        {
+            if (name == "Destroy")
+            {
+                self.DeleteAll<LobbyInfos>();
+
+                if (lobbyPanel != null)
+                {
+                    lobbyPanel.RemoveSelf();
+                    lobbyPanel = null;
+                }
+
+                if (lobbies != null)
+                {
+                    foreach (var lobby in lobbies.ToArray())
+                    {
+                        lobby.RemoveSelf();
+                    }
+                    lobbies.Clear();
+                }
+
+                if (noMsg != null)
+                {
+                    noMsg.RemoveSelf();
+                    noMsg = null;
+                }
+
+                if (spectateEntityButton != null)
+                {
+                    spectateEntityButton.RemoveSelf();
+                    spectateEntityButton = null;
+                }
+            }
+            else
+            {
+                CreateLobbyBrowser(self);
+            }
+        }
+
+        private void HandleReplayBrowser(MainMenu self, string name)
+        {
+            if (name == "Destroy")
+            {
+                self.DeleteAll<ReplayInfos>();
+
+                if (_replaysPanel != null)
+                {
+                    _replaysPanel.RemoveSelf();
+                }
+
+                if (replays != null)
+                {
+                    replays.Clear();
+                }
+
+                if (noMsg != null)
+                {
+                    noMsg.RemoveSelf();
+                    noMsg = null;
+                }
+            }
+            else
+            {
+                CreateReplay(self);
+            }
+        }
+
+        private void CreateLobbyBrowser(MainMenu self)
+        {
+            if (variants.Count == 0)
+            {
+                variants = MainMenu.VersusMatchSettings.Variants.BuildMenu(self, out _, out self.MaxUICameraY);
+            }
+
+            var loader = new Loader(true);
+            Loader.Message = "RETRIEVING LOBBIES...";
+            self.Add(loader);
+
+            self.BackState = TowerFall.MainMenu.MenuState.VersusOptions;
+            MainMenu.VersusMatchSettings.Mode = TF.EX.Domain.Models.Modes.Netplay.ToTF();
+
+            Task.Run(async () =>
+            {
+                try
+                {
+                    self.ButtonGuideA.SetDetails(MenuButtonGuide.ButtonModes.Confirm, "JOIN");
+                    self.ButtonGuideB.SetDetails(MenuButtonGuide.ButtonModes.Back, "RETURN");
+                    self.ButtonGuideC.SetDetails(MenuButtonGuide.ButtonModes.Start, "CREATE");
+                    self.ButtonGuideD.SetDetails(MenuButtonGuide.ButtonModes.Alt2, "REFRESH");
+
+                    spectateEntityButton = new Monocle.Entity();
+                    var spectateButton = new MenuButtonGuide(4);
+                    spectateButton.SetDetails(MenuButtonGuide.ButtonModes.Alt, "SPECTATE");
+                    spectateEntityButton.Add(spectateButton);
+                    self.Add(spectateEntityButton);
+
+                    _inputService.DisableAllController();
+
+                    await _matchmakingService.RetrieveLobbies(OnRetrieveSuccess);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError<MainMenuPatch>("Error when creating lobby browser menu", ex);
+                }
+            });
         }
 
         private void CreateReplay(MainMenu self)
@@ -104,6 +312,8 @@ namespace TF.EX.Patchs.Scene
             var loader = new Loader(true);
             Loader.Message = "LOADING REPLAYS...";
             self.Add(loader);
+
+            self.BackState = TowerFall.MainMenu.MenuState.Main;
 
             Task.Run(async () =>
             {
@@ -115,18 +325,15 @@ namespace TF.EX.Patchs.Scene
                     var maxY = 50.0f;
 
                     var replays = (await _replayService.LoadAndGetReplays()).ToArray();
-
-                    self.BackState = TowerFall.MainMenu.MenuState.Main;
-
                     if (replays.Length == 0)
                     {
                         _logger.LogError<MainMenuPatch>("No replay found");
                         _inputService.EnableAllController();
                         self.Remove(loader);
 
-                        _noReplayTitle = new Text("PLAY SOME ONLINE GAME FIRST");
-                        _noReplayTitle.Position = new Vector2(100, 100);
-                        self.Add(_noReplayTitle);
+                        noMsg = new Text("PLAY SOME ONLINE GAME FIRST");
+                        noMsg.Position = new Vector2(100, 100);
+                        self.Add(noMsg);
 
                         return;
                     }
@@ -165,8 +372,6 @@ namespace TF.EX.Patchs.Scene
                     self.MaxUICameraY = maxY;
 
                     dynCamera.Invoke("Add", _replaysPanel, false);
-
-                    self.BackState = TowerFall.MainMenu.MenuState.Main;
 
                     dynMainMenu.Invoke("TweenBGCameraToY", 1);
 
@@ -288,15 +493,60 @@ namespace TF.EX.Patchs.Scene
 
             Monocle.Draw.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, DepthStencilState.None, RasterizerState.CullNone);
 
-            if (self.State == TowerFall.MainMenu.MenuState.VersusOptions)
+            if (self.State == MainMenu.MenuState.Rollcall
+                && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel() == Domain.Models.Modes.Netplay)
             {
-                var mode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
+                var opponents = _matchmakingService.GetOwnLobby().Players.Where(p => p.RoomChatPeerId != _matchmakingService.GetRoomChatPeerId()).ToArray();
+                int playerIndex = 1;
 
-                if (TowerFall.MainMenu.VersusMatchSettings != null
-                && mode == Domain.Models.Modes.Netplay1v1QuickPlay
-                && _matchmakingService.IsConnectedToServer())
+                foreach (var opponent in opponents)
                 {
-                    Monocle.Draw.OutlineTextCentered(TFGame.Font, $"{_matchmakingService.GetTotalAvailablePlayersInQuickPlayQueue()} PLAYERS", new Vector2(35f, 8f), Color.Aqua, 1f);
+                    var latency = _matchmakingService.GetPingToOpponent();
+                    if (latency > 0)
+                    {
+                        var color = Color.White;
+
+                        switch (latency)
+                        {
+                            case var n when (n >= 0 && n < 60):
+                                color = Color.LightGreen;
+                                break;
+                            case var n when (n >= 60 && n < 120):
+                                color = Color.GreenYellow;
+                                break;
+                            case var n when (n >= 120 && n < 150):
+                                color = Color.OrangeRed;
+                                break;
+                            case var n when (n >= 150):
+                                color = Color.Red;
+                                break;
+                            default:
+                                break;
+                        }
+
+                        var rollcallElement = self.GetAll<RollcallElement>().First(rc =>
+                        {
+                            var dyn = DynamicData.For(rc);
+                            var index = dyn.Get<int>("playerIndex");
+
+                            return index == playerIndex;
+                        });
+
+                        var posPing = rollcallElement.Position;
+                        var dynRollcall = DynamicData.For(rollcallElement);
+
+                        var controlIconPos = dynRollcall.Get<Vector2>("ControlIconPos");
+                        var posName = rollcallElement.Position + controlIconPos + Vector2.UnitY * 15f;
+                        posPing.Y -= 66f;
+
+                        Monocle.Draw.OutlineTextCentered(TFGame.Font, $"{latency} MS", posPing, color, 1.5f);
+
+                        var state = dynRollcall.Get<Monocle.StateMachine>("state");
+                        var nameColor = ((state.State == 1) ? ArcherData.Archers[playerIndex].ColorB : ArcherData.Archers[playerIndex].ColorA);
+                        Monocle.Draw.OutlineTextCentered(TFGame.Font, opponent.Name, posName, nameColor, Color.Black);
+                    }
+
+                    playerIndex++;
                 }
             }
 
@@ -341,19 +591,275 @@ namespace TF.EX.Patchs.Scene
 
             if (TowerFall.MainMenu.VersusMatchSettings != null && self.State == TowerFall.MainMenu.MenuState.VersusOptions)
             {
-                if (TFGame.PlayerInputs[0] != null && TFGame.PlayerInputs[0].MenuBack)
+                if (MenuInput.Back)
                 {
-                    if (!_matchmakingService.HasRegisteredForQuickPlay())
-                    {
-                        self.State = TowerFall.MainMenu.MenuState.Main;
-                    }
+                    self.State = TowerFall.MainMenu.MenuState.Main;
                     return;
                 }
             }
 
             orig(self);
+
+            if (self.State.ToDomainModel() == Domain.Models.MenuState.LobbyBrowser)
+            {
+                if (MenuInput.Start)
+                {
+                    self.State = TF.EX.Domain.Models.MenuState.LobbyBuilder.ToTFModel();
+                    return;
+                }
+
+                if (MenuInput.Alt && DateTime.UtcNow >= nextServerPull)
+                {
+                    _inputService.DisableAllController();
+
+                    nextServerPull = DateTime.UtcNow.AddSeconds(3);
+                    Sounds.ui_altCostumeShift.Play();
+                    self.AddLoader("RETRIEVING LOBBIES...");
+
+                    foreach (var lobby in lobbies.ToArray())
+                    {
+                        lobby.RemoveSelf();
+                    }
+
+                    lobbies.Clear();
+
+                    if (lobbyPanel != null)
+                    {
+                        lobbyPanel.RemoveSelf();
+                        lobbyPanel = null;
+                    }
+
+                    _matchmakingService.RetrieveLobbies(OnRetrieveSuccess);
+                    return;
+                }
+            }
+
+            if (self.State.ToDomainModel() == Domain.Models.MenuState.LobbyBuilder)
+            {
+                if (MenuInput.Start)
+                {
+                    var variantsToggle = variants
+                        .Where(v => v is VariantToggle && (v as VariantToggle).Variant.Value)
+                        .Select(v => (v as VariantToggle).Variant.Title)
+                        .ToList();
+
+                    var roomId = Guid.NewGuid().ToString();
+                    var roomChatId = Guid.NewGuid().ToString();
+
+                    var roomUrl = $"{Config.SERVER}/room/{roomId}";
+                    var roomChatUrl = $"{Config.SERVER}/room/{roomChatId}";
+
+                    var lobby = _matchmakingService.GetOwnLobby();
+                    lobby.GameData.Variants = variantsToggle.ToArray();
+                    lobby.Name = _netplayManager.GetNetplayMeta().Name;
+                    lobby.RoomChatId = roomChatId;
+                    lobby.RoomId = roomId;
+                    lobby.Players.Add(new Domain.Models.WebSocket.Player
+                    {
+                        Name = _netplayManager.GetNetplayMeta().Name,
+                        Addr = string.Empty,
+                        IsHost = true
+                    });
+
+                    self.AddLoader("CREATING LOBBY");
+
+                    _inputService.DisableAllController();
+
+                    Action onSucess = () =>
+                    {
+                        _inputService.EnableAllController();
+                        _inputService.DisableAllControllerExceptLocal();
+                        self.RemoveLoader();
+                        Sounds.ui_click.Play();
+                        self.State = MainMenu.MenuState.Rollcall;
+                        self.BackState = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
+                        _netplayManager.SetRoomAndServerMode(roomUrl);
+                        _matchmakingService.ConnectAndListenToLobby(roomChatUrl);
+
+                        rngService.SetSeed(_matchmakingService.GetOwnLobby().GameData.Seed);
+
+                        //Apply length
+                        MainMenu.VersusMatchSettings.MatchLength = (MatchSettings.MatchLengths)lobby.GameData.MatchLength;
+                    };
+
+                    Action onFail = () =>
+                    {
+                        _inputService.EnableAllController();
+                        self.RemoveLoader();
+                        TowerFall.Sounds.ui_invalid.Play();
+                        self.State = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
+                    };
+
+                    _matchmakingService.CreateLobby(onSucess, onFail);
+                }
+            }
+        }
+
+        private void OnRetrieveSuccess()
+        {
+            _inputService.EnableAllController();
+
+            var self = TFGame.Instance.Scene as TowerFall.MainMenu;
+
+            TFGame.Instance.Scene.RemoveLoader();
+
+            var reslobbies = _matchmakingService.GetLobbies();
+
+            if (lobbies.Count == 0 && reslobbies.Count() > 0 || lobbies.Count != reslobbies.Count())
+            {
+
+                var dynMainMenu = DynamicData.For(self);
+                var dynCamera = DynamicData.For(self.UILayer);
+
+                lobbyPanel = new LobbyPanel(225, 110);
+                var maxY = 50.0f;
+
+                var lobb = reslobbies.ToArray();
+                for (int i = 0; i < lobb.Length; i++)
+                {
+                    var newLobby = lobb[i];
+
+                    if (newLobby == null)
+                    {
+                        _logger.LogError<MainMenuPatch>("Lobby is null ?");
+
+                        continue;
+                    }
+
+                    Action onClick = () =>
+                    {
+                        _inputService.DisableAllController();
+
+                        var variantsToggle = variants
+                            .Where(v => v is VariantToggle)
+                            .Select(v => (v as VariantToggle).Variant.Title)
+                        .ToList();
+
+                        bool canJoin = newLobby.GameData.Variants.All(str => variantsToggle.Contains(str));
+
+                        if (!canJoin)
+                        {
+                            _logger.LogError<MainMenuPatch>("Can't join lobby because of customs variants");
+
+                            _inputService.EnableAllController();
+
+                            TowerFall.Sounds.ui_invalid.Play();
+                            return;
+                        }
+
+                        if (string.IsNullOrEmpty(newLobby.RoomId) || string.IsNullOrEmpty(newLobby.RoomChatId))
+                        {
+                            _logger.LogError<MainMenuPatch>("Lobby to join is null ?");
+                            return;
+                        }
+
+                        self.AddLoader("JOINING LOBBY");
+
+                        Action onSucess = () =>
+                        {
+                            self.RemoveLoader();
+                            Sounds.ui_click.Play();
+
+                            var roomUrl = $"{Config.SERVER}/room/{newLobby.RoomId}";
+                            var roomChatUrl = $"{Config.SERVER}/room/{newLobby.RoomChatId}";
+
+                            _netplayManager.SetRoomAndServerMode(roomUrl);
+                            _netplayManager.UpdatePlayer2Name(newLobby.Players.First(pl => pl.IsHost).Name);
+                            _matchmakingService.ConnectAndListenToLobby(roomChatUrl);
+
+                            _matchmakingService.UpdateOwnLobby(newLobby);
+                            _inputService.EnableAllController();
+                            _inputService.DisableAllControllerExceptLocal();
+
+                            rngService.SetSeed(newLobby.GameData.Seed);
+
+
+                            //Apply variant
+                            MainMenu.VersusMatchSettings.Variants.ApplyVariants(newLobby.GameData.Variants);
+
+                            //Apply length
+                            MainMenu.VersusMatchSettings.MatchLength = (MatchSettings.MatchLengths)newLobby.GameData.MatchLength;
+
+                            self.State = MainMenu.MenuState.Rollcall;
+
+                        };
+
+                        Action onFail = () =>
+                        {
+                            _inputService.EnableAllController();
+                            self.RemoveLoader();
+                            TowerFall.Sounds.ui_invalid.Play();
+
+                            foreach (var lobby in lobbies.ToArray())
+                            {
+                                lobby.RemoveSelf();
+                            }
+
+                            lobbies.Clear();
+                            if (lobbyPanel != null)
+                            {
+                                lobbyPanel.RemoveSelf();
+                                lobbyPanel = null;
+                            }
+
+                        };
+
+                        _matchmakingService.JoinLobby(newLobby.RoomId, onSucess, onFail);
+                    };
+
+                    var but = new LobbyInfos(self, new Vector2(5.0f, maxY), newLobby, onClick, lobbyPanel);
+
+                    this.lobbies.Add(but);
+                    if (i != 0)
+                    {
+                        this.lobbies[i - 1].DownItem = but;
+                        but.UpItem = this.lobbies[i - 1];
+                    }
+
+                    if (i == 0)
+                    {
+                        dynMainMenu.Set("ToStartSelected", but);
+                        but.Selected = true;
+                    }
+
+                    dynCamera.Invoke("Add", but, false);
+
+                    maxY += 35.0f;
+                }
+
+                self.MaxUICameraY = maxY;
+
+                dynCamera.Invoke("Add", lobbyPanel, false);
+                dynMainMenu.Invoke("TweenBGCameraToY", 1);
+
+                _inputService.EnableAllController();
+                return;
+            }
+
+            foreach (var lobby in reslobbies.ToArray())
+            {
+                var lob = lobbies.Where(l => l.Lobby.RoomId == lobby.RoomId).FirstOrDefault();
+                if (lob != null)
+                {
+                    lob.UpdateLobby(lobby);
+                }
+            }
+
+            if (lobbies.Count == 0)
+            {
+                if (noMsg == null)
+                {
+                    noMsg = new Text("NO LOBBY FOUND");
+
+                    noMsg.Position = new Vector2(100, 100);
+                    self.Add(noMsg);
+
+                    _inputService.EnableAllController();
+                }
+            }
         }
     }
+
 
     public static class OptionsButtonExtensions
     {

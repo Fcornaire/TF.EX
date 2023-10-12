@@ -1,27 +1,32 @@
-﻿namespace TF.EX.Domain.Ports
+﻿using TF.EX.Domain.Models.WebSocket;
+
+namespace TF.EX.Domain.Ports
 {
     public interface IMatchmakingService
     {
         int GetPingToOpponent();
         Guid GetOpponentPeerId();
-        bool HasOpponentChoosed();
         bool IsConnectedToServer();
         bool ConnectToServerAndListen();
+        void ConnectAndListenToLobby(string roomUrl);
 
         void DisconnectFromServer();
         void DisconnectFromLobby();
-        void RegisterForDirect();
 
-        string GetDirectCode();
-        Task<bool> SendOpponentCode(string text);
-        void RegisterForQuickPlay();
-        bool HasRegisteredForQuickPlay();
-        bool HasFoundOpponentForQuickPlay();
-        void CancelQuickPlay();
-        void AcceptOpponentInQuickPlay();
-        bool HasAcceptedOpponentForQuickPlay();
-        bool HasOpponentDeclined();
+        Task RetrieveLobbies(Action onSuccess);
 
-        int GetTotalAvailablePlayersInQuickPlayQueue();
+        IEnumerable<Lobby> GetLobbies();
+
+        Lobby GetOwnLobby();
+
+        void UpdateOwnLobby(Lobby lobby);
+        Task CreateLobby(Action onSuccess, Action onFail);
+        Task JoinLobby(string roomId, Action onSucess, Action onFail);
+
+        Task UpdatePlayer(Player player);
+        string GetRoomChatPeerId();
+        Task LeaveLobby(Action onSuccess, Action onFail);
+        void ResetPeer();
+        bool IsLobbyReady();
     }
 }

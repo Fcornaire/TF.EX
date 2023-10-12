@@ -1,9 +1,11 @@
-﻿using MonoMod.RuntimeDetour;
+﻿using Monocle;
+using MonoMod.RuntimeDetour;
 using MonoMod.Utils;
 using TF.EX.Domain;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
+using TF.EX.TowerFallExtensions.Scene;
 using TowerFall;
 
 namespace TF.EX.Patchs.PlayerInput
@@ -61,6 +63,10 @@ namespace TF.EX.Patchs.PlayerInput
             MenuSkipReplay_hook.Dispose();
             MenuSaveReplay_hook.Dispose();
             MenuSaveReplayCheck_hook.Dispose();
+            MenuLeft_hook.Dispose();
+            MenuRight_hook.Dispose();
+            MenuUp_hook.Dispose();
+            MenuDown_hook.Dispose();
         }
 
         private static bool MenuConfirm_patch(MenuConfirm_orig orig, KeyboardInput self)
@@ -173,13 +179,10 @@ namespace TF.EX.Patchs.PlayerInput
         //TODO: refactor to have a unique intercept for all inputs
         private static bool Intercept(KeyboardInput self, bool actualInput)
         {
-            (var state_machine, _) = ServiceCollections.ResolveStateMachineService();
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
             var inputService = ServiceCollections.ResolveInputService();
 
-            var init = state_machine.IsInitialized();
-            var canStart = state_machine.CanStart();
             var isNetplayInit = netplayManager.IsInit();
 
             if (TFGame.Instance.Scene is MainMenu
@@ -206,47 +209,42 @@ namespace TF.EX.Patchs.PlayerInput
                 var dynMenu = DynamicData.For(TFGame.Instance.Scene as MainMenu);
                 var state = dynMenu.Get<MainMenu.MenuState>("state");
 
-                if (state == MainMenu.MenuState.Rollcall && matchmakingService.HasOpponentChoosed())
+                var currentMode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
+
+                if (state == MainMenu.MenuState.Rollcall && currentMode.IsNetplay())
                 {
-                    return true;
+                    var rollcallElement = (TFGame.Instance.Scene as MainMenu).GetAll<RollcallElement>().First(rc =>
+                    {
+                        var dyn = DynamicData.For(rc);
+                        var index = dyn.Get<int>("playerIndex");
+
+                        return index == 0;
+                    });
+
+                    var dynRollcallElement = DynamicData.For(rollcallElement);
+                    StateMachine rollcallState = dynRollcallElement.Get<StateMachine>("state");
+                    if (rollcallState.State == 0)
+                    {
+                        return actualInput;
+                    }
+
+                    return ServiceCollections.ResolveMatchmakingService().IsLobbyReady();
                 }
             }
 
-            if (canStart)
+            if (isNetplayInit)
             {
                 return true;
             }
-
-            if (init)
-            {
-                return false;
-            }
-
-            if (!init)
-            {
-                return actualInput;
-            }
             else
             {
-                if (isNetplayInit)
-                {
-                    return true;
-                }
-                else
-                {
-                    return actualInput;
-                }
+                return actualInput;
             }
         }
 
         private bool IsLocalPlayerKeyboard(KeyboardInput self)
         {
             return _inputService.GetInputIndex(self) == 0;
-        }
-
-        private bool IsPlayer2(KeyboardInput self)
-        {
-            return _inputService.GetInputIndex(self) == 1;
         }
     }
 }
