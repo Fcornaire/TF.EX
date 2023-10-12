@@ -124,7 +124,7 @@ namespace TF.EX.Patchs.Engine
                     _netplayManager.Reset();
                     ServiceCollections.PurgeCache();
 
-                    TowerFall.PlayerInput.AssignInputs(); //Reset inputs
+                    //TowerFall.PlayerInput.AssignInputs(); //Reset inputs
                 }
 
                 _netplayManager.ResetMode();

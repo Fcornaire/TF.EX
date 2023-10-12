@@ -33,7 +33,6 @@ namespace TF.EX.Patchs
 
         public void Load()
         {
-            On.TowerFall.Session.ctor += Session_ctor;
             On.TowerFall.Session.StartRound += Session_StartRound;
             On.TowerFall.Session.CreateResults += Session_CreateResults;
             On.TowerFall.Session.GetOldScore += Session_GetOldScore;
@@ -44,7 +43,6 @@ namespace TF.EX.Patchs
 
         public void Unload()
         {
-            On.TowerFall.Session.ctor -= Session_ctor;
             On.TowerFall.Session.StartRound -= Session_StartRound;
             On.TowerFall.Session.CreateResults -= Session_CreateResults;
             On.TowerFall.Session.GetOldScore -= Session_GetOldScore;
@@ -161,16 +159,6 @@ namespace TF.EX.Patchs
 
             var session = _sessionService.GetSession();
             session.RoundStarted = true;
-        }
-
-        private void Session_ctor(On.TowerFall.Session.orig_ctor orig, TowerFall.Session self, TowerFall.MatchSettings settings)
-        {
-            orig(self, settings);
-            //TODO: Methodes
-            settings.Variants.DisableAll();
-            settings.Variants.TournamentRules();
-
-            self.MatchSettings = settings;
         }
     }
 }

@@ -8,10 +8,8 @@ namespace TF.EX.Domain.Extensions
         {
             switch (mode)
             {
-                case Modes.Netplay1v1QuickPlay:
-                    return "Netplay Quickplay";
-                case Modes.Netplay1v1Direct:
-                    return "Netplay Direct";
+                case Modes.Netplay:
+                    return "Netplay";
                 default:
                     return mode.ToString();
             }
@@ -23,10 +21,8 @@ namespace TF.EX.Domain.Extensions
 
             switch (modeName)
             {
-                case "NETPLAY DIRECT":
-                    return Modes.Netplay1v1Direct;
-                case "NETPLAY QUICKPLAY":
-                    return Modes.Netplay1v1QuickPlay;
+                case "NETPLAY":
+                    return Modes.Netplay;
                 default:
                     return (Modes)mode;
             }
@@ -34,19 +30,12 @@ namespace TF.EX.Domain.Extensions
 
         public static TowerFall.Modes ToTF(this Modes modes)
         {
-            switch (modes)
-            {
-                case Modes.Netplay1v1Direct:
-                case Modes.Netplay1v1QuickPlay:
-                    throw new System.NotImplementedException("TF EX mode cannot be used directly in TowerFall");
-                default:
-                    return (TowerFall.Modes)modes;
-            }
+            return (TowerFall.Modes)modes;
         }
 
         public static bool IsNetplay(this Modes mode)
         {
-            return mode == Modes.Netplay1v1Direct || mode == Modes.Netplay1v1QuickPlay;
+            return mode == Modes.Netplay;
         }
     }
 }

@@ -26,7 +26,6 @@ namespace TF.EX.Patchs
             serviceCollection.AddSingleton<IHookable, ArrowCushionPatch>();
             serviceCollection.AddSingleton<IHookable, PlayerIndicatorPatch>();
             serviceCollection.AddSingleton<IHookable, VersusMatchResultsPatch>();
-            serviceCollection.AddSingleton<IHookable, BladeButtonPatch>();
             serviceCollection.AddSingleton<IHookable, OptionsButtonPatch>();
             serviceCollection.AddSingleton<IHookable, RollCallElementPatch>();
             serviceCollection.AddSingleton<IHookable, VersusBeginButtonPatch>();
@@ -75,6 +74,9 @@ namespace TF.EX.Patchs
             serviceCollection.AddSingleton<IHookable, MapScenePatch>();
             serviceCollection.AddSingleton<IHookable, OrbPatch>();
             serviceCollection.AddSingleton<IHookable, SpikeballPatch>();
+            serviceCollection.AddSingleton<IHookable, MenuItemPatch>();
+            serviceCollection.AddSingleton<IHookable, MatchVariantsPatchs>();
+            serviceCollection.AddSingleton<IHookable, VariantPatch>();
         }
 
         public static LavaPatch GetLavaPatch(this IServiceProvider serviceProvider)

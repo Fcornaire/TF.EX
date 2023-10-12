@@ -1,4 +1,5 @@
 ﻿using TF.EX.Domain.Context;
+using TF.EX.Domain.Models.WebSocket;
 using TF.EX.Domain.Ports;
 
 namespace TF.EX.Domain.Services
@@ -12,9 +13,9 @@ namespace TF.EX.Domain.Services
             _gameContext = gameContext;
         }
 
-        public void AddArcher(int index, string archer_alt)
+        public void AddArcher(int index, Player player)
         {
-            _gameContext.AddArcher(index, archer_alt);
+            _gameContext.AddArcher(index, player);
         }
 
         public IEnumerable<(int, string)> GetArchers()
@@ -33,6 +34,11 @@ namespace TF.EX.Domain.Services
             };
 
             return finalArchers;
+        }
+
+        public void RemoveArcher(int playerIndex)
+        {
+            _gameContext.RemoveArcher(playerIndex);
         }
 
         public void Reset()

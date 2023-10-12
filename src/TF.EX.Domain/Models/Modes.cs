@@ -12,7 +12,6 @@
         EditorTest,
         EditorPreview,
         LevelTest,
-        Netplay1v1QuickPlay = 10,
-        Netplay1v1Direct = 11,
+        Netplay = 10
     }
 }

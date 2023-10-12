@@ -1,5 +1,6 @@
-﻿using MonoMod.Utils;
-using TF.EX.Domain;
+﻿using Microsoft.Xna.Framework;
+using Monocle;
+using MonoMod.Utils;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Ports;
@@ -9,55 +10,147 @@ namespace TF.EX.Patchs.Entity.MenuItem
 {
     public class RollCallElementPatch : IHookable
     {
-        private INetplayStateMachine _stateMachine;
         private readonly IMatchmakingService _matchmakingService;
+        private readonly IArcherService archerService;
 
-        public RollCallElementPatch(INetplayStateMachine stateMachine, IMatchmakingService matchmakingService)
+        public RollCallElementPatch(IMatchmakingService matchmakingService, IArcherService archerService)
         {
-            _stateMachine = stateMachine;
             _matchmakingService = matchmakingService;
+            this.archerService = archerService;
         }
 
         public void Load()
         {
-            On.TowerFall.RollcallElement.ctor += RollcallElement_ctor;
             On.TowerFall.RollcallElement.StartVersus += RollcallElement_StartVersus;
             On.TowerFall.RollcallElement.Update += RollcallElement_Update;
             On.TowerFall.RollcallElement.NotJoinedUpdate += RollcallElement_NotJoinedUpdate;
+            On.TowerFall.RollcallElement.EnterJoined += RollcallElement_EnterJoined;
+            On.TowerFall.RollcallElement.JoinedUpdate += RollcallElement_JoinedUpdate;
+            On.TowerFall.RollcallElement.LeaveJoined += RollcallElement_LeaveJoined;
         }
 
         public void Unload()
         {
-            On.TowerFall.RollcallElement.ctor -= RollcallElement_ctor;
             On.TowerFall.RollcallElement.StartVersus -= RollcallElement_StartVersus;
             On.TowerFall.RollcallElement.Update -= RollcallElement_Update;
             On.TowerFall.RollcallElement.NotJoinedUpdate -= RollcallElement_NotJoinedUpdate;
+            On.TowerFall.RollcallElement.EnterJoined -= RollcallElement_EnterJoined;
+            On.TowerFall.RollcallElement.JoinedUpdate -= RollcallElement_JoinedUpdate;
+            On.TowerFall.RollcallElement.LeaveJoined -= RollcallElement_LeaveJoined;
+        }
+
+        private void RollcallElement_LeaveJoined(On.TowerFall.RollcallElement.orig_LeaveJoined orig, RollcallElement self)
+        {
+            orig(self);
+
+            var currentMode = MainMenu.VersusMatchSettings.Mode.ToModel();
+            if (currentMode == Domain.Models.Modes.Netplay)
+            {
+                var dynRollcallElement = DynamicData.For(self);
+                var playerIndex = dynRollcallElement.Get<int>("playerIndex");
+                StateMachine state = dynRollcallElement.Get<StateMachine>("state");
+
+                //We only care about joined update (1)
+                if (state == 1 && MenuInput.Back)
+                {
+                    if (playerIndex == 0)
+                    {
+                        var lobby = _matchmakingService.GetOwnLobby();
+                        var player = lobby.Players.First(pl => pl.RoomChatPeerId == _matchmakingService.GetRoomChatPeerId());
+                        if (player.Ready)
+                        {
+                            player.Ready = false;
+                            archerService.RemoveArcher(playerIndex);
+
+                            _matchmakingService.UpdatePlayer(player);
+                        }
+                    }
+                    else
+                    {
+                        LeavePlayerUI(dynRollcallElement);
+                    }
+                }
+            }
+        }
+
+        private int RollcallElement_JoinedUpdate(On.TowerFall.RollcallElement.orig_JoinedUpdate orig, RollcallElement self)
+        {
+            var currentMode = MainMenu.VersusMatchSettings.Mode.ToModel();
+
+            if (currentMode == Domain.Models.Modes.Netplay)
+            {
+                var dynRollcallElement = DynamicData.For(self);
+                var playerIndex = dynRollcallElement.Get<int>("playerIndex");
+
+                if (playerIndex == 0)
+                {
+                    return orig(self);
+                }
+
+                return 1;
+            }
+
+            return orig(self);
+        }
+
+        private void RollcallElement_EnterJoined(On.TowerFall.RollcallElement.orig_EnterJoined orig, RollcallElement self)
+        {
+            orig(self);
+
+            var currentMode = MainMenu.VersusMatchSettings.Mode.ToModel();
+            if (currentMode == Domain.Models.Modes.Netplay)
+            {
+                var lobby = _matchmakingService.GetOwnLobby();
+                var dynRollcallElement = DynamicData.For(self);
+                var playerIndex = dynRollcallElement.Get<int>("playerIndex");
+
+                if (playerIndex == 0)
+                {
+                    var player = lobby.Players.First(pl => pl.RoomChatPeerId == _matchmakingService.GetRoomChatPeerId());
+                    if (!player.Ready)
+                    {
+                        player.Ready = true;
+                        player.ArcherIndex = TFGame.Characters[playerIndex];
+                        player.ArcherAltIndex = (int)TFGame.AltSelect[playerIndex];
+
+                        archerService.AddArcher(playerIndex, player);
+
+                        _matchmakingService.UpdatePlayer(player);
+                    }
+                }
+                else
+                {
+                    UpdatePlayerUI(dynRollcallElement);
+                }
+            }
         }
 
         private int RollcallElement_NotJoinedUpdate(On.TowerFall.RollcallElement.orig_NotJoinedUpdate orig, RollcallElement self)
         {
             var dynRollcallElement = DynamicData.For(self);
 
-            if (IsNetplay1v1())
-            {
-                var playerIndex = dynRollcallElement.Get<int>("playerIndex");
-                var portrait = dynRollcallElement.Get<ArcherPortrait>("portrait");
-                var dynArcherPortrait = DynamicData.For(portrait);
-                var joined = dynArcherPortrait.Get<bool>("joined");
-
-                if (playerIndex == 1 && _matchmakingService.HasOpponentChoosed() && !joined)
-                {
-                    UpdatePlayer2UI(dynRollcallElement);
-                }
-            }
-
             var res = orig(self);
 
             var input = dynRollcallElement.Get<TowerFall.PlayerInput>("input");
 
-            if (IsNetplay1v1() && input != null && input.MenuBack)
+            var currentMode = MainMenu.VersusMatchSettings.Mode.ToModel();
+
+            if (currentMode == Domain.Models.Modes.Netplay && input != null && input.MenuBack)
             {
-                self.MainMenu.State = MainMenu.MenuState.VersusOptions;
+                Task.Run(async () =>
+                {
+                    await _matchmakingService.LeaveLobby(() =>
+                    {
+                        self.MainMenu.State = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
+                        _matchmakingService.DisconnectFromLobby();
+                        _matchmakingService.ResetPeer();
+                    }, () =>
+                    {
+                        self.MainMenu.State = MainMenu.MenuState.VersusOptions;
+                    });
+                }).GetAwaiter().GetResult();
+
+                self.MainMenu.State = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
             }
 
             return res;
@@ -65,19 +158,17 @@ namespace TF.EX.Patchs.Entity.MenuItem
 
         private void RollcallElement_Update(On.TowerFall.RollcallElement.orig_Update orig, RollcallElement self)
         {
-            if (IsNetplay1v1())
+            var lobby = _matchmakingService.GetOwnLobby();
+            var dynRollcallElement = DynamicData.For(self);
+            int playerIndex = dynRollcallElement.Get<int>("playerIndex");
+
+            if (playerIndex != 0 && playerIndex < lobby.Players.Count)
             {
-                if (_matchmakingService.HasOpponentDeclined())
+                var player = lobby.Players.ToArray()[playerIndex];
+                if (player != null)
                 {
-                    Sounds.ui_invalid.Play();
-                    self.MainMenu.State = MainMenu.MenuState.VersusOptions;
-                    TFGame.Instance.Commands.Open = false;
-                    _matchmakingService.DisconnectFromServer();
-
-                    return;
+                    UpdateControllerIcon(self, dynRollcallElement, playerIndex);
                 }
-
-                _stateMachine.Update();
             }
 
             orig(self);
@@ -101,30 +192,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
             self.MainMenu.State = MainMenu.MenuState.Fade;
         }
 
-        private void RollcallElement_ctor(On.TowerFall.RollcallElement.orig_ctor orig, TowerFall.RollcallElement self, int playerIndex)
-        {
-            orig(self, playerIndex);
-
-            (var stateMachine, _) = ServiceCollections.ResolveStateMachineService();
-
-            _stateMachine = stateMachine; //making sure we have the right service (QP vs Direct)
-            _stateMachine.Reset();
-
-            if (IsNetplay1v1()) //TODO: only true 1v1
-            {
-                TFGame.PlayerInputs[2] = null;
-                TFGame.PlayerInputs[3] = null;
-            }
-        }
-
-        private bool IsNetplay1v1()
-        {
-            var isNetplay = MainMenu.CurrentMatchSettings != null && (MainMenu.CurrentMatchSettings.Mode.ToModel() == TF.EX.Domain.Models.Modes.Netplay1v1Direct || MainMenu.CurrentMatchSettings.Mode.ToModel() == TF.EX.Domain.Models.Modes.Netplay1v1QuickPlay);
-
-            return MainMenu.CurrentMatchSettings != null && isNetplay;
-        }
-
-        private void UpdatePlayer2UI(DynamicData rollcallElement)
+        private void UpdatePlayerUI(DynamicData rollcallElement)
         {
             var playerIndex = rollcallElement.Get<int>("playerIndex");
             rollcallElement.Set("archerType", TFGame.AltSelect[playerIndex]);
@@ -133,8 +201,31 @@ namespace TF.EX.Patchs.Entity.MenuItem
 
             portrait.SetCharacter(TFGame.Characters[playerIndex], archerType, 1);
             portrait.Join(unlock: false);
-            TFGame.Players[1] = true;
+            TFGame.Players[playerIndex] = true;
+        }
+
+        private void LeavePlayerUI(DynamicData rollcallElement)
+        {
+            var playerIndex = rollcallElement.Get<int>("playerIndex");
+            var portrait = rollcallElement.Get<ArcherPortrait>("portrait");
+
+            portrait.Leave();
+            TFGame.Players[playerIndex] = false;
+        }
+
+        private void UpdateControllerIcon(RollcallElement self, DynamicData rollcallElement, int playerIndex)
+        {
+            var alt = TFGame.MenuAtlas[$"controls/xb360/rt"];
+            var controlIcon = rollcallElement.Get<Image>("controlIcon");
+
+            rollcallElement.Set("confirmButton", TFGame.MenuAtlas[$"controls/xb360/a"]);
+            rollcallElement.Set("altButton", alt);
+            rollcallElement.Set("altBezier", new Bezier(new Vector2(30 - alt.Width / 2, 80f), new Vector2(-30 + alt.Width / 2, 80f), new Vector2(0f, 120f)));
+
+            controlIcon.SwapSubtexture(TFGame.MenuAtlas[$"controls/xb360/player{playerIndex + 1}"]);
+            controlIcon.CenterOrigin();
+
+            rollcallElement.Set("controlIcon", controlIcon);
         }
     }
-
 }

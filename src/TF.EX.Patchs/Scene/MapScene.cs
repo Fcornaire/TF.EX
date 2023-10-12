@@ -1,4 +1,5 @@
 using TF.EX.Domain;
+using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
 using TF.EX.TowerFallExtensions;
@@ -10,7 +11,7 @@ namespace TF.EX.Patchs.Scene
     {
         private readonly IInputService _inputService;
 
-        private readonly INetplayManager _netplayManager;
+        private readonly IMatchmakingService matchmakingService;
 
         private readonly IRngService _rngService;
 
@@ -20,24 +21,24 @@ namespace TF.EX.Patchs.Scene
             "TWILIGHT SPIRE"
         };
 
-        public MapScenePatch(IInputService inputService, INetplayManager netplayManager, IRngService rngService)
+        public MapScenePatch(IInputService inputService, IMatchmakingService matchmakingService, IRngService rngService)
         {
             _inputService = inputService;
-            _netplayManager = netplayManager;
+            this.matchmakingService = matchmakingService;
             _rngService = rngService;
         }
 
         public void Load()
         {
             On.TowerFall.MapScene.StartSession += MapScene_StartSession;
-            On.TowerFall.MapScene.GetRandomVersusTower += MapScene_GetRandomVersusTower;
+            //On.TowerFall.MapScene.GetRandomVersusTower += MapScene_GetRandomVersusTower;
             On.TowerFall.MapScene.Begin += MapScene_Begin;
         }
 
         public void Unload()
         {
             On.TowerFall.MapScene.StartSession -= MapScene_StartSession;
-            On.TowerFall.MapScene.GetRandomVersusTower -= MapScene_GetRandomVersusTower;
+            //On.TowerFall.MapScene.GetRandomVersusTower -= MapScene_GetRandomVersusTower;
             On.TowerFall.MapScene.Begin -= MapScene_Begin;
         }
 
@@ -54,10 +55,11 @@ namespace TF.EX.Patchs.Scene
         {
             orig(self);
 
-            if (_netplayManager.HasSetMode())
+            var currentMode = MainMenu.VersusMatchSettings.Mode.ToModel();
+            if (currentMode.IsNetplay())
             {
                 self.Selection.OnDeselect();
-                self.Selection = self.GetRandomVersusTower();
+                self.Selection = self.Buttons.First(button => matchmakingService.GetOwnLobby().GameData.MapId == button.Data?.ID.X);
                 self.Selection.OnSelect();
                 self.ScrollToButton(self.Selection);
             }

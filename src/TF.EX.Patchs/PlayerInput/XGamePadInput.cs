@@ -1,10 +1,12 @@
-﻿using MonoMod.RuntimeDetour;
+﻿using Monocle;
+using MonoMod.RuntimeDetour;
 using MonoMod.Utils;
 using TF.EX.Domain;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
 using TF.EX.TowerFallExtensions;
+using TF.EX.TowerFallExtensions.Scene;
 using TowerFall;
 
 namespace TF.EX.Patchs.PlayerInput
@@ -178,12 +180,9 @@ namespace TF.EX.Patchs.PlayerInput
         //TODO: refactor to have a unique intercept for all inputs
         private static bool InterceptConfirm(XGamepadInput self, bool actualInput)
         {
-            (var state_machine, var mode) = ServiceCollections.ResolveStateMachineService();
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var inputService = ServiceCollections.ResolveInputService();
 
-            var init = state_machine.IsInitialized();
-            var canStart = state_machine.CanStart();
             var isNetplayInit = netplayManager.IsInit();
             var isReplayMode = netplayManager.IsReplayMode();
             var isPaused = TFGame.Instance.Scene is TowerFall.Level && (TFGame.Instance.Scene as TowerFall.Level).Paused;
@@ -216,23 +215,31 @@ namespace TF.EX.Patchs.PlayerInput
                 }
             }
 
-
             if (TFGame.Instance.Scene is MainMenu)
             {
                 var dynMenu = DynamicData.For(TFGame.Instance.Scene as MainMenu);
                 var state = dynMenu.Get<MainMenu.MenuState>("state");
 
-                if (state == MainMenu.MenuState.Rollcall && mode.IsNetplay())
+                var currentMode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
+
+                if (state == MainMenu.MenuState.Rollcall && currentMode.IsNetplay())
                 {
-                    if (canStart)
+                    var rollcallElement = (TFGame.Instance.Scene as MainMenu).GetAll<RollcallElement>().First(rc =>
                     {
-                        return true;
+                        var dyn = DynamicData.For(rc);
+                        var index = dyn.Get<int>("playerIndex");
+
+                        return index == 0;
+                    });
+
+                    var dynRollcallElement = DynamicData.For(rollcallElement);
+                    StateMachine rollcallState = dynRollcallElement.Get<StateMachine>("state");
+                    if (rollcallState.State == 0)
+                    {
+                        return actualInput;
                     }
 
-                    if (!init)
-                    {
-                        return false;
-                    }
+                    return ServiceCollections.ResolveMatchmakingService().IsLobbyReady();
                 }
             }
 
@@ -251,11 +258,6 @@ namespace TF.EX.Patchs.PlayerInput
                 return true;
             }
 
-            if (canStart)
-            {
-                return true;
-            }
-
             return actualInput;
         }
 
@@ -263,12 +265,9 @@ namespace TF.EX.Patchs.PlayerInput
         {
             try
             {
-                (var state_machine, _) = ServiceCollections.ResolveStateMachineService();
                 var netplayManager = ServiceCollections.ResolveNetplayManager();
                 var inputService = ServiceCollections.ResolveInputService();
 
-                var init = state_machine.IsInitialized();
-                var canStart = state_machine.CanStart();
                 var isNetplayInit = netplayManager.IsInit();
                 var isPaused = TFGame.Instance.Scene is TowerFall.Level && (TFGame.Instance.Scene as TowerFall.Level).Paused;
 
@@ -295,25 +294,6 @@ namespace TF.EX.Patchs.PlayerInput
                     }
                 }
 
-                if (TFGame.Instance.Scene is MainMenu)
-                {
-                    var dynMenu = DynamicData.For(TFGame.Instance.Scene as MainMenu);
-                    var state = dynMenu.Get<MainMenu.MenuState>("state");
-
-                    if (state == MainMenu.MenuState.Rollcall)
-                    {
-                        if (canStart)
-                        {
-                            return false;
-                        }
-
-                        if (init)
-                        {
-                            return false;
-                        }
-                    }
-                }
-
                 if (TFGame.Instance.Scene is MapScene)
                 {
                     return false;
@@ -335,12 +315,9 @@ namespace TF.EX.Patchs.PlayerInput
 
         private static bool InterceptLR(XGamepadInput self, bool actualInput)
         {
-            (var state_machine, _) = ServiceCollections.ResolveStateMachineService();
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var inputService = ServiceCollections.ResolveInputService();
 
-            var init = state_machine.IsInitialized();
-            var canStart = state_machine.CanStart();
             var isNetplayInit = netplayManager.IsInit();
             var isPaused = TFGame.Instance.Scene is TowerFall.Level && (TFGame.Instance.Scene as TowerFall.Level).Paused;
 
@@ -363,15 +340,7 @@ namespace TF.EX.Patchs.PlayerInput
 
                 if (state == MainMenu.MenuState.Rollcall)
                 {
-                    if (canStart)
-                    {
-                        return false;
-                    }
-
-                    if (!init)
-                    {
-                        return false;
-                    }
+                    return actualInput;
                 }
             }
 

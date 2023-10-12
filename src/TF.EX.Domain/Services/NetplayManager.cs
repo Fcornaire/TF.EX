@@ -160,6 +160,11 @@ namespace TF.EX.Domain.Services
                                     TFGame.Characters[index] = archer;
                                     TFGame.AltSelect[index] = alt;
                                     TFGame.Players[index] = true;
+
+                                    if (index == 1)
+                                    {
+                                        _player2Name = _gameContext.GetPlayers().First(p => p.Item1 == index).Item2.Name;
+                                    }
                                 }
 
                                 var dynRoundLogic = DynamicData.For(roundLogic);
@@ -581,8 +586,6 @@ namespace TF.EX.Domain.Services
                 _cancellationTokenSource = new CancellationTokenSource();
                 _cancellationToken = _cancellationTokenSource.Token;
 
-                (var stateMachine, _) = ServiceCollections.ResolveStateMachineService();
-                stateMachine.Reset();
                 ServiceCollections.ResolveReplayService().Reset();
             }
         }

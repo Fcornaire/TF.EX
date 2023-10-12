@@ -12,14 +12,12 @@ namespace TF.EX.Patchs.Layer
     {
         private readonly INetplayManager _netplayManager;
         private readonly IInputService _inputService;
-        private readonly INetplayStateMachine _netplayStateMachine;
         private bool _hasShowedDesynch = false;
 
-        public GameplayLayerPatch(INetplayManager netplayManager, IInputService inputService, INetplayStateMachine netplayStateMachine)
+        public GameplayLayerPatch(INetplayManager netplayManager, IInputService inputService)
         {
             _netplayManager = netplayManager;
             _inputService = inputService;
-            _netplayStateMachine = netplayStateMachine;
         }
 
         public void Load()

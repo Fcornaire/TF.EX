@@ -4,6 +4,7 @@ using TF.EX.Domain.Externals;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Models.State;
 using TF.EX.Domain.Models.State.Entity.HUD;
+using TF.EX.Domain.Models.WebSocket;
 using TF.EX.Domain.Utils;
 
 namespace TF.EX.Domain.Context
@@ -24,7 +25,7 @@ namespace TF.EX.Domain.Context
         int GetSeed();
         Rng GetRng();
         void UpdateRng(Rng rng);
-        void InitializeReplay(int id);
+        void InitializeReplay(int id, GameData gameData = null);
         void AddRecord(GameState gameState, bool shouldSwapPlayer);
         void RemovePredictedRecords(int frame);
         Replay GetReplay();
@@ -54,8 +55,10 @@ namespace TF.EX.Domain.Context
         void AddSoundEffect(SoundEffect data, string filename);
         void ClearDesiredSfx();
         IEnumerable<(int, string)> GetArchers();
-        void AddArcher(int index, string archer_alt);
+        IEnumerable<(int, Player)> GetPlayers();
+        void AddArcher(int index, Player player);
         void ResetArcherSelections();
+        void RemoveArcher(int playerIndex);
     }
 
     internal class GameContext : IGameContext
@@ -73,7 +76,7 @@ namespace TF.EX.Domain.Context
         private ICollection<SFX> _desiredSfxs = new List<SFX>();
         private ICollection<SoundEffectPlaying> _currentSfxs = new List<SoundEffectPlaying>();
         private Dictionary<string, SoundEffect> _soundEffects = new Dictionary<string, SoundEffect>();
-        private Dictionary<int, string> ArcherSelections = new Dictionary<int, string>();
+        private Dictionary<int, Player> ArcherSelections = new Dictionary<int, Player>();
         private int _lastRollbackFrame = 0;
 
         private int _localPlayerIndex = -1;
@@ -179,7 +182,7 @@ namespace TF.EX.Domain.Context
             _rng = new Rng { Seed = rng.Seed, Gen_type = rng.Gen_type.ToList() };
         }
 
-        public void InitializeReplay(int towerId)
+        public void InitializeReplay(int towerId, GameData gameData = null)
         {
             if (_replay == null)
             {
@@ -189,8 +192,16 @@ namespace TF.EX.Domain.Context
                     {
                         Id = towerId,
                         PlayerDraw = PlayerDraw.Unkown,
+                        Version = ServiceCollections.CurrentReplayVersion,
                     },
                 };
+
+                if (gameData != null)
+                {
+                    _replay.Informations.Variants = gameData.Variants ?? new List<string>();
+                    _replay.Informations.Mode = (TF.EX.Domain.Models.Modes)gameData.Mode;
+                    _replay.Informations.VersusMatchLength = gameData.MatchLength;
+                }
             }
         }
 
@@ -407,17 +418,27 @@ namespace TF.EX.Domain.Context
 
         public IEnumerable<(int, string)> GetArchers()
         {
-            return ArcherSelections.Select(kvp => (kvp.Key, kvp.Value));
+            return ArcherSelections.Select(kvp => (kvp.Key, $"{kvp.Value.ArcherIndex}-{kvp.Value.ArcherAltIndex}"));
         }
 
-        public void AddArcher(int index, string archer_alt)
+        public void AddArcher(int index, Player player)
         {
-            ArcherSelections.Add(index, archer_alt);
+            ArcherSelections.Add(index, player);
         }
 
         public void ResetArcherSelections()
         {
             ArcherSelections.Clear();
+        }
+
+        public void RemoveArcher(int playerIndex)
+        {
+            ArcherSelections.Remove(playerIndex);
+        }
+
+        public IEnumerable<(int, Player)> GetPlayers()
+        {
+            return ArcherSelections.Select(kvp => (kvp.Key, kvp.Value));
         }
     }
 }

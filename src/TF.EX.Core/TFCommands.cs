@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using TF.EX.Common.Extensions;
 using TF.EX.Domain;
 using TF.EX.Domain.CustomComponent;
+using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Ports;
 using TowerFall;
@@ -22,9 +23,12 @@ namespace TF.EX.Core
             var map = args.Length > 2 ? Math.Min(int.Parse(args[2]), 14) : 0;
             var seed = args.Length > 3 ? int.Parse(args[3]) : 42;
             var checkDistance = args.Length > 4 ? Math.Min(int.Parse(args[4]), 7) : 2;
+            var variant = args.Length > 5 ? args[5] : "";
+
+            variant = variant.Replace("_", " ");
 
             var logger = ServiceCollections.ResolveLogger();
-            logger.LogDebug<Commands>($"Launching test mode with mode: {mode}, startLevel: {startLevel}, seed: {seed}, checkDistance: {checkDistance}");
+            logger.LogDebug<Commands>($"Launching test mode with mode: {mode}, startLevel: {startLevel}, seed: {seed}, checkDistance: {checkDistance} with variant {variant}");
 
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var replayService = ServiceCollections.ResolveReplayService();
@@ -46,7 +50,7 @@ namespace TF.EX.Core
                 TFGame.Players[i] = TFGame.PlayerInputs[i] != null;
             }
 
-            StartGame(mode, netplayManager, map, startLevel);
+            StartGame(mode, netplayManager, map, startLevel, variant);
 
             TFGame.Instance.Commands.Open = false;
         }
@@ -231,7 +235,7 @@ namespace TF.EX.Core
             }
         }
 
-        private static void StartGame(TowerFall.Modes mode, INetplayManager netplayManager = null, int map = 0, int startLevel = 0)
+        private static void StartGame(TowerFall.Modes mode, INetplayManager netplayManager = null, int map = 0, int startLevel = 0, string variant = "")
         {
             for (int i = 0; i < 4; i++)
             {
@@ -241,6 +245,10 @@ namespace TF.EX.Core
             MatchSettings matchSettings = MatchSettings.GetDefaultVersus();
             matchSettings.LevelSystem = GameData.VersusTowers[map].GetLevelSystem();
             matchSettings.Mode = mode;
+            if (!string.IsNullOrEmpty(variant))
+            {
+                matchSettings.Variants.ApplyVariants(new List<string> { variant });
+            }
 
             var levels = (matchSettings.LevelSystem as VersusLevelSystem).OwnGenLevel(matchSettings, GameData.VersusTowers[map], null, ServiceCollections.ResolveRngService());
             var dynVersusLevelSystem = DynamicData.For(matchSettings.LevelSystem);

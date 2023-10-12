@@ -111,14 +111,18 @@ namespace TF.EX.TowerFallExtensions
             var inputService = ServiceCollections.ResolveInputService();
 
             gameState.AddJumpPadsState(self);
-            gameState.SFXs = sfxService.Get().Select(sfx => new SFXState
+
+            if (!netplayManager.IsTestMode())
             {
-                Frame = sfx.Frame,
-                Name = sfx.Name,
-                Pan = sfx.Pan,
-                Pitch = sfx.Pitch,
-                Volume = sfx.Volume,
-            });
+                gameState.SFXs = sfxService.Get().Select(sfx => new SFXState
+                {
+                    Frame = sfx.Frame,
+                    Name = sfx.Name,
+                    Pan = sfx.Pan,
+                    Pitch = sfx.Pitch,
+                    Volume = sfx.Volume,
+                });
+            }
             gameState.AddRoundLogicState(self);
             gameState.Entities.Hud = hudService.Get();
             gameState.AddPlayersState(self);

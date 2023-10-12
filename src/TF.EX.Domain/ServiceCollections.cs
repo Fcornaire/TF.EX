@@ -6,12 +6,10 @@ using Microsoft.Extensions.Primitives;
 using TF.EX.Common;
 using TF.EX.Common.Logging;
 using TF.EX.Domain.Context;
-using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
 using TF.EX.Domain.Services;
-using TF.EX.Domain.Services.StateMachine;
 using TF.EX.Domain.Services.TF;
 using TowerFall;
 
@@ -23,7 +21,7 @@ namespace TF.EX.Domain
         public static IServiceProvider ServiceProvider;
         private static HashSet<double> _cachedPickupEntries = new HashSet<double>();
         private static CancellationTokenSource _resetCacheToken = new CancellationTokenSource();
-        public static readonly ReplayVersion CurrentReplayVersion = ReplayVersion.V2;
+        public static readonly ReplayVersion CurrentReplayVersion = ReplayVersion.V3;
 
         public static void RegisterServices()
         {
@@ -43,9 +41,6 @@ namespace TF.EX.Domain
             ServiceCollection.AddSingleton<IGameContext, GameContext>();
             ServiceCollection.AddSingleton<INetplayManager, NetplayManager>();
             ServiceCollection.AddSingleton<IMatchmakingService, MatchmakingService>();
-            ServiceCollection.AddTransient<INetplayStateMachine, DefaultNetplayStateMachine>();
-            ServiceCollection.AddSingleton<INetplayStateMachine, Netplay1V1QuickPlayStateMachine>();
-            ServiceCollection.AddSingleton<INetplayStateMachine, Netplay1V1DirectStateMachine>();
             ServiceCollection.AddSingleton<IReplayService, ReplayService>();
             ServiceCollection.AddSingleton<ISFXService, SFXService>();
             ServiceCollection.AddSingleton<ISyncTestUtilsService, SyncTestUtilsService>();
@@ -148,17 +143,6 @@ namespace TF.EX.Domain
         public static ISFXService ResolveSFXService() { return ServiceProvider.GetRequiredService<ISFXService>(); }
 
         public static ILogger ResolveLogger() { return ServiceProvider.GetRequiredService<ILogger>(); }
-
-
-        public static (INetplayStateMachine, TF.EX.Domain.Models.Modes) ResolveStateMachineService()
-        {
-            var mode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
-
-            var implem = mode.ToType();
-            var stateMachines = ServiceProvider.GetServices<INetplayStateMachine>();
-
-            return (stateMachines.First(service => service.GetType() == implem), mode);
-        }
 
         public static void ResetState()
         {

@@ -7,26 +7,21 @@ namespace TF.EX.Patchs.Entity.MenuItem
     {
         public void Load()
         {
-            On.TowerFall.VersusCoinButton.Update += VersusCoinButton_Update;
+            On.TowerFall.VersusCoinButton.Render += VersusCoinButton_Render;
         }
 
         public void Unload()
         {
-            On.TowerFall.VersusCoinButton.Update -= VersusCoinButton_Update;
+            On.TowerFall.VersusCoinButton.Render -= VersusCoinButton_Render;
         }
 
-        private void VersusCoinButton_Update(On.TowerFall.VersusCoinButton.orig_Update orig, TowerFall.VersusCoinButton self)
+        private void VersusCoinButton_Render(On.TowerFall.VersusCoinButton.orig_Render orig, TowerFall.VersusCoinButton self)
         {
-            orig(self);
+            var currentMode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
 
-            var currentMode = TowerFall.MainMenu.VersusMatchSettings.Mode;
-
-            if (currentMode.ToModel().IsNetplay() && TowerFall.MainMenu.VersusMatchSettings.MatchLength != TowerFall.MatchSettings.MatchLengths.Standard)
+            if (currentMode != Domain.Models.Modes.Netplay)
             {
-                TowerFall.MainMenu.VersusMatchSettings.MatchLength = TowerFall.MatchSettings.MatchLengths.Standard; //Prevent changing on netplay mode
-                var dynVersusCoinButton = DynamicData.For(self);
-                dynVersusCoinButton.Invoke("UpdateSides");
-                TowerFall.Sounds.ui_invalid.Play();
+                orig(self);
             }
         }
     }

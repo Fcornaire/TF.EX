@@ -15,14 +15,12 @@ namespace TF.EX.Patchs
         public void Load()
         {
             On.TowerFall.MatchSettings.PlayerGoals += MatchSettings_PlayerGoals;
-
         }
 
         public void Unload()
         {
             On.TowerFall.MatchSettings.PlayerGoals -= MatchSettings_PlayerGoals;
         }
-
 
         private int MatchSettings_PlayerGoals(On.TowerFall.MatchSettings.orig_PlayerGoals orig, MatchSettings self, int p2goal, int p3goal, int p4goal)
         {
