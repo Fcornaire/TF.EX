@@ -38,6 +38,14 @@ Also, this is project is still super WIP !
     <img src="images/modes.gif" alt="animated" />
   </p>
 
+- Modded variant
+
+  Ability to run online play with custom variant as long as they are EX compatible. Read [EX API](EX-API.md) for mor details.
+
+  <p align="center">
+    <img src="images/moddedVariant.gif" alt="animated" />
+  </p>
+
 - Replays
 
   Replay is "Normally" automatically exported at the end of a game.

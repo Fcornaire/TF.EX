@@ -1,5 +1,7 @@
 ﻿using FortRise;
 using Monocle;
+using MonoMod.ModInterop;
+using TF.EX.API;
 using TF.EX.Domain;
 using TF.EX.Patchs;
 using TowerFall;
@@ -39,8 +41,11 @@ namespace TF.EX
 
         private void RegisterAndLoad()
         {
+            typeof(ModExports).ModInterop();
+
             TF.EX.Domain.ServiceCollections.RegisterServices();
             TF.EX.Domain.ServiceCollections.ServiceCollection.RegisterPatchs();
+            TF.EX.Domain.ServiceCollections.ServiceCollection.AddAPIManager();
             TF.EX.Domain.ServiceCollections.Build();
             TF.EX.Domain.ServiceCollections.ServiceProvider.LoadPatchs();
         }

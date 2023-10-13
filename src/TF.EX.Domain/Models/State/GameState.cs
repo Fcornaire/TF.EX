@@ -24,6 +24,8 @@
 
         public Vector2f ScreenOffset { get; set; } = new Vector2f { X = -1, Y = -1 };
 
+        public Dictionary<string, string> AdditionnalData { get; set; } = new Dictionary<string, string>();
+
         public int Frame { get; set; }
     }
 
