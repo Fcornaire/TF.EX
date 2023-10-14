@@ -32,11 +32,23 @@ Also, this is project is still super WIP !
   <img src="images/demo.gif" alt="animated" />
 </p>
 
-2 new modes available, `Netplay Quickplay` and `Netplay Direct`
+1 new mode available, `Netplay`
 
-   <p align="center">
-    <img src="images/modes.gif" alt="animated" />
-  </p>
+<p align="center">
+  <img src="images/lobbies.gif" alt="animated" />
+</p>
+
+Create a lobby for some online action !
+
+<p align="center">
+  <img src="images/createLobby.gif" alt="animated" />
+</p>
+
+Or join available one
+
+<p align="center">
+  <img src="images/joiningLobby.gif" alt="animated" />
+</p>
 
 - Modded variant
 
