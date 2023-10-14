@@ -32,5 +32,10 @@ namespace TF.EX.Domain.Extensions
                 }
             }
         }
+
+        public static bool ContainsCustomVariant(this MatchVariants matchVariants, IEnumerable<string> variants)
+        {
+            return variants.Any(variant => matchVariants.CustomVariants.Any(v => v.Value.Title == variant));
+        }
     }
 }
