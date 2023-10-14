@@ -19,6 +19,7 @@ namespace TF.EX.Common
         Task CheckForUpdate();
         bool IsUpdateAvailable();
         bool Update();
+        Version GetLatestVersion();
     }
 
     public class AutoUpdater : IAutoUpdater
@@ -30,6 +31,9 @@ namespace TF.EX.Common
         private string ZipPath => $"{DownloadPath}/update.zip";
 
         private bool _isUpdateAvailable = false;
+
+        private Version latestVersion;
+        private Version currentVersion;
 
         public AutoUpdater(ILogger logger)
         {
@@ -43,12 +47,12 @@ namespace TF.EX.Common
             try
             {
                 var meta = File.ReadAllText(".\\Mods\\TF.EX\\meta.json");
-                var currentVersion = GetVersion(meta);
+                currentVersion = GetVersion(meta);
 
                 _logger.LogDebug<AutoUpdater>($"TF.EX Mod current version {currentVersion}");
                 _logger.LogDebug<AutoUpdater>($"Checking last TF.EX mod version");
 
-                var latestVersion = await GetLatestVersion();
+                latestVersion = await GetLatestVersion();
 
                 _logger.LogDebug<AutoUpdater>($"Latest TF.EX mod version : {latestVersion}");
 
@@ -205,6 +209,11 @@ namespace TF.EX.Common
         public bool IsUpdateAvailable()
         {
             return _isUpdateAvailable;
+        }
+
+        Version IAutoUpdater.GetLatestVersion()
+        {
+            return latestVersion;
         }
     }
 }

@@ -25,13 +25,13 @@ namespace TF.EX.Patchs.Engine
     {
         public static InputRenderer[] ReplayInputRenderers;
 
-        private bool _shouldShowUpdateDialog = true;
+        private bool _shouldShowUpdateNotif = true;
 
         private readonly INetplayManager _netplayManager;
         private readonly IInputService _inputService;
         private readonly IReplayService _replayService;
         private readonly IMatchmakingService _matchmakingService;
-        private readonly IAutoUpdater _autoUpdater;
+        private readonly IAutoUpdater autoUpdater;
         private readonly ISyncTestUtilsService _syncTestUtilsService;
         private readonly ILogger _logger;
 
@@ -58,7 +58,7 @@ namespace TF.EX.Patchs.Engine
             _inputService = inputService;
             _replayService = replayService;
             _matchmakingService = matchmakingService;
-            _autoUpdater = autoUpdater;
+            this.autoUpdater = autoUpdater;
             _logger = logger;
             _syncTestUtilsService = syncTestUtilsService;
         }
@@ -86,7 +86,7 @@ namespace TF.EX.Patchs.Engine
                 _replayService.Export();
             }
 
-            if (_autoUpdater.IsUpdateAvailable())
+            if (autoUpdater.IsUpdateAvailable())
             {
                 if (!FortRise.RiseCore.DebugMode)
                 {
@@ -98,7 +98,7 @@ namespace TF.EX.Patchs.Engine
 
                 stopWatch.Start();
                 logger.LogDebug("TF.EX mod updating...");
-                _autoUpdater.Update();
+                autoUpdater.Update();
                 stopWatch.Stop();
 
                 var time = stopWatch.ElapsedMilliseconds / 1000 == 0 ? $"{stopWatch.ElapsedMilliseconds}ms" : $"{stopWatch.ElapsedMilliseconds / 1000}s";
@@ -325,25 +325,28 @@ namespace TF.EX.Patchs.Engine
             {
                 case TowerFall.MainMenu.MenuState.PressStart:
                     UpdateClipped(self.Commands);
-                    break;
-                case TowerFall.MainMenu.MenuState.Main:
-                    if (_shouldShowUpdateDialog)
-                    {
-                        _shouldShowUpdateDialog = false;
 
-                        if (ServiceCollections.ServiceProvider.GetRequiredService<IAutoUpdater>().IsUpdateAvailable())
+                    if (_shouldShowUpdateNotif)
+                    {
+                        _shouldShowUpdateNotif = false;
+
+                        if (autoUpdater.IsUpdateAvailable())
                         {
-                            var dialog = new Dialog(
-                                "TF EX Update",
-                                "A TF EX mod update is available \n \nCancel this to start updating",
-                                new Vector2(160f, 120f),
-                                self.Exit,
-                                new Dictionary<string, Action>());
-                            var dynLayer = DynamicData.For((TFGame.Instance.Scene as TowerFall.MainMenu).GetMainLayer());
-                            dynLayer.Invoke("Add", dialog, false);
+                            var notif = new Notification(self.Scene, $"EX mod update version {autoUpdater.GetLatestVersion()} ...");
+                            Sounds.ui_clickSpecial.Play(160, 5);
+                            _inputService.DisableAllController();
+
+                            Alarm alarm = Alarm.Create(Alarm.AlarmMode.Oneshot, null, 150, true);
+                            alarm.OnComplete = self.Exit;
+
+                            notif.Add(alarm);
+
+                            self.Scene.Add(notif);
                         }
                     }
 
+                    break;
+                case TowerFall.MainMenu.MenuState.Main:
                     if (_matchmakingService.IsConnectedToServer())
                     {
                         _matchmakingService.DisconnectFromServer();

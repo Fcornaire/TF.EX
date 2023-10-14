@@ -2,13 +2,13 @@
 
 EX has the ability to run custom variant as long as the mod is made compatible with EX.
 
-It's your responsability to make sure the mod is netplay compatbile (You should ask author)
+It's your responsability to make sure the mod is netplay compatible (You should ask author)
 
 # Making a custom variant compatible (For developper)
 
 This guide will help you implement your modded variant for netplay session.
 
-You can also look at this [PR]("https://github.com/FortRise/ExampleFortRiseMod/pull/1") which make Jester Hat variant compatible with EX
+You can also look at this [PR](https://github.com/FortRise/ExampleFortRiseMod/pull/1) which make Jester Hat variant compatible with EX
 
 ## Prerequisites
 

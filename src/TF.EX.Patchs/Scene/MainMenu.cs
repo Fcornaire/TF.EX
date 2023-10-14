@@ -680,10 +680,16 @@ namespace TF.EX.Patchs.Scene
 
                         //Apply length
                         MainMenu.VersusMatchSettings.MatchLength = (MatchSettings.MatchLengths)lobby.GameData.MatchLength;
+
+                        if (MainMenu.VersusMatchSettings.Variants.ContainsCustomVariant(lobby.GameData.Variants))
+                        {
+                            self.Add(new Notification(self, $"Be cautious! Custom variants might not work properly", 15, 500));
+                        }
                     };
 
                     Action onFail = () =>
                     {
+                        self.Add(new Notification(self, $"Failed to create lobby", 10, 120));
                         _inputService.EnableAllController();
                         self.RemoveLoader();
                         TowerFall.Sounds.ui_invalid.Play();
@@ -773,7 +779,6 @@ namespace TF.EX.Patchs.Scene
 
                             rngService.SetSeed(newLobby.GameData.Seed);
 
-
                             //Apply variant
                             MainMenu.VersusMatchSettings.Variants.ApplyVariants(newLobby.GameData.Variants);
 
@@ -782,10 +787,16 @@ namespace TF.EX.Patchs.Scene
 
                             self.State = MainMenu.MenuState.Rollcall;
 
+                            if (MainMenu.VersusMatchSettings.Variants.ContainsCustomVariant(newLobby.GameData.Variants))
+                            {
+                                self.Add(new Notification(self, $"Be cautious! Custom variants might not work properly", 15, 500));
+                            }
                         };
 
                         Action onFail = () =>
                         {
+                            self.Add(new Notification(self, $"Failed to join lobby", 10, 150));
+
                             _inputService.EnableAllController();
                             self.RemoveLoader();
                             TowerFall.Sounds.ui_invalid.Play();
