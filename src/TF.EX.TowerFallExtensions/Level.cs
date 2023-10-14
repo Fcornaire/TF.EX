@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Monocle;
 using MonoMod.Utils;
+using TF.EX.API;
 using TF.EX.Domain;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Externals;
@@ -161,6 +162,8 @@ namespace TF.EX.TowerFallExtensions
             gameState.AddCrackedPlatform(self);
             gameState.AddSpikeball(self);
             gameState.AddExplosions(self);
+
+            gameState.AdditionnalData = TF.EX.Domain.ServiceCollections.ServiceProvider.ResolveAPIManager().GetStates();
 
             return gameState;
         }
@@ -590,6 +593,8 @@ namespace TF.EX.TowerFallExtensions
             }
 
             level.PostLoad(gameState);
+
+            TF.EX.Domain.ServiceCollections.ServiceProvider.ResolveAPIManager().LoadStates(gameState.AdditionnalData);
 
             level.SortGamePlayLayer(CompareDepth);
             level.SortHUDLayer(CompareDepth);

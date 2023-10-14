@@ -11,6 +11,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <ProjectReference Include="..\TF.EX.API\TF.EX.API.csproj" />
 	  <ProjectReference Include="..\TF.EX.Domain\TF.EX.Domain.csproj" />
 	</ItemGroup>
 

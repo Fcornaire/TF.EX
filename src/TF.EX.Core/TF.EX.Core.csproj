@@ -3,7 +3,6 @@
   <PropertyGroup>
 	  <TargetFramework>net472</TargetFramework>
 	  <LangVersion>11</LangVersion>
-	  <ImplicitUsings>enable</ImplicitUsings>
 	  <PackageCopyToOutput>true</PackageCopyToOutput>
   </PropertyGroup>
 
@@ -46,9 +45,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\TF.EX.Domain\TF.EX.Domain.csproj" />
-    <ProjectReference Include="..\TF.EX.Patchs\TF.EX.Patchs.csproj" />
-    <ProjectReference Include="..\TF.EX.TowerFallExtensions\TF.EX.TowerFallExtensions.csproj" />
+		<ProjectReference Include="..\TF.EX.Domain\TF.EX.Domain.csproj" />
+		<ProjectReference Include="..\TF.EX.Patchs\TF.EX.Patchs.csproj" />
+		<ProjectReference Include="..\TF.EX.API\TF.EX.API.csproj" />
+		<ProjectReference Include="..\TF.EX.TowerFallExtensions\TF.EX.TowerFallExtensions.csproj" />
   </ItemGroup>
 
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Debug'">
