@@ -1,17 +1,13 @@
 ﻿using Microsoft.Xna.Framework;
-using MonoMod.Utils;
-using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Ports;
 using TF.EX.TowerFallExtensions;
-using TF.EX.TowerFallExtensions.Scene;
 using TowerFall;
 
 namespace TF.EX.Patchs.Entity.MenuItem
 {
     internal class VersusBeginButtonPatch : IHookable
     {
-
         private readonly IMatchmakingService _matchmakingService;
         private readonly INetplayManager _netplayManager;
         private readonly IArcherService _archerService;
@@ -47,6 +43,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
 
             if (currentMode == TF.EX.Domain.Models.Modes.Netplay)
             {
+                _matchmakingService.ResetLobby();
                 self.MainMenu.State = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
                 return;
             }
@@ -59,17 +56,6 @@ namespace TF.EX.Patchs.Entity.MenuItem
             orig(self, position, tweenFrom);
 
             _archerService.Reset();
-        }
-
-        private void CancelDialog()
-        {
-            (TFGame.Instance.Scene as MainMenu).GetMainLayer().Remove((ent) => ent is Dialog);
-        }
-
-        private void Add(Monocle.Entity entity)
-        {
-            var dynLayer = DynamicData.For((TFGame.Instance.Scene as MainMenu).GetMainLayer());
-            dynLayer.Invoke("Add", entity, false);
         }
     }
 }

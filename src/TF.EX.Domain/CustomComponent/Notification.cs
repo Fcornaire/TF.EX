@@ -19,17 +19,8 @@ namespace TF.EX.Domain.CustomComponent
         private int appearDuration;
         private int stayingDuration;
 
-        public Notification(Scene scene, string text, int appearDuration = 20, int stayingDuration = 250) : base(-1)
+        private Notification(string text, int appearDuration = 20, int stayingDuration = 250) : base(-1)
         {
-            // Remove all previous notifications (TODO: manage multiple notifications ?)
-            var notifs = scene.Layers.SelectMany(layer => layer.Value.Entities)
-                .Where(ent => ent is Notification).Select(ent => ent as Notification);
-
-            foreach (var notif in notifs)
-            {
-                notif.RemoveSelf();
-            }
-
             description = text.ToUpper();
             length = (int)Math.Ceiling(TFGame.Font.MeasureString(description).X / 10.0) + 1;
 
@@ -44,6 +35,21 @@ namespace TF.EX.Domain.CustomComponent
             StartAnimation();
         }
 
+        public static Notification Create(Scene scene, string text, int appearDuration = 20, int stayingDuration = 250)
+        {
+            // Remove all previous notifications (TODO: manage multiple notifications ?)
+            var notifs = scene.Layers.SelectMany(layer => layer.Value.Entities)
+                .Where(ent => ent is Notification).Select(ent => ent as Notification);
+
+            foreach (var notif in notifs)
+            {
+                notif.RemoveSelf();
+            }
+            var res = new Notification(text, appearDuration, stayingDuration);
+            scene.Add(res);
+
+            return res;
+        }
         private void StartAnimation()
         {
             Tween tween = Tween.Create(Tween.TweenMode.Oneshot, Ease.CubeOut, appearDuration, true);

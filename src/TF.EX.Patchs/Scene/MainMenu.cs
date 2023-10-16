@@ -233,6 +233,7 @@ namespace TF.EX.Patchs.Scene
             }
             else
             {
+                TFGameExtensions.ResetVersusChoices();
                 CreateLobbyBrowser(self);
             }
         }
@@ -272,9 +273,7 @@ namespace TF.EX.Patchs.Scene
                 variants = MainMenu.VersusMatchSettings.Variants.BuildMenu(self, out _, out self.MaxUICameraY);
             }
 
-            var loader = new Loader(true);
-            Loader.Message = "RETRIEVING LOBBIES...";
-            self.Add(loader);
+            self.AddLoader("RETRIEVING LOBBIES...");
 
             self.BackState = TowerFall.MainMenu.MenuState.VersusOptions;
             MainMenu.VersusMatchSettings.Mode = TF.EX.Domain.Models.Modes.Netplay.ToTF();
@@ -283,20 +282,16 @@ namespace TF.EX.Patchs.Scene
             {
                 try
                 {
-                    self.ButtonGuideA.SetDetails(MenuButtonGuide.ButtonModes.Confirm, "JOIN");
-                    self.ButtonGuideB.SetDetails(MenuButtonGuide.ButtonModes.Back, "RETURN");
-                    self.ButtonGuideC.SetDetails(MenuButtonGuide.ButtonModes.Start, "CREATE");
-                    self.ButtonGuideD.SetDetails(MenuButtonGuide.ButtonModes.Alt2, "REFRESH");
+                    _inputService.DisableAllControllers();
 
-                    spectateEntityButton = new Monocle.Entity();
-                    var spectateButton = new MenuButtonGuide(4);
-                    spectateButton.SetDetails(MenuButtonGuide.ButtonModes.Alt, "SPECTATE");
-                    spectateEntityButton.Add(spectateButton);
-                    self.Add(spectateEntityButton);
-
-                    _inputService.DisableAllController();
-
-                    await _matchmakingService.RetrieveLobbies(OnRetrieveSuccess);
+                    _matchmakingService.ResetLobbies();
+                    await _matchmakingService.GetLobbies(OnRetrieveSuccess, () =>
+                    {
+                        self.RemoveLoader();
+                        Notification.Create(self, "Failed to retrieve lobbies...");
+                        Sounds.ui_invalid.Play();
+                        _inputService.EnableAllControllers();
+                    });
                 }
                 catch (Exception ex)
                 {
@@ -307,11 +302,9 @@ namespace TF.EX.Patchs.Scene
 
         private void CreateReplay(MainMenu self)
         {
-            _inputService.DisableAllController();
+            _inputService.DisableAllControllers();
 
-            var loader = new Loader(true);
-            Loader.Message = "LOADING REPLAYS...";
-            self.Add(loader);
+            self.AddLoader("LOADING REPLAYS...");
 
             self.BackState = TowerFall.MainMenu.MenuState.Main;
 
@@ -328,8 +321,8 @@ namespace TF.EX.Patchs.Scene
                     if (replays.Length == 0)
                     {
                         _logger.LogError<MainMenuPatch>("No replay found");
-                        _inputService.EnableAllController();
-                        self.Remove(loader);
+                        _inputService.EnableAllControllers();
+                        self.RemoveLoader();
 
                         noMsg = new Text("PLAY SOME ONLINE GAME FIRST");
                         noMsg.Position = new Vector2(100, 100);
@@ -375,12 +368,12 @@ namespace TF.EX.Patchs.Scene
 
                     dynMainMenu.Invoke("TweenBGCameraToY", 1);
 
-                    _inputService.EnableAllController();
+                    _inputService.EnableAllControllers();
 
                     self.ButtonGuideA.SetDetails(MenuButtonGuide.ButtonModes.Confirm, "LAUNCH");
                     self.ButtonGuideB.SetDetails(MenuButtonGuide.ButtonModes.Back, "EXIT");
                     Loader.Message = "";
-                    self.Remove(loader);
+                    self.RemoveLoader();
 
                     Sounds.ui_startGame.Play();
                 }
@@ -411,21 +404,16 @@ namespace TF.EX.Patchs.Scene
 
                 Task.Run(async () =>
                 {
-                    _inputService.DisableAllController();
+                    _inputService.DisableAllControllers();
 
-                    var loader = new Loader(true);
-                    loader.Position.Y = toLaunch.Position.Y;
-                    Loader.Message = "LOADING REPLAY...";
-                    TFGame.Instance.Scene.Add(new Fader());
-                    TFGame.Instance.Scene.Add(loader);
+                    TFGame.Instance.Scene.AddLoader("LOADING REPLAY..");
 
                     await _replayService.LoadAndStart(toLaunch.OriginalName);
 
-                    TFGame.Instance.Scene.Remove(loader);
-                    Loader.Message = "";
+                    TFGame.Instance.Scene.RemoveLoader();
 
                     _netplayManager.EnableReplayMode();
-                    _inputService.EnableAllController();
+                    _inputService.EnableAllControllers();
                 });
             }
         }
@@ -610,7 +598,7 @@ namespace TF.EX.Patchs.Scene
 
                 if (MenuInput.Alt && DateTime.UtcNow >= nextServerPull)
                 {
-                    _inputService.DisableAllController();
+                    _inputService.DisableAllControllers();
 
                     nextServerPull = DateTime.UtcNow.AddSeconds(3);
                     Sounds.ui_altCostumeShift.Play();
@@ -629,7 +617,14 @@ namespace TF.EX.Patchs.Scene
                         lobbyPanel = null;
                     }
 
-                    _matchmakingService.RetrieveLobbies(OnRetrieveSuccess);
+                    _matchmakingService.ResetLobbies();
+                    _matchmakingService.GetLobbies(OnRetrieveSuccess, () =>
+                    {
+                        self.RemoveLoader();
+                        Notification.Create(self, "Failed to retrieve lobbies...");
+                        Sounds.ui_invalid.Play();
+                        _inputService.EnableAllControllers();
+                    });
                     return;
                 }
             }
@@ -661,13 +656,14 @@ namespace TF.EX.Patchs.Scene
                         IsHost = true
                     });
 
-                    self.AddLoader("CREATING LOBBY");
+                    self.AddLoader("CREATING LOBBY...");
+                    Sounds.ui_click.Play();
 
-                    _inputService.DisableAllController();
+                    _inputService.DisableAllControllers();
 
                     Action onSucess = () =>
                     {
-                        _inputService.EnableAllController();
+                        _inputService.EnableAllControllers();
                         _inputService.DisableAllControllerExceptLocal();
                         self.RemoveLoader();
                         Sounds.ui_click.Play();
@@ -683,14 +679,14 @@ namespace TF.EX.Patchs.Scene
 
                         if (MainMenu.VersusMatchSettings.Variants.ContainsCustomVariant(lobby.GameData.Variants))
                         {
-                            self.Add(new Notification(self, $"Be cautious! Custom variants might not work properly", 15, 500));
+                            Notification.Create(self, $"Be cautious! Custom variants might not work properly", 15, 500);
                         }
                     };
 
                     Action onFail = () =>
                     {
-                        self.Add(new Notification(self, $"Failed to create lobby", 10, 120));
-                        _inputService.EnableAllController();
+                        Notification.Create(self, $"Failed to create lobby", 10, 120);
+                        _inputService.EnableAllControllers();
                         self.RemoveLoader();
                         TowerFall.Sounds.ui_invalid.Play();
                         self.State = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
@@ -703,17 +699,30 @@ namespace TF.EX.Patchs.Scene
 
         private void OnRetrieveSuccess()
         {
-            _inputService.EnableAllController();
+            _inputService.EnableAllControllers();
 
             var self = TFGame.Instance.Scene as TowerFall.MainMenu;
 
-            TFGame.Instance.Scene.RemoveLoader();
+            self.ButtonGuideA.SetDetails(MenuButtonGuide.ButtonModes.Confirm, "JOIN");
+            self.ButtonGuideB.SetDetails(MenuButtonGuide.ButtonModes.Back, "RETURN");
+            self.ButtonGuideC.SetDetails(MenuButtonGuide.ButtonModes.Start, "CREATE");
+            self.ButtonGuideD.SetDetails(MenuButtonGuide.ButtonModes.Alt2, "REFRESH");
+
+            if (spectateEntityButton == null)
+            {
+                spectateEntityButton = new Monocle.Entity(-1);
+                var spectateButton = new MenuButtonGuide(4);
+                spectateButton.SetDetails(MenuButtonGuide.ButtonModes.Alt, "SPECTATE");
+                spectateEntityButton.Add(spectateButton);
+                self.Add(spectateEntityButton);
+            }
+
+            self.RemoveLoader();
 
             var reslobbies = _matchmakingService.GetLobbies();
 
             if (lobbies.Count == 0 && reslobbies.Count() > 0 || lobbies.Count != reslobbies.Count())
             {
-
                 var dynMainMenu = DynamicData.For(self);
                 var dynCamera = DynamicData.For(self.UILayer);
 
@@ -734,7 +743,7 @@ namespace TF.EX.Patchs.Scene
 
                     Action onClick = () =>
                     {
-                        _inputService.DisableAllController();
+                        _inputService.DisableAllControllers();
 
                         var variantsToggle = variants
                             .Where(v => v is VariantToggle)
@@ -747,7 +756,7 @@ namespace TF.EX.Patchs.Scene
                         {
                             _logger.LogError<MainMenuPatch>("Can't join lobby because of customs variants");
 
-                            _inputService.EnableAllController();
+                            _inputService.EnableAllControllers();
 
                             TowerFall.Sounds.ui_invalid.Play();
                             return;
@@ -774,7 +783,7 @@ namespace TF.EX.Patchs.Scene
                             _matchmakingService.ConnectAndListenToLobby(roomChatUrl);
 
                             _matchmakingService.UpdateOwnLobby(newLobby);
-                            _inputService.EnableAllController();
+                            _inputService.EnableAllControllers();
                             _inputService.DisableAllControllerExceptLocal();
 
                             rngService.SetSeed(newLobby.GameData.Seed);
@@ -789,15 +798,15 @@ namespace TF.EX.Patchs.Scene
 
                             if (MainMenu.VersusMatchSettings.Variants.ContainsCustomVariant(newLobby.GameData.Variants))
                             {
-                                self.Add(new Notification(self, $"Be cautious! Custom variants might not work properly", 15, 500));
+                                Notification.Create(self, $"Be cautious! Custom variants might not work properly", 15, 500);
                             }
                         };
 
                         Action onFail = () =>
                         {
-                            self.Add(new Notification(self, $"Failed to join lobby", 10, 150));
+                            Notification.Create(self, $"Failed to join lobby", 10, 150);
 
-                            _inputService.EnableAllController();
+                            _inputService.EnableAllControllers();
                             self.RemoveLoader();
                             TowerFall.Sounds.ui_invalid.Play();
 
@@ -843,7 +852,7 @@ namespace TF.EX.Patchs.Scene
                 dynCamera.Invoke("Add", lobbyPanel, false);
                 dynMainMenu.Invoke("TweenBGCameraToY", 1);
 
-                _inputService.EnableAllController();
+                _inputService.EnableAllControllers();
                 return;
             }
 
@@ -865,7 +874,7 @@ namespace TF.EX.Patchs.Scene
                     noMsg.Position = new Vector2(100, 100);
                     self.Add(noMsg);
 
-                    _inputService.EnableAllController();
+                    _inputService.EnableAllControllers();
                 }
             }
         }

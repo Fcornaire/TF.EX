@@ -8,13 +8,13 @@ namespace TF.EX.Domain.CustomComponent
     {
         private float alpha;
 
-        public Fader()
+        public Fader() : base(0)
         {
             base.Depth = 10000;
             Tween tween = Tween.Create(Tween.TweenMode.Oneshot, Ease.CubeOut, 50, start: true);
             tween.OnUpdate = delegate (Tween t)
             {
-                alpha = MathHelper.Lerp(0f, 0.5f, t.Eased);
+                alpha = MathHelper.Lerp(0f, 0.4f, t.Eased);
             };
             Add(tween);
         }

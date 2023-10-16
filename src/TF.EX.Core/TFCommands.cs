@@ -8,10 +8,10 @@ using System.Net.Sockets;
 using System.Threading.Tasks;
 using TF.EX.Common.Extensions;
 using TF.EX.Domain;
-using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Ports;
+using TF.EX.TowerFallExtensions.Scene;
 using TowerFall;
 
 namespace TF.EX.Core
@@ -132,16 +132,13 @@ namespace TF.EX.Core
             {
                 TFGame.Instance.Commands.Open = false;
 
-                var loader = new Loader(true);
-                Loader.Message = "LOADING REPLAY...";
-                TFGame.Instance.Scene.Add(new Fader());
-                TFGame.Instance.Scene.Add(loader);
+                TFGame.Instance.Scene.AddLoader("LOADING REPLAY...");
 
                 await replayService.LoadAndStart(replayName);
 
                 netplayManager.SetReplayMode();
 
-                TFGame.Instance.Scene.Remove(loader);
+                TFGame.Instance.Scene.RemoveLoader();
             });
         }
 

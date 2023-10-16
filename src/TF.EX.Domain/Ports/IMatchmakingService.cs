@@ -13,7 +13,9 @@ namespace TF.EX.Domain.Ports
         void DisconnectFromServer();
         void DisconnectFromLobby();
 
-        Task RetrieveLobbies(Action onSuccess);
+        Task GetLobbies(Action onSuccess, Action onFail);
+
+        void ResetLobbies();
 
         IEnumerable<Lobby> GetLobbies();
 
@@ -23,10 +25,11 @@ namespace TF.EX.Domain.Ports
         Task CreateLobby(Action onSuccess, Action onFail);
         Task JoinLobby(string roomId, Action onSucess, Action onFail);
 
-        Task UpdatePlayer(Player player);
+        Task UpdatePlayer(Player player, Action onSucess, Action onFail);
         string GetRoomChatPeerId();
         Task LeaveLobby(Action onSuccess, Action onFail);
         void ResetPeer();
         bool IsLobbyReady();
+        void ResetLobby();
     }
 }
