@@ -103,13 +103,13 @@ namespace TF.EX.Domain.Services.TF
             _context.UpdatePolledInput(newInput);
         }
 
-        public void DisableAllController()
+        public void DisableAllControllers()
         {
             TFGame.PlayerInputs = new PlayerInput[4];
             MenuInput.MenuInputs = new PlayerInput[5];
         }
 
-        public void EnableAllController()
+        public void EnableAllControllers()
         {
             PlayerInput.AssignInputs();
             MenuInput.UpdateInputs();

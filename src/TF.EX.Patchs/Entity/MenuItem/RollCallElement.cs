@@ -1,9 +1,11 @@
 ﻿using Microsoft.Xna.Framework;
 using Monocle;
 using MonoMod.Utils;
+using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Ports;
+using TF.EX.Domain.Ports.TF;
 using TowerFall;
 
 namespace TF.EX.Patchs.Entity.MenuItem
@@ -12,11 +14,13 @@ namespace TF.EX.Patchs.Entity.MenuItem
     {
         private readonly IMatchmakingService _matchmakingService;
         private readonly IArcherService archerService;
+        private readonly IInputService inputService;
 
-        public RollCallElementPatch(IMatchmakingService matchmakingService, IArcherService archerService)
+        public RollCallElementPatch(IMatchmakingService matchmakingService, IArcherService archerService, IInputService inputService)
         {
             _matchmakingService = matchmakingService;
             this.archerService = archerService;
+            this.inputService = inputService;
         }
 
         public void Load()
@@ -62,7 +66,19 @@ namespace TF.EX.Patchs.Entity.MenuItem
                             player.Ready = false;
                             archerService.RemoveArcher(playerIndex);
 
-                            _matchmakingService.UpdatePlayer(player);
+                            inputService.DisableAllControllers();
+
+                            _matchmakingService.UpdatePlayer(player, () =>
+                            {
+                                inputService.EnableAllControllers();
+                                inputService.DisableAllControllerExceptLocal();
+                            }, () =>
+                            {
+                                inputService.EnableAllControllers();
+                                inputService.DisableAllControllerExceptLocal();
+                                Sounds.ui_invalid.Play();
+                                Notification.Create(self.Scene, "Failed to notify server");
+                            });
                         }
                     }
                     else
@@ -115,7 +131,21 @@ namespace TF.EX.Patchs.Entity.MenuItem
 
                         archerService.AddArcher(playerIndex, player);
 
-                        _matchmakingService.UpdatePlayer(player);
+                        inputService.DisableAllControllers();
+
+                        _matchmakingService.UpdatePlayer(player, () =>
+                            {
+                                inputService.EnableAllControllers();
+                                inputService.DisableAllControllerExceptLocal();
+                                self.HandleControlChange();
+                            }, () =>
+                            {
+                                inputService.EnableAllControllers();
+                                inputService.DisableAllControllerExceptLocal();
+                                self.HandleControlChange();
+                                Sounds.ui_invalid.Play();
+                                Notification.Create(self.Scene, "Failed to notify server");
+                            });
                     }
                 }
                 else
@@ -141,16 +171,16 @@ namespace TF.EX.Patchs.Entity.MenuItem
                 {
                     await _matchmakingService.LeaveLobby(() =>
                     {
-                        self.MainMenu.State = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
+                        (TFGame.Instance.Scene as MainMenu).State = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
                         _matchmakingService.DisconnectFromLobby();
                         _matchmakingService.ResetPeer();
                     }, () =>
                     {
-                        self.MainMenu.State = MainMenu.MenuState.VersusOptions;
+                        (TFGame.Instance.Scene as MainMenu).State = MainMenu.MenuState.VersusOptions;
                     });
                 }).GetAwaiter().GetResult();
 
-                self.MainMenu.State = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
+                (TFGame.Instance.Scene as MainMenu).State = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
             }
 
             return res;

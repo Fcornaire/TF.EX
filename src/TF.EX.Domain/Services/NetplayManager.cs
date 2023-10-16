@@ -144,7 +144,6 @@ namespace TF.EX.Domain.Services
                                 }
 
                                 _logger.LogDebug<NetplayManager>($"Netplay session etablished with {_player2Name}");
-                                ServiceCollections.ResolveMatchmakingService().DisconnectFromServer();
                                 ServiceCollections.ResolveMatchmakingService().DisconnectFromLobby();
 
                                 _gameContext.ResetPlayersIndex();

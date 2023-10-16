@@ -129,10 +129,7 @@ namespace TF.EX.Patchs.Engine
 
                 _netplayManager.ResetMode();
 
-                TFGame.Players[0] = false;
-                TFGame.Players[1] = false;
-                TFGame.Characters[0] = 0;
-                TFGame.Characters[1] = 1;
+                TFGameExtensions.ResetVersusChoices();
             }
         }
 
@@ -332,9 +329,9 @@ namespace TF.EX.Patchs.Engine
 
                         if (autoUpdater.IsUpdateAvailable())
                         {
-                            var notif = new Notification(self.Scene, $"EX mod update version {autoUpdater.GetLatestVersion()} ...");
+                            var notif = Notification.Create(self.Scene, $"EX mod update version {autoUpdater.GetLatestVersion()} ...");
                             Sounds.ui_clickSpecial.Play(160, 5);
-                            _inputService.DisableAllController();
+                            _inputService.DisableAllControllers();
 
                             Alarm alarm = Alarm.Create(Alarm.AlarmMode.Oneshot, null, 150, true);
                             alarm.OnComplete = self.Exit;

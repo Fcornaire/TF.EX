@@ -5,6 +5,7 @@ using System.Net.WebSockets;
 using System.Text.Json;
 using TF.EX.Common.Extensions;
 using TF.EX.Common.Handle;
+using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Externals;
 using TF.EX.Domain.Models.WebSocket;
@@ -23,7 +24,6 @@ namespace TF.EX.Domain.Services
         private ClientWebSocket _webSocket;
         private byte[] _buffer = new byte[1056];
 
-        private bool _isListening = false;
         private int _ping = 0;
         private Stopwatch _stopwatch = new Stopwatch();
         private Guid _opponentPeerId = Guid.Empty;
@@ -34,6 +34,7 @@ namespace TF.EX.Domain.Services
         private string roomChatPeerId = string.Empty;
 
         private Dictionary<string, Action> onResult = new Dictionary<string, Action>();
+        private WSAction currentAction = WSAction.None;
 
         private readonly INetplayManager _netplayManager;
         private readonly IArcherService _archerService;
@@ -55,7 +56,6 @@ namespace TF.EX.Domain.Services
 
         public bool ConnectToServerAndListen()
         {
-            Reset();
             try
             {
                 Task.Run(async () =>
@@ -69,6 +69,22 @@ namespace TF.EX.Domain.Services
             catch (Exception e)
             {
                 _logger.LogError<MatchmakingService>("Error when connecting to server", e);
+
+                if (_webSocket.State == WebSocketState.Closed)
+                {
+                    if (_webSocket.CloseStatus.HasValue)
+                    {
+                        _logger.LogError<MatchmakingService>($"Connection closed with status {_webSocket.CloseStatus.Value} : {_webSocket.CloseStatusDescription}");
+                    }
+
+                    Close();
+                }
+
+                if (TFGame.Instance.Scene is MainMenu)
+                {
+                    (TFGame.Instance.Scene as MainMenu).State = MainMenu.MenuState.VersusOptions;
+                }
+
                 return false;
             }
 
@@ -76,39 +92,69 @@ namespace TF.EX.Domain.Services
             {
                 try
                 {
-                    if (!_isListening)
+                    while (!cancellationToken.IsCancellationRequested)
                     {
-                        _isListening = true;
-                        while (!cancellationToken.IsCancellationRequested)
+                        var segment = new ArraySegment<byte>(_buffer);
+                        using (var ms = new MemoryStream())
                         {
-                            var segment = new ArraySegment<byte>(_buffer);
-                            using (var ms = new MemoryStream())
+                            WebSocketReceiveResult result;
+                            do
                             {
-                                WebSocketReceiveResult result;
-                                do
+                                result = await _webSocket.ReceiveAsync(segment, cancellationToken);
+                                if (result.MessageType == WebSocketMessageType.Close)
                                 {
-                                    result = await _webSocket.ReceiveAsync(segment, cancellationToken);
-                                    if (result.MessageType == WebSocketMessageType.Close)
-                                    {
-                                        await CloseAsync();
-                                        return;
-                                    }
+                                    Close();
+                                    return;
+                                }
 
-                                    ms.Write(_buffer, 0, result.Count);
-                                } while (!result.EndOfMessage);
+                                ms.Write(_buffer, 0, result.Count);
+                            } while (!result.EndOfMessage);
 
-                                var data = ms.ToArray();
-                                var message = System.Text.Encoding.UTF8.GetString(data, 0, data.Length);
+                            var data = ms.ToArray();
+                            var message = System.Text.Encoding.UTF8.GetString(data, 0, data.Length);
 
-                                HandleMessageContents(message);
-                            }
+                            await HandleMessageContents(message);
                         }
                     }
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError<MatchmakingService>("Error while listening to server message", ex); //NOT KILLED
-                    Reset();
+
+                    if (_webSocket.State == WebSocketState.Closed)
+                    {
+                        if (_webSocket.CloseStatus.HasValue)
+                        {
+                            _logger.LogError<MatchmakingService>($"Connection closed with status {_webSocket.CloseStatus.Value} : {_webSocket.CloseStatusDescription}");
+                        }
+                    }
+
+                    if (currentAction != WSAction.None)
+                    {
+                        onResult[$"{currentAction}-fail"]();
+                        currentAction = WSAction.None;
+                    }
+                    else
+                    {
+                        if (TFGame.Instance.Scene is MainMenu)
+                        {
+                            var mainMenu = TFGame.Instance.Scene as MainMenu;
+                            mainMenu.ButtonGuideA.Clear();
+                            mainMenu.ButtonGuideB.Clear();
+                            mainMenu.ButtonGuideC.Clear();
+                            mainMenu.ButtonGuideD.Clear();
+                        }
+
+                        Notification.Create(TFGame.Instance.Scene, "Connexion dropped...");
+                    }
+
+                    Close();
+                    DisconnectFromLobby();
+
+                    if (TFGame.Instance.Scene is MainMenu)
+                    {
+                        (TFGame.Instance.Scene as MainMenu).State = MainMenu.MenuState.VersusOptions;
+                    }
                 }
             }, cancellationToken);
 
@@ -181,52 +227,78 @@ namespace TF.EX.Domain.Services
         }
 
 
-        private void HandleMessageContents(string message)
+        private async Task HandleMessageContents(string message)
         {
+            if (message.Contains("KeepAlive"))
+            {
+                await Send(message);
+            }
+
             if (message.Contains("GetLobbiesResponse"))
             {
                 var response = JsonSerializer.Deserialize<GetLobbiesResponseMessage>(message);
                 _lobbies = response.GetLobbiesResponse.Lobbies;
-                onResult["GetLobbiesResponse-success"]();
+                if (currentAction == WSAction.GetLobbies)
+                {
+                    onResult["GetLobbies-success"]();
+                    currentAction = WSAction.None;
+                }
             }
 
             if (message.Contains("CreateLobbyResponse"))
             {
                 var response = JsonSerializer.Deserialize<CreateLobbyResponseMessage>(message);
-                if (response.CreateLobbyResponse.Success)
+                if (currentAction == WSAction.CreateLobby)
                 {
-                    _logger.LogDebug<MatchmakingService>("Lobby created!");
-                    ownLobby = response.CreateLobbyResponse.Lobby;
-                    onResult["CreateLobbyResponse-success"]();
-                }
-                else
-                {
-                    _logger.LogDebug<MatchmakingService>($"Lobby creation failed! : {response.CreateLobbyResponse.Message}");
-                    onResult["CreateLobbyResponse-fail"]();
+                    if (response.CreateLobbyResponse.Success)
+                    {
+                        _logger.LogDebug<MatchmakingService>("Lobby created!");
+                        ownLobby = response.CreateLobbyResponse.Lobby;
+                        onResult["CreateLobby-success"]();
+                    }
+                    else
+                    {
+                        _logger.LogDebug<MatchmakingService>($"Lobby creation failed! : {response.CreateLobbyResponse.Message}");
+                        onResult["CreateLobby-fail"]();
+                    }
+
+                    currentAction = WSAction.None;
                 }
             };
 
             if (message.Contains("JoinLobbyResponse"))
             {
-                var response = JsonSerializer.Deserialize<JoinLobbyResponseMessage>(message);
-                if (response.JoinLobbyResponse.Success)
+                if (currentAction == WSAction.JoinLobby)
                 {
-                    _logger.LogDebug<MatchmakingService>("Lobby joined!");
+                    var response = JsonSerializer.Deserialize<JoinLobbyResponseMessage>(message);
+                    if (response.JoinLobbyResponse.Success)
+                    {
+                        _logger.LogDebug<MatchmakingService>("Lobby joined!");
 
-                    peerId = response.JoinLobbyResponse.RoomPeerId.ToString();
-                    roomChatPeerId = response.JoinLobbyResponse.RoomChatPeerId.ToString();
+                        peerId = response.JoinLobbyResponse.RoomPeerId.ToString();
+                        roomChatPeerId = response.JoinLobbyResponse.RoomChatPeerId.ToString();
 
-                    onResult["JoinLobbyResponse-success"]();
-                }
-                else
-                {
-                    _logger.LogDebug<MatchmakingService>($"Lobby join failed! : {response.JoinLobbyResponse.Message}");
-                    onResult["JoinLobbyResponse-fail"]();
+                        onResult["JoinLobby-success"]();
+                    }
+                    else
+                    {
+                        _logger.LogDebug<MatchmakingService>($"Lobby join failed! : {response.JoinLobbyResponse.Message}");
+                        onResult["JoinLobby-fail"]();
+                    }
+
+                    currentAction = WSAction.None;
                 }
             };
 
             if (message.Contains("LobbyUpdate"))
             {
+                //Needed because UpdatePlayer response is a LobbyUpdate , but not necessarely all the time
+                if (currentAction == WSAction.UpdatePlayer)
+                {
+                    onResult["UpdatePlayer-success"]();
+                    currentAction = WSAction.None;
+                }
+
                 _logger.LogDebug<MatchmakingService>("Lobby updated!");
 
                 var response = JsonSerializer.Deserialize<LobbyUpdateMessage>(message);
@@ -238,16 +310,21 @@ namespace TF.EX.Domain.Services
 
             if (message.Contains("LeaveLobbyResponse"))
             {
-                var response = JsonSerializer.Deserialize<LeaveLobbyResponseMessage>(message);
-                if (response.LeaveLobbyResponse.Success)
+                if (currentAction != WSAction.None)
                 {
-                    _logger.LogDebug<MatchmakingService>("Lobby left!");
-                    onResult["LeaveLobbyResponse-success"]();
-                }
-                else
-                {
-                    _logger.LogDebug<MatchmakingService>($"Lobby leave failed! : {response.LeaveLobbyResponse.Message}");
-                    onResult["LeaveLobbyResponse-fail"]();
+                    var response = JsonSerializer.Deserialize<LeaveLobbyResponseMessage>(message);
+                    if (response.LeaveLobbyResponse.Success)
+                    {
+                        _logger.LogDebug<MatchmakingService>("Lobby left!");
+                        onResult["LeaveLobby-success"]();
+                    }
+                    else
+                    {
+                        _logger.LogDebug<MatchmakingService>($"Lobby leave failed! : {response.LeaveLobbyResponse.Message}");
+                        onResult["LeaveLobby-fail"]();
+                    }
+
+                    currentAction = WSAction.None;
                 }
             }
         }
@@ -425,7 +502,7 @@ namespace TF.EX.Domain.Services
         /// Close all connections
         /// </summary>
         /// <returns></returns>
-        public async Task CloseAsync()
+        public void Close()
         {
             cancellationTokenSource.Cancel();
             cancellationTokenSource = new CancellationTokenSource();
@@ -439,22 +516,28 @@ namespace TF.EX.Domain.Services
             Reset();
         }
 
-        private void EnsureConnection()
+        private bool EnsureConnection()
         {
+            if (_webSocket.State == WebSocketState.Closed || _webSocket.State == WebSocketState.Aborted)
+            {
+                Close();
+            }
+
             if (_webSocket.State != WebSocketState.Open)
             {
-                ConnectToServerAndListen();
+                return ConnectToServerAndListen();
             }
+
+            return true;
         }
 
         public void DisconnectFromServer()
         {
-            Task.Run(CloseAsync).GetAwaiter().GetResult();
+            Close();
         }
 
         private void Reset()
         {
-            _isListening = false;
             _stopwatch.Reset();
             _opponentPeerId = Guid.Empty;
             _ping = 0;
@@ -487,28 +570,66 @@ namespace TF.EX.Domain.Services
             _opponentPeerId = Guid.Empty;
         }
 
-        public async Task RetrieveLobbies(Action onSuccess)
+        private async Task Update(WSAction action, Action onSuccess, Action onFail)
         {
-            if (onResult.ContainsKey("GetLobbiesResponse-success"))
+            var actionName = action.ToString();
+            if (onResult.ContainsKey($"{actionName}-success"))
             {
-                onResult["GetLobbiesResponse-success"] = onSuccess;
+                onResult[$"{actionName}-success"] = onSuccess;
             }
             else
             {
-                onResult.Add("GetLobbiesResponse-success", onSuccess);
+                onResult.Add($"{actionName}-success", onSuccess);
             }
 
-            EnsureConnection();
-            _lobbies = null;
-            await SendGetLobbies();
+            if (onResult.ContainsKey($"{actionName}-fail"))
+            {
+                onResult[$"{actionName}-fail"] = onFail;
+            }
+            else
+            {
+                onResult.Add($"{actionName}-fail", onFail);
+            }
+
+            if (!EnsureConnection())
+            {
+                onFail();
+                return;
+            }
+
+            currentAction = action;
+
+            switch (action)
+            {
+                case WSAction.GetLobbies:
+                    await SendGetLobbies();
+                    break;
+                case WSAction.CreateLobby:
+                    await SendCreateLobby();
+                    break;
+                case WSAction.JoinLobby:
+                    await SendJoinLobby(ownLobby.RoomId);
+                    break;
+                case WSAction.LeaveLobby:
+                    await SendLeaveLobby();
+                    break;
+                case WSAction.UpdatePlayer:
+                    await SendUpdatePlayer(ownLobby.Players.First(pl => pl.RoomChatPeerId == roomChatPeerId));
+                    break;
+                case WSAction.None:
+                    break;
+            }
+        }
+
+        public async Task GetLobbies(Action onSuccess, Action onFail)
+        {
+            await Update(WSAction.GetLobbies, onSuccess, onFail);
         }
 
         public IEnumerable<Lobby> GetLobbies()
         {
             return _lobbies;
         }
-
-
 
         public Lobby GetOwnLobby()
         {
@@ -529,50 +650,13 @@ namespace TF.EX.Domain.Services
 
         public async Task CreateLobby(Action onSucess, Action onFail)
         {
-            if (onResult.ContainsKey("CreateLobbyResponse-success"))
-            {
-                onResult["CreateLobbyResponse-success"] = onSucess;
-            }
-            else
-            {
-                onResult.Add("CreateLobbyResponse-success", onSucess);
-            }
-
-            if (onResult.ContainsKey("CreateLobbyResponse-fail"))
-            {
-                onResult["CreateLobbyResponse-fail"] = onFail;
-            }
-            else
-            {
-                onResult.Add("CreateLobbyResponse-fail", onFail);
-            }
-
-            EnsureConnection();
-            await SendCreateLobby();
+            await Update(WSAction.CreateLobby, onSucess, onFail);
         }
 
         public async Task JoinLobby(string roomId, Action onSucess, Action onFail)
         {
-            if (onResult.ContainsKey("JoinLobbyResponse-success"))
-            {
-                onResult["JoinLobbyResponse-success"] = onSucess;
-            }
-            else
-            {
-                onResult.Add("JoinLobbyResponse-success", onSucess);
-            }
-
-            if (onResult.ContainsKey("JoinLobbyResponse-fail"))
-            {
-                onResult["JoinLobbyResponse-fail"] = onFail;
-            }
-            else
-            {
-                onResult.Add("JoinLobbyResponse-fail", onFail);
-            }
-
-            EnsureConnection();
-            await SendJoinLobby(roomId);
+            ownLobby.RoomId = roomId;
+            await Update(WSAction.JoinLobby, onSucess, onFail);
         }
 
         public string GetRoomChatPeerId()
@@ -580,39 +664,39 @@ namespace TF.EX.Domain.Services
             return roomChatPeerId;
         }
 
-        public async Task UpdatePlayer(Models.WebSocket.Player player)
+        public async Task UpdatePlayer(Models.WebSocket.Player player, Action onSucess, Action onFail)
         {
-            EnsureConnection();
-            await SendUpdatePlayer(player);
+            await Update(WSAction.UpdatePlayer, onSucess, onFail);
         }
 
         public async Task LeaveLobby(Action onSucess, Action onFail)
         {
-            if (onResult.ContainsKey("LeaveLobbyResponse-success"))
-            {
-                onResult["LeaveLobbyResponse-success"] = onSucess;
-            }
-            else
-            {
-                onResult.Add("LeaveLobbyResponse-success", onSucess);
-            }
-
-            if (onResult.ContainsKey("LeaveLobbyResponse-fail"))
-            {
-                onResult["LeaveLobbyResponse-fail"] = onFail;
-            }
-            else
-            {
-                onResult.Add("LeaveLobbyResponse-fail", onFail);
-            }
-
-            EnsureConnection();
-            await SendLeaveLobby();
+            await Update(WSAction.LeaveLobby, onSucess, onFail);
         }
 
         public bool IsLobbyReady()
         {
             return ownLobby.Players.Count >= 2 && ownLobby.Players.All(pl => pl.Ready);
         }
+
+        public void ResetLobbies()
+        {
+            _lobbies = null;
+        }
+
+        public void ResetLobby()
+        {
+            ownLobby = new Lobby();
+        }
+    }
+
+    public enum WSAction
+    {
+        None,
+        GetLobbies,
+        CreateLobby,
+        JoinLobby,
+        LeaveLobby,
+        UpdatePlayer
     }
 }

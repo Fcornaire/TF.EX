@@ -12,8 +12,6 @@ namespace TF.EX.Domain.CustomComponent
 
         private Sprite<int> coinSprite;
 
-        private Color lengthColor = Calc.HexToColor("3CBCFC");
-
         public LobbyVersusCoinButton(Vector2 position, Vector2 tweenFrom) : base(position, tweenFrom, 168, 34)
         {
             coinSprite = VersusCoinButton.GetCoinSprite();
