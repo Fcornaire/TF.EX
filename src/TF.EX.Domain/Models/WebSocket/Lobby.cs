@@ -8,6 +8,7 @@ namespace TF.EX.Domain.Models.WebSocket
         public string RoomId { get; set; } = "";
         public string RoomChatId { get; set; } = "";
         public ICollection<Player> Players { get; set; } = new List<Player>();
+        public ICollection<Player> Spectators { get; set; } = new List<Player>();
         public GameData GameData { get; set; } = new GameData();
     }
 

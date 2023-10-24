@@ -1,4 +1,6 @@
-﻿using TF.EX.Domain.Ports.TF;
+﻿using MonoMod.Utils;
+using System.Collections;
+using TF.EX.Domain.Ports.TF;
 
 namespace TF.EX.Patchs.Component
 {
@@ -16,11 +18,21 @@ namespace TF.EX.Patchs.Component
         public void Load()
         {
             On.Monocle.Coroutine.Update += Coroutine_Update;
+            On.Monocle.Coroutine.ctor_IEnumerator += Coroutine_ctor_IEnumerator;
         }
 
         public void Unload()
         {
             On.Monocle.Coroutine.Update -= Coroutine_Update;
+            On.Monocle.Coroutine.ctor_IEnumerator -= Coroutine_ctor_IEnumerator;
+        }
+
+        private void Coroutine_ctor_IEnumerator(On.Monocle.Coroutine.orig_ctor_IEnumerator orig, Monocle.Coroutine self, IEnumerator functionCall)
+        {
+            orig(self, functionCall);
+
+            var dynCoroutine = DynamicData.For(self);
+            dynCoroutine.Set("NAME", functionCall.GetType().Name);
         }
 
         private void Coroutine_Update(On.Monocle.Coroutine.orig_Update orig, Monocle.Coroutine self)
@@ -41,10 +53,16 @@ namespace TF.EX.Patchs.Component
 
             if (self.Entity is TowerFall.VersusStart)
             {
-
-                var hud = _hudService.Get();
-                hud.VersusStart.CoroutineState += 1;
-                _hudService.Update(hud);
+                var dynCoroutine = DynamicData.For(self);
+                if (dynCoroutine.TryGet("NAME", out string name))
+                {
+                    if (name.Contains("SetupSequence"))
+                    {
+                        var hud = _hudService.Get();
+                        hud.VersusStart.CoroutineState += 1;
+                        _hudService.Update(hud);
+                    }
+                }
             }
 
             if (self.Entity is TowerFall.VersusRoundResults)

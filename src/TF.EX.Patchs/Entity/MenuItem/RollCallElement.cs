@@ -15,12 +15,17 @@ namespace TF.EX.Patchs.Entity.MenuItem
         private readonly IMatchmakingService _matchmakingService;
         private readonly IArcherService archerService;
         private readonly IInputService inputService;
+        private readonly INetplayManager netplayManager;
 
-        public RollCallElementPatch(IMatchmakingService matchmakingService, IArcherService archerService, IInputService inputService)
+        public RollCallElementPatch(IMatchmakingService matchmakingService,
+            IArcherService archerService,
+            IInputService inputService,
+            INetplayManager netplayManager)
         {
             _matchmakingService = matchmakingService;
             this.archerService = archerService;
             this.inputService = inputService;
+            this.netplayManager = netplayManager;
         }
 
         public void Load()
@@ -31,6 +36,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
             On.TowerFall.RollcallElement.EnterJoined += RollcallElement_EnterJoined;
             On.TowerFall.RollcallElement.JoinedUpdate += RollcallElement_JoinedUpdate;
             On.TowerFall.RollcallElement.LeaveJoined += RollcallElement_LeaveJoined;
+            On.TowerFall.RollcallElement.Render += RollcallElement_Render;
         }
 
         public void Unload()
@@ -41,7 +47,20 @@ namespace TF.EX.Patchs.Entity.MenuItem
             On.TowerFall.RollcallElement.EnterJoined -= RollcallElement_EnterJoined;
             On.TowerFall.RollcallElement.JoinedUpdate -= RollcallElement_JoinedUpdate;
             On.TowerFall.RollcallElement.LeaveJoined -= RollcallElement_LeaveJoined;
+            On.TowerFall.RollcallElement.Render -= RollcallElement_Render;
         }
+
+        private void RollcallElement_Render(On.TowerFall.RollcallElement.orig_Render orig, RollcallElement self)
+        {
+            orig(self);
+
+            var lobby = _matchmakingService.GetOwnLobby();
+            if (lobby.Spectators.Any())
+            {
+                Draw.OutlineTextCentered(TFGame.Font, $"SPECTATORS : {lobby.Spectators.Count}", new Vector2(40f, 20f), Color.White, Color.Black);
+            }
+        }
+
 
         private void RollcallElement_LeaveJoined(On.TowerFall.RollcallElement.orig_LeaveJoined orig, RollcallElement self)
         {
@@ -120,7 +139,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
                 var dynRollcallElement = DynamicData.For(self);
                 var playerIndex = dynRollcallElement.Get<int>("playerIndex");
 
-                if (playerIndex == 0)
+                if (playerIndex == 0 && !_matchmakingService.IsSpectator())
                 {
                     var player = lobby.Players.First(pl => pl.RoomChatPeerId == _matchmakingService.GetRoomChatPeerId());
                     if (!player.Ready)
@@ -172,7 +191,10 @@ namespace TF.EX.Patchs.Entity.MenuItem
                     await _matchmakingService.LeaveLobby(() =>
                     {
                         (TFGame.Instance.Scene as MainMenu).State = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
-                        _matchmakingService.DisconnectFromLobby();
+                        if (!_matchmakingService.IsSpectator())
+                        {
+                            _matchmakingService.DisconnectFromLobby();
+                        }
                         _matchmakingService.ResetPeer();
                     }, () =>
                     {
@@ -211,6 +233,14 @@ namespace TF.EX.Patchs.Entity.MenuItem
 
             orig(self);
 
+            var currentMode = MainMenu.VersusMatchSettings.Mode.ToModel();
+            var lobby = _matchmakingService.GetOwnLobby();
+            if (currentMode.IsNetplay() && lobby.Spectators.Any())
+            {
+                netplayManager.AddSpectators(lobby.Spectators);
+            }
+
+            netplayManager.UpdateNumPlayers(lobby.Players.Count);
 
             if (MainMenu.VersusMatchSettings.TeamMode)
             {

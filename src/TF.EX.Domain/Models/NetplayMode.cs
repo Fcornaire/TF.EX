@@ -7,6 +7,7 @@
         Test,
         Replay,
         Server,
+        Spectator,
         Unknown
     }
 }

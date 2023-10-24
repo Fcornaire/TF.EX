@@ -119,7 +119,8 @@ namespace TF.EX.Domain.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError<MatchmakingService>("Error while listening to server message", ex); //NOT KILLED
+                    _logger.LogError<MatchmakingService>("Error while listening to server message", ex);
+                    _logger.LogError<MatchmakingService>("inner exception", ex.InnerException);
 
                     if (_webSocket.State == WebSocketState.Closed)
                     {
@@ -149,7 +150,10 @@ namespace TF.EX.Domain.Services
                     }
 
                     Close();
-                    DisconnectFromLobby();
+                    if (!IsSpectator())
+                    {
+                        DisconnectFromLobby();
+                    }
 
                     if (TFGame.Instance.Scene is MainMenu)
                     {
@@ -190,7 +194,8 @@ namespace TF.EX.Domain.Services
                 JoinLobby = new JoinLobby
                 {
                     RoomId = roomId,
-                    Name = _netplayManager.GetNetplayMeta().Name
+                    Name = _netplayManager.GetNetplayMeta().Name,
+                    IsPlayer = currentAction == WSAction.JoinLobby
                 }
             };
 
@@ -238,11 +243,8 @@ namespace TF.EX.Domain.Services
             {
                 var response = JsonSerializer.Deserialize<GetLobbiesResponseMessage>(message);
                 _lobbies = response.GetLobbiesResponse.Lobbies;
-                if (currentAction == WSAction.GetLobbies)
-                {
-                    onResult["GetLobbies-success"]();
-                    currentAction = WSAction.None;
-                }
+
+                onResult["GetLobbies-success"]?.Invoke();
             }
 
             if (message.Contains("CreateLobbyResponse"))
@@ -254,6 +256,8 @@ namespace TF.EX.Domain.Services
                     {
                         _logger.LogDebug<MatchmakingService>("Lobby created!");
                         ownLobby = response.CreateLobbyResponse.Lobby;
+                        peerId = ownLobby.Players.First(pl => pl.IsHost).RoomPeerId.ToString();
+                        roomChatPeerId = ownLobby.Players.First(pl => pl.IsHost).RoomChatPeerId.ToString();
                         onResult["CreateLobby-success"]();
                     }
                     else
@@ -266,28 +270,40 @@ namespace TF.EX.Domain.Services
                 }
             };
 
-            if (message.Contains("JoinLobbyResponse"))
+            if (message.Contains("JoinLobby"))
             {
-                if (currentAction == WSAction.JoinLobby)
+                var response = JsonSerializer.Deserialize<JoinLobbyResponseMessage>(message);
+                if (response.JoinLobbyResponse.Success)
                 {
-                    var response = JsonSerializer.Deserialize<JoinLobbyResponseMessage>(message);
-                    if (response.JoinLobbyResponse.Success)
+                    _logger.LogDebug<MatchmakingService>("Lobby joined!");
+
+                    peerId = response.JoinLobbyResponse.RoomPeerId.ToString();
+                    roomChatPeerId = response.JoinLobbyResponse.RoomChatPeerId.ToString();
+
+                    if (currentAction == WSAction.JoinLobby)
                     {
-                        _logger.LogDebug<MatchmakingService>("Lobby joined!");
-
-                        peerId = response.JoinLobbyResponse.RoomPeerId.ToString();
-                        roomChatPeerId = response.JoinLobbyResponse.RoomChatPeerId.ToString();
-
                         onResult["JoinLobby-success"]();
                     }
                     else
                     {
-                        _logger.LogDebug<MatchmakingService>($"Lobby join failed! : {response.JoinLobbyResponse.Message}");
+                        onResult["JoinAsSpectator-success"]();
+                    }
+                }
+                else
+                {
+                    _logger.LogDebug<MatchmakingService>($"Lobby join failed! : {response.JoinLobbyResponse.Message}");
+
+                    if (currentAction == WSAction.JoinAsSpectator)
+                    {
+                        onResult["JoinAsSpectator-fail"]();
+                    }
+                    else
+                    {
                         onResult["JoinLobby-fail"]();
                     }
-
-                    currentAction = WSAction.None;
                 }
+
+                currentAction = WSAction.None;
             };
 
             if (message.Contains("LobbyUpdate"))
@@ -306,6 +322,7 @@ namespace TF.EX.Domain.Services
                 var lobby = response.LobbyUpdate.Lobby;
 
                 HandleLobbyUpdate(lobby);
+                ownLobby = lobby;
             }
 
             if (message.Contains("LeaveLobbyResponse"))
@@ -352,7 +369,7 @@ namespace TF.EX.Domain.Services
 
             if (TFGame.Instance.Scene is MainMenu && (TFGame.Instance.Scene as MainMenu).State == MainMenu.MenuState.Rollcall && rollCalls.Any())
             {
-                int playerIndex = 1;
+                int playerIndex = IsSpectator() ? 0 : 1;
                 foreach (var player in lobby.Players.Where(pl => pl.RoomChatPeerId != roomChatPeerId))
                 {
                     var rollCall = rollCalls.First(rc =>
@@ -395,6 +412,14 @@ namespace TF.EX.Domain.Services
                 }
             }
 
+            if (IsSpectator() && !_netplayManager.IsSpectatorMode())
+            {
+                var roomUrl = $"{SERVER_URL}/room/{lobby.RoomId}";
+                var hostPeerId = lobby.Players.First(pl => pl.IsHost).RoomPeerId;
+
+                _netplayManager.SetSpectatorMode(roomUrl, hostPeerId);
+            }
+
             //True for 2 player...
             if (lobby.Players.Count == 1)
             {
@@ -404,7 +429,6 @@ namespace TF.EX.Domain.Services
                     rollCall.HandleControlChange();
                 }
             }
-
 
             UpdateOwnLobby(lobby);
         }
@@ -608,6 +632,7 @@ namespace TF.EX.Domain.Services
                     await SendCreateLobby();
                     break;
                 case WSAction.JoinLobby:
+                case WSAction.JoinAsSpectator:
                     await SendJoinLobby(ownLobby.RoomId);
                     break;
                 case WSAction.LeaveLobby:
@@ -653,15 +678,22 @@ namespace TF.EX.Domain.Services
             await Update(WSAction.CreateLobby, onSucess, onFail);
         }
 
-        public async Task JoinLobby(string roomId, Action onSucess, Action onFail)
+        public async Task JoinLobby(string roomId, bool isPlayer, Action onSucess, Action onFail)
         {
             ownLobby.RoomId = roomId;
-            await Update(WSAction.JoinLobby, onSucess, onFail);
+            var action = isPlayer ? WSAction.JoinLobby : WSAction.JoinAsSpectator;
+
+            await Update(action, onSucess, onFail);
         }
 
         public string GetRoomChatPeerId()
         {
             return roomChatPeerId;
+        }
+
+        public string GetRoomPeerId()
+        {
+            return peerId;
         }
 
         public async Task UpdatePlayer(Models.WebSocket.Player player, Action onSucess, Action onFail)
@@ -688,6 +720,11 @@ namespace TF.EX.Domain.Services
         {
             ownLobby = new Lobby();
         }
+
+        public bool IsSpectator()
+        {
+            return ownLobby.Spectators.Any(spectator => spectator.RoomPeerId == peerId);
+        }
     }
 
     public enum WSAction
@@ -697,6 +734,7 @@ namespace TF.EX.Domain.Services
         CreateLobby,
         JoinLobby,
         LeaveLobby,
-        UpdatePlayer
+        UpdatePlayer,
+        JoinAsSpectator
     }
 }

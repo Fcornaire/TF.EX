@@ -12,6 +12,7 @@ using TF.EX.Domain.Models.State.Entity.LevelEntity.Player;
 using TF.EX.Domain.Models.State.Layer;
 using TF.EX.TowerFallExtensions.Entity.LevelEntity;
 using TF.EX.TowerFallExtensions.Layer;
+using TF.EX.TowerFallExtensions.Scene;
 using TowerFall;
 
 namespace TF.EX.TowerFallExtensions
@@ -369,6 +370,9 @@ namespace TF.EX.TowerFallExtensions
 
             //VersusStart
             level.Delete<VersusStart>();
+
+            //This is to remove variant sequence entity
+            level.DeleteAllByDepth(-10001);
 
             if (gameState.Entities.Hud.VersusStart.CoroutineState > 0)
             {
