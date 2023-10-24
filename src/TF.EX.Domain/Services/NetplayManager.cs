@@ -337,6 +337,17 @@ namespace TF.EX.Domain.Services
                 else if (_netplayMode == NetplayMode.Spectator)
                 {
                     Notification.Create(TFGame.Instance.Scene, "A error occured while spectating");
+
+                    Task.Run(async () =>
+                    {
+                        await ServiceCollections.ResolveMatchmakingService().LeaveLobby(() =>
+                        {
+                            (TFGame.Instance.Scene as MainMenu).State = MainMenu.MenuState.VersusOptions;
+                        }, () =>
+                        {
+                            (TFGame.Instance.Scene as MainMenu).State = MainMenu.MenuState.VersusOptions;
+                        });
+                    }).GetAwaiter().GetResult();
                 }
                 else if (!info.Equals("PredictionThreshold"))
                 {

@@ -50,6 +50,12 @@ Or join available one
   <img src="images/joiningLobby.gif" alt="animated" />
 </p>
 
+Or even spectate ! (Experimental)
+
+<p align="center">
+  <img src="images/spectate.gif" alt="animated" />
+</p>
+
 - Modded variant
 
   Ability to run online play with custom variant as long as they are EX compatible. Read [EX API](EX-API.md) for mor details.

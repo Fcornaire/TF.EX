@@ -8,11 +8,19 @@ It's your responsability to make sure the mod is netplay compatible (You should 
 
 This guide will help you implement your modded variant for netplay session.
 
+Note that this isn't a simple process as both mods can conflict.
+
 You can also look at this [PR](https://github.com/FortRise/ExampleFortRiseMod/pull/1) which make Jester Hat variant compatible with EX
 
 ## Prerequisites
 
-There are 2 rules of thumb for making your mod compatbile:
+There are 3 rules of thumb (and the first one is super important) for making your mod compatbile:
+
+- Your mod does not interfere or briefly with EX patchs. There isn't a specific rule but some EX patch require initial setup before executing the original method.
+
+So for example, some EX patch check some RNG call to be able to track them; patching the same function make the original get called without being able to register the RNG stuff. (May be one day, this will be handled differently)
+
+You can check `TF.EX.TowerFallExtensions` project to see what's being patched. I don't have a good solution right now than contacting me to see how your patch are going to affect EX patchs.
 
 - Your custom variant act deterministically. That's mean for a X frame, applying the same input result to the same Y frame, every time with no exception.
 
