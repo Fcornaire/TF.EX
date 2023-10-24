@@ -26,6 +26,7 @@ namespace TF.EX.Patchs.PlayerInput
         private delegate bool MenuDown_orig(KeyboardInput self);
 
         private static IDetour MenuConfirm_hook;
+        private static IDetour MenuStart_hook;
         private static IDetour MenuSkipReplay_hook;
         private static IDetour MenuSaveReplay_hook;
         private static IDetour MenuSaveReplayCheck_hook;
@@ -46,6 +47,7 @@ namespace TF.EX.Patchs.PlayerInput
             On.TowerFall.KeyboardInput.GetState += KeyboardInput_GetState;
 
             MenuConfirm_hook = new Hook(typeof(KeyboardInput).GetProperty("MenuConfirm").GetGetMethod(), MenuConfirm_patch);
+            MenuStart_hook = new Hook(typeof(KeyboardInput).GetProperty("MenuStart").GetGetMethod(), MenuConfirm_patch);
             MenuSkipReplay_hook = new Hook(typeof(KeyboardInput).GetProperty("MenuSkipReplay").GetGetMethod(), MenuSkipReplay_patch);
             MenuSaveReplay_hook = new Hook(typeof(KeyboardInput).GetProperty("MenuSaveReplay").GetGetMethod(), MenuSaveReplay_patch);
             MenuSaveReplayCheck_hook = new Hook(typeof(KeyboardInput).GetProperty("MenuSaveReplayCheck").GetGetMethod(), MenuSaveReplayCheck_patch);
@@ -60,6 +62,7 @@ namespace TF.EX.Patchs.PlayerInput
             On.TowerFall.KeyboardInput.GetState -= KeyboardInput_GetState;
 
             MenuConfirm_hook.Dispose();
+            MenuStart_hook.Dispose();
             MenuSkipReplay_hook.Dispose();
             MenuSaveReplay_hook.Dispose();
             MenuSaveReplayCheck_hook.Dispose();
@@ -202,17 +205,29 @@ namespace TF.EX.Patchs.PlayerInput
                 return actualInput;
             }
 
-            var isPlayer2 = inputService.GetInputIndex(self) == 1;
+            if (TFGame.Instance.Scene is MapScene)
+            {
+                return true;
+            }
 
-            if (isPlayer2 && TFGame.Instance.Scene is MainMenu)
+            if (TFGame.Instance.Scene is MainMenu)
             {
                 var dynMenu = DynamicData.For(TFGame.Instance.Scene as MainMenu);
                 var state = dynMenu.Get<MainMenu.MenuState>("state");
-
                 var currentMode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
 
                 if (state == MainMenu.MenuState.Rollcall && currentMode.IsNetplay())
                 {
+                    if (ServiceCollections.ResolveMatchmakingService().IsLobbyReady())
+                    {
+                        return true;
+                    }
+
+                    if (matchmakingService.IsSpectator())
+                    {
+                        return false;
+                    }
+
                     var rollcallElement = (TFGame.Instance.Scene as MainMenu).GetAll<RollcallElement>().First(rc =>
                     {
                         var dyn = DynamicData.For(rc);

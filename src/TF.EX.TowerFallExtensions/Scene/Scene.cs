@@ -56,6 +56,22 @@ namespace TF.EX.TowerFallExtensions.Scene
             }
         }
 
+        public static void DeleteAllByDepth(this Monocle.Scene scene, int depth)
+        {
+            var entities = scene.Layers.SelectMany(layer => layer.Value.Entities)
+                .Where(ent => ent is Monocle.Entity && ent.Depth == depth).ToList();
+
+            if (entities.Count > 0)
+            {
+                entities.ForEach(entity =>
+                {
+                    scene.Layers.FirstOrDefault(layer => layer.Value.Index == entity.LayerIndex).Value.Entities.Remove(entity);
+                    entity.Removed();
+                });
+            }
+        }
+
+
         public static void AddLoader(this Monocle.Scene scene, string msg)
         {
             var currentLoader = scene.Get<Loader>();

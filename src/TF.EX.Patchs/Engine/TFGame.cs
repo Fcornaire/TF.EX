@@ -23,7 +23,7 @@ namespace TF.EX.Patchs.Engine
 {
     public class TFGamePatch : IHookable
     {
-        public static InputRenderer[] ReplayInputRenderers;
+        public static InputRenderer[] CustomInputRenderers;
 
         private bool _shouldShowUpdateNotif = true;
 
@@ -117,7 +117,7 @@ namespace TF.EX.Patchs.Engine
             {
                 CalcPatch.Reset();
 
-                ReplayInputRenderers = null;
+                CustomInputRenderers = null;
 
                 if (!_netplayManager.IsTestMode())
                 {
@@ -438,23 +438,18 @@ namespace TF.EX.Patchs.Engine
             return true;
         }
 
-        public static void SetupReplayInputRenderer()
+        public static void SetupCustomInputRenderer(int numberInputs)
         {
-            var replayService = ServiceCollections.ResolveReplayService();
-            var replay = replayService.GetReplay();
+            CustomInputRenderers = new InputRenderer[numberInputs];
 
-            ReplayInputRenderers = new InputRenderer[replay.Record[0].Inputs.Count];
-
-            if (replay.Record.Count > 0)
+            float num = 0f;
+            for (int i = 0; i < numberInputs; i++)
             {
-                float num = 0f;
-                for (int i = 0; i < replay.Record[0].Inputs.Count; i++)
-                {
-                    ReplayInputRenderers[i] = new InputRenderer(i, num);
-                    num += (float)ReplayInputRenderers[i].Width;
-                }
+                CustomInputRenderers[i] = new InputRenderer(i, num);
+                num += CustomInputRenderers[i].Width;
             }
         }
+
         private void ArtificialSlow()
         {
             Random random = new Random();

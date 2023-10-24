@@ -28,6 +28,7 @@ namespace TF.EX.Patchs.PlayerInput
         private delegate bool MenuSaveReplay_orig(XGamepadInput self);
         private delegate bool MenuSaveReplayCheck_orig(XGamepadInput self);
         private static IDetour MenuConfirm_hook;
+        private static IDetour MenuStart_hook;
         private static IDetour MenuBack_hook;
         private static IDetour MenuLeft_hook;
         private static IDetour MenuRight_hook;
@@ -50,6 +51,7 @@ namespace TF.EX.Patchs.PlayerInput
             On.TowerFall.XGamepadInput.GetState += XGamepadInput_GetState;
 
             MenuConfirm_hook = new Hook(typeof(XGamepadInput).GetProperty("MenuConfirm").GetGetMethod(), MenuConfirm_patch);
+            MenuStart_hook = new Hook(typeof(XGamepadInput).GetProperty("MenuStart").GetGetMethod(), MenuStart_patch);
             MenuBack_hook = new Hook(typeof(XGamepadInput).GetProperty("MenuBack").GetGetMethod(), MenuBack_patch);
             MenuLeft_hook = new Hook(typeof(XGamepadInput).GetProperty("MenuLeft").GetGetMethod(), MenuLR_patch);
             MenuRight_hook = new Hook(typeof(XGamepadInput).GetProperty("MenuRight").GetGetMethod(), MenuLR_patch);
@@ -66,6 +68,7 @@ namespace TF.EX.Patchs.PlayerInput
             On.TowerFall.XGamepadInput.GetState -= XGamepadInput_GetState;
 
             MenuConfirm_hook.Dispose();
+            MenuStart_hook.Dispose();
             MenuBack_hook.Dispose();
             MenuLeft_hook.Dispose();
             MenuRight_hook.Dispose();
@@ -73,11 +76,18 @@ namespace TF.EX.Patchs.PlayerInput
             MenuSkipReplay_hook.Dispose();
             MenuSaveReplay_hook.Dispose();
             MenuSaveReplayCheck_hook.Dispose();
+            MenuUp_hook.Dispose();
+            MenuDown_hook.Dispose();
         }
 
         private static bool MenuConfirm_patch(MenuConfirm_orig orig, XGamepadInput self)
         {
             return InterceptConfirm(self, orig(self));
+        }
+
+        private static bool MenuStart_patch(MenuConfirm_orig orig, XGamepadInput self)
+        {
+            return InterceptStart(self, orig(self));
         }
 
         private static bool MenuBack_patch(MenuConfirm_orig orig, XGamepadInput self)
@@ -182,6 +192,7 @@ namespace TF.EX.Patchs.PlayerInput
         {
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var inputService = ServiceCollections.ResolveInputService();
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
 
             var isNetplayInit = netplayManager.IsInit();
             var isReplayMode = netplayManager.IsReplayMode();
@@ -224,6 +235,16 @@ namespace TF.EX.Patchs.PlayerInput
 
                 if (state == MainMenu.MenuState.Rollcall && currentMode.IsNetplay())
                 {
+                    if (ServiceCollections.ResolveMatchmakingService().IsLobbyReady())
+                    {
+                        return true;
+                    }
+
+                    if (matchmakingService.IsSpectator())
+                    {
+                        return false;
+                    }
+
                     var rollcallElement = (TFGame.Instance.Scene as MainMenu).GetAll<RollcallElement>().First(rc =>
                     {
                         var dyn = DynamicData.For(rc);
@@ -239,7 +260,7 @@ namespace TF.EX.Patchs.PlayerInput
                         return actualInput;
                     }
 
-                    return ServiceCollections.ResolveMatchmakingService().IsLobbyReady();
+                    return actualInput;
                 }
             }
 
@@ -259,6 +280,51 @@ namespace TF.EX.Patchs.PlayerInput
             }
 
             return actualInput;
+        }
+
+        private static bool InterceptStart(XGamepadInput self, bool actualResult)
+        {
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+
+            if (TFGame.Instance.Scene is MainMenu)
+            {
+                var dynMenu = DynamicData.For(TFGame.Instance.Scene as MainMenu);
+                var state = dynMenu.Get<MainMenu.MenuState>("state");
+
+                var currentMode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
+
+                if (state == MainMenu.MenuState.Rollcall && currentMode.IsNetplay())
+                {
+                    if (ServiceCollections.ResolveMatchmakingService().IsLobbyReady())
+                    {
+                        return true;
+                    }
+
+                    if (matchmakingService.IsSpectator())
+                    {
+                        return false;
+                    }
+
+                    var rollcallElement = (TFGame.Instance.Scene as MainMenu).GetAll<RollcallElement>().First(rc =>
+                    {
+                        var dyn = DynamicData.For(rc);
+                        var index = dyn.Get<int>("playerIndex");
+
+                        return index == 0;
+                    });
+
+                    var dynRollcallElement = DynamicData.For(rollcallElement);
+                    StateMachine rollcallState = dynRollcallElement.Get<StateMachine>("state");
+                    if (rollcallState.State == 0)
+                    {
+                        return actualResult;
+                    }
+
+                    return actualResult;
+                }
+            }
+
+            return actualResult;
         }
 
         private static bool InterceptBack(XGamepadInput self, bool actualInput)
@@ -317,6 +383,7 @@ namespace TF.EX.Patchs.PlayerInput
         {
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var inputService = ServiceCollections.ResolveInputService();
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
 
             var isNetplayInit = netplayManager.IsInit();
             var isPaused = TFGame.Instance.Scene is TowerFall.Level && (TFGame.Instance.Scene as TowerFall.Level).Paused;
@@ -337,9 +404,28 @@ namespace TF.EX.Patchs.PlayerInput
             {
                 var dynMenu = DynamicData.For(TFGame.Instance.Scene as MainMenu);
                 var state = dynMenu.Get<MainMenu.MenuState>("state");
+                var currentMode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
 
-                if (state == MainMenu.MenuState.Rollcall)
+                if (state == MainMenu.MenuState.Rollcall && currentMode.IsNetplay())
                 {
+                    if (ServiceCollections.ResolveMatchmakingService().IsLobbyReady())
+                    {
+                        return true;
+                    }
+
+                    if (matchmakingService.IsSpectator())
+                    {
+                        return false;
+                    }
+
+                    var rollcallElement = (TFGame.Instance.Scene as MainMenu).GetAll<RollcallElement>().First(rc =>
+                    {
+                        var dyn = DynamicData.For(rc);
+                        var index = dyn.Get<int>("playerIndex");
+
+                        return index == 0;
+                    });
+
                     return actualInput;
                 }
             }

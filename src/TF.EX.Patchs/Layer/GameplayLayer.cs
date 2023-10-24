@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Monocle;
 using TF.EX.Domain.Extensions;
+using TF.EX.Domain.Models;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
 using TF.EX.Patchs.Engine;
@@ -11,13 +12,17 @@ namespace TF.EX.Patchs.Layer
     internal class GameplayLayerPatch : IHookable
     {
         private readonly INetplayManager _netplayManager;
+        private readonly IReplayService _replayService;
         private readonly IInputService _inputService;
+        private readonly IMatchmakingService _matchmakingService;
         private bool _hasShowedDesynch = false;
 
-        public GameplayLayerPatch(INetplayManager netplayManager, IInputService inputService)
+        public GameplayLayerPatch(INetplayManager netplayManager, IInputService inputService, IReplayService replayService, IMatchmakingService matchmakingService)
         {
             _netplayManager = netplayManager;
             _inputService = inputService;
+            _replayService = replayService;
+            _matchmakingService = matchmakingService;
         }
 
         public void Load()
@@ -34,14 +39,25 @@ namespace TF.EX.Patchs.Layer
         {
             orig(self);
 
-            if (_netplayManager.IsReplayMode() && TFGame.GameLoaded)
+            if ((_netplayManager.IsReplayMode() || _netplayManager.IsSpectatorMode()) && TFGame.GameLoaded)
             {
-                if (TFGamePatch.ReplayInputRenderers == null)
+                if (TFGamePatch.CustomInputRenderers == null)
                 {
-                    TFGamePatch.SetupReplayInputRenderer();
+                    if (_netplayManager.IsReplayMode())
+                    {
+                        var replay = _replayService.GetReplay();
+                        if (replay.Record.Count > 0)
+                        {
+                            TFGamePatch.SetupCustomInputRenderer(replay.Record[0].Inputs.Count);
+                        }
+                    }
+                    else
+                    {
+                        TFGamePatch.SetupCustomInputRenderer(_netplayManager.GetNumPlayers());
+                    }
                 }
 
-                var inputRenderers = TFGamePatch.ReplayInputRenderers;
+                var inputRenderers = TFGamePatch.CustomInputRenderers;
 
                 for (int i = 0; i < inputRenderers.Length; i++)
                 {
@@ -51,14 +67,18 @@ namespace TF.EX.Patchs.Layer
                         inputRenderers[i].Render(state);
                     }
                 }
-
-                return;
             }
 
             if (TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay())
             {
+                if (_matchmakingService.IsSpectator())
+                {
+                    var lobby = _matchmakingService.GetOwnLobby();
+                    Draw.OutlineTextCentered(TFGame.Font, $"SPECTATORS : {lobby.Spectators.Count}", new Vector2(30f, 20f), Color.White, Color.Black);
+                }
+
                 var latency = _netplayManager.GetNetworkStats().ping;
-                Draw.OutlineTextCentered(TFGame.Font, $"{latency} MS", new Vector2(20f, 8f), GetColor(latency), 1f);
+                Draw.OutlineTextCentered(TFGame.Font, $"{latency} MS", new Vector2(20f, 10f), GetColor(latency), 1f);
 
                 if (_netplayManager.GetNetplayMode() != TF.EX.Domain.Models.NetplayMode.Test)
                 {

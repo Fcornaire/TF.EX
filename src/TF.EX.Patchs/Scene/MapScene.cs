@@ -10,10 +10,9 @@ namespace TF.EX.Patchs.Scene
     internal class MapScenePatch : IHookable
     {
         private readonly IInputService _inputService;
-
         private readonly IMatchmakingService matchmakingService;
-
         private readonly IRngService _rngService;
+        private readonly INetplayManager netplayManager;
 
         private static readonly IEnumerable<string> NETPLAY_SAFE_MAP = new List<string>
         {
@@ -21,11 +20,12 @@ namespace TF.EX.Patchs.Scene
             "TWILIGHT SPIRE"
         };
 
-        public MapScenePatch(IInputService inputService, IMatchmakingService matchmakingService, IRngService rngService)
+        public MapScenePatch(IInputService inputService, IMatchmakingService matchmakingService, IRngService rngService, INetplayManager netplayManager)
         {
             _inputService = inputService;
             this.matchmakingService = matchmakingService;
             _rngService = rngService;
+            this.netplayManager = netplayManager;
         }
 
         public void Load()
@@ -44,6 +44,10 @@ namespace TF.EX.Patchs.Scene
 
         private void MapScene_StartSession(On.TowerFall.MapScene.orig_StartSession orig, TowerFall.MapScene self)
         {
+            var lobby = matchmakingService.GetOwnLobby();
+            netplayManager.UpdatePlayers(lobby.Players, lobby.Spectators);
+            matchmakingService.DisconnectFromLobby();
+
             orig(self);
 
             _rngService.Reset();

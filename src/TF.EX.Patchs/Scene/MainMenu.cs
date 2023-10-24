@@ -7,6 +7,7 @@ using TF.EX.Domain;
 using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models;
+using TF.EX.Domain.Models.WebSocket;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
 using TF.EX.TowerFallExtensions;
@@ -484,7 +485,9 @@ namespace TF.EX.Patchs.Scene
             if (self.State == MainMenu.MenuState.Rollcall
                 && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel() == Domain.Models.Modes.Netplay)
             {
-                var opponents = _matchmakingService.GetOwnLobby().Players.Where(p => p.RoomChatPeerId != _matchmakingService.GetRoomChatPeerId()).ToArray();
+                var opponents = _matchmakingService.IsSpectator()
+                    ? _matchmakingService.GetOwnLobby().Players.Where(pl => pl.IsHost).ToArray()
+                    : _matchmakingService.GetOwnLobby().Players.Where(p => p.RoomChatPeerId != _matchmakingService.GetRoomChatPeerId()).ToArray();
                 int playerIndex = 1;
 
                 foreach (var opponent in opponents)
@@ -627,6 +630,48 @@ namespace TF.EX.Patchs.Scene
                     });
                     return;
                 }
+
+                if (MenuInput.Alt2)
+                {
+                    if (!lobbies.SingleOrDefault(lobby => lobby.Selected))
+                    {
+                        Notification.Create(self, "You must select a lobby to spectate");
+                        Sounds.ui_invalid.Play();
+                        return;
+                    }
+
+                    var lobbyToSpectate = lobbies.Single(lobby => lobby.Selected).Lobby;
+
+                    _inputService.DisableAllControllers();
+
+                    var variantsToggle = variants
+                        .Where(v => v is VariantToggle)
+                        .Select(v => (v as VariantToggle).Variant.Title)
+                    .ToList();
+
+                    bool canJoin = lobbyToSpectate.GameData.Variants.All(str => variantsToggle.Contains(str));
+
+                    if (!canJoin)
+                    {
+                        _logger.LogError<MainMenuPatch>("Can't join lobby because of customs variants");
+
+                        _inputService.EnableAllControllers();
+
+                        TowerFall.Sounds.ui_invalid.Play();
+                        return;
+                    }
+
+                    if (string.IsNullOrEmpty(lobbyToSpectate.RoomId) || string.IsNullOrEmpty(lobbyToSpectate.RoomChatId))
+                    {
+                        _logger.LogError<MainMenuPatch>("Lobby to spectate is null ?");
+
+                        return;
+                    }
+
+                    self.AddLoader("JOINING LOBBY AS SPECTATOR");
+
+                    _matchmakingService.JoinLobby(lobbyToSpectate.RoomId, false, () => OnJoinSuccess(self, lobbyToSpectate, false), () => OnFailedToJoinLobby(self));
+                }
             }
 
             if (self.State.ToDomainModel() == Domain.Models.MenuState.LobbyBuilder)
@@ -669,7 +714,7 @@ namespace TF.EX.Patchs.Scene
                         Sounds.ui_click.Play();
                         self.State = MainMenu.MenuState.Rollcall;
                         self.BackState = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
-                        _netplayManager.SetRoomAndServerMode(roomUrl);
+                        _netplayManager.SetRoomAndServerMode(roomUrl, true);
                         _matchmakingService.ConnectAndListenToLobby(roomChatUrl);
 
                         rngService.SetSeed(_matchmakingService.GetOwnLobby().GameData.Seed);
@@ -770,61 +815,7 @@ namespace TF.EX.Patchs.Scene
 
                         self.AddLoader("JOINING LOBBY");
 
-                        Action onSucess = () =>
-                        {
-                            self.RemoveLoader();
-                            Sounds.ui_click.Play();
-
-                            var roomUrl = $"{Config.SERVER}/room/{newLobby.RoomId}";
-                            var roomChatUrl = $"{Config.SERVER}/room/{newLobby.RoomChatId}";
-
-                            _netplayManager.SetRoomAndServerMode(roomUrl);
-                            _netplayManager.UpdatePlayer2Name(newLobby.Players.First(pl => pl.IsHost).Name);
-                            _matchmakingService.ConnectAndListenToLobby(roomChatUrl);
-
-                            _matchmakingService.UpdateOwnLobby(newLobby);
-                            _inputService.EnableAllControllers();
-                            _inputService.DisableAllControllerExceptLocal();
-
-                            rngService.SetSeed(newLobby.GameData.Seed);
-
-                            //Apply variant
-                            MainMenu.VersusMatchSettings.Variants.ApplyVariants(newLobby.GameData.Variants);
-
-                            //Apply length
-                            MainMenu.VersusMatchSettings.MatchLength = (MatchSettings.MatchLengths)newLobby.GameData.MatchLength;
-
-                            self.State = MainMenu.MenuState.Rollcall;
-
-                            if (MainMenu.VersusMatchSettings.Variants.ContainsCustomVariant(newLobby.GameData.Variants))
-                            {
-                                Notification.Create(self, $"Be cautious! Custom variants might not work properly", 15, 500);
-                            }
-                        };
-
-                        Action onFail = () =>
-                        {
-                            Notification.Create(self, $"Failed to join lobby", 10, 150);
-
-                            _inputService.EnableAllControllers();
-                            self.RemoveLoader();
-                            TowerFall.Sounds.ui_invalid.Play();
-
-                            foreach (var lobby in lobbies.ToArray())
-                            {
-                                lobby.RemoveSelf();
-                            }
-
-                            lobbies.Clear();
-                            if (lobbyPanel != null)
-                            {
-                                lobbyPanel.RemoveSelf();
-                                lobbyPanel = null;
-                            }
-
-                        };
-
-                        _matchmakingService.JoinLobby(newLobby.RoomId, onSucess, onFail);
+                        _matchmakingService.JoinLobby(newLobby.RoomId, true, () => OnJoinSuccess(self, newLobby, true), () => OnFailedToJoinLobby(self));
                     };
 
                     var but = new LobbyInfos(self, new Vector2(5.0f, maxY), newLobby, onClick, lobbyPanel);
@@ -876,6 +867,62 @@ namespace TF.EX.Patchs.Scene
 
                     _inputService.EnableAllControllers();
                 }
+            }
+        }
+
+        private void OnJoinSuccess(MainMenu self, Lobby newLobby, bool isPlayer)
+        {
+            self.RemoveLoader();
+            Sounds.ui_click.Play();
+
+            var roomUrl = $"{Config.SERVER}/room/{newLobby.RoomId}";
+            var roomChatUrl = $"{Config.SERVER}/room/{newLobby.RoomChatId}";
+
+            if (isPlayer)
+            {
+                _netplayManager.SetRoomAndServerMode(roomUrl, false);
+                _netplayManager.UpdatePlayer2Name(newLobby.Players.First(pl => pl.IsHost).Name);
+                _matchmakingService.ConnectAndListenToLobby(roomChatUrl);
+            }
+
+            _matchmakingService.UpdateOwnLobby(newLobby);
+            _inputService.EnableAllControllers();
+            _inputService.DisableAllControllerExceptLocal();
+
+            rngService.SetSeed(newLobby.GameData.Seed);
+
+            //Apply variant
+            MainMenu.VersusMatchSettings.Variants.ApplyVariants(newLobby.GameData.Variants);
+
+            //Apply length
+            MainMenu.VersusMatchSettings.MatchLength = (MatchSettings.MatchLengths)newLobby.GameData.MatchLength;
+
+            self.State = MainMenu.MenuState.Rollcall;
+
+            if (MainMenu.VersusMatchSettings.Variants.ContainsCustomVariant(newLobby.GameData.Variants))
+            {
+                Notification.Create(self, $"Be cautious! Custom variants might not work properly", 15, 500);
+            }
+        }
+
+        private void OnFailedToJoinLobby(MainMenu self)
+        {
+            Notification.Create(self, $"Failed to join lobby", 10, 150);
+
+            _inputService.EnableAllControllers();
+            self.RemoveLoader();
+            TowerFall.Sounds.ui_invalid.Play();
+
+            foreach (var lobby in lobbies.ToArray())
+            {
+                lobby.RemoveSelf();
+            }
+
+            lobbies.Clear();
+            if (lobbyPanel != null)
+            {
+                lobbyPanel.RemoveSelf();
+                lobbyPanel = null;
             }
         }
     }

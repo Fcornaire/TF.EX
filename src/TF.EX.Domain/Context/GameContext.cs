@@ -423,7 +423,13 @@ namespace TF.EX.Domain.Context
 
         public void AddArcher(int index, Player player)
         {
-            ArcherSelections.Add(index, player);
+            if (!ArcherSelections.ContainsKey(index))
+            {
+                ArcherSelections.Add(index, player);
+                return;
+            }
+
+            FortRise.Logger.Log($"Archer already selected for player {index}");
         }
 
         public void ResetArcherSelections()

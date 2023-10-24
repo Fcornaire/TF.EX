@@ -34,7 +34,7 @@
                 Name = "LOCAL",
                 Netplay = new NetplayConfig
                 {
-                    Local = new NetplayLocalConfig
+                    LocalConf = new NetplayLocalConfig
                     {
                         RemoteAddr = addr,
                         Port = 7000,
@@ -44,7 +44,7 @@
             };
         }
 
-        internal GGRSConfig DefaultServer(string roomUrl)
+        internal GGRSConfig DefaultServer(string roomUrl, bool isHost)
         {
             return new GGRSConfig
             {
@@ -52,9 +52,10 @@
                 Name = "SERVER",
                 Netplay = new NetplayConfig
                 {
-                    Server = new NetplayServerConfig
+                    ServerConf = new NetplayServerConfig
                     {
-                        RoomUrl = roomUrl
+                        RoomUrl = roomUrl,
+                        IsHost = isHost
                     }
                 },
             };
@@ -63,8 +64,12 @@
 
     public class NetplayConfig
     {
-        public NetplayLocalConfig Local { get; set; }
-        public NetplayServerConfig Server { get; set; }
+        public int NumPlayers { get; set; }
+        public ICollection<string> Spectators { get; set; } = new List<string>();
+        public ICollection<string> Players { get; set; } = new List<string>();
+        public NetplayLocalConfig LocalConf { get; set; }
+        public NetplayServerConfig ServerConf { get; set; }
+        public NetplaySpectatorConfig SpectatorConf { get; set; }
     }
 
     public class NetplayLocalConfig
@@ -78,10 +83,19 @@
     public class NetplayServerConfig
     {
         public string RoomUrl { get; set; }
+
+        public bool IsHost { get; set; }
     }
 
     public class TestConfig
     {
         public int CheckDistance { get; set; }
+    }
+
+    public class NetplaySpectatorConfig
+    {
+        public string RoomUrl { get; set; }
+
+        public string ToSpectate { get; set; }
     }
 }

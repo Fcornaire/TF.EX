@@ -15,8 +15,8 @@ namespace TF.EX.Utils
         [Fact]
         public async Task TestReplayComparison()
         {
-            string replayFilePath1 = Path.Combine(_replaysFolder, "01-10-2023T12-46-59.tow");
-            string replayFilePath2 = Path.Combine(_replaysFolder, "01-10-2023T12-46-54_laptop.tow");
+            string replayFilePath1 = Path.Combine(_replaysFolder, "21-10-2023T19-41-50_gog.tow");
+            string replayFilePath2 = Path.Combine(_replaysFolder, "21-10-2023T19-41-41_lap.tow");
 
             List<TF.EX.Domain.Models.Record> record1 = (await ReplayService.ToReplay(replayFilePath1)).Record;
             List<TF.EX.Domain.Models.Record> record2 = (await ReplayService.ToReplay(replayFilePath2)).Record;
@@ -60,18 +60,20 @@ namespace TF.EX.Utils
         }
 
         [Theory]
-        [InlineData(7682)]
+        [InlineData(8854)]
         public async Task TestReplayComparisonAtSpecificFrame(int frame)
         {
-            string replayFilePath1 = Path.Combine(_replaysFolder, "23-09-2023T14-34-47.tow");
-            string replayFilePath2 = Path.Combine(_replaysFolder, "23-09-2023T14-34-40_laptop.tow");
+            string replayFilePath1 = Path.Combine(_replaysFolder, "21-10-2023T19-41-50_gog.tow");
+            string replayFilePath2 = Path.Combine(_replaysFolder, "21-10-2023T19-41-41_lap.tow");
 
             List<TF.EX.Domain.Models.Record> record1 = (await ReplayService.ToReplay(replayFilePath1)).Record;
             List<TF.EX.Domain.Models.Record> record2 = (await ReplayService.ToReplay(replayFilePath2)).Record;
 
             try
             {
-                record1.ToList()[frame + 1].ShouldDeepEqual(record2.ToList()[frame + 1]);
+                var rec = record1.ToList()[frame + 1];
+                var rec2 = record2.ToList()[frame + 1];
+                rec.ShouldDeepEqual(rec2);
             }
             catch (DeepEqual.Syntax.DeepEqualException e)
             {

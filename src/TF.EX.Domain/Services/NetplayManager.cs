@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using TF.EX.Common.Extensions;
 using TF.EX.Common.Handle;
 using TF.EX.Domain.Context;
+using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Externals;
 using TF.EX.Domain.Models;
@@ -143,12 +144,23 @@ namespace TF.EX.Domain.Services
                                     return;
                                 }
 
-                                _logger.LogDebug<NetplayManager>($"Netplay session etablished with {_player2Name}");
+                                var matchMakingService = ServiceCollections.ResolveMatchmakingService();
+
+                                if (!matchMakingService.IsSpectator())
+                                {
+                                    _logger.LogDebug<NetplayManager>($"Netplay session etablished with {_player2Name}");
+                                }
+                                else
+                                {
+                                    _logger.LogDebug<NetplayManager>($"Netplay session etablished as spectator");
+                                }
                                 ServiceCollections.ResolveMatchmakingService().DisconnectFromLobby();
 
                                 _gameContext.ResetPlayersIndex();
 
-                                foreach ((var index, var archer_alt) in _archerService.GetFinalArchers())
+                                var archers = matchMakingService.IsSpectator() ? _archerService.GetArchers() : _archerService.GetFinalArchers();
+
+                                foreach ((var index, var archer_alt) in archers)
                                 {
                                     var splitted = archer_alt.Split('-');
 
@@ -160,7 +172,7 @@ namespace TF.EX.Domain.Services
                                     TFGame.AltSelect[index] = alt;
                                     TFGame.Players[index] = true;
 
-                                    if (index == 1)
+                                    if (index == 1 && !matchMakingService.IsSpectator())
                                     {
                                         _player2Name = _gameContext.GetPlayers().First(p => p.Item1 == index).Item2.Name;
                                     }
@@ -321,6 +333,10 @@ namespace TF.EX.Domain.Services
                     }
 
                     throw new InvalidOperationException($"AdvanceFrame error : {info} {mismatch}");
+                }
+                else if (_netplayMode == NetplayMode.Spectator)
+                {
+                    Notification.Create(TFGame.Instance.Scene, "A error occured while spectating");
                 }
                 else if (!info.Equals("PredictionThreshold"))
                 {
@@ -668,11 +684,12 @@ namespace TF.EX.Domain.Services
             _player2Name = player2Name;
         }
 
-        public void SetRoomAndServerMode(string roomUrl)
+        public void SetRoomAndServerMode(string roomUrl, bool isHost)
         {
-            GGRSConfig.Netplay.Server = new NetplayServerConfig
+            GGRSConfig.Netplay.ServerConf = new NetplayServerConfig
             {
-                RoomUrl = roomUrl
+                RoomUrl = roomUrl,
+                IsHost = isHost
             };
             _netplayMode = NetplayMode.Server;
         }
@@ -727,7 +744,7 @@ namespace TF.EX.Domain.Services
         public void SetServerMode(string roomUrl)
         {
             _netplayMode = NetplayMode.Server;
-            GGRSConfig = GGRSConfig.DefaultServer(roomUrl);
+            GGRSConfig = GGRSConfig.DefaultServer(roomUrl, true);
         }
 
         public void ResetMode()
@@ -798,6 +815,64 @@ namespace TF.EX.Domain.Services
         public bool IsServerMode()
         {
             return _netplayMode == NetplayMode.Server;
+        }
+
+        public void SetSpectatorMode(string roomUrl, string toSpectate)
+        {
+            _netplayMode = NetplayMode.Spectator;
+            GGRSConfig.Netplay.SpectatorConf = new NetplaySpectatorConfig
+            {
+                ToSpectate = toSpectate,
+                RoomUrl = roomUrl,
+            };
+        }
+
+        public bool IsSpectatorMode()
+        {
+            return _netplayMode == NetplayMode.Spectator;
+        }
+
+        public void AddSpectators(IEnumerable<Domain.Models.WebSocket.Player> spectators)
+        {
+            foreach (var spectator in spectators)
+            {
+                var peerId = spectator.RoomPeerId;
+                GGRSConfig.Netplay.Spectators.Add(peerId);
+            }
+        }
+
+        public void UpdatePlayers(ICollection<Domain.Models.WebSocket.Player> players, ICollection<Domain.Models.WebSocket.Player> spectators)
+        {
+            GGRSConfig.Netplay.Players = new List<string>();
+            GGRSConfig.Netplay.Spectators = new List<string>();
+
+            foreach (var player in players)
+            {
+                var peerId = player.RoomPeerId;
+                GGRSConfig.Netplay.Players.Add(peerId);
+            }
+
+            foreach (var spectator in spectators)
+            {
+                var peerId = spectator.RoomPeerId;
+                GGRSConfig.Netplay.Spectators.Add(peerId);
+            }
+
+            if (_netplayMode == NetplayMode.Spectator)
+            {
+                var hostPeerId = players.First(p => p.IsHost).RoomPeerId;
+                GGRSConfig.Netplay.SpectatorConf.ToSpectate = hostPeerId;
+            }
+        }
+
+        public void UpdateNumPlayers(int count)
+        {
+            GGRSConfig.Netplay.NumPlayers = count;
+        }
+
+        public int GetNumPlayers()
+        {
+            return GGRSConfig.Netplay.NumPlayers;
         }
     }
 }

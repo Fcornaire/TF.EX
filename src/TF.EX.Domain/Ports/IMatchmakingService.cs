@@ -23,7 +23,7 @@ namespace TF.EX.Domain.Ports
 
         void UpdateOwnLobby(Lobby lobby);
         Task CreateLobby(Action onSuccess, Action onFail);
-        Task JoinLobby(string roomId, Action onSucess, Action onFail);
+        Task JoinLobby(string roomId, bool isPlayer, Action onSucess, Action onFail);
 
         Task UpdatePlayer(Player player, Action onSucess, Action onFail);
         string GetRoomChatPeerId();
@@ -31,5 +31,7 @@ namespace TF.EX.Domain.Ports
         void ResetPeer();
         bool IsLobbyReady();
         void ResetLobby();
+        bool IsSpectator();
+        string GetRoomPeerId();
     }
 }

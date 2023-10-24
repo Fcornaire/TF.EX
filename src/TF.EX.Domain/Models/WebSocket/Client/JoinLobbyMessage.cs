@@ -15,5 +15,8 @@ namespace TF.EX.Domain.Models.WebSocket.Client
 
         [JsonPropertyName("name")]
         public string Name { get; set; }
+
+        [JsonPropertyName("is_player")]
+        public bool IsPlayer { get; set; }
     }
 }

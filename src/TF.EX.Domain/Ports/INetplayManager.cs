@@ -1,5 +1,6 @@
 ﻿using TF.EX.Domain.Models;
 using TF.EX.Domain.Models.State;
+using TF.EX.Domain.Models.WebSocket;
 
 namespace TF.EX.Domain.Ports
 {
@@ -67,7 +68,7 @@ namespace TF.EX.Domain.Ports
         string GetPlayer2Name();
 
         void UpdatePlayer2Name(string name);
-        void SetRoomAndServerMode(string roomUrl);
+        void SetRoomAndServerMode(string roomUrl, bool isHost);
 
         bool ShouldSwapPlayer();
         PlayerDraw GetPlayerDraw();
@@ -88,5 +89,11 @@ namespace TF.EX.Domain.Ports
         ICollection<ArcherInfo> GetArchersInfo();
         Record GetLastRecord();
         bool IsServerMode();
+        void SetSpectatorMode(string roomUrl, string hostPeerId);
+        bool IsSpectatorMode();
+        void AddSpectators(IEnumerable<Player> spectators);
+        void UpdatePlayers(ICollection<Player> players, ICollection<Player> spectators);
+        void UpdateNumPlayers(int count);
+        int GetNumPlayers();
     }
 }
