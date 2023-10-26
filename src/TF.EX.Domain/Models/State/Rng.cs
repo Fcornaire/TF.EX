@@ -1,9 +1,14 @@
 ﻿
+using MessagePack;
+
 namespace TF.EX.Domain.Models.State
 {
+    [MessagePackObject]
     public class Rng
     {
+        [Key(0)]
         public int Seed { get; set; } = -1;
+        [Key(1)]
         public ICollection<RngGenType> Gen_type { get; set; } = new List<RngGenType>();
 
         public void ResetGenType()

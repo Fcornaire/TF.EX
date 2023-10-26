@@ -1,8 +1,7 @@
-﻿using Microsoft.Win32.SafeHandles;
-using System.IO.Compression;
+﻿using MessagePack;
+using Microsoft.Win32.SafeHandles;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Text.Json;
 
 namespace TF.EX.Common.Handle
 {
@@ -10,10 +9,10 @@ namespace TF.EX.Common.Handle
     {
         private readonly int size;
         private readonly Action cleanup;
-        public SafeBytes(T obj, bool useCompression)
+        public SafeBytes(T obj, bool useJson)
             : base(true)
         {
-            var bytes = ToBytes(obj, useCompression);
+            var bytes = ToBytes(obj, useJson);
 
             int length = bytes.Length;
             IntPtr ptr = Marshal.AllocHGlobal(length);
@@ -32,7 +31,7 @@ namespace TF.EX.Common.Handle
             this.cleanup = cleanup;
         }
 
-        public byte[] ToBytes()
+        public byte[] PtrToBytes()
         {
             if (handle == IntPtr.Zero || size == 0)
             {
@@ -63,63 +62,40 @@ namespace TF.EX.Common.Handle
             return true;
         }
 
-        private byte[] ToBytes(T obj, bool useCompression)
+        private byte[] ToBytes(T obj, bool useJson)
         {
-            var json = JsonSerializer.Serialize(obj);
-            var bytes = Encoding.UTF8.GetBytes(json);
+            var options = useJson ? SerializationOptions.GetContractlessOptions() : SerializationOptions.GetDefaultOptionWithCompression();
 
-            if (!useCompression)
+            var serialized = MessagePackSerializer.Serialize(obj, options);
+
+            if (!useJson)
             {
-                return bytes;
+                return serialized;
             }
 
-            var compressedBytes = Compress(bytes);
-            return compressedBytes;
+            var json = MessagePackSerializer.ConvertToJson(serialized);
+            var bytes = Encoding.UTF8.GetBytes(json);
+            return bytes;
         }
 
-        public T ToStruct(bool useDecompression)
+        public T ToStruct(bool useJson)
         {
-            byte[] bytes = ToBytes();
+            byte[] rawBytes = PtrToBytes();
 
-            if (useDecompression)
-            {
-                bytes = Decompress(bytes);
-            }
-
-            var json = Encoding.UTF8.GetString(bytes);
-
-            if (string.IsNullOrEmpty(json))
+            if (rawBytes.Length == 0)
             {
                 return default;
             }
 
-            return JsonSerializer.Deserialize<T>(json);
-        }
+            if (useJson)
+            {
+                var json = Encoding.UTF8.GetString(rawBytes);
+                var bytes = MessagePackSerializer.ConvertFromJson(json, SerializationOptions.GetContractlessOptions());
+                var result = MessagePackSerializer.Deserialize<T>(bytes, SerializationOptions.GetContractlessOptions());
+                return result;
+            }
 
-        private byte[] Compress(byte[] data)
-        {
-            using (MemoryStream output = new MemoryStream())
-            {
-                using (GZipStream gzip = new GZipStream(output, CompressionMode.Compress))
-                {
-                    gzip.Write(data, 0, data.Length);
-                }
-                return output.ToArray();
-            }
-        }
-        public byte[] Decompress(byte[] compressedData)
-        {
-            using (MemoryStream input = new MemoryStream(compressedData))
-            {
-                using (MemoryStream output = new MemoryStream())
-                {
-                    using (GZipStream gzip = new GZipStream(input, CompressionMode.Decompress))
-                    {
-                        gzip.CopyTo(output);
-                    }
-                    return output.ToArray();
-                }
-            }
+            return MessagePackSerializer.Deserialize<T>(rawBytes, SerializationOptions.GetDefaultOptionWithCompression());
         }
     }
 

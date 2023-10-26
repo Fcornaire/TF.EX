@@ -119,11 +119,14 @@ namespace TF.EX.Patchs.Engine
 
                 CustomInputRenderers = null;
 
+                if (!_netplayManager.IsReplayMode())
+                {
+                    ServiceCollections.PurgeCache();
+                }
+
                 if (!_netplayManager.IsTestMode())
                 {
                     _netplayManager.Reset();
-                    ServiceCollections.PurgeCache();
-
                     //TowerFall.PlayerInput.AssignInputs(); //Reset inputs
                 }
 

@@ -413,7 +413,6 @@ namespace TF.EX.Patchs.Scene
 
                     TFGame.Instance.Scene.RemoveLoader();
 
-                    _netplayManager.EnableReplayMode();
                     _inputService.EnableAllControllers();
                 });
             }

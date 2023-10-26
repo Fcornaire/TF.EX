@@ -1,5 +1,4 @@
 ﻿using MonoMod.Utils;
-using TF.EX.Domain.CustomComponent;
 using TowerFall;
 
 namespace TF.EX.TowerFallExtensions.Scene
@@ -80,7 +79,6 @@ namespace TF.EX.TowerFallExtensions.Scene
                 var loader = new Loader(true);
                 Loader.Message = msg;
                 scene.Add(loader);
-                scene.Add(new Fader());
             }
             else
             {
@@ -101,12 +99,6 @@ namespace TF.EX.TowerFallExtensions.Scene
             if (loader != null)
             {
                 loader.RemoveSelf();
-            }
-
-            var fader = scene.Get<Fader>();
-            if (fader != null)
-            {
-                fader.RemoveSelf();
             }
         }
     }

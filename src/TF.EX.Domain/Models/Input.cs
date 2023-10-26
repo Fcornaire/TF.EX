@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using MessagePack;
+using System.Runtime.InteropServices;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Externals;
 using TF.EX.Domain.Models.State;
@@ -7,30 +8,43 @@ using TowerFall;
 namespace TF.EX.Domain.Models
 {
     [StructLayout(LayoutKind.Sequential)]
+    [MessagePackObject]
     public struct Input
     {
+        [Key(0)]
         public int jump_check { get; set; }
 
+        [Key(1)]
         public int jump_pressed { get; set; }
 
+        [Key(2)]
         public int shoot_check { get; set; }
 
+        [Key(3)]
         public int shoot_pressed { get; set; }
 
+        [Key(4)]
         public int alt_shoot_check { get; set; }
 
+        [Key(5)]
         public int alt_shoot_pressed { get; set; }
 
+        [Key(6)]
         public int dodge_check { get; set; }
 
+        [Key(7)]
         public int dodge_pressed { get; set; }
 
+        [Key(8)]
         public int arrow_pressed { get; set; }
 
+        [Key(9)]
         public int move_x { get; set; }
 
+        [Key(10)]
         public int move_y { get; set; }
 
+        [Key(11)]
         public Vector2f aim_axis { get; set; }
     }
 

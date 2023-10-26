@@ -73,8 +73,6 @@ namespace TF.EX.Domain.Ports
         bool ShouldSwapPlayer();
         PlayerDraw GetPlayerDraw();
         void SetPlayersIndex(int playerDraw);
-        void EnableReplayMode();
-        void DisableReplayMode();
         bool HasSetMode();
         void SetTestMode(int checkDistance);
         void SetLocalMode(string addr, PlayerDraw draw);

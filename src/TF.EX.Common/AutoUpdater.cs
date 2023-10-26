@@ -1,16 +1,17 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using MessagePack;
+using Microsoft.Extensions.Logging;
 using System.IO.Compression;
 using System.Net;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
 using TF.EX.Common.Extensions;
 
 namespace TF.EX.Common
 {
-    internal class GithubTag
+    [DataContract]
+    public class GithubTag
     {
-        [JsonPropertyName("name")]
+        [DataMember(Name = "name")]
         public string Name { get; set; }
     }
 
@@ -151,7 +152,8 @@ namespace TF.EX.Common
             client.DefaultRequestHeaders.Add("User-Agent", "Towerfall");
             var response = await client.GetAsync("https://api.github.com/repos/fcornaire/tf.ex/tags");
             var content = await response.Content.ReadAsStringAsync();
-            var tags = JsonSerializer.Deserialize<List<GithubTag>>(content);
+            var bytes = MessagePackSerializer.ConvertFromJson(content);
+            var tags = MessagePackSerializer.Deserialize<List<GithubTag>>(bytes);
 
             var regex = new Regex(@"v\d+\.\d+\.\d+");
             var semverTags = tags.Select(t => t.Name).Where(tag => regex.IsMatch(tag)).ToList();

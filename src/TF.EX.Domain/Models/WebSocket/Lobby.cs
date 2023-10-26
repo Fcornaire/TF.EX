@@ -1,7 +1,9 @@
-﻿using TowerFall;
+﻿using MessagePack;
+using TowerFall;
 
 namespace TF.EX.Domain.Models.WebSocket
 {
+    [MessagePackObject(keyAsPropertyName: true)]
     public class Lobby
     {
         public string Name { get; set; } = "";
@@ -12,6 +14,7 @@ namespace TF.EX.Domain.Models.WebSocket
         public GameData GameData { get; set; } = new GameData();
     }
 
+    [MessagePackObject(keyAsPropertyName: true)]
     public class GameData
     {
         public int MapId { get; set; } = 0;
@@ -21,6 +24,7 @@ namespace TF.EX.Domain.Models.WebSocket
         public int Seed { get; set; } = 0;
     }
 
+    [MessagePackObject(keyAsPropertyName: true)]
     public class Player
     {
         public string Name { get; set; } = "";

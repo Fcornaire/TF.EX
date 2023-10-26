@@ -1,16 +1,18 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Runtime.Serialization;
 
 namespace TF.EX.Domain.Models.WebSocket.Client
 {
-    internal class UpdatePlayerMessage
+    [DataContract]
+    public class UpdatePlayerMessage
     {
-        [JsonPropertyName("UpdatePlayer")]
+        [DataMember(Name = "UpdatePlayer")]
         public UpdatePlayer UpdatePlayer { get; set; } = new UpdatePlayer();
     }
 
+    [DataContract]
     public class UpdatePlayer
     {
-        [JsonPropertyName("player")]
+        [DataMember(Name = "player")]
         public Player Player { get; set; }
     }
 }

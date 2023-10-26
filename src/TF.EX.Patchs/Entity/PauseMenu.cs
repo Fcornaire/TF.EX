@@ -35,7 +35,6 @@ namespace TF.EX.Patchs.Entity
                 var level = dynPauseMenu.Get<Level>("level");
 
                 level.Session.MatchSettings.LevelSystem.Dispose();
-                _netplayManager.DisableReplayMode();
 
                 return;
             }
