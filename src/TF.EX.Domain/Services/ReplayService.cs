@@ -1,9 +1,7 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using MessagePack;
+using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.IO.Compression;
-using System.Text.Json;
-using System.Text.Json.Serialization.Metadata;
 using TF.EX.Common.Extensions;
 using TF.EX.Domain.Context;
 using TF.EX.Domain.Extensions;
@@ -104,8 +102,8 @@ namespace TF.EX.Domain.Services
 
                    var filePath = $"{replaysFolder}\\{replayFilename}";
 
-                   var isCached = ServiceCollections.GetCached(filePath, out Replay replay);
-                   if (!isCached || replay == null || replay.Record.Count == 0)
+                   ServiceCollections.GetCached(filePath, out Replay replay);
+                   if (replay == null || (replay != null && replay.Record == null)) //null-conditional member access somehow not working ?
                    {
                        replay = await ToReplay(filePath);
                        ServiceCollections.AddToCache(filePath, replay, TimeSpan.FromMinutes(5));
@@ -141,6 +139,8 @@ namespace TF.EX.Domain.Services
                        matchSettings.Variants.ApplyVariants(replay.Informations.Variants);
                        matchSettings.MatchLength = (MatchSettings.MatchLengths)replay.Informations.VersusMatchLength;
                        MainMenu.VersusMatchSettings = matchSettings;
+
+                       _netplayManager.SetReplayMode();
 
                        new TowerFall.Session(matchSettings).StartGame();
                    }
@@ -200,27 +200,18 @@ namespace TF.EX.Domain.Services
 
         private void WriteToFile(Replay replay, Stream stream)
         {
-            using var gzipStream = new GZipStream(stream, CompressionMode.Compress);
-            JsonSerializer.Serialize(gzipStream, replay);
+            MessagePackSerializer.Serialize(stream, replay, Common.SerializationOptions.GetDefaultOptionWithCompression());
         }
 
         public static async Task<Replay> ToReplay(string filePath, bool shouldIgnoreRecord = false)
         {
-            JsonSerializerOptions options = new JsonSerializerOptions();
-
+            using var fileStream = new FileStream(filePath, FileMode.Open);
             if (shouldIgnoreRecord)
             {
-                var modifier = new IgnorePropertiesWithType(typeof(List<Record>));
-
-                options.TypeInfoResolver = new DefaultJsonTypeInfoResolver
-                {
-                    Modifiers = { modifier.ModifyTypeInfo }
-                };
+                return await MessagePackSerializer.DeserializeAsync<Replay>(fileStream, SerializationOptions.GetDefaultOptionWithIgnore());
             }
 
-            using var fileStream = new FileStream(filePath, FileMode.Open);
-            using var gzip = new GZipStream(fileStream, CompressionMode.Decompress);
-            return await JsonSerializer.DeserializeAsync<Replay>(gzip, options);
+            return await MessagePackSerializer.DeserializeAsync<Replay>(fileStream, Common.SerializationOptions.GetDefaultOptionWithCompression());
         }
 
         public void Reset()
@@ -244,24 +235,19 @@ namespace TF.EX.Domain.Services
             int impossibleToLoad = 0;
             Loader.Message = $"LOADING REPLAYS... \n\n                {loaded}/{replays.Count}";
 
-            //TODO: There should be a better way to load replays
-            await replays.ForEachAsync(4, async replay =>
+            await replays.ForEachAsync(10, async replay =>
             {
                 var replayPath = $"{REPLAYS_FOLDER}\\{replay}";
 
                 var isCached = ServiceCollections.GetCached<Replay>(replayPath, out var replayRecordless);
                 if (!isCached)
                 {
-                    var attempt = 1;
-                    bool loadedReplay = false;
-                    while (!loadedReplay)
+                    var attempt = 0;
+                    while (attempt < 3)
                     {
                         try
                         {
-                            _logger.LogDebug<ReplayService>($"Loading replay {replay} (attemp {attempt})");
                             replayRecordless = await ToReplay(replayPath, true);
-
-                            loadedReplay = true;
 
                             if (replayRecordless.Informations.Version != ServiceCollections.CurrentReplayVersion)
                             {
@@ -274,24 +260,21 @@ namespace TF.EX.Domain.Services
                                 return;
                             }
 
-                            ServiceCollections.AddToCache(replayPath, replayRecordless, TimeSpan.FromMinutes(15));
+                            ServiceCollections.AddToCache(replayPath, replayRecordless, TimeSpan.FromMinutes(10));
 
                             res.Add(replayRecordless);
+                            break;
                         }
-                        catch (OutOfMemoryException e)
+                        catch (Exception e)
                         {
                             attempt++;
                             _logger.LogError<ReplayService>($"Error while loading replay {replay}", e);
                             await Task.Delay(500);
-                        }
-                        catch (Exception e)
-                        {
-                            _logger.LogError<ReplayService>($"Error while loading replay {replay}", e);
-                            break;
+                            _logger.LogDebug<ReplayService>($"Loading replay {replay} (attemp {attempt + 1})");
                         }
                     }
 
-                    if (!loadedReplay)
+                    if (attempt >= 3)
                     {
                         _logger.LogError<ReplayService>($"Impossible to load replay {replay}");
                         Interlocked.Increment(ref impossibleToLoad);

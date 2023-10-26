@@ -17,6 +17,11 @@ namespace TF.EX.Common.Extensions
         public static void LogError<T>(this ILogger logger, string message, Exception exception = null)
         {
             Log<T>(logger, LogLevel.Error, $"{message}", exception);
+
+            if (exception.InnerException != null)
+            {
+                Log<T>(logger, LogLevel.Error, $"{message} - InnerException", exception.InnerException);
+            }
         }
 
         private static string Formatter(string state, Exception exception)

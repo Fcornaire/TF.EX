@@ -1,18 +1,18 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Runtime.Serialization;
 
 namespace TF.EX.Domain.Models.WebSocket
 {
+    [DataContract]
     public class PeerMessage
     {
-        [JsonPropertyName("peer_id")]
+        [DataMember(Name = "peer_id")]
         public Guid PeerId { get; set; }
 
-        [JsonPropertyName("message")]
+        [DataMember(Name = "message")]
         public string Message { get; set; }
 
-        [JsonPropertyName("peer_message_type")]
-        [JsonConverter(typeof(JsonStringEnumConverter))]
-        public PeerMessageType Type { get; set; }
+        [DataMember(Name = "peer_message_type")]
+        public string Type { get; set; }
     }
 
     public enum PeerMessageType

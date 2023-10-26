@@ -11,9 +11,13 @@
 	  <PackageReference Include="DeepEqual" Version="4.2.1" />
 	  <PackageReference Include="LazyCache" Version="2.4.0" />
 	  <PackageReference Include="LazyCache.AspNetCore" Version="2.4.0" />
+	  <PackageReference Include="MessagePack" Version="2.4.59" />
+	  <PackageReference Include="MessagePackAnalyzer" Version="2.5.129">
+	    <PrivateAssets>all</PrivateAssets>
+	    <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+	  </PackageReference>
 	  <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
 		<PackageReference Include="MonoMod" Version="22.5.1.1" />
-		<PackageReference Include="System.Text.Json" Version="7.0.3" />
 	</ItemGroup>
 
 	<ItemGroup>

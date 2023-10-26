@@ -1,8 +1,8 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using MessagePack;
+using Microsoft.Extensions.Logging;
 using MonoMod.Utils;
 using System.Diagnostics;
 using System.Net.WebSockets;
-using System.Text.Json;
 using TF.EX.Common.Extensions;
 using TF.EX.Common.Handle;
 using TF.EX.Domain.CustomComponent;
@@ -169,7 +169,8 @@ namespace TF.EX.Domain.Services
         {
             var getLobbiesMessage = new GetLobbiesMessage();
 
-            var message = JsonSerializer.Serialize(getLobbiesMessage);
+            var bytes = MessagePackSerializer.Serialize(getLobbiesMessage);
+            var message = MessagePackSerializer.ConvertToJson(bytes);
             await Send(message);
         }
 
@@ -183,7 +184,8 @@ namespace TF.EX.Domain.Services
                 }
             };
 
-            var message = JsonSerializer.Serialize(createLobbyMessage);
+            var bytes = MessagePackSerializer.Serialize(createLobbyMessage);
+            var message = MessagePackSerializer.ConvertToJson(bytes);
             await Send(message);
         }
 
@@ -199,7 +201,8 @@ namespace TF.EX.Domain.Services
                 }
             };
 
-            var message = JsonSerializer.Serialize(joinLobbyMessage);
+            var bytes = MessagePackSerializer.Serialize(joinLobbyMessage);
+            var message = MessagePackSerializer.ConvertToJson(bytes);
             await Send(message);
         }
 
@@ -213,7 +216,8 @@ namespace TF.EX.Domain.Services
                 }
             };
 
-            var message = JsonSerializer.Serialize(updatePlayerMessage);
+            var bytes = MessagePackSerializer.Serialize(updatePlayerMessage);
+            var message = MessagePackSerializer.ConvertToJson(bytes);
             await Send(message);
         }
 
@@ -221,7 +225,8 @@ namespace TF.EX.Domain.Services
         {
             var leaveLobbyMessage = new LeaveLobbyMessage { };
 
-            var message = JsonSerializer.Serialize(leaveLobbyMessage);
+            var bytes = MessagePackSerializer.Serialize(leaveLobbyMessage);
+            var message = MessagePackSerializer.ConvertToJson(bytes);
             await Send(message);
         }
 
@@ -241,7 +246,8 @@ namespace TF.EX.Domain.Services
 
             if (message.Contains("GetLobbiesResponse"))
             {
-                var response = JsonSerializer.Deserialize<GetLobbiesResponseMessage>(message);
+                var bytes = MessagePackSerializer.ConvertFromJson(message);
+                var response = MessagePackSerializer.Deserialize<GetLobbiesResponseMessage>(bytes);
                 _lobbies = response.GetLobbiesResponse.Lobbies;
 
                 onResult["GetLobbies-success"]?.Invoke();
@@ -249,7 +255,8 @@ namespace TF.EX.Domain.Services
 
             if (message.Contains("CreateLobbyResponse"))
             {
-                var response = JsonSerializer.Deserialize<CreateLobbyResponseMessage>(message);
+                var bytes = MessagePackSerializer.ConvertFromJson(message);
+                var response = MessagePackSerializer.Deserialize<CreateLobbyResponseMessage>(bytes);
                 if (currentAction == WSAction.CreateLobby)
                 {
                     if (response.CreateLobbyResponse.Success)
@@ -272,7 +279,8 @@ namespace TF.EX.Domain.Services
 
             if (message.Contains("JoinLobby"))
             {
-                var response = JsonSerializer.Deserialize<JoinLobbyResponseMessage>(message);
+                var bytes = MessagePackSerializer.ConvertFromJson(message);
+                var response = MessagePackSerializer.Deserialize<JoinLobbyResponseMessage>(bytes);
                 if (response.JoinLobbyResponse.Success)
                 {
                     _logger.LogDebug<MatchmakingService>("Lobby joined!");
@@ -317,7 +325,9 @@ namespace TF.EX.Domain.Services
 
                 _logger.LogDebug<MatchmakingService>("Lobby updated!");
 
-                var response = JsonSerializer.Deserialize<LobbyUpdateMessage>(message);
+                var bytes = MessagePackSerializer.ConvertFromJson(message);
+
+                var response = MessagePackSerializer.Deserialize<LobbyUpdateMessage>(bytes);
 
                 var lobby = response.LobbyUpdate.Lobby;
 
@@ -329,7 +339,9 @@ namespace TF.EX.Domain.Services
             {
                 if (currentAction != WSAction.None)
                 {
-                    var response = JsonSerializer.Deserialize<LeaveLobbyResponseMessage>(message);
+                    var bytes = MessagePackSerializer.ConvertFromJson(message);
+
+                    var response = MessagePackSerializer.Deserialize<LeaveLobbyResponseMessage>(bytes);
                     if (response.LeaveLobbyResponse.Success)
                     {
                         _logger.LogDebug<MatchmakingService>("Lobby left!");
@@ -450,10 +462,10 @@ namespace TF.EX.Domain.Services
                     while (!cancellationTokenLobby.IsCancellationRequested)
                     {
                         var message = MatchboxClientFFI.poll_message();
-                        using (var safeBytes = new SafeBytes<IEnumerable<PeerMessage>>(message, () => { MatchboxClientFFI.free_messages(message); }))
+                        using (var safeBytes = new SafeBytes<List<PeerMessage>>(message, () => { MatchboxClientFFI.free_messages(message); }))
                         {
-                            var data = safeBytes.ToStruct(false);
-                            if (data != null)
+                            var data = safeBytes.ToStruct(true);
+                            if (data != null && data.Count > 0)
                             {
                                 HandleLobbyMessage(data);
                             }
@@ -476,42 +488,51 @@ namespace TF.EX.Domain.Services
             {
                 foreach (PeerMessage peerMessage in data)
                 {
-                    switch (peerMessage.Type)
+                    PeerMessageType type;
+
+                    if (Enum.TryParse(peerMessage.Type, out type))
                     {
-                        case PeerMessageType.Ping:
-                            if (_opponentPeerId == Guid.Empty)
-                            {
-                                _opponentPeerId = peerMessage.PeerId;
-                            }
-                            MatchboxClientFFI.send_message(PeerMessageType.Pong.ToString(), peerMessage.PeerId.ToString());
-                            break;
-                        case PeerMessageType.Pong:
-                            if (_opponentPeerId == Guid.Empty)
-                            {
-                                _opponentPeerId = peerMessage.PeerId;
-                            }
-                            _stopwatch.Stop();
-                            _ping = (int)_stopwatch.ElapsedMilliseconds;
+                        switch (type)
+                        {
+                            case PeerMessageType.Ping:
+                                if (_opponentPeerId == Guid.Empty)
+                                {
+                                    _opponentPeerId = peerMessage.PeerId;
+                                }
+                                MatchboxClientFFI.send_message(PeerMessageType.Pong.ToString(), peerMessage.PeerId.ToString());
+                                break;
+                            case PeerMessageType.Pong:
+                                if (_opponentPeerId == Guid.Empty)
+                                {
+                                    _opponentPeerId = peerMessage.PeerId;
+                                }
+                                _stopwatch.Stop();
+                                _ping = (int)_stopwatch.ElapsedMilliseconds;
 
-                            Task.Run(async () =>
-                            {
-                                await Task.Delay(1000);
+                                Task.Run(async () =>
+                                {
+                                    await Task.Delay(1000);
 
+                                    _stopwatch.Restart();
+                                    MatchboxClientFFI.send_message(PeerMessageType.Ping.ToString(), peerMessage.PeerId.ToString());
+                                });
+
+                                break;
+                            case PeerMessageType.Archer:
+                                break;
+                            case PeerMessageType.Greetings:
+                                _opponentPeerId = peerMessage.PeerId;
                                 _stopwatch.Restart();
                                 MatchboxClientFFI.send_message(PeerMessageType.Ping.ToString(), peerMessage.PeerId.ToString());
-                            });
-
-                            break;
-                        case PeerMessageType.Archer:
-                            break;
-                        case PeerMessageType.Greetings:
-                            _opponentPeerId = peerMessage.PeerId;
-                            _stopwatch.Restart();
-                            MatchboxClientFFI.send_message(PeerMessageType.Ping.ToString(), peerMessage.PeerId.ToString());
-                            break;
-                        default:
-                            _logger.LogError<MatchmakingService>($"Unknown message type received from opponent : {peerMessage.Type}");
-                            break;
+                                break;
+                            default:
+                                _logger.LogError<MatchmakingService>($"Unknown message type received from opponent : {peerMessage.Type}");
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogError<MatchmakingService>($"Unknown message type received from opponent : {peerMessage.Type}");
                     }
                 }
             }

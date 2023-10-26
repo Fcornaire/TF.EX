@@ -1,23 +1,25 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Runtime.Serialization;
 
 namespace TF.EX.Domain.Models.WebSocket.Server
 {
+    [DataContract]
     public class CreateLobbyResponseMessage
     {
 
-        [JsonPropertyName("CreateLobbyResponse")]
+        [DataMember(Name = "CreateLobbyResponse")]
         public CreateLobbyResponse CreateLobbyResponse { get; set; } = new CreateLobbyResponse();
     }
 
+    [DataContract]
     public class CreateLobbyResponse
     {
-        [JsonPropertyName("success")]
+        [DataMember(Name = "success")]
         public bool Success { get; set; }
 
-        [JsonPropertyName("message")]
+        [DataMember(Name = "message")]
         public string Message { get; set; }
 
-        [JsonPropertyName("lobby")]
+        [DataMember(Name = "lobby")]
         public Lobby Lobby { get; set; }
     }
 }

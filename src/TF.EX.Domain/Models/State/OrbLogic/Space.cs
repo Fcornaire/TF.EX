@@ -1,18 +1,26 @@
-﻿using TF.EX.Domain.Models.State.Component;
+﻿using MessagePack;
+using TF.EX.Domain.Models.State.Component;
 
 namespace TF.EX.Domain.Models.State.OrbLogic
 {
+    [MessagePackObject]
     public class Space
     {
+        [Key(0)]
         public Counter SpaceCounter { get; set; }
 
+        [Key(1)]
         public Vector2f TargetSpaceSpeed { get; set; }
 
+        [Key(2)]
         public Vector2f SpaceSpeed { get; set; }
 
+        [Key(3)]
         public Vector2f ScreenOffsetStart { get; set; }
+        [Key(4)]
         public Vector2f ScreenOffsetEnd { get; set; }
 
+        [Key(5)]
         public float SpaceTweenTimer { get; set; }
 
         public static Space Default => new Space

@@ -1,9 +1,10 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using MessagePack;
+using Microsoft.Extensions.Logging;
 using MonoMod.Utils;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Text.Json;
 using System.Text.RegularExpressions;
+using TF.EX.Common;
 using TF.EX.Common.Extensions;
 using TF.EX.Common.Handle;
 using TF.EX.Domain.Context;
@@ -92,7 +93,7 @@ namespace TF.EX.Domain.Services
                         {
                             try
                             {
-                                using var handle = new SafeBytes<GGRSConfig>(GGRSConfig, false);
+                                using var handle = new SafeBytes<GGRSConfig>(GGRSConfig, true);
                                 GGRSFFI.IsInInit = true;
                                 var status = GGRSFFI.netplay_init(handle.ToBytesFFI()).ToModelGGrsFFI();
                                 GGRSFFI.IsInInit = false;
@@ -193,7 +194,7 @@ namespace TF.EX.Domain.Services
                 }
                 else
                 {
-                    using var handle = new SafeBytes<GGRSConfig>(GGRSConfig, false);
+                    using var handle = new SafeBytes<GGRSConfig>(GGRSConfig, true);
                     GGRSFFI.netplay_init(handle.ToBytesFFI()).ToModelGGrsFFI();
                     _isInit = true;
                 }
@@ -397,7 +398,7 @@ namespace TF.EX.Domain.Services
         {
             if (_isInit)
             {
-                using (var handle = new SafeBytes<GameState>(gameState, true))
+                using (var handle = new SafeBytes<GameState>(gameState, false))
                 {
                     var status = GGRSFFI.netplay_save_game_state(handle.ToBytesFFI()).ToModelGGrsFFI();
                     if (!status.IsOk)
@@ -446,7 +447,7 @@ namespace TF.EX.Domain.Services
 
                 using (var safeBytes = new SafeBytes<GameState>(result.Data, () => { GGRSFFI.netplay_free_game_state(result.Data); }))
                 {
-                    toLoad = safeBytes.ToStruct(true);
+                    toLoad = safeBytes.ToStruct(false);
                 }
 
                 return toLoad;
@@ -611,8 +612,6 @@ namespace TF.EX.Domain.Services
                 GGRSFFI.IsInInit = false;
                 _cancellationTokenSource = new CancellationTokenSource();
                 _cancellationToken = _cancellationTokenSource.Token;
-
-                ServiceCollections.ResolveReplayService().Reset();
             }
         }
 
@@ -628,10 +627,9 @@ namespace TF.EX.Domain.Services
 
         public void SaveConfig()
         {
-            var jsonToSave = JsonSerializer.Serialize(NetplayMeta, new JsonSerializerOptions
-            {
-                WriteIndented = true
-            });
+            var bytes = MessagePackSerializer.Serialize(NetplayMeta, SerializationOptions.GetContractlessOptions());
+
+            var jsonToSave = MessagePackSerializer.ConvertToJson(bytes, SerializationOptions.GetContractlessOptions());
             File.WriteAllText($"{Directory.GetCurrentDirectory()}\\netplay_meta.json", jsonToSave);
         }
 
@@ -651,7 +649,9 @@ namespace TF.EX.Domain.Services
                 };
 
                 var json = File.ReadAllText("netplay_meta.json");
-                NetplayMeta = JsonSerializer.Deserialize<NetplayMeta>(json);
+
+                var bytes = MessagePackSerializer.ConvertFromJson(json, SerializationOptions.GetContractlessOptions());
+                NetplayMeta = MessagePackSerializer.Deserialize<NetplayMeta>(bytes, SerializationOptions.GetContractlessOptions());
                 if (NetplayMeta.InputDelay == 0)
                 {
                     NetplayMeta.InputDelay = 2;
@@ -718,16 +718,6 @@ namespace TF.EX.Domain.Services
         public void SetPlayersIndex(int playerDraw)
         {
             _gameContext.SetPlayersIndex(playerDraw);
-        }
-
-        public void EnableReplayMode()
-        {
-            _netplayMode = NetplayMode.Replay;
-        }
-
-        public void DisableReplayMode()
-        {
-            _netplayMode = NetplayMode.Unknown;
         }
 
         public bool HasSetMode()
