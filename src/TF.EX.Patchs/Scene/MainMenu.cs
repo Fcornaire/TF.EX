@@ -25,6 +25,8 @@ namespace TF.EX.Patchs.Scene
         private readonly IRngService rngService;
         private readonly ILogger _logger;
 
+        private bool hasShowedWarning = false;
+
         private OptionsButton _netplayName;
 
         private List<ReplayInfos> replays = new List<ReplayInfos>();
@@ -92,6 +94,16 @@ namespace TF.EX.Patchs.Scene
                     break;
                 case Domain.Models.MenuState.LobbyBuilder:
                     HandleLobbyBuilder(self, name);
+                    break;
+                case MenuState.PressStart:
+                    if (FortRise.RiseCore.Modules.Any(module => module.Name != "TF.EX Mod" && module.Name != "Adventure") && !hasShowedWarning)
+                    {
+                        Sounds.ui_clickSpecial.Play(160, 4);
+                        Notification.Create(TFGame.Instance.Scene, "EX has compatibility issue with other mods! expect bugs", 10, 600);
+                        hasShowedWarning = true;
+                    }
+
+                    orig(self, name, state);
                     break;
                 default:
                     orig(self, name, state);
