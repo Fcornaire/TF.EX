@@ -346,16 +346,11 @@ namespace TF.EX.Patchs.Engine
                     }
 
                     break;
-                case TowerFall.MainMenu.MenuState.Main:
-                    if (_matchmakingService.IsConnectedToServer())
-                    {
-                        _matchmakingService.DisconnectFromServer();
-                    }
-                    break;
                 case TowerFall.MainMenu.MenuState.VersusOptions:
                     var dynCommands = DynamicData.For(self.Commands);
                     dynCommands.Set("currentText", string.Empty);
                     break;
+                case TowerFall.MainMenu.MenuState.Main:
                 default:
                     break;
             }
