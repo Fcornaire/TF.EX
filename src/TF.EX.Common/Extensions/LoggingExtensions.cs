@@ -18,7 +18,7 @@ namespace TF.EX.Common.Extensions
         {
             Log<T>(logger, LogLevel.Error, $"{message}", exception);
 
-            if (exception.InnerException != null)
+            if (exception?.InnerException != null)
             {
                 Log<T>(logger, LogLevel.Error, $"{message} - InnerException", exception.InnerException);
             }

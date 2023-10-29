@@ -33,5 +33,7 @@ namespace TF.EX.Domain.Ports
         void ResetLobby();
         bool IsSpectator();
         string GetRoomPeerId();
+        Task RematchChoice();
+        Task ArcherSelectChoice();
     }
 }

@@ -18,9 +18,11 @@ namespace TF.EX.Domain.CustomComponent
 
         private int appearDuration;
         private int stayingDuration;
+        private bool isSticky;
 
-        private Notification(string text, int appearDuration = 20, int stayingDuration = 250) : base(-1)
+        private Notification(string text, int layer, int appearDuration = 20, int stayingDuration = 250, bool isSticky = false) : base(layer)
         {
+            this.isSticky = isSticky;
             description = text.ToUpper();
             length = (int)Math.Ceiling(TFGame.Font.MeasureString(description).X / 10.0) + 1;
 
@@ -35,7 +37,7 @@ namespace TF.EX.Domain.CustomComponent
             StartAnimation();
         }
 
-        public static Notification Create(Scene scene, string text, int appearDuration = 20, int stayingDuration = 250)
+        public static Notification Create(Scene scene, string text, int appearDuration = 20, int stayingDuration = 250, bool isSticky = false)
         {
             // Remove all previous notifications (TODO: manage multiple notifications ?)
             var notifs = scene.Layers.SelectMany(layer => layer.Value.Entities)
@@ -45,7 +47,11 @@ namespace TF.EX.Domain.CustomComponent
             {
                 notif.RemoveSelf();
             }
-            var res = new Notification(text, appearDuration, stayingDuration);
+
+            var layer = scene is MainMenu ? -1 : 4;
+
+            var res = new Notification(text, layer, appearDuration, stayingDuration, isSticky);
+
             scene.Add(res);
 
             return res;
@@ -57,25 +63,29 @@ namespace TF.EX.Domain.CustomComponent
             {
                 Position = Vector2.Lerp(initialPosition, new Vector2(length, Position.Y), t.Eased);
             };
-            tween.OnComplete = (Tween t) =>
+
+            if (!isSticky)
             {
-                initialTweenPosition = Position;
-                Alarm alarm = Alarm.Create(Alarm.AlarmMode.Oneshot, null, stayingDuration, true);
-                alarm.OnComplete = () =>
+                tween.OnComplete = (Tween t) =>
                 {
-                    Tween tween2 = Tween.Create(Tween.TweenMode.Oneshot, Ease.CubeOut, 10, true);
-                    tween2.OnUpdate = (Tween t) =>
+                    initialTweenPosition = Position;
+                    Alarm alarm = Alarm.Create(Alarm.AlarmMode.Oneshot, null, stayingDuration, true);
+                    alarm.OnComplete = () =>
                     {
-                        Position = Vector2.Lerp(initialTweenPosition, initialPosition, t.Eased);
+                        Tween tween2 = Tween.Create(Tween.TweenMode.Oneshot, Ease.CubeOut, 10, true);
+                        tween2.OnUpdate = (Tween t) =>
+                        {
+                            Position = Vector2.Lerp(initialTweenPosition, initialPosition, t.Eased);
+                        };
+                        tween2.OnComplete = (Tween t) =>
+                        {
+                            RemoveSelf();
+                        };
+                        Add(tween2);
                     };
-                    tween2.OnComplete = (Tween t) =>
-                    {
-                        RemoveSelf();
-                    };
-                    Add(tween2);
+                    Add(alarm);
                 };
-                Add(alarm);
-            };
+            }
             Add(tween);
         }
 

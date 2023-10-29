@@ -21,37 +21,11 @@ namespace TF.EX.Patchs.Entity.HUD
         public void Load()
         {
             On.TowerFall.VersusPlayerMatchResults.ctor += VersusPlayerMatchResults_ctor;
-            On.TowerFall.VersusPlayerMatchResults.Render += VersusPlayerMatchResults_Render;
         }
 
         public void Unload()
         {
             On.TowerFall.VersusPlayerMatchResults.ctor -= VersusPlayerMatchResults_ctor;
-            On.TowerFall.VersusPlayerMatchResults.Render -= VersusPlayerMatchResults_Render;
-        }
-
-        private void VersusPlayerMatchResults_Render(On.TowerFall.VersusPlayerMatchResults.orig_Render orig, TowerFall.VersusPlayerMatchResults self)
-        {
-            orig(self);
-
-            var outileText = self.Components.Single(c =>
-            {
-                if (c is OutlineText)
-                {
-                    try
-                    {
-                        var dynOutlineText = DynamicData.For(c);
-                        return dynOutlineText.TryGet("IsPlayerName", out bool _);
-                    }
-                    catch (System.Exception)
-                    {
-                        return false;
-                    }
-                }
-                return false;
-            });
-
-            outileText.Render();
         }
 
         private void VersusPlayerMatchResults_ctor(On.TowerFall.VersusPlayerMatchResults.orig_ctor orig, TowerFall.VersusPlayerMatchResults self, TowerFall.Session session, TowerFall.VersusMatchResults matchResults, int playerIndex, Vector2 tweenFrom, Vector2 tweenTo, List<TowerFall.AwardInfo> awards)

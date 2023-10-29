@@ -1,5 +1,6 @@
 ﻿using MessagePack;
 using Microsoft.Extensions.Logging;
+using Monocle;
 using MonoMod.Utils;
 using System.Diagnostics;
 using System.Net.WebSockets;
@@ -12,6 +13,7 @@ using TF.EX.Domain.Models.WebSocket;
 using TF.EX.Domain.Models.WebSocket.Client;
 using TF.EX.Domain.Models.WebSocket.Server;
 using TF.EX.Domain.Ports;
+using TF.EX.Domain.Ports.TF;
 using TowerFall;
 
 namespace TF.EX.Domain.Services
@@ -38,13 +40,19 @@ namespace TF.EX.Domain.Services
 
         private readonly INetplayManager _netplayManager;
         private readonly IArcherService _archerService;
+        private readonly IInputService _inputService;
+        private readonly IRngService _rngService;
         private readonly ILogger _logger;
 
         private CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         private CancellationToken cancellationToken;
         private CancellationTokenSource cancellationTokenSourceLobby = new CancellationTokenSource();
         private CancellationToken cancellationTokenLobby;
-        public MatchmakingService(INetplayManager netplayManager, IArcherService archerService, ILogger logger)
+        public MatchmakingService(INetplayManager netplayManager,
+            IArcherService archerService,
+            IInputService inputService,
+            IRngService rngService,
+            ILogger logger)
         {
             _webSocket = new ClientWebSocket();
             _netplayManager = netplayManager;
@@ -52,6 +60,8 @@ namespace TF.EX.Domain.Services
             cancellationTokenLobby = cancellationTokenSourceLobby.Token;
             _logger = logger;
             _archerService = archerService;
+            _inputService = inputService;
+            _rngService = rngService;
         }
 
         public bool ConnectToServerAndListen()
@@ -146,6 +156,7 @@ namespace TF.EX.Domain.Services
                             mainMenu.ButtonGuideD.Clear();
                         }
 
+                        Sounds.ui_invalid.Play();
                         Notification.Create(TFGame.Instance.Scene, "Connexion dropped...");
                     }
 
@@ -230,18 +241,36 @@ namespace TF.EX.Domain.Services
             await Send(message);
         }
 
+        private async Task SendRematchChoice()
+        {
+            var lobbyRematchMessage = new RematchLobbyChoiceMessage { };
+
+            var bytes = MessagePackSerializer.Serialize(lobbyRematchMessage);
+            var message = MessagePackSerializer.ConvertToJson(bytes);
+            await Send(message);
+        }
+
+        private async Task SendArcherSelectChoice()
+        {
+            var sendArcherSelectChoice = new ArcherSelectChoiceMessage { };
+
+            var bytes = MessagePackSerializer.Serialize(sendArcherSelectChoice);
+            var message = MessagePackSerializer.ConvertToJson(bytes);
+            await Send(message);
+        }
+
         private async Task Send(string msg)
         {
             var segment = new ArraySegment<byte>(System.Text.Encoding.UTF8.GetBytes(msg));
             await _webSocket.SendAsync(segment, WebSocketMessageType.Binary, true, cancellationToken);
         }
 
-
         private async Task HandleMessageContents(string message)
         {
             if (message.Contains("KeepAlive"))
             {
                 await Send(message);
+                return;
             }
 
             if (message.Contains("GetLobbiesResponse"))
@@ -331,8 +360,8 @@ namespace TF.EX.Domain.Services
 
                 var lobby = response.LobbyUpdate.Lobby;
 
-                HandleLobbyUpdate(lobby);
                 ownLobby = lobby;
+                HandleLobbyUpdate(lobby);
             }
 
             if (message.Contains("LeaveLobbyResponse"))
@@ -356,21 +385,84 @@ namespace TF.EX.Domain.Services
                     currentAction = WSAction.None;
                 }
             }
+
+            if (message.Contains("LeaveLobbyForce"))
+            {
+                var mainMenu = new MainMenu(MainMenu.MenuState.VersusOptions);
+                Engine.Instance.Scene = mainMenu;
+                (TFGame.Instance.Scene as Level).Session.MatchSettings.LevelSystem.Dispose();
+
+                Sounds.ui_invalid.Play();
+                Notification.Create(mainMenu, "All players left...");
+                ownLobby = new Lobby();
+            }
+
+            if (message.Contains("RematchLobby"))
+            {
+                if (TFGame.Instance.Scene is Level)
+                {
+                    _inputService.EnableAllControllers();
+                    Sounds.ui_click.Play();
+                    Engine.Instance.Scene = new MapScene(MainMenu.RollcallModes.Versus);
+                    (TFGame.Instance.Scene as Level).Session.MatchSettings.LevelSystem.Dispose();
+                }
+            }
+
+            if (message.Contains("ArcherSelect"))
+            {
+                if (TFGame.Instance.Scene is Level)
+                {
+                    _inputService.EnableAllControllers();
+                    Sounds.ui_clickBack.Play();
+                    Engine.Instance.Scene = new MainMenu(MainMenu.MenuState.Rollcall);
+                    _archerService.Reset();
+                    (TFGame.Instance.Scene as Level).Session.MatchSettings.LevelSystem.Dispose();
+                }
+            }
         }
 
         private void HandleLobbyUpdate(Lobby lobby)
         {
             Sounds.ui_altCostumeShift.Play();
 
+            if (lobby.GameData.Seed != _rngService.GetSeed())
+            {
+                _rngService.SetSeed(lobby.GameData.Seed);
+            }
+
+            if (lobby.Players.Count == 1 && TFGame.Instance.Scene is Level)
+            {
+                Sounds.ui_invalid.Play();
+                Notification.Create(TFGame.Instance.Scene, "All players left...", 10, 500);
+                Task.Run(SendLeaveLobby);
+
+                ownLobby = new Lobby();
+
+                _inputService.EnableAllControllers();
+
+                ResetPeer();
+                return;
+            }
+
             //Leave if host left
             if (!lobby.Players.Any(pl => pl.IsHost))
             {
+                Task.Run(SendLeaveLobby);
+
                 if (TFGame.Instance.Scene is MainMenu)
                 {
                     (TFGame.Instance.Scene as MainMenu).State = Domain.Models.MenuState.LobbyBrowser.ToTFModel();
+                    ownLobby = new Lobby();
                 }
+
+                if (TFGame.Instance.Scene is Level)
+                {
+                    Sounds.ui_invalid.Play();
+                    Notification.Create(TFGame.Instance.Scene, "Host left the game...");
+                    ownLobby = new Lobby();
+                }
+
                 ResetPeer();
-                DisconnectFromLobby();
                 return;
             }
 
@@ -745,6 +837,16 @@ namespace TF.EX.Domain.Services
         public bool IsSpectator()
         {
             return ownLobby.Spectators.Any(spectator => spectator.RoomPeerId == peerId);
+        }
+
+        public async Task RematchChoice()
+        {
+            await SendRematchChoice();
+        }
+
+        public async Task ArcherSelectChoice()
+        {
+            await SendArcherSelectChoice();
         }
     }
 

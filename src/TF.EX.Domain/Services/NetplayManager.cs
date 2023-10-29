@@ -226,7 +226,7 @@ namespace TF.EX.Domain.Services
             var status = GGRSFFI.netplay_poll().ToModelGGrsFFI();
             if (!status.IsOk)
             {
-                if (status.Info.AsString().Contains("Peer Disconnected!")
+                if (status.Info.AsString().Contains("Disconnected")
                     || status.Info.AsString().Contains("local_frame_advantage bigger than")
                     || status.Info.AsString().Contains("No session found"))
                 {
@@ -337,6 +337,7 @@ namespace TF.EX.Domain.Services
                 }
                 else if (_netplayMode == NetplayMode.Spectator)
                 {
+                    Sounds.ui_invalid.Play();
                     Notification.Create(TFGame.Instance.Scene, "A error occured while spectating");
 
                     Task.Run(async () =>
@@ -592,7 +593,6 @@ namespace TF.EX.Domain.Services
                     }
                 }
 
-                ServiceCollections.ResolveMatchmakingService().DisconnectFromServer();
                 ServiceCollections.ResolveMatchmakingService().DisconnectFromLobby();
                 ServiceCollections.ResolveSessionService().Reset();
 
