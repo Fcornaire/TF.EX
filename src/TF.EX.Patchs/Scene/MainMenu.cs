@@ -23,6 +23,7 @@ namespace TF.EX.Patchs.Scene
         private readonly IReplayService _replayService;
         private readonly IInputService _inputService;
         private readonly IRngService rngService;
+        private readonly IAPIManager _apiManager;
         private readonly ILogger _logger;
 
         private bool hasShowedWarning = false;
@@ -52,6 +53,7 @@ namespace TF.EX.Patchs.Scene
             IReplayService replayService,
             IInputService inputService,
             IRngService rngService,
+            IAPIManager apiManager,
             ILogger logger)
         {
             _matchmakingService = matchmakingService;
@@ -59,6 +61,7 @@ namespace TF.EX.Patchs.Scene
             _replayService = replayService;
             _inputService = inputService;
             this.rngService = rngService;
+            _apiManager = apiManager;
             _logger = logger;
         }
 
@@ -96,11 +99,26 @@ namespace TF.EX.Patchs.Scene
                     HandleLobbyBuilder(self, name);
                     break;
                 case MenuState.PressStart:
-                    if (FortRise.RiseCore.Modules.Any(module => module.Name != "TF.EX Mod" && module.Name != "Adventure") && !hasShowedWarning)
+                    if (!hasShowedWarning)
                     {
-                        Sounds.ui_clickSpecial.Play(160, 4);
-                        Notification.Create(TFGame.Instance.Scene, "EX has compatibility issue with other mods! expect bugs", 10, 600);
-                        hasShowedWarning = true;
+                        bool hasUnsafeMod = false;
+                        var otherMods = FortRise.RiseCore.Modules.Where(module => module.ID != "dshad.tf.ex" && module.ID != "com.fortrise.adventure");
+
+                        foreach (var mod in otherMods)
+                        {
+                            if (!_apiManager.IsModuleSafe(mod.ID))
+                            {
+                                hasUnsafeMod = true;
+                                break;
+                            }
+                        }
+
+                        if (hasUnsafeMod)
+                        {
+                            Sounds.ui_clickSpecial.Play(160, 4);
+                            Notification.Create(TFGame.Instance.Scene, "EX has compatibility issue with other mods! expect bugs", 10, 600);
+                            hasShowedWarning = true;
+                        }
                     }
 
                     orig(self, name, state);

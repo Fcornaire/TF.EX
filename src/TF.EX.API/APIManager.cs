@@ -1,25 +1,15 @@
 ﻿using FortRise;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
+using TF.EX.Domain.Ports;
 
 namespace TF.EX.API
 {
-    public interface IStateEvents
-    {
-        string OnSaveState();
-        void OnLoadState(string toLoad);
-    }
-
-    public interface IAPIManager
-    {
-        void RegisterVariantStateEvents(FortModule module, string name, IStateEvents events);
-        Dictionary<string, string> GetStates();
-        void LoadStates(Dictionary<string, string> state);
-    }
-
     public class APIManager : IAPIManager
     {
         private ConcurrentDictionary<string, IStateEvents> stateEvents = new ConcurrentDictionary<string, IStateEvents>();
+        private ConcurrentBag<string> safeModules = new ConcurrentBag<string>();
 
         public void RegisterVariantStateEvents(FortModule module, string name, IStateEvents events)
         {
@@ -61,6 +51,22 @@ namespace TF.EX.API
                     pair.Value.OnLoadState(toLoad);
                 }
             }
+        }
+
+        public void MarkModuleAsSafe(FortModule module)
+        {
+            if (safeModules.Contains(module.ID))
+            {
+                FortRise.Logger.Log("[TF.EX.API] Module already marked as safe " + module.ID, FortRise.Logger.LogLevel.Info);
+                return;
+            }
+
+            safeModules.Add(module.ID);
+        }
+
+        public bool IsModuleSafe(string id)
+        {
+            return safeModules.Contains(id);
         }
     }
 }

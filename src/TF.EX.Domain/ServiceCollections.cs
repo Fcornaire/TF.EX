@@ -142,6 +142,11 @@ namespace TF.EX.Domain
         public static IArrowService ResolveArrowService() { return ServiceProvider.GetRequiredService<IArrowService>(); }
         public static ISFXService ResolveSFXService() { return ServiceProvider.GetRequiredService<ISFXService>(); }
 
+        public static IAPIManager ResolveAPIManager()
+        {
+            return ServiceProvider.GetService<IAPIManager>();
+        }
+
         public static ILogger ResolveLogger() { return ServiceProvider.GetRequiredService<ILogger>(); }
 
         public static void ResetState()
