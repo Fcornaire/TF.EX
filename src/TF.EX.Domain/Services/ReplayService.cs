@@ -120,11 +120,15 @@ namespace TF.EX.Domain.Services
                        var player2Index = replay.Informations.PlayerDraw == PlayerDraw.Player1 ? 1 : 0;
 
                        var archers = replay.Informations.Archers.ToArray();
+                       var usedArchers = archers.Select(archer => archer.Index);
 
-                       TFGame.Characters[0] = archers[player1Index].Index; //TODO: number of players dependent
-                       TFGame.Characters[1] = archers[player2Index].Index;
-                       TFGame.AltSelect[0] = (ArcherData.ArcherTypes)archers[player1Index].Type;
-                       TFGame.AltSelect[1] = (ArcherData.ArcherTypes)archers[player2Index].Type;
+                       (var archerIndexP1, var altIndexP1) = ArcherDataExtensions.EnsureArcherDataExist(archers[player1Index].Index, (int)archers[player1Index].Type, usedArchers);
+                       (var archerIndexP2, var altIndexP2) = ArcherDataExtensions.EnsureArcherDataExist(archers[player2Index].Index, (int)archers[player2Index].Type, usedArchers);
+
+                       TFGame.Characters[0] = archerIndexP1; //TODO: number of players dependent
+                       TFGame.Characters[1] = archerIndexP2;
+                       TFGame.AltSelect[0] = (ArcherData.ArcherTypes)altIndexP1;
+                       TFGame.AltSelect[1] = (ArcherData.ArcherTypes)altIndexP2;
 
                        currentReplayFrame = 0;
                        var firstRecord = replay.Record.First(rec => rec.GameState.Entities.Players.Count > 0);

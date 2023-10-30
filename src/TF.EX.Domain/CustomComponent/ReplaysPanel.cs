@@ -158,8 +158,10 @@ namespace TF.EX.Domain.CustomComponent
             for (int i = 0; i < replayInfo.Archers.Count(); i++)
             {
                 var archerInfo = replayInfo.Archers.ElementAt(i);
+                (var archerIndex, var altIndex) = ArcherDataExtensions.EnsureArcherDataExist(archerInfo.Index, (int)archerInfo.Type, TFGame.Characters);
 
-                ArcherData archerData = ArcherData.Get(archerInfo.Index, (ArcherData.ArcherTypes)archerInfo.Type);
+                var archerData = ArcherData.Get(archerIndex, (ArcherData.ArcherTypes)altIndex);
+
                 if (archerInfo.HasWon)
                 {
                     _portraits[i] = new Image(archerData.Portraits.Win);
