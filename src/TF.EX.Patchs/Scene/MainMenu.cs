@@ -735,6 +735,7 @@ namespace TF.EX.Patchs.Scene
 
                         if (MainMenu.VersusMatchSettings.Variants.ContainsCustomVariant(lobby.GameData.Variants))
                         {
+                            Sounds.ui_clickSpecial.Play(160, 4);
                             Notification.Create(self, $"Be cautious! Custom variants might not work properly", 15, 500);
                         }
                     };
@@ -912,6 +913,7 @@ namespace TF.EX.Patchs.Scene
 
             if (MainMenu.VersusMatchSettings.Variants.ContainsCustomVariant(newLobby.GameData.Variants))
             {
+                Sounds.ui_clickSpecial.Play(160, 4);
                 Notification.Create(self, $"Be cautious! Custom variants might not work properly", 15, 500);
             }
         }

@@ -491,9 +491,24 @@ namespace TF.EX.Domain.Services
                     {
                         if (state.State == 0)
                         {
-                            TFGame.Characters[playerIndex] = player.ArcherIndex;
-                            TFGame.AltSelect[playerIndex] = (ArcherData.ArcherTypes)player.ArcherAltIndex;
-                            _archerService.AddArcher(playerIndex, player);
+                            var usedArchers = lobby.Players.Select(pl => pl.ArcherIndex);
+
+                            (var archerIndex, var altIndex) = ArcherDataExtensions.EnsureArcherDataExist(player.ArcherIndex, player.ArcherAltIndex, usedArchers);
+
+                            var updatedPlayer = new Domain.Models.WebSocket.Player
+                            {
+                                ArcherIndex = archerIndex,
+                                ArcherAltIndex = altIndex,
+                                IsHost = player.IsHost,
+                                Name = player.Name,
+                                Ready = player.Ready,
+                                RoomChatPeerId = player.RoomChatPeerId,
+                                RoomPeerId = player.RoomPeerId
+                            };
+
+                            TFGame.Characters[playerIndex] = archerIndex;
+                            TFGame.AltSelect[playerIndex] = (ArcherData.ArcherTypes)altIndex;
+                            _archerService.AddArcher(playerIndex, updatedPlayer);
 
                             state.State = 1;
                         }
