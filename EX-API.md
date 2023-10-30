@@ -1,10 +1,48 @@
+# Overview
+
+EX expose an API for other mods to interact with it. Right now, it expose 3 functions:
+
+```C#
+ /// <summary>
+ /// Register custom SaveState/LoadState events for a variant.
+ ///
+ /// <para>Those are used by EX rollback system to properly save/load variant custom properties</para>
+ /// </summary>
+public static Action<FortModule, string, Func<string>, Action<string>> RegisterVariantStateEvents;
+```
+
+```C#
+ /// <summary>
+ /// Mark a module as EX safe.
+ ///
+ /// <para>This is only to prevent EX showing a warning when a mod is loaded.</para>
+ ///
+ /// <para> It does not automatically mean the mod is compatible with EX and test should be done first. </para>
+ /// </summary>
+public static Action<FortModule> MarkModuleAsSafe;
+```
+
+```C#
+/// <summary>
+/// Determine if the game is currently playing online.
+///
+/// <para>Might be useful if a mod want to trigger some action</para>
+/// </summary>
+public static bool IsPlayingOnline;
+```
+
+`MarkModuleAsSafe` is used to prevent showing this notification
+![Alt text](images/incompat.png)
+
+⚠ Saying this again, this does not autmatically make the mod compatible, it's only prevent showing the compatibility notification ⚠
+
 # About Modded variant
 
 EX has the ability to run custom variant as long as the mod is made compatible with EX.
 
 It's your responsability to make sure the mod is netplay compatible (You should ask author)
 
-# Making a custom variant compatible (For developper)
+## Making a custom variant compatible (For developper)
 
 This guide will help you implement your modded variant for netplay session.
 
@@ -12,7 +50,7 @@ Note that this isn't a simple process as both mods can conflict.
 
 You can also look at this [PR](https://github.com/FortRise/ExampleFortRiseMod/pull/1) which make Jester Hat variant compatible with EX
 
-## Prerequisites
+### Prerequisites
 
 There are 3 rules of thumb (and the first one is super important) for making your mod compatbile:
 
@@ -26,7 +64,7 @@ You can check `TF.EX.Patchs` project to see what's being patched. I don't have a
 
 - Your are only saving/loading the custom part of your variant, that's mean you shouldn't try for example to save the players position because it's already made by EX. You should only focus of the things that are specific to your mod
 
-## Context
+### Context
 
 Altought i recommend to have at least a basic knowledge of how rollback netcode work (there are some great explanation/video on the web), it's not mandatory for making the mod compatible.
 
@@ -53,9 +91,9 @@ That mean it's your responsability to know what your custom variant add to the g
 
 - The LoadState delegate: a function that take a serialized version of the mod state and expect you to load the it
 
-## Implementation
+### Implementation
 
-### Import the mod
+#### Import the mod
 
 This is straight forward. Create a class like this one
 
@@ -76,7 +114,7 @@ This is straight forward. Create a class like this one
 
 `static TfExAPIModImports()` is just the constructor that will automatically make MonoMod find EX mod
 
-### Register the custom Save/Load delegate
+#### Register the custom Save/Load delegate
 
 Call the precedent delegate with something like this
 
@@ -89,7 +127,7 @@ with OnSaveState being your save state delegate and OnLoadState being your load 
 Do note the register function should be call after all mods finished loading, so not a the mod loading.
 For now, you can do it using the FortRise event `FortRise.RiseCore.Events.OnPreInitialize`
 
-## Test
+### Test
 
 You can test by launching EX on test mode which is a special mode that trigger a rollback every check_distance frame and check if the state on each frame are the same (equality by checksum)
 
