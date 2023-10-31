@@ -14,13 +14,19 @@ namespace TF.EX.Patchs.Entity
         private readonly INetplayManager _netplayManager;
         private readonly IMatchmakingService _matchmakingService;
         private readonly IInputService _inputService;
+        private readonly IArcherService _archerService;
         private readonly ILogger _logger;
 
-        public PauseMenuPatch(INetplayManager netplayManager, IMatchmakingService matchmakingService, IInputService inputService, ILogger logger)
+        public PauseMenuPatch(INetplayManager netplayManager,
+            IMatchmakingService matchmakingService,
+            IInputService inputService,
+             IArcherService archerService,
+            ILogger logger)
         {
             _netplayManager = netplayManager;
             _matchmakingService = matchmakingService;
             _inputService = inputService;
+            _archerService = archerService;
             _logger = logger;
         }
 
@@ -203,7 +209,7 @@ namespace TF.EX.Patchs.Entity
             var dynPauseMenu = DynamicData.For(self);
             var menuType = dynPauseMenu.Get<MenuType>("menuType");
 
-            return _matchmakingService.IsConnectedToServer() && menuType == MenuType.VersusMatchEnd;
+            return (_matchmakingService.IsConnectedToServer() || _archerService.GetArchers().Count() > 0) && menuType == MenuType.VersusMatchEnd;
         }
 
     }

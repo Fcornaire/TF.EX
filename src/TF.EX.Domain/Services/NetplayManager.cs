@@ -273,7 +273,6 @@ namespace TF.EX.Domain.Services
 
                 if (_events.Any(s => s.Contains(Event.Disconnected.ToString())))
                 {
-                    ServiceCollections.ResolveMatchmakingService().DisconnectFromServer();
                     ServiceCollections.ResolveReplayService().Export();
                 }
 
