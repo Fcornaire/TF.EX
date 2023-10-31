@@ -29,6 +29,11 @@ namespace TF.EX.Patchs
                 return 2;
             }
 
+            if (_netplayManager.GetNetplayMode() == Domain.Models.NetplayMode.Local)
+            {
+                return 10;
+            }
+
             return orig(self, p2goal, p3goal, p4goal);
         }
     }

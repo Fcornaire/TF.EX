@@ -62,19 +62,22 @@ namespace TF.EX.Core
         public static void LaunchLocalNetplay(string[] args)
         {
             var mode = args.Length > 0 ? ParseMode(args[0]) : TowerFall.Modes.LastManStanding;
-            var addr = args.Length > 1 ? args[1] : "";
-            var startLevel = args.Length > 2 ? Math.Min(int.Parse(args[2]), 9) : 0;
-            var draw = args.Length > 3 ? ParseDraw(args[3]) : PlayerDraw.Player1;
-            var seed = args.Length > 4 ? int.Parse(args[4]) : 42;
+            var remoteAddr = args.Length > 1 ? args[1] : "";
+            var remotePort = args.Length > 2 ? int.Parse(args[2]) : 7001;
+            var localPort = args.Length > 3 ? ushort.Parse(args[3]) : (ushort)7000;
+            var map = args.Length > 4 ? Math.Min(int.Parse(args[4]), 14) : 0;
+            var startLevel = args.Length > 5 ? Math.Min(int.Parse(args[5]), 9) : 0;
+            var draw = args.Length > 6 ? ParseDraw(args[6]) : PlayerDraw.Player1;
+            var seed = args.Length > 7 ? int.Parse(args[7]) : 42;
 
 
-            if (string.IsNullOrEmpty(addr))
+            if (string.IsNullOrEmpty(remoteAddr))
             {
-                TFGame.Instance.Commands.Log("You must specify an address in your local network (assuming the local port 7000 is available)");
+                TFGame.Instance.Commands.Log("You must specify an address in your local network (assuming the port is available)");
                 return;
             }
 
-            if (IPAddress.TryParse(addr, out var ip))
+            if (IPAddress.TryParse(remoteAddr, out var ip))
             {
                 if (ip.AddressFamily != AddressFamily.InterNetwork)
                 {
@@ -88,7 +91,7 @@ namespace TF.EX.Core
                 return;
             }
 
-            addr = $"{addr}:7000";
+            remoteAddr = $"{remoteAddr}:{remotePort}";
 
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var replayService = ServiceCollections.ResolveReplayService();
@@ -100,12 +103,12 @@ namespace TF.EX.Core
                 return;
             }
 
-            netplayManager.SetLocalMode(addr, draw);
+            netplayManager.SetLocalMode(remoteAddr, localPort, draw);
 
             rngService.SetSeed(seed);
             replayService.Initialize();
 
-            StartGame(mode, netplayManager, startLevel);
+            StartGame(mode, netplayManager, map, startLevel);
 
             TFGame.Instance.Commands.Open = false;
         }

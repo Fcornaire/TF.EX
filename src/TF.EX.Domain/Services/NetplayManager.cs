@@ -159,30 +159,33 @@ namespace TF.EX.Domain.Services
 
                                 _gameContext.ResetPlayersIndex();
 
-                                var archers = matchMakingService.IsSpectator() ? _archerService.GetArchers() : _archerService.GetFinalArchers();
-
-                                foreach ((var index, var archer_alt) in archers)
+                                if (_netplayMode != NetplayMode.Local)
                                 {
-                                    var splitted = archer_alt.Split('-');
+                                    var archers = matchMakingService.IsSpectator() ? _archerService.GetArchers() : _archerService.GetFinalArchers();
 
-                                    Enum.TryParse(splitted[1], out ArcherData.ArcherTypes alt);
-
-                                    var archer = int.Parse(splitted[0]);
-
-                                    TFGame.Characters[index] = archer;
-                                    TFGame.AltSelect[index] = alt;
-                                    TFGame.Players[index] = true;
-
-                                    if (index == 1 && !matchMakingService.IsSpectator())
+                                    foreach ((var index, var archer_alt) in archers)
                                     {
-                                        _player2Name = _gameContext.GetPlayers().First(p => p.Item1 == index).Item2.Name;
+                                        var splitted = archer_alt.Split('-');
+
+                                        Enum.TryParse(splitted[1], out ArcherData.ArcherTypes alt);
+
+                                        var archer = int.Parse(splitted[0]);
+
+                                        TFGame.Characters[index] = archer;
+                                        TFGame.AltSelect[index] = alt;
+                                        TFGame.Players[index] = true;
+
+                                        if (index == 1 && !matchMakingService.IsSpectator())
+                                        {
+                                            _player2Name = _gameContext.GetPlayers().First(p => p.Item1 == index).Item2.Name;
+                                        }
                                     }
+
+                                    var dynRoundLogic = DynamicData.For(roundLogic);
+
+                                    roundLogic.Session.CurrentLevel.Add(new VersusStart(roundLogic.Session));
+                                    dynRoundLogic.Set("Players", dynRoundLogic.Invoke("SpawnPlayersFFA"));
                                 }
-
-                                var dynRoundLogic = DynamicData.For(roundLogic);
-
-                                roundLogic.Session.CurrentLevel.Add(new VersusStart(roundLogic.Session));
-                                dynRoundLogic.Set("Players", dynRoundLogic.Invoke("SpawnPlayersFFA"));
                             }
                             catch (Exception e)
                             {
@@ -463,7 +466,7 @@ namespace TF.EX.Domain.Services
 
         public bool IsTestMode()
         {
-            return _netplayMode == NetplayMode.Test || _netplayMode == NetplayMode.Local;
+            return _netplayMode == NetplayMode.Test;
         }
 
         public bool IsRollbackFrame()
@@ -730,10 +733,10 @@ namespace TF.EX.Domain.Services
             GGRSConfig = GGRSConfig.DefaultTest(checkDistance);
         }
 
-        public void SetLocalMode(string addr, PlayerDraw draw)
+        public void SetLocalMode(string addr, ushort localPort, PlayerDraw draw)
         {
             _netplayMode = NetplayMode.Local;
-            GGRSConfig = GGRSConfig.DefaultLocal(addr, draw);
+            GGRSConfig = GGRSConfig.DefaultLocal(addr, localPort, draw);
         }
 
         public void SetReplayMode()
