@@ -26,7 +26,7 @@
             };
         }
 
-        internal GGRSConfig DefaultLocal(string addr, PlayerDraw draw)
+        internal GGRSConfig DefaultLocal(string addr, ushort localPort, PlayerDraw draw)
         {
             return new GGRSConfig
             {
@@ -37,7 +37,7 @@
                     LocalConf = new NetplayLocalConfig
                     {
                         RemoteAddr = addr,
-                        Port = 7000,
+                        Port = localPort,
                         PlayerDraw = draw
                     }
                 },
