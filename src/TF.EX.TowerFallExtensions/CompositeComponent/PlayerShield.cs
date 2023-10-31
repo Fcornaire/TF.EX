@@ -8,7 +8,7 @@ namespace TF.EX.TowerFallExtensions.CompositeComponent
         public static PlayerShield GetState(this TowerFall.PlayerShield entity)
         {
             var dynEntity = DynamicData.For(entity);
-            var shield = dynEntity.Get<Monocle.SpritePart<int>>("shield");
+            var shield = dynEntity.Get<Monocle.SpritePart<int>>("sprite");
             var sineWave = dynEntity.Get<Monocle.SineWave>("sine");
 
             return new PlayerShield

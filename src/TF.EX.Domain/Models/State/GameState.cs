@@ -6,7 +6,7 @@ namespace TF.EX.Domain.Models.State
     public class GameState
     {
         [Key(0)]
-        public Entity.Entity Entities { get; set; } = new Entity.Entity();
+        public Entity.Entities Entities { get; set; } = new Entity.Entities();
 
         [Key(1)]
         public Layer.Layer Layer { get; set; } = new Layer.Layer();

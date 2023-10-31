@@ -1,17 +1,9 @@
 ﻿using Microsoft.Xna.Framework;
-using TF.EX.Domain.Ports.TF;
 
 namespace TF.EX.Patchs.Entity
 {
     public class TreasureSpawnerPatch : IHookable
     {
-        private readonly IRngService _rngService;
-
-        public TreasureSpawnerPatch(IRngService rngService)
-        {
-            _rngService = rngService;
-        }
-
         public void Load()
         {
             On.TowerFall.TreasureSpawner.GetChestSpawnsForLevel += TreasureSpawner_GetChestSpawnsForLevel;
