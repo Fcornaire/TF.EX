@@ -36,7 +36,7 @@ namespace TF.EX.TowerFallExtensions
             }
 
             dynSprite.Set("CurrentAnimID", toLoad.CurrentAnimID);
-            dynSprite.Set("CurrentFrame", toLoad.CurrentFrame);
+            dynSprite.Set("currentFrame", toLoad.CurrentFrame);
             dynSprite.Set("AnimationFrame", toLoad.AnimationFrame);
             dynSprite.Set("timer", toLoad.Timer);
             dynSprite.Set("Playing", toLoad.Playing);

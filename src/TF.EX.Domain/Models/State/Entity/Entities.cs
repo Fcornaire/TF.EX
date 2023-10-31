@@ -7,7 +7,7 @@ using TF.EX.Domain.Models.State.Entity.LevelEntity.Player;
 namespace TF.EX.Domain.Models.State.Entity
 {
     [MessagePackObject]
-    public class Entity
+    public class Entities
     {
         [Key(0)]
         public ICollection<Player> Players { get; set; } = new List<Player>();
