@@ -360,6 +360,20 @@ namespace TF.EX.TowerFallExtensions
                 versusRoundResults.Added();
                 hudFade.Added();
 
+                if (level.Session.GetWinner() != -1)
+                {
+                    var vsMatchResults = new VersusMatchResults(level.Session, versusRoundResults);
+
+                    var dynVsMatchResults = DynamicData.For(vsMatchResults);
+
+                    dynVsMatchResults.Set("Scene", level);
+                    dynVsMatchResults.Set("Level", level);
+                    level.Layers.FirstOrDefault(l => l.Value.Index == vsMatchResults.LayerIndex).Value.Entities.Add(vsMatchResults);
+                    vsMatchResults.Added();
+
+                    versusRoundResults.MatchResults = vsMatchResults;
+                }
+
                 for (int i = 0; i < gameState.Entities.Hud.VersusRoundResults.CoroutineState; i++)
                 {
                     versusRoundResults.Update();
