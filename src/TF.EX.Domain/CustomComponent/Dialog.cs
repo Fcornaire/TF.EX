@@ -6,6 +6,7 @@ using TowerFall;
 namespace TF.EX.Domain.CustomComponent
 {
     //TODO: Make this a proper menu
+    [Obsolete("Update this of use notification", true)]
     public class Dialog : Monocle.Entity
     {
         private Action _cancel;

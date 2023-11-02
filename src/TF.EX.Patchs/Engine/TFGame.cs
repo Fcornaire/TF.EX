@@ -198,15 +198,6 @@ namespace TF.EX.Patchs.Engine
 
             if (_netplayManager.IsDisconnected())
             {
-                if (self.Scene is Level)
-                {
-                    var dialog = (self.Scene as Level).Get<Dialog>();
-                    if (dialog != null)
-                    {
-                        (self.Scene as Level).Delete<Dialog>(); //Fix
-                    }
-                }
-
                 orig(self, gameTime);
                 return;
             }

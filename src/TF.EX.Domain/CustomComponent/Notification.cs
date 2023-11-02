@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Monocle;
+using MonoMod.Utils;
 using TowerFall;
 
 namespace TF.EX.Domain.CustomComponent
@@ -20,7 +21,7 @@ namespace TF.EX.Domain.CustomComponent
         private int stayingDuration;
         private bool isSticky;
 
-        private Notification(string text, int layer, int appearDuration = 20, int stayingDuration = 250, bool isSticky = false) : base(layer)
+        private Notification(string text, int layer, int appearDuration = 20, int stayingDuration = 250, bool isSticky = false, bool withoutAnimation = false) : base(layer)
         {
             this.isSticky = isSticky;
             description = text.ToUpper();
@@ -28,33 +29,65 @@ namespace TF.EX.Domain.CustomComponent
 
             initialTweenPosition = new Vector2(-length * 10, 10);
             initialPosition = initialTweenPosition;
-            Position = initialPosition;
+
+            if (!withoutAnimation)
+            {
+                Position = initialPosition;
+            }
+            else
+            {
+                Position = new Vector2(length, 10);
+            }
 
             this.appearDuration = appearDuration;
             this.stayingDuration = stayingDuration;
 
             canvas = new Canvas(length * 10, 14);
-            StartAnimation();
+
+            if (!withoutAnimation)
+            {
+                StartAnimation();
+            }
+
         }
 
-        public static Notification Create(Scene scene, string text, int appearDuration = 20, int stayingDuration = 250, bool isSticky = false)
+        public static Notification Create(Scene scene, string text, int appearDuration = 20, int stayingDuration = 250, bool isSticky = false, bool withoutAnimation = false)
         {
             // Remove all previous notifications (TODO: manage multiple notifications ?)
-            var notifs = scene.Layers.SelectMany(layer => layer.Value.Entities)
-                .Where(ent => ent is Notification).Select(ent => ent as Notification);
+
+            var layerIndex = scene is MainMenu ? -1 : 4;
+            Clear(scene, layerIndex);
+
+            var notification = new Notification(text, layerIndex, appearDuration, stayingDuration, isSticky, withoutAnimation);
+
+            var dynNotification = DynamicData.For(notification);
+            dynNotification.Set("Scene", scene);
+
+            var layer = scene.Layers.Single(l => l.Key == layerIndex).Value;
+            layer.Entities.Add(notification);
+
+            return notification;
+        }
+
+        public static void Clear(Scene scene, int layerIndex)
+        {
+            var layer = scene.Layers.Single(l => l.Key == layerIndex).Value;
+
+            var dynLayer = DynamicData.For(layer);
+            List<Entity> toAdd = dynLayer.Get<List<Entity>>("toAdd");
+
+            toAdd.Where(ent => ent is Notification).ToList().ForEach(ent =>
+            {
+                toAdd.Remove(ent);
+                ent.Removed();
+            });
+
+            var notifs = layer.Entities.Where(ent => ent is Notification).ToList();
 
             foreach (var notif in notifs)
             {
                 notif.RemoveSelf();
             }
-
-            var layer = scene is MainMenu ? -1 : 4;
-
-            var res = new Notification(text, layer, appearDuration, stayingDuration, isSticky);
-
-            scene.Add(res);
-
-            return res;
         }
         private void StartAnimation()
         {

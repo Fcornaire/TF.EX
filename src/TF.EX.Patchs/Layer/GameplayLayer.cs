@@ -15,7 +15,6 @@ namespace TF.EX.Patchs.Layer
         private readonly IReplayService _replayService;
         private readonly IInputService _inputService;
         private readonly IMatchmakingService _matchmakingService;
-        private bool _hasShowedDesynch = false;
 
         public GameplayLayerPatch(INetplayManager netplayManager, IInputService inputService, IReplayService replayService, IMatchmakingService matchmakingService)
         {
@@ -82,28 +81,9 @@ namespace TF.EX.Patchs.Layer
 
                 if (_netplayManager.GetNetplayMode() != TF.EX.Domain.Models.NetplayMode.Test)
                 {
-                    if (_netplayManager.HasDesynchronized())
-                    {
-                        Draw.OutlineTextCentered(TFGame.Font, "DESYNCH DETECTED!", new Vector2(160f, 20f), Color.Red, 2f);
-
-                        if (!_hasShowedDesynch)
-                        {
-                            Sounds.ui_invalid.Play();
-                            _hasShowedDesynch = true;
-                        }
-                    }
-
                     if (_netplayManager.IsDisconnected())
                     {
                         Draw.OutlineTextCentered(TFGame.Font, "DISCONNECTED", new Vector2(160f, 20f), Color.Red, 2f);
-                    }
-                    else if (_netplayManager.IsAttemptingToReconnect())
-                    {
-                        Draw.OutlineTextCentered(TFGame.Font, "TRYING TO SYNC", new Vector2(160f, 20f), Color.Yellow, 2f);
-                    }
-                    else if (_netplayManager.IsSyncing())
-                    {
-                        Draw.OutlineTextCentered(TFGame.Font, "SYNCHRONIZING...", new Vector2(160f, 20f), Color.Green, 2f);
                     }
                 }
             }

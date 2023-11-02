@@ -39,20 +39,10 @@ namespace TF.EX.Patchs.Scene
                 && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
                 && !_netplayManager.IsReplayMode()
                 && !_netplayManager.IsSynchronized()
-                && self.Level.Get<Dialog>() is null
                 && self.Level.Session.RoundIndex == 0
                 )
             {
-                var dialog = new Dialog("Infos",
-                    "Establishing a connection ...",
-                    new Vector2(160f, 120f),
-                    null,
-                    new Dictionary<string, Action>(),
-                    null,
-                    true
-                );
-                var dynLayer = DynamicData.For(self.Level.GetGameplayLayer());
-                dynLayer.Invoke("Add", dialog, false);
+                Notification.Create(self.Level, "Waiting for other players ...", 20, 0, false, true);
             }
         }
 
