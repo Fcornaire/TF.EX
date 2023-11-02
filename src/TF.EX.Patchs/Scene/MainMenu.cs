@@ -116,7 +116,7 @@ namespace TF.EX.Patchs.Scene
                         if (hasUnsafeMod)
                         {
                             Sounds.ui_clickSpecial.Play(160, 4);
-                            Notification.Create(TFGame.Instance.Scene, "EX has compatibility issue with other mods! expect bugs", 10, 600);
+                            Notification.Create(TFGame.Instance.Scene, "TF.EX has compatibility issues with other mods! expect bugs!", 10, 600);
                             hasShowedWarning = true;
                         }
                     }
@@ -304,7 +304,7 @@ namespace TF.EX.Patchs.Scene
                 variants = MainMenu.VersusMatchSettings.Variants.BuildMenu(self, out _, out self.MaxUICameraY);
             }
 
-            self.AddLoader("RETRIEVING LOBBIES...");
+            self.AddLoader("FINDING LOBBIES...");
 
             self.BackState = TowerFall.MainMenu.MenuState.VersusOptions;
             MainMenu.VersusMatchSettings.Mode = TF.EX.Domain.Models.Modes.Netplay.ToTF();
@@ -355,7 +355,7 @@ namespace TF.EX.Patchs.Scene
                         _inputService.EnableAllControllers();
                         self.RemoveLoader();
 
-                        noMsg = new Text("PLAY SOME ONLINE GAME FIRST");
+                        noMsg = new Text("PLAY SOME ONLINE GAMES FIRST!");
                         noMsg.Position = new Vector2(100, 100);
                         self.Add(noMsg);
 
@@ -437,7 +437,7 @@ namespace TF.EX.Patchs.Scene
                 {
                     _inputService.DisableAllControllers();
 
-                    TFGame.Instance.Scene.AddLoader("LOADING REPLAY..");
+                    TFGame.Instance.Scene.AddLoader("LOADING REPLAY...");
 
                     await _replayService.LoadAndStart(toLaunch.OriginalName);
 
@@ -579,7 +579,7 @@ namespace TF.EX.Patchs.Scene
             inputDelay.SetCallbacks(inputDelay.InputDelayState, InputDelayRightCallback, InputDelayLeftCallback, null);
             buttons.Insert(0, inputDelay);
 
-            _netplayName = new OptionsButton("NETPLAY NAME");
+            _netplayName = new OptionsButton("NETPLAY USERNAME");
             _netplayName.SetCallbacks(_netplayName.NameState, null, null, null);
             buttons.Insert(1, _netplayName);
 
@@ -634,7 +634,7 @@ namespace TF.EX.Patchs.Scene
 
                     nextServerPull = DateTime.UtcNow.AddSeconds(3);
                     Sounds.ui_altCostumeShift.Play();
-                    self.AddLoader("RETRIEVING LOBBIES...");
+                    self.AddLoader("FINDING LOBBIES...");
 
                     foreach (var lobby in lobbies.ToArray())
                     {
@@ -664,7 +664,7 @@ namespace TF.EX.Patchs.Scene
                 {
                     if (!lobbies.SingleOrDefault(lobby => lobby.Selected))
                     {
-                        Notification.Create(self, "You must select a lobby to spectate");
+                        Notification.Create(self, "You must select a lobby to spectate!");
                         Sounds.ui_invalid.Play();
                         return;
                     }
@@ -682,7 +682,7 @@ namespace TF.EX.Patchs.Scene
 
                     if (!canJoin)
                     {
-                        _logger.LogError<MainMenuPatch>("Can't join lobby because of customs variants");
+                        _logger.LogError<MainMenuPatch>("Can't join lobby because of custom variants");
 
                         _inputService.EnableAllControllers();
 
@@ -754,7 +754,7 @@ namespace TF.EX.Patchs.Scene
                         if (MainMenu.VersusMatchSettings.Variants.ContainsCustomVariant(lobby.GameData.Variants))
                         {
                             Sounds.ui_clickSpecial.Play(160, 4);
-                            Notification.Create(self, $"Be cautious! Custom variants might not work properly", 15, 500);
+                            Notification.Create(self, $"Be CAREFUL! Custom variants might not work properly", 15, 500);
                         }
                     };
 
@@ -829,7 +829,7 @@ namespace TF.EX.Patchs.Scene
 
                         if (!canJoin)
                         {
-                            _logger.LogError<MainMenuPatch>("Can't join lobby because of customs variants");
+                            _logger.LogError<MainMenuPatch>("Can't join lobby because of custom variants");
 
                             _inputService.EnableAllControllers();
 
@@ -890,7 +890,7 @@ namespace TF.EX.Patchs.Scene
             {
                 if (noMsg == null)
                 {
-                    noMsg = new Text("NO LOBBY FOUND");
+                    noMsg = new Text("NO LOBBIES FOUND");
 
                     noMsg.Position = new Vector2(100, 100);
                     self.Add(noMsg);
@@ -932,7 +932,7 @@ namespace TF.EX.Patchs.Scene
             if (MainMenu.VersusMatchSettings.Variants.ContainsCustomVariant(newLobby.GameData.Variants))
             {
                 Sounds.ui_clickSpecial.Play(160, 4);
-                Notification.Create(self, $"Be cautious! Custom variants might not work properly", 15, 500);
+                Notification.Create(self, $"Be CAREFUL! Custom variants might not work properly", 15, 500);
             }
         }
 
