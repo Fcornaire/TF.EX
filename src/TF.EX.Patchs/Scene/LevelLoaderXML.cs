@@ -42,7 +42,7 @@ namespace TF.EX.Patchs.Scene
                 && self.Level.Session.RoundIndex == 0
                 )
             {
-                Notification.Create(self.Level, "Waiting for other players ...", 20, 0, false, true);
+                Notification.Create(self.Level, "Waiting for other players...", 20, 0, false, true);
             }
         }
 
