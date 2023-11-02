@@ -50,8 +50,8 @@ namespace TF.EX.Common
                 var meta = File.ReadAllText(".\\Mods\\TF.EX\\meta.json");
                 currentVersion = GetVersion(meta);
 
-                _logger.LogDebug<AutoUpdater>($"TF.EX Mod current version {currentVersion}");
-                _logger.LogDebug<AutoUpdater>($"Checking last TF.EX mod version");
+                _logger.LogDebug<AutoUpdater>($"TF.EX Mod current version : {currentVersion}");
+                _logger.LogDebug<AutoUpdater>($"Checking latest TF.EX mod version");
 
                 latestVersion = await GetLatestVersion();
 
@@ -63,11 +63,11 @@ namespace TF.EX.Common
 
                     if (!hasRelease)
                     {
-                        _logger.LogDebug<AutoUpdater>("No TF.EX Mod release available");
+                        _logger.LogDebug<AutoUpdater>("No TF.EX Update available");
                         return;
                     }
 
-                    _logger.LogDebug<AutoUpdater>("TF.EX Mod Update available!");
+                    _logger.LogDebug<AutoUpdater>("TF.EX Update available!");
                     await DownloadLatest();
                     ExtractUpdate();
                     _logger.LogDebug<AutoUpdater>($"Donwloaded and extracted {latestVersion} update");
@@ -76,7 +76,7 @@ namespace TF.EX.Common
                 }
                 else
                 {
-                    _logger.LogDebug<AutoUpdater>("No TF.EX Mod update available");
+                    _logger.LogDebug<AutoUpdater>("No TF.EX Update available");
                 }
             }
             catch (Exception ex)
@@ -115,7 +115,7 @@ namespace TF.EX.Common
         {
             if (!_isUpdateAvailable)
             {
-                _logger.LogError<AutoUpdater>("No TF.EX mod update found");
+                _logger.LogError<AutoUpdater>("No TF.EX UPDATE AVAILABLE");
                 return false;
             }
 
