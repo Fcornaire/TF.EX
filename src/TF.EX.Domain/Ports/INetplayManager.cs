@@ -56,10 +56,6 @@ namespace TF.EX.Domain.Ports
 
         bool IsFramesAhead();
 
-        bool HasDesynchronized();
-
-        bool IsAttemptingToReconnect();
-
         void Reset();
         NetplayMeta GetNetplayMeta();
         void UpdateMeta(NetplayMeta config);
@@ -82,8 +78,6 @@ namespace TF.EX.Domain.Ports
         void SetReplayMode();
 
         bool HasFailedInitialConnection();
-
-        bool IsSyncing();
         ICollection<ArcherInfo> GetArchersInfo();
         Record GetLastRecord();
         bool IsServerMode();

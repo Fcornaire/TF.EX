@@ -23,8 +23,6 @@ namespace TF.EX.Domain.Services
     {
         //TODO: refactor this to only use native GGRSFFI
         private bool _isInit;
-        private bool _isAttemptingToReconnect;
-        private bool _isSyncing = false;
         private double _framesToReSimulate;
         private NetplayMode _netplayMode;
         private bool _isRollbackFrame;
@@ -41,7 +39,6 @@ namespace TF.EX.Domain.Services
         private List<string> _events;
         private List<NetplayRequest> _netplayRequests;
         private NetworkStats _networkStats;
-        private bool _hasDesynch = false;
         private string _player2Name = "PLAYER";
         private CancellationTokenSource _cancellationTokenSource;
         private CancellationToken _cancellationToken;
@@ -254,42 +251,46 @@ namespace TF.EX.Domain.Services
 
             if (_events.ToList().Count > 0)
             {
-                if (_events.Any(s => s.Contains(Event.Synchronizing.ToString())))
-                {
-                    _isSyncing = true;
-                }
-
                 if (_events.Any(s => s.Contains(Event.NetworkInterrupted.ToString())))
                 {
-                    _isAttemptingToReconnect = true;
+                    if (!ServiceCollections.ResolveMatchmakingService().GetOwnLobby().IsEmpty)
+                    {
+                        Notification.Create(TFGame.Instance.Scene, "Trying to re sync", 10, 300, false, true);
+                    }
                 }
 
                 if (_events.Any(s => s.Contains(Event.NetworkResumed.ToString())))
                 {
-                    _isAttemptingToReconnect = false;
+                    Notification.Clear(TFGame.Instance.Scene, 4);
                 }
 
                 if (_events.Any(s => s.Contains(Event.Synchronized.ToString())))
                 {
-                    _isSyncing = false;
+                    Sounds.ui_clickSpecial.Play();
+                    Notification.Create(TFGame.Instance.Scene, "Synchronized!", 10, 150);
                 }
 
                 if (_events.Any(s => s.Contains(Event.Disconnected.ToString())))
                 {
+                    Notification.Clear(TFGame.Instance.Scene, 4);
                     ServiceCollections.ResolveReplayService().Export();
                 }
 
                 //TODO: find a way to properly detect desynch
                 //if (_events.Any(s => s.Contains(Event.DesyncDetected.ToString())) && !HaveFramesToReSimulate())
                 //{
-                //    _hasDesynch = true;
+                //    if (_netplayMode == NetplayMode.Server)
+                //    {
+                //        Sounds.ui_invalid.Play();
+                //        Notification.Create(TFGame.Instance.Scene, "Game desynchronized!", 10, 100, true);
+                //    }
+
                 //    var desynchStrings = _events.Where(s => s.Contains(Event.DesyncDetected.ToString())).ToList();
 
                 //    foreach (var desynchString in desynchStrings)
                 //    {
                 //        var frame = Int32.Parse(desynchString.Split(new[] { "frame" }, StringSplitOptions.None)[1].Split(',')[0].Trim());
-                //        Console.WriteLine("Desynched at " + frame);
-                //        _desynchedFrames.Add(frame);
+                //        _logger.LogDebug<NetplayManager>("Desynched at " + frame);
                 //    }
                 //}
             }
@@ -567,16 +568,6 @@ namespace TF.EX.Domain.Services
             return _netplayMode == NetplayMode.Replay;
         }
 
-        public bool HasDesynchronized()
-        {
-            return _hasDesynch;
-        }
-
-        public bool IsAttemptingToReconnect()
-        {
-            return _isAttemptingToReconnect;
-        }
-
         public void Reset()
         {
             if (_isInit)
@@ -605,8 +596,6 @@ namespace TF.EX.Domain.Services
                 _networkStats = new NetworkStats();
                 _isRollbackFrame = false;
                 _framesAhead = 0;
-                _hasDesynch = false;
-                _isAttemptingToReconnect = false;
                 _isUpdating = false;
                 _gameContext.ResetPlayersIndex();
 
@@ -758,11 +747,6 @@ namespace TF.EX.Domain.Services
         public bool HasFailedInitialConnection()
         {
             return _hasFailedInitialConnection;
-        }
-
-        public bool IsSyncing()
-        {
-            return _isSyncing;
         }
 
         //TODO: Refactor this to handle more than 2 players

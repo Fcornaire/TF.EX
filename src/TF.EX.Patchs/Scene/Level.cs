@@ -4,7 +4,6 @@ using Monocle;
 using MonoMod.Utils;
 using System.Xml;
 using TF.EX.Domain;
-using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Externals;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
@@ -107,23 +106,6 @@ namespace TF.EX.Patchs.Scene
             }
 
             SkipLevelLoaderIfNeeded();
-
-            EnsureNoDialog(self);
-        }
-
-        private void EnsureNoDialog(Level self)
-        {
-            if (_netplayManager.IsSynchronized())
-            {
-                var entities = self.GetGameplayLayer().Entities;
-                var dialog = entities.FirstOrDefault(e => e is Dialog) as Dialog;
-
-                if (dialog != null)
-                {
-                    dialog.Removed();
-                    entities.Remove(dialog);
-                }
-            }
         }
 
         private void Level_HandlePausing(On.TowerFall.Level.orig_HandlePausing orig, Level self)
