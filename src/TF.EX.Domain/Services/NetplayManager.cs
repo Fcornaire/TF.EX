@@ -274,6 +274,7 @@ namespace TF.EX.Domain.Services
                 {
                     Notification.Clear(TFGame.Instance.Scene, 4);
                     ServiceCollections.ResolveReplayService().Export();
+                    ServiceCollections.ResolveMatchmakingService().LeaveLobby(() => { }, () => { });
                 }
 
                 //TODO: find a way to properly detect desynch
