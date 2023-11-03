@@ -294,12 +294,12 @@ namespace TF.EX.Domain.Services
                         ownLobby = response.CreateLobbyResponse.Lobby;
                         peerId = ownLobby.Players.First(pl => pl.IsHost).RoomPeerId.ToString();
                         roomChatPeerId = ownLobby.Players.First(pl => pl.IsHost).RoomChatPeerId.ToString();
-                        onResult["CreateLobby-success"]();
+                        onResult["CreateLobby-success"]?.Invoke();
                     }
                     else
                     {
                         _logger.LogDebug<MatchmakingService>($"Lobby creation failed! : {response.CreateLobbyResponse.Message}");
-                        onResult["CreateLobby-fail"]();
+                        onResult["CreateLobby-fail"]?.Invoke();
                     }
 
                     currentAction = WSAction.None;
@@ -319,11 +319,11 @@ namespace TF.EX.Domain.Services
 
                     if (currentAction == WSAction.JoinLobby)
                     {
-                        onResult["JoinLobby-success"]();
+                        onResult["JoinLobby-success"]?.Invoke();
                     }
                     else
                     {
-                        onResult["JoinAsSpectator-success"]();
+                        onResult["JoinAsSpectator-success"]?.Invoke();
                     }
                 }
                 else
@@ -332,11 +332,11 @@ namespace TF.EX.Domain.Services
 
                     if (currentAction == WSAction.JoinAsSpectator)
                     {
-                        onResult["JoinAsSpectator-fail"]();
+                        onResult["JoinAsSpectator-fail"]?.Invoke();
                     }
                     else
                     {
-                        onResult["JoinLobby-fail"]();
+                        onResult["JoinLobby-fail"]?.Invoke();
                     }
                 }
 
@@ -348,7 +348,7 @@ namespace TF.EX.Domain.Services
                 //Needed because UpdatePlayer response is a LobbyUpdate , but not necessarely all the time
                 if (currentAction == WSAction.UpdatePlayer)
                 {
-                    onResult["UpdatePlayer-success"]();
+                    onResult["UpdatePlayer-success"]?.Invoke();
                     currentAction = WSAction.None;
                 }
 
@@ -374,12 +374,12 @@ namespace TF.EX.Domain.Services
                     if (response.LeaveLobbyResponse.Success)
                     {
                         _logger.LogDebug<MatchmakingService>("Lobby left!");
-                        onResult["LeaveLobby-success"]();
+                        onResult["LeaveLobby-success"]?.Invoke();
                     }
                     else
                     {
                         _logger.LogDebug<MatchmakingService>($"Lobby leave failed! : {response.LeaveLobbyResponse.Message}");
-                        onResult["LeaveLobby-fail"]();
+                        onResult["LeaveLobby-fail"]?.Invoke();
                     }
 
                     currentAction = WSAction.None;
@@ -447,8 +447,6 @@ namespace TF.EX.Domain.Services
             //Leave if host left
             if (!lobby.Players.Any(pl => pl.IsHost))
             {
-                Task.Run(SendLeaveLobby);
-
                 if (TFGame.Instance.Scene is MainMenu)
                 {
                     (TFGame.Instance.Scene as MainMenu).State = Domain.Models.MenuState.LobbyBrowser.ToTFModel();

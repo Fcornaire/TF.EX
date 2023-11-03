@@ -60,11 +60,22 @@ namespace TF.EX.Domain.CustomComponent
 
             var notification = new Notification(text, layerIndex, appearDuration, stayingDuration, isSticky, withoutAnimation);
 
-            var dynNotification = DynamicData.For(notification);
-            dynNotification.Set("Scene", scene);
+            switch (scene)
+            {
+                case MainMenu mainMenu:
+                    mainMenu.Add(notification);
+                    break;
+                case Level level:
+                    var dynNotification = DynamicData.For(notification);
+                    dynNotification.Set("Scene", scene);
 
-            var layer = scene.Layers.Single(l => l.Key == layerIndex).Value;
-            layer.Entities.Add(notification);
+                    var layer = scene.Layers.Single(l => l.Key == layerIndex).Value;
+                    layer.Entities.Add(notification);
+                    break;
+                default:
+                    FortRise.Logger.Error($"Notification not supported for scene {scene.GetType().Name}");
+                    break;
+            }
 
             return notification;
         }
