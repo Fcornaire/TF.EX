@@ -25,7 +25,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             var targetCounter = dynLavaControl.Get<Counter>("targetCounter");
             var target = entity.Target;
 
-            if (lavas[0].Percent <= 0 && !targetCounter) //Orb logic OnLavaFinish might have not been called yet
+            if (mode == TowerFall.LavaControl.LavaMode.Pickup && lavas[0].Percent <= 0 && !targetCounter) //Orb logic OnLavaFinish might have not been called yet
             {
                 return null;
             }
