@@ -274,7 +274,12 @@ namespace TF.EX.Domain.Services
                 {
                     Notification.Clear(TFGame.Instance.Scene, 4);
                     ServiceCollections.ResolveReplayService().Export();
-                    ServiceCollections.ResolveMatchmakingService().LeaveLobby(() => { }, () => { });
+
+                    //Leave lobby if the game is not over and we are disconnected
+                    if ((TFGame.Instance.Scene as TowerFall.Level).Session.GetWinner() == -1)
+                    {
+                        ServiceCollections.ResolveMatchmakingService().LeaveLobby(() => { }, () => { });
+                    }
                 }
 
                 //TODO: find a way to properly detect desynch
