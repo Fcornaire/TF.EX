@@ -119,12 +119,12 @@ namespace TF.EX.Common
                 return false;
             }
 
-            var updateFiles = Directory.GetFiles(UpdatePath);
+            var updateFiles = Directory.GetFiles(UpdatePath, "*", SearchOption.AllDirectories);
 
             foreach (var file in updateFiles)
             {
                 var fileName = Path.GetFileName(file);
-                var destination = $"{Directory.GetCurrentDirectory()}\\Mods\\TF.EX\\{fileName}";
+                var destination = $"{Directory.GetCurrentDirectory()}\\{file.Replace(UpdatePath, "Mods\\TF.EX")}";
 
                 if (File.Exists(destination))
                 {
