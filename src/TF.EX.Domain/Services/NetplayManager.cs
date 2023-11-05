@@ -1,5 +1,6 @@
 ﻿using MessagePack;
 using Microsoft.Extensions.Logging;
+using Monocle;
 using MonoMod.Utils;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -344,24 +345,25 @@ namespace TF.EX.Domain.Services
 
                     throw new InvalidOperationException($"AdvanceFrame error : {info} {mismatch}");
                 }
-                else if (_netplayMode == NetplayMode.Spectator)
-                {
-                    Sounds.ui_invalid.Play();
-                    Notification.Create(TFGame.Instance.Scene, "A error occured while spectating");
-
-                    Task.Run(async () =>
-                    {
-                        await ServiceCollections.ResolveMatchmakingService().LeaveLobby(() =>
-                        {
-                            (TFGame.Instance.Scene as MainMenu).State = MainMenu.MenuState.VersusOptions;
-                        }, () =>
-                        {
-                            (TFGame.Instance.Scene as MainMenu).State = MainMenu.MenuState.VersusOptions;
-                        });
-                    }).GetAwaiter().GetResult();
-                }
                 else if (!info.Equals("PredictionThreshold"))
                 {
+                    if (_netplayMode == NetplayMode.Spectator)
+                    {
+                        Task.Run(async () =>
+                        {
+                            await ServiceCollections.ResolveMatchmakingService().LeaveLobby(() => { }, () => { });
+                        }).GetAwaiter().GetResult();
+
+                        var mainMenu = new MainMenu(MainMenu.MenuState.VersusOptions);
+                        Engine.Instance.Scene = mainMenu;
+                        (TFGame.Instance.Scene as Level).Session.MatchSettings.LevelSystem.Dispose();
+
+                        Sounds.ui_invalid.Play();
+                        Notification.Create(TFGame.Instance.Scene, "A error occured while spectating");
+
+                        return status;
+                    }
+
                     throw new InvalidOperationException($"AdvanceFrame error : {info}");
                 }
             }

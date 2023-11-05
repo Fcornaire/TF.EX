@@ -795,7 +795,8 @@ namespace TF.EX.Domain.Services
                 RoomId = lobby.RoomId,
                 RoomChatId = lobby.RoomChatId,
                 Players = lobby.Players,
-                GameData = lobby.GameData
+                GameData = lobby.GameData,
+                Spectators = lobby.Spectators
             };
         }
 
