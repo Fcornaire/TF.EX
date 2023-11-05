@@ -91,10 +91,12 @@ namespace TF.EX.Patchs.Entity.MenuItem
                             {
                                 inputService.EnableAllControllers();
                                 inputService.DisableAllControllerExceptLocal();
+                                dynRollcallElement.Set("input", TFGame.PlayerInputs[0]);
                             }, () =>
                             {
                                 inputService.EnableAllControllers();
                                 inputService.DisableAllControllerExceptLocal();
+                                dynRollcallElement.Set("input", TFGame.PlayerInputs[0]);
                                 Sounds.ui_invalid.Play();
                                 Notification.Create(self.Scene, "Failed to notify server");
                             });
@@ -156,11 +158,14 @@ namespace TF.EX.Patchs.Entity.MenuItem
                             {
                                 inputService.EnableAllControllers();
                                 inputService.DisableAllControllerExceptLocal();
+                                dynRollcallElement.Set("input", TFGame.PlayerInputs[0]);
                                 self.HandleControlChange();
                             }, () =>
                             {
                                 inputService.EnableAllControllers();
                                 inputService.DisableAllControllerExceptLocal();
+                                dynRollcallElement.Set("input", TFGame.PlayerInputs[0]);
+
                                 self.HandleControlChange();
                                 Sounds.ui_invalid.Play();
                                 Notification.Create(self.Scene, "Failed to notify server");
@@ -180,29 +185,34 @@ namespace TF.EX.Patchs.Entity.MenuItem
 
             var res = orig(self);
 
-            var input = dynRollcallElement.Get<TowerFall.PlayerInput>("input");
+            int playerIndex = dynRollcallElement.Get<int>("playerIndex");
 
-            var currentMode = MainMenu.VersusMatchSettings.Mode.ToModel();
-
-            if (currentMode == Domain.Models.Modes.Netplay && input != null && input.MenuBack)
+            if (playerIndex == 0)
             {
-                Task.Run(async () =>
-                {
-                    await _matchmakingService.LeaveLobby(() =>
-                    {
-                        (TFGame.Instance.Scene as MainMenu).State = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
-                        if (!_matchmakingService.IsSpectator())
-                        {
-                            _matchmakingService.DisconnectFromLobby();
-                        }
-                        _matchmakingService.ResetPeer();
-                    }, () =>
-                    {
-                        (TFGame.Instance.Scene as MainMenu).State = MainMenu.MenuState.VersusOptions;
-                    });
-                }).GetAwaiter().GetResult();
+                var input = dynRollcallElement.Get<TowerFall.PlayerInput>("input");
 
-                (TFGame.Instance.Scene as MainMenu).State = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
+                var currentMode = MainMenu.VersusMatchSettings.Mode.ToModel();
+
+                if (currentMode == Domain.Models.Modes.Netplay && input != null && input.MenuBack)
+                {
+                    Task.Run(async () =>
+                    {
+                        await _matchmakingService.LeaveLobby(() =>
+                        {
+                            (TFGame.Instance.Scene as MainMenu).State = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
+                            if (!_matchmakingService.IsSpectator())
+                            {
+                                _matchmakingService.DisconnectFromLobby();
+                            }
+                            _matchmakingService.ResetPeer();
+                        }, () =>
+                        {
+                            (TFGame.Instance.Scene as MainMenu).State = MainMenu.MenuState.VersusOptions;
+                        });
+                    }).GetAwaiter().GetResult();
+
+                    (TFGame.Instance.Scene as MainMenu).State = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
+                }
             }
 
             return res;
