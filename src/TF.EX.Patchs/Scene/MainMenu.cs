@@ -282,7 +282,7 @@ namespace TF.EX.Patchs.Scene
 
                 if (replays != null)
                 {
-                    replays.Clear();
+                    RemoveReplays();
                 }
 
                 if (noMsg != null)
@@ -429,7 +429,7 @@ namespace TF.EX.Patchs.Scene
 
             if (toLaunch != null)
             {
-                replays.Clear();
+                RemoveReplays();
                 Monocle.Music.Stop();
                 Sounds.ui_mapZoom.Play();
 
@@ -444,6 +444,7 @@ namespace TF.EX.Patchs.Scene
                     TFGame.Instance.Scene.RemoveLoader();
 
                     _inputService.EnableAllControllers();
+                    _inputService.EnsureRemoteController();
                 });
             }
         }
@@ -955,6 +956,16 @@ namespace TF.EX.Patchs.Scene
                 lobbyPanel.RemoveSelf();
                 lobbyPanel = null;
             }
+        }
+
+        private void RemoveReplays()
+        {
+            foreach (var replay in replays.ToArray())
+            {
+                replay.RemoveSelf();
+            }
+
+            replays.Clear();
         }
     }
 
