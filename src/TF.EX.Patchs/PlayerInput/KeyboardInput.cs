@@ -47,7 +47,7 @@ namespace TF.EX.Patchs.PlayerInput
             On.TowerFall.KeyboardInput.GetState += KeyboardInput_GetState;
 
             MenuConfirm_hook = new Hook(typeof(KeyboardInput).GetProperty("MenuConfirm").GetGetMethod(), MenuConfirm_patch);
-            MenuStart_hook = new Hook(typeof(KeyboardInput).GetProperty("MenuStart").GetGetMethod(), MenuConfirm_patch);
+            //MenuStart_hook = new Hook(typeof(KeyboardInput).GetProperty("MenuStart").GetGetMethod(), MenuConfirm_patch);
             MenuSkipReplay_hook = new Hook(typeof(KeyboardInput).GetProperty("MenuSkipReplay").GetGetMethod(), MenuSkipReplay_patch);
             MenuSaveReplay_hook = new Hook(typeof(KeyboardInput).GetProperty("MenuSaveReplay").GetGetMethod(), MenuSaveReplay_patch);
             MenuSaveReplayCheck_hook = new Hook(typeof(KeyboardInput).GetProperty("MenuSaveReplayCheck").GetGetMethod(), MenuSaveReplayCheck_patch);
@@ -62,7 +62,7 @@ namespace TF.EX.Patchs.PlayerInput
             On.TowerFall.KeyboardInput.GetState -= KeyboardInput_GetState;
 
             MenuConfirm_hook.Dispose();
-            MenuStart_hook.Dispose();
+            //MenuStart_hook.Dispose();
             MenuSkipReplay_hook.Dispose();
             MenuSaveReplay_hook.Dispose();
             MenuSaveReplayCheck_hook.Dispose();
@@ -185,6 +185,8 @@ namespace TF.EX.Patchs.PlayerInput
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
             var inputService = ServiceCollections.ResolveInputService();
+            var isReplayMode = netplayManager.IsReplayMode();
+            var isPaused = TFGame.Instance.Scene is TowerFall.Level && (TFGame.Instance.Scene as TowerFall.Level).Paused;
 
             var isNetplayInit = netplayManager.IsInit();
 
@@ -193,6 +195,11 @@ namespace TF.EX.Patchs.PlayerInput
                && inputService.GetInputIndex(self) != 0)
             {
                 return false; //Ignore input for other players in netplay
+            }
+
+            if (isPaused)
+            {
+                return actualInput;
             }
 
             if (netplayManager.IsDisconnected())
@@ -245,6 +252,11 @@ namespace TF.EX.Patchs.PlayerInput
 
                     return ServiceCollections.ResolveMatchmakingService().IsLobbyReady();
                 }
+            }
+
+            if (isReplayMode)
+            {
+                return true;
             }
 
             if (isNetplayInit)
