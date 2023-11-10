@@ -16,6 +16,8 @@ namespace TF.EX.Domain.Ports.TF
         void ResetCurrentInput();
         void EnsureRemoteController();
 
+        void EnsureFakeControllers();
+
         int GetInputIndex(PlayerInput input);
         void DisableAllControllers();
         void EnableAllControllers();
