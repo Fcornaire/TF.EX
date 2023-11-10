@@ -29,6 +29,14 @@ namespace TF.EX.Domain.Services.TF
         {
             if (TFGame.PlayerInputs[1] is null)
             {
+                TFGame.PlayerInputs[1] = new KeyboardInput();
+            }
+        }
+
+        public void EnsureFakeControllers()
+        {
+            if (TFGame.PlayerInputs[1] is null)
+            {
                 TFGame.PlayerInputs[1] = new FakeController();
             }
         }

@@ -444,7 +444,7 @@ namespace TF.EX.Patchs.Scene
                     TFGame.Instance.Scene.RemoveLoader();
 
                     _inputService.EnableAllControllers();
-                    _inputService.EnsureRemoteController();
+                    _inputService.EnsureFakeControllers();
                 });
             }
         }
