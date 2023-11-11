@@ -54,6 +54,12 @@ namespace TF.EX.Patchs.Entity.MenuItem
             orig(self, position, tweenFrom);
 
             _archerService.Reset();
+
+            var lobby = _matchmakingService.GetOwnLobby();
+            if (!lobby.IsEmpty)
+            {
+                _matchmakingService.LeaveLobby(_matchmakingService.ResetLobby, _matchmakingService.ResetLobby);
+            }
         }
     }
 }
