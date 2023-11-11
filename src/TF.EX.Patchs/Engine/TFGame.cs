@@ -128,12 +128,6 @@ namespace TF.EX.Patchs.Engine
                 {
                     _netplayManager.Reset();
                     //TowerFall.PlayerInput.AssignInputs(); //Reset inputs
-
-                    var lobby = _matchmakingService.GetOwnLobby();
-                    if (!lobby.IsEmpty)
-                    {
-                        _matchmakingService.LeaveLobby(_matchmakingService.ResetLobby, _matchmakingService.ResetLobby);
-                    }
                 }
 
                 _netplayManager.ResetMode();
