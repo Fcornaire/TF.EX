@@ -156,7 +156,7 @@ namespace TF.EX.Domain.Services
                             mainMenu.ButtonGuideD.Clear();
                         }
 
-                        Sounds.ui_invalid.Play();
+                        Sounds.ui_clickSpecial.Play();
                         Notification.Create(TFGame.Instance.Scene, "Connexion dropped...");
                     }
 
