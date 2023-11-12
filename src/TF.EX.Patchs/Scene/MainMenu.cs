@@ -960,10 +960,10 @@ namespace TF.EX.Patchs.Scene
 
         private void RemoveReplays()
         {
-            foreach (var replay in replays.ToArray())
-            {
-                replay.RemoveSelf();
-            }
+            //foreach (var replay in replays.ToArray())
+            //{
+            //    replay.RemoveSelf();
+            //}
 
             replays.Clear();
         }
