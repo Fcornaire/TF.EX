@@ -24,6 +24,9 @@ namespace TF.EX.Domain.Models.State
         [Key(6)]
         public double ActualDepth { get; set; } = Constants.MIASMA_CUSTOM_DEPTH;
 
+        [Key(7)]
+        public Dictionary<int, float> Frame_TimeMult { get; set; } = new Dictionary<int, float>();
+
         public static Miasma Default()
         {
             return new Miasma

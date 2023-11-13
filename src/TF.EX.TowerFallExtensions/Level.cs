@@ -111,6 +111,8 @@ namespace TF.EX.TowerFallExtensions
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var inputService = ServiceCollections.ResolveInputService();
 
+            gameState.Frame = GGRSFFI.netplay_current_frame();
+
             gameState.AddJumpPadsState(self);
 
             if (!netplayManager.IsTestMode())
@@ -141,7 +143,6 @@ namespace TF.EX.TowerFallExtensions
             gameState.AddLavaControlState(self);
             gameState.AddBGTorches(self);
             gameState.Rng = rngService.Get();
-            gameState.Frame = GGRSFFI.netplay_current_frame();
 
             if (netplayManager.IsTestMode())
             {
@@ -230,6 +231,7 @@ namespace TF.EX.TowerFallExtensions
                     IsDissipating = gameState.Session.Miasma.IsDissipating,
                     Percent = gameState.Session.Miasma.Percent,
                     SideWeight = gameState.Session.Miasma.SideWeight,
+                    Frame_TimeMult = gameState.Session.Miasma.Frame_TimeMult,
                 },
                 Scores = gameState.Session.Scores.ToArray(),
                 OldScores = gameState.Session.OldScores.ToArray(),
@@ -328,11 +330,29 @@ namespace TF.EX.TowerFallExtensions
                     sess.Miasma.CoroutineTimer = 0;
 
                     var miasma = level.AddMiasmaToGameplayLayer(gameState.Session.Miasma.ActualDepth);
+                    var currentTimeMult = TFGame.TimeMult;
+
+                    var initialFrame = 0;
+                    var dynTFGame = DynamicData.For(TFGame.Instance);
+
+                    if (gameState.Session.Miasma.Frame_TimeMult.Count > 0)
+                    {
+                        var frame_timeMult = gameState.Session.Miasma.Frame_TimeMult.FirstOrDefault();
+                        initialFrame = frame_timeMult.Key;
+                    }
 
                     for (int i = 0; i < gameState.Session.Miasma.CoroutineTimer; i++)
                     {
+                        if (gameState.Session.Miasma.Frame_TimeMult.ContainsKey(i + initialFrame) && initialFrame > 0)
+                        {
+                            var timeMult = gameState.Session.Miasma.Frame_TimeMult[i + initialFrame];
+                            dynTFGame.Set("TimeMult", timeMult);
+                        }
+
                         miasma.Update();
                     }
+
+                    dynTFGame.Set("TimeMult", currentTimeMult);
                 }
             }
 
@@ -824,6 +844,19 @@ namespace TF.EX.TowerFallExtensions
                 var counter = DynamicData.For(miasmaCounter).Get<float>("counter");
 
                 var stateSession = sessionService.GetSession();
+                var miasma = level.Get<TowerFall.Miasma>();
+
+                if (miasma != null)
+                {
+                    int lastKey = stateSession.Miasma.Frame_TimeMult.Keys.Count > 0 ? stateSession.Miasma.Frame_TimeMult.Keys.Max() : int.MinValue;
+                    float lastValue = stateSession.Miasma.Frame_TimeMult.Values.Count > 0 ? stateSession.Miasma.Frame_TimeMult.Values.Max() : float.MinValue;
+
+                    if (gameState.Frame > lastKey && TFGame.TimeMult != lastValue)
+                    {
+                        stateSession.Miasma.Frame_TimeMult.Add(gameState.Frame, TFGame.TimeMult);
+                    }
+                }
+
                 stateSession.RoundStarted = roundStarted;
                 stateSession.RoundEndCounter = endCounter;
                 stateSession.IsEnding = isEnding;
@@ -845,6 +878,7 @@ namespace TF.EX.TowerFallExtensions
                         IsDissipating = stateSession.Miasma.IsDissipating,
                         Percent = stateSession.Miasma.Percent,
                         SideWeight = stateSession.Miasma.SideWeight,
+                        Frame_TimeMult = stateSession.Miasma.Frame_TimeMult,
                     },
                     Scores = level.Session.Scores.ToArray(),
                     OldScores = level.Session.OldScores.ToArray(),
