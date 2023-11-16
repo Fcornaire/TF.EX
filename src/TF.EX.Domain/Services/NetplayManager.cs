@@ -431,7 +431,7 @@ namespace TF.EX.Domain.Services
                 {
                     var inputs = handle._inputs;
 
-                    var gameInputs = inputs.Select(inp => inp.ToTFInput()).ToList();
+                    var gameInputs = inputs.ToList();
 
                     if (ShouldSwapPlayer())
                     {

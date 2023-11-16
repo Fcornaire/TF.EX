@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using TF.EX.Domain.Models.State;
 
 namespace TF.EX.Patchs
 {
@@ -35,7 +36,6 @@ namespace TF.EX.Patchs
             "Encumbrance",
             "SmallQuivers",
             "NoQuivers",
-            "FreeAiming",
             "NoSlipping",
             "SlipperyFloors",
             "OffsetWorld",
@@ -68,6 +68,12 @@ namespace TF.EX.Patchs
 
             self.Variants = self.Variants.Where(v => !UnauthorizedVariant.Contains(v.Title)).ToArray();
             self.TournamentRules();
+            self.Variants.First(variant => variant.Title == "FREE AIMING").Value = true;
+            if (self.CustomVariants.ContainsKey(Constants.RIGHT_STICK_VARIANT_NAME))
+            {
+                self.CustomVariants.TryGetValue(Constants.RIGHT_STICK_VARIANT_NAME, out var variant);
+                variant.Value = true;
+            }
         }
 
 

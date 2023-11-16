@@ -55,7 +55,7 @@ namespace TF.EX.API
 
         public void MarkModuleAsSafe(FortModule module)
         {
-            if (safeModules.Contains(module.ID))
+            if (safeModules.Any((mod) => mod == module.ID))
             {
                 FortRise.Logger.Log("[TF.EX.API] Module already marked as safe " + module.ID, FortRise.Logger.LogLevel.Info);
                 return;
@@ -66,7 +66,7 @@ namespace TF.EX.API
 
         public bool IsModuleSafe(string id)
         {
-            return safeModules.Contains(id);
+            return safeModules.Any((mod) => mod == id);
         }
     }
 }

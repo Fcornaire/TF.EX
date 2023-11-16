@@ -16,5 +16,12 @@ namespace TF.EX.Domain.Models.State
 
 
         public override string ToString() => $"({X}, {Y})";
+
+        public bool IsAfterThreshold() => Math.Abs(X) > 0.5f || Math.Abs(Y) > 0.5f;
+
+        public static bool operator >(Vector2f a, Vector2f b) => Math.Abs(a.X) > Math.Abs(b.X) && Math.Abs(a.Y) > Math.Abs(b.Y);
+
+        public static bool operator <(Vector2f a, Vector2f b) => Math.Abs(a.X) < Math.Abs(b.X) && Math.Abs(a.Y) < Math.Abs(b.Y);
+
     }
 }

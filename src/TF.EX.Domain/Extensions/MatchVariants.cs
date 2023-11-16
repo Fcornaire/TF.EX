@@ -1,4 +1,5 @@
-﻿using TowerFall;
+﻿using TF.EX.Domain.Models.State;
+using TowerFall;
 
 namespace TF.EX.Domain.Extensions
 {
@@ -35,7 +36,7 @@ namespace TF.EX.Domain.Extensions
 
         public static bool ContainsCustomVariant(this MatchVariants matchVariants, IEnumerable<string> variants)
         {
-            return variants.Any(variant => matchVariants.CustomVariants.Any(v => v.Value.Title == variant));
+            return variants.Any(variant => variant != Constants.RIGHT_STICK_VARIANT_TITLE && matchVariants.CustomVariants.Any(v => v.Value.Title == variant));
         }
     }
 }

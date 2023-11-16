@@ -144,5 +144,7 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Player
         [Key(45)]
         public bool ShouldAutoBounce { get; set; }
 
+        [Key(46)]
+        public bool IsAimingRight { get; set; }
     }
 }

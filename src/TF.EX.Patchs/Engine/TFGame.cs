@@ -358,9 +358,7 @@ namespace TF.EX.Patchs.Engine
             {
                 var playerInput = _inputService.GetPolledInput();
 
-                var input = playerInput.ToModel();
-
-                var status = _netplayManager.AdvanceFrame(input);
+                var status = _netplayManager.AdvanceFrame(playerInput);
 
                 if (!status.IsOk)
                 {
