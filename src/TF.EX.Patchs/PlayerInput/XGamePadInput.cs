@@ -199,6 +199,11 @@ namespace TF.EX.Patchs.PlayerInput
             var isReplayMode = netplayManager.IsReplayMode();
             var isPaused = TFGame.Instance.Scene is TowerFall.Level && (TFGame.Instance.Scene as TowerFall.Level).Paused;
 
+            if (isReplayMode)
+            {
+                return true;
+            }
+
             if (TFGame.Instance.Scene is MainMenu
                 && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
                 && inputService.GetInputIndex(self) != 0)
@@ -273,11 +278,6 @@ namespace TF.EX.Patchs.PlayerInput
             if (netplayManager.IsDisconnected())
             {
                 return actualInput;
-            }
-
-            if (isReplayMode)
-            {
-                return true;
             }
 
             return actualInput;
