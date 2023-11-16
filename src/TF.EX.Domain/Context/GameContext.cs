@@ -1,5 +1,4 @@
 ﻿using Microsoft.Xna.Framework.Audio;
-using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Externals;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Models.State;
@@ -13,10 +12,10 @@ namespace TF.EX.Domain.Context
     {
         void AddStuckArrow(Vector2f arrowPosition, TowerFall.Platform platform);
         Dictionary<Vector2f, TowerFall.Platform> GetPlatoformStuckArrows();
-        void UpdateCurrentInputs(IEnumerable<TowerFall.InputState> inputs);
-        void UpdatePolledInput(TowerFall.InputState input);
-        TowerFall.InputState GetPolledInput();
-        TowerFall.InputState GetCurrentInput(int characterIndex);
+        void UpdateCurrentInputs(IEnumerable<Input> inputs);
+        void UpdatePolledInput(Input input);
+        Input GetPolledInput();
+        Input GetCurrentInput(int characterIndex);
 
         Session GetSession();
         void UpdateSession(Session session);
@@ -31,7 +30,7 @@ namespace TF.EX.Domain.Context
         Replay GetReplay();
         void LoadReplay(Replay replay);
         Record GetCurrentReplayFrame(int frame);
-        List<TowerFall.InputState> GetCurrentInputs();
+        List<Input> GetCurrentInputs();
         Dictionary<int, double> GetGamePlayerLayerActualDepthLookup();
         void SaveGamePlayerLayerActualDepthLookup(Dictionary<int, double> toSave);
         void ResetGamePlayLayerActualDepthLookup();
@@ -66,8 +65,8 @@ namespace TF.EX.Domain.Context
         private const int NUM_PLAYER = 2; //TODO: variable
 
         private readonly Dictionary<Vector2f, TowerFall.Platform> StuckArrows_Platforms; //Save Stuck arrow instead of serialising it TODO: clear when running a new netplay session
-        private readonly AttributeManager<TowerFall.InputState> CurrentInputs;
-        private TowerFall.InputState PolledInput;
+        private readonly AttributeManager<Input> CurrentInputs;
+        private Input PolledInput;
         private Session Session;
         private Rng _rng = new Rng();
         private Replay _replay;
@@ -85,8 +84,8 @@ namespace TF.EX.Domain.Context
         public GameContext()
         {
             StuckArrows_Platforms = new Dictionary<Vector2f, TowerFall.Platform>();
-            PolledInput = new TowerFall.InputState();
-            CurrentInputs = new AttributeManager<TowerFall.InputState>(() => EmptyInput(), NUM_PLAYER);
+            PolledInput = new Input();
+            CurrentInputs = new AttributeManager<Input>(EmptyInput, NUM_PLAYER);
             Session = new Session
             {
                 RoundEndCounter = Constants.INITIAL_END_COUNTER,
@@ -110,19 +109,19 @@ namespace TF.EX.Domain.Context
             return StuckArrows_Platforms;
         }
 
-        private TowerFall.InputState EmptyInput() { return new TowerFall.InputState(); }
+        private Input EmptyInput() { return new Input(); }
 
-        public void UpdateCurrentInputs(IEnumerable<TowerFall.InputState> inputs)
+        public void UpdateCurrentInputs(IEnumerable<Input> inputs)
         {
             CurrentInputs.Update(inputs);
         }
 
-        public void UpdatePolledInput(TowerFall.InputState input)
+        public void UpdatePolledInput(Input input)
         {
             PolledInput = input;
         }
 
-        public TowerFall.InputState GetCurrentInput(int characterIndex)
+        public Input GetCurrentInput(int characterIndex)
         {
             if (characterIndex < 0)
             {
@@ -142,7 +141,7 @@ namespace TF.EX.Domain.Context
             return CurrentInputs[characterIndex];
         }
 
-        public TowerFall.InputState GetPolledInput()
+        public Input GetPolledInput()
         {
             return PolledInput;
         }
@@ -208,7 +207,7 @@ namespace TF.EX.Domain.Context
         public void AddRecord(GameState gameState, bool shouldSwapPlayer) //TODO: 2nd parameter might be useless
         {
             var gs = gameState;
-            var inputs = CurrentInputs.Get().Select(input => input.ToModel()).ToList();
+            var inputs = CurrentInputs.Get().ToList();
 
             _replay.Record.Add(new Record
             {
@@ -237,7 +236,7 @@ namespace TF.EX.Domain.Context
             return _replay.Record.Find(rec => rec.GameState.Frame == frame);
         }
 
-        public List<TowerFall.InputState> GetCurrentInputs()
+        public List<Input> GetCurrentInputs()
         {
             return CurrentInputs.Get();
         }

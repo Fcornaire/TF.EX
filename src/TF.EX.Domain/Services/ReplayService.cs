@@ -183,7 +183,7 @@ namespace TF.EX.Domain.Services
 
             if (record != null)
             {
-                _inputService.UpdateCurrent(record.Inputs.Select(input => input.ToTFInput()));
+                _inputService.UpdateCurrent(record.Inputs.ToList());
                 //_gameStateService.LoadState(Engine.Instance.Scene, record.GameState);
             }
 

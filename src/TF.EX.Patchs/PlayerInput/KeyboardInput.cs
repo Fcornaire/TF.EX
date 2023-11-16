@@ -3,6 +3,7 @@ using MonoMod.RuntimeDetour;
 using MonoMod.Utils;
 using TF.EX.Domain;
 using TF.EX.Domain.Extensions;
+using TF.EX.Domain.Models;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
 using TF.EX.TowerFallExtensions.Scene;
@@ -173,10 +174,10 @@ namespace TF.EX.Patchs.PlayerInput
                 {
                     _inputService.UpdatePolledInput(polledInput);
                 }
-                return _inputService.GetCurrentInput(_inputService.GetLocalPlayerInputIndex()); //TODO: get by player instead of index
+                return _inputService.GetCurrentInput(_inputService.GetLocalPlayerInputIndex()).ToTFInput(); //TODO: get by player instead of index
             }
 
-            return _inputService.GetCurrentInput(_inputService.GetRemotePlayerInputIndex());
+            return _inputService.GetCurrentInput(_inputService.GetRemotePlayerInputIndex()).ToTFInput();
         }
 
         //TODO: refactor to have a unique intercept for all inputs

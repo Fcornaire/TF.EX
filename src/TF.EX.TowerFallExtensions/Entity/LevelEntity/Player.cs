@@ -98,6 +98,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 DodgeStallCounter = dynPlayer.Get<Counter>("dodgeStallCounter").Value,
                 DodgeCooldown = dynPlayer.Get<bool>("dodgeCooldown"),
                 Aiming = entity.Aiming,
+                IsAimingRight = dynPlayer.Get<bool>("isAimingRight"),
                 CanVarJump = dynPlayer.Get<bool>("canVarJump"),
                 IsOnGround = entity.OnGround,
                 DuckSlipCounter = dynPlayer.Get<float>("duckSlipCounter"),
@@ -185,6 +186,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 
             dynPlayer.Set("dodgeCooldown", toLoad.DodgeCooldown);
             dynPlayer.Set("aiming", toLoad.Aiming);
+            dynPlayer.Set("isAimingRight", toLoad.IsAimingRight);
             dynPlayer.Set("canVarJump", toLoad.CanVarJump);
             dynPlayer.Set("OnGround", toLoad.IsOnGround);
             dynPlayer.Set("duckSlipCounter", toLoad.DuckSlipCounter);

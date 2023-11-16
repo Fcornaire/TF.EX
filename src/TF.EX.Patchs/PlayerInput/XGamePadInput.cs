@@ -3,6 +3,7 @@ using MonoMod.RuntimeDetour;
 using MonoMod.Utils;
 using TF.EX.Domain;
 using TF.EX.Domain.Extensions;
+using TF.EX.Domain.Models;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
 using TF.EX.TowerFallExtensions;
@@ -170,16 +171,16 @@ namespace TF.EX.Patchs.PlayerInput
                 {
                     if (!_netplayManager.IsReplayMode())
                     {
-                        _inputService.UpdatePolledInput(polledInput);
+                        _inputService.UpdatePolledInput(polledInput, self.GetRightStick());
                     }
                     else
                     {
                         //InterceptReplay(polledInput); TODO: implement replay interception
                     }
-                    return _inputService.GetCurrentInput(_inputService.GetLocalPlayerInputIndex());
+                    return _inputService.GetCurrentInput(_inputService.GetLocalPlayerInputIndex()).ToTFInput();
                 }
 
-                return _inputService.GetCurrentInput(_inputService.GetRemotePlayerInputIndex());
+                return _inputService.GetCurrentInput(_inputService.GetRemotePlayerInputIndex()).ToTFInput();
             }
             else
             {

@@ -1,15 +1,17 @@
-﻿using TowerFall;
+﻿using TF.EX.Domain.Models;
+using TF.EX.Domain.Models.State;
+using TowerFall;
 
 namespace TF.EX.Domain.Ports.TF
 {
     public interface IInputService
     {
-        void UpdateCurrent(IEnumerable<InputState> inputs);
-        void UpdatePolledInput(InputState input);
+        void UpdateCurrent(IEnumerable<Input> inputs);
+        void UpdatePolledInput(InputState input, RightStick rightStick = default);
         void ResetPolledInput();
-        InputState GetCurrentInput(int characterIndex);
-        InputState GetPolledInput();
-        List<InputState> GetCurrentInputs();
+        Input GetCurrentInput(int characterIndex);
+        Input GetPolledInput();
+        List<Input> GetCurrentInputs();
 
         int GetLocalPlayerInputIndex();
         int GetRemotePlayerInputIndex();
