@@ -939,7 +939,7 @@ namespace TF.EX.Patchs.Scene
 
         private void OnFailedToJoinLobby(MainMenu self)
         {
-            Notification.Create(self, $"Failed to join lobby", 10, 150);
+            Notification.Create(self, $"Failed to join lobby: either full, gone, or already started", 15, 450);
 
             _inputService.EnableAllControllers();
             self.RemoveLoader();
