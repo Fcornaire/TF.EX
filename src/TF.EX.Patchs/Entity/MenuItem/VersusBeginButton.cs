@@ -9,12 +9,10 @@ namespace TF.EX.Patchs.Entity.MenuItem
     internal class VersusBeginButtonPatch : IHookable
     {
         private readonly IMatchmakingService _matchmakingService;
-        private readonly INetplayManager _netplayManager;
         private readonly IArcherService _archerService;
-        public VersusBeginButtonPatch(IMatchmakingService matchmakingService, INetplayManager netplayManager, IArcherService archerService)
+        public VersusBeginButtonPatch(IMatchmakingService matchmakingService, IArcherService archerService)
         {
             _matchmakingService = matchmakingService;
-            _netplayManager = netplayManager;
             _archerService = archerService;
         }
 
@@ -56,6 +54,12 @@ namespace TF.EX.Patchs.Entity.MenuItem
             orig(self, position, tweenFrom);
 
             _archerService.Reset();
+
+            var lobby = _matchmakingService.GetOwnLobby();
+            if (!lobby.IsEmpty)
+            {
+                _matchmakingService.LeaveLobby(_matchmakingService.ResetLobby, _matchmakingService.ResetLobby);
+            }
         }
     }
 }

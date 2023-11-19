@@ -3,6 +3,7 @@ using Monocle;
 using MonoMod.Utils;
 using System.Reflection;
 using TF.EX.Domain.Extensions;
+using TF.EX.Domain.Models.State;
 using TF.EX.Domain.Models.State.Entity.LevelEntity;
 using TF.EX.Domain.Models.State.Entity.LevelEntity.Player;
 using TF.EX.TowerFallExtensions.ComponentExtensions;
@@ -97,6 +98,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 DodgeStallCounter = dynPlayer.Get<Counter>("dodgeStallCounter").Value,
                 DodgeCooldown = dynPlayer.Get<bool>("dodgeCooldown"),
                 Aiming = entity.Aiming,
+                IsAimingRight = dynPlayer.Get<bool>("isAimingRight"),
                 CanVarJump = dynPlayer.Get<bool>("canVarJump"),
                 IsOnGround = entity.OnGround,
                 DuckSlipCounter = dynPlayer.Get<float>("duckSlipCounter"),
@@ -184,6 +186,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 
             dynPlayer.Set("dodgeCooldown", toLoad.DodgeCooldown);
             dynPlayer.Set("aiming", toLoad.Aiming);
+            dynPlayer.Set("isAimingRight", toLoad.IsAimingRight);
             dynPlayer.Set("canVarJump", toLoad.CanVarJump);
             dynPlayer.Set("OnGround", toLoad.IsOnGround);
             dynPlayer.Set("duckSlipCounter", toLoad.DuckSlipCounter);
@@ -377,12 +380,48 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 
                         list.Add(finishAutoMoveAction);
                         break;
+                    case Constants.INVENTORY_INVISIBLE_DELEGATE:
+                        var invisible = typeof(PlayerExtensions).GetMethod("InvisibleDelegate", BindingFlags.NonPublic | BindingFlags.Static);
+                        Action finvisibleAction = (Action)Delegate.CreateDelegate(typeof(Action), self, invisible);
+
+                        list.Add(finvisibleAction);
+                        break;
+                    case Constants.INVENTORY_SHIELD_DELEGATE:
+                        var shield = typeof(PlayerExtensions).GetMethod("ShieldDelegate", BindingFlags.NonPublic | BindingFlags.Static);
+                        Action shieldAction = (Action)Delegate.CreateDelegate(typeof(Action), self, shield);
+
+                        list.Add(shieldAction);
+                        break;
+                    case "Gain":
+                        var wingsGain = typeof(PlayerExtensions).GetMethod("Gain", BindingFlags.NonPublic | BindingFlags.Static);
+                        Action wingsGainAction = (Action)Delegate.CreateDelegate(typeof(Action), self, wingsGain);
+
+                        list.Add(wingsGainAction);
+                        break;
                     default:
                         throw new InvalidOperationException("Scheduled action not found");
                 };
             }
 
             return list;
+        }
+
+        private static void InvisibleDelegate(TowerFall.Player self)
+        {
+            self.Invisible = true;
+        }
+
+        private static void ShieldDelegate(TowerFall.Player self)
+        {
+            self.HasShield = true;
+        }
+
+        private static void Gain(TowerFall.Player self)
+        {
+            var dynPlayer = DynamicData.For(self);
+            TowerFall.PlayerWings wings = dynPlayer.Get<TowerFall.PlayerWings>("wings");
+
+            wings.Gain();
         }
     }
 }

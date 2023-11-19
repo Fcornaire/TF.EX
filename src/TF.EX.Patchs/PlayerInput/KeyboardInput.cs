@@ -3,6 +3,7 @@ using MonoMod.RuntimeDetour;
 using MonoMod.Utils;
 using TF.EX.Domain;
 using TF.EX.Domain.Extensions;
+using TF.EX.Domain.Models;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
 using TF.EX.TowerFallExtensions.Scene;
@@ -47,7 +48,7 @@ namespace TF.EX.Patchs.PlayerInput
             On.TowerFall.KeyboardInput.GetState += KeyboardInput_GetState;
 
             MenuConfirm_hook = new Hook(typeof(KeyboardInput).GetProperty("MenuConfirm").GetGetMethod(), MenuConfirm_patch);
-            MenuStart_hook = new Hook(typeof(KeyboardInput).GetProperty("MenuStart").GetGetMethod(), MenuConfirm_patch);
+            //MenuStart_hook = new Hook(typeof(KeyboardInput).GetProperty("MenuStart").GetGetMethod(), MenuConfirm_patch);
             MenuSkipReplay_hook = new Hook(typeof(KeyboardInput).GetProperty("MenuSkipReplay").GetGetMethod(), MenuSkipReplay_patch);
             MenuSaveReplay_hook = new Hook(typeof(KeyboardInput).GetProperty("MenuSaveReplay").GetGetMethod(), MenuSaveReplay_patch);
             MenuSaveReplayCheck_hook = new Hook(typeof(KeyboardInput).GetProperty("MenuSaveReplayCheck").GetGetMethod(), MenuSaveReplayCheck_patch);
@@ -62,7 +63,7 @@ namespace TF.EX.Patchs.PlayerInput
             On.TowerFall.KeyboardInput.GetState -= KeyboardInput_GetState;
 
             MenuConfirm_hook.Dispose();
-            MenuStart_hook.Dispose();
+            //MenuStart_hook.Dispose();
             MenuSkipReplay_hook.Dispose();
             MenuSaveReplay_hook.Dispose();
             MenuSaveReplayCheck_hook.Dispose();
@@ -152,17 +153,26 @@ namespace TF.EX.Patchs.PlayerInput
 
         private InputState KeyboardInput_GetState(On.TowerFall.KeyboardInput.orig_GetState orig, KeyboardInput self)
         {
-            //EnsureStateMachine();
-            if (_netplayManager.GetNetplayMode() != Domain.Models.NetplayMode.Test && !_netplayManager.IsReplayMode() && !_netplayManager.IsSynchronized())
+            if (_netplayManager.GetNetplayMode() != Domain.Models.NetplayMode.Test
+               && _netplayManager.GetNetplayMode() != Domain.Models.NetplayMode.Replay
+               && !_netplayManager.IsSynchronized())
             {
                 return orig(self);
             }
 
-            var mode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
+            var level = TFGame.Instance.Scene as TowerFall.Level;
 
-            if (!mode.IsNetplay() && _netplayManager.GetNetplayMode() == Domain.Models.NetplayMode.Uninitialized)
+            if (level == null)
             {
                 return orig(self);
+            }
+
+            var roundStarted = level.Session.RoundLogic.RoundStarted;
+
+            if (!roundStarted) //Ignore if round not started to prevent useless rollback
+            {
+                _inputService.ResetPolledInput();
+                return new InputState();
             }
 
             var polledInput = orig(self);
@@ -173,10 +183,10 @@ namespace TF.EX.Patchs.PlayerInput
                 {
                     _inputService.UpdatePolledInput(polledInput);
                 }
-                return _inputService.GetCurrentInput(_inputService.GetLocalPlayerInputIndex()); //TODO: get by player instead of index
+                return _inputService.GetCurrentInput(_inputService.GetLocalPlayerInputIndex()).ToTFInput(); //TODO: get by player instead of index
             }
 
-            return _inputService.GetCurrentInput(_inputService.GetRemotePlayerInputIndex());
+            return _inputService.GetCurrentInput(_inputService.GetRemotePlayerInputIndex()).ToTFInput();
         }
 
         //TODO: refactor to have a unique intercept for all inputs
@@ -185,8 +195,15 @@ namespace TF.EX.Patchs.PlayerInput
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
             var inputService = ServiceCollections.ResolveInputService();
+            var isReplayMode = netplayManager.IsReplayMode();
+            var isPaused = TFGame.Instance.Scene is TowerFall.Level && (TFGame.Instance.Scene as TowerFall.Level).Paused;
 
             var isNetplayInit = netplayManager.IsInit();
+
+            if (isReplayMode)
+            {
+                return true;
+            }
 
             if (TFGame.Instance.Scene is MainMenu
                && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
@@ -195,14 +212,20 @@ namespace TF.EX.Patchs.PlayerInput
                 return false; //Ignore input for other players in netplay
             }
 
-            if (netplayManager.IsDisconnected())
+            if (isPaused)
             {
                 return actualInput;
             }
 
             if (TFGame.Instance.Scene is Level && (TFGame.Instance.Scene as TowerFall.Level).Session.GetWinner() != -1)
             {
-                return actualInput;
+                var dynMacthResults = DynamicData.For((TFGame.Instance.Scene as TowerFall.Level).Get<VersusMatchResults>());
+                var isFinished = dynMacthResults.Get<bool>("finished");
+
+                if (isFinished)
+                {
+                    return actualInput;
+                }
             }
 
             if (TFGame.Instance.Scene is MapScene)
@@ -245,6 +268,11 @@ namespace TF.EX.Patchs.PlayerInput
 
                     return ServiceCollections.ResolveMatchmakingService().IsLobbyReady();
                 }
+            }
+
+            if (netplayManager.IsDisconnected())
+            {
+                return actualInput;
             }
 
             if (isNetplayInit)

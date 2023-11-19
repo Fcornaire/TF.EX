@@ -14,5 +14,11 @@
         public static readonly float INITIAL_GAME_RATE_TARGET = 1f;
 
         public static readonly double MIASMA_CUSTOM_DEPTH = -1000000.0; //Miasma doesn't have an actual depth, we need id at the end of the level entity list
+
+        public const string INVENTORY_INVISIBLE_DELEGATE = "InvisibleDelegate";
+        public const string INVENTORY_SHIELD_DELEGATE = "ShieldDelegate";
+        public const string RIGHT_STICK_VARIANT_NAME = "RightStickShot";
+        public const string RIGHT_STICK_VARIANT_TITLE = "RIGHT STICK SHOT";
+
     }
 }

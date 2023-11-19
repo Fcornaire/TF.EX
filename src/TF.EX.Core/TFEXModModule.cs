@@ -3,6 +3,7 @@ using Monocle;
 using MonoMod.ModInterop;
 using TF.EX.API;
 using TF.EX.Domain;
+using TF.EX.Domain.Models.State;
 using TF.EX.Patchs;
 using TowerFall;
 
@@ -37,6 +38,17 @@ namespace TF.EX
             }
 
             TF.EX.Domain.ServiceCollections.ServiceProvider.UnloadPatchs();
+        }
+
+        public override void OnVariantsRegister(VariantManager manager, bool noPerPlayer = false)
+        {
+            var rightStickArrow = new CustomVariantInfo(
+                Constants.RIGHT_STICK_VARIANT_NAME, Atlas["variants/freeAiming"],
+                "Shot arrow with your right stick!".ToUpperInvariant(),
+                CustomVariantFlags.CanRandom
+            );
+
+            manager.AddVariant(rightStickArrow, noPerPlayer);
         }
 
         private void RegisterAndLoad()

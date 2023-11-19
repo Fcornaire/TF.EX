@@ -62,7 +62,7 @@ namespace TF.EX.Patchs.Layer
                 {
                     if (inputRenderers[i] != null)
                     {
-                        InputState state = _inputService.GetCurrentInputs().ToArray()[i];
+                        InputState state = _inputService.GetCurrentInputs().ToArray()[i].ToTFInput();
                         inputRenderers[i].Render(state);
                     }
                 }

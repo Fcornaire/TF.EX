@@ -282,7 +282,7 @@ namespace TF.EX.Patchs.Scene
 
                 if (replays != null)
                 {
-                    replays.Clear();
+                    RemoveReplays();
                 }
 
                 if (noMsg != null)
@@ -429,7 +429,7 @@ namespace TF.EX.Patchs.Scene
 
             if (toLaunch != null)
             {
-                replays.Clear();
+                RemoveReplays();
                 Monocle.Music.Stop();
                 Sounds.ui_mapZoom.Play();
 
@@ -444,6 +444,7 @@ namespace TF.EX.Patchs.Scene
                     TFGame.Instance.Scene.RemoveLoader();
 
                     _inputService.EnableAllControllers();
+                    _inputService.EnsureFakeControllers();
                 });
             }
         }
@@ -938,7 +939,7 @@ namespace TF.EX.Patchs.Scene
 
         private void OnFailedToJoinLobby(MainMenu self)
         {
-            Notification.Create(self, $"Failed to join lobby", 10, 150);
+            Notification.Create(self, $"Failed to join lobby: either full, gone, or already started", 15, 450);
 
             _inputService.EnableAllControllers();
             self.RemoveLoader();
@@ -955,6 +956,16 @@ namespace TF.EX.Patchs.Scene
                 lobbyPanel.RemoveSelf();
                 lobbyPanel = null;
             }
+        }
+
+        private void RemoveReplays()
+        {
+            //foreach (var replay in replays.ToArray())
+            //{
+            //    replay.RemoveSelf();
+            //}
+
+            replays.Clear();
         }
     }
 

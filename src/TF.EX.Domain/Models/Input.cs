@@ -46,6 +46,9 @@ namespace TF.EX.Domain.Models
 
         [Key(11)]
         public Vector2f aim_axis { get; set; }
+
+        [Key(12)]
+        public Vector2f aim_right_axis { get; set; }
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -122,25 +125,6 @@ namespace TF.EX.Domain.Models
 
         public static int ToInt(this bool value) => value ? 1 : 0;
         public static bool ToBool(this int value) => value == 1;
-
-        public static Input ToModel(this InputState input)
-        {
-            return new Input
-            {
-                aim_axis = input.AimAxis.ToModel(),
-                alt_shoot_check = input.AltShootCheck.ToInt(),
-                alt_shoot_pressed = input.AltShootPressed.ToInt(),
-                arrow_pressed = input.ArrowsPressed.ToInt(),
-                dodge_check = input.DodgeCheck.ToInt(),
-                dodge_pressed = input.DodgePressed.ToInt(),
-                jump_check = input.JumpCheck.ToInt(),
-                jump_pressed = input.JumpPressed.ToInt(),
-                move_x = input.MoveX,
-                move_y = input.MoveY,
-                shoot_check = input.ShootCheck.ToInt(),
-                shoot_pressed = input.ShootPressed.ToInt()
-            };
-        }
 
         public static InputState ToTFInput(this Input input)
         {

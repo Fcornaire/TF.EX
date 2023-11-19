@@ -1,4 +1,7 @@
 ﻿using TF.EX.Domain.Context;
+using TF.EX.Domain.Extensions;
+using TF.EX.Domain.Models;
+using TF.EX.Domain.Models.State;
 using TF.EX.Domain.Ports.TF;
 using TowerFall;
 
@@ -33,12 +36,20 @@ namespace TF.EX.Domain.Services.TF
             }
         }
 
-        public InputState GetCurrentInput(int characterIndex)
+        public void EnsureFakeControllers()
+        {
+            if (TFGame.PlayerInputs[1] is null)
+            {
+                TFGame.PlayerInputs[1] = new FakeController();
+            }
+        }
+
+        public Input GetCurrentInput(int characterIndex)
         {
             return _context.GetCurrentInput(characterIndex);
         }
 
-        public List<InputState> GetCurrentInputs()
+        public List<Input> GetCurrentInputs()
         {
             return _context.GetCurrentInputs();
         }
@@ -48,7 +59,7 @@ namespace TF.EX.Domain.Services.TF
             return _context.GetLocalPlayerIndex();
         }
 
-        public InputState GetPolledInput()
+        public Input GetPolledInput()
         {
             return _context.GetPolledInput();
         }
@@ -60,10 +71,10 @@ namespace TF.EX.Domain.Services.TF
 
         public void ResetCurrentInput()
         {
-            var defaultInputs = new List<InputState>
+            var defaultInputs = new List<Input>
             {
-                new InputState(),
-                new InputState(),
+                new Input(),
+                new Input(),
             };
 
             _context.UpdateCurrentInputs(defaultInputs);
@@ -71,33 +82,34 @@ namespace TF.EX.Domain.Services.TF
 
         public void ResetPolledInput()
         {
-            _context.UpdatePolledInput(new InputState());
+            _context.UpdatePolledInput(new Input());
         }
 
-        public void UpdateCurrent(IEnumerable<InputState> inputs)
+        public void UpdateCurrent(IEnumerable<Input> inputs)
         {
             _context.UpdateCurrentInputs(inputs);
         }
 
 
-        public void UpdatePolledInput(InputState input)
+        public void UpdatePolledInput(InputState input, RightStick rightStick = default)
         {
             var polled = _context.GetPolledInput();
 
-            var newInput = new InputState
+            var newInput = new Input
             {
-                MoveX = input.MoveX,
-                MoveY = input.MoveY,
-                AimAxis = input.AimAxis,
-                JumpCheck = input.JumpCheck ? input.JumpCheck : polled.JumpCheck,
-                AltShootCheck = input.AltShootCheck ? input.AltShootCheck : polled.AltShootCheck,
-                AltShootPressed = input.AltShootPressed ? input.AltShootPressed : polled.AltShootPressed,
-                ArrowsPressed = input.ArrowsPressed ? input.ArrowsPressed : polled.ArrowsPressed,
-                DodgeCheck = input.DodgeCheck ? input.DodgeCheck : polled.DodgeCheck,
-                DodgePressed = input.DodgePressed ? input.DodgePressed : polled.DodgePressed,
-                JumpPressed = input.JumpPressed ? input.JumpPressed : polled.JumpPressed,
-                ShootCheck = input.ShootCheck ? input.ShootCheck : polled.ShootCheck,
-                ShootPressed = input.ShootPressed ? input.ShootPressed : polled.ShootPressed
+                move_x = input.MoveX,
+                move_y = input.MoveY,
+                aim_axis = input.AimAxis.ToModel(),
+                jump_check = input.JumpCheck ? input.JumpCheck.ToInt() : polled.jump_check,
+                alt_shoot_check = input.AltShootCheck ? input.AltShootCheck.ToInt() : polled.alt_shoot_check,
+                alt_shoot_pressed = input.AltShootPressed ? input.AltShootPressed.ToInt() : polled.alt_shoot_pressed,
+                arrow_pressed = input.ArrowsPressed ? input.ArrowsPressed.ToInt() : polled.arrow_pressed,
+                dodge_check = input.DodgeCheck ? input.DodgeCheck.ToInt() : polled.dodge_check,
+                dodge_pressed = input.DodgePressed ? input.DodgePressed.ToInt() : polled.dodge_pressed,
+                jump_pressed = input.JumpPressed ? input.JumpPressed.ToInt() : polled.jump_pressed,
+                shoot_check = input.ShootCheck ? input.ShootCheck.ToInt() : polled.shoot_check,
+                shoot_pressed = input.ShootPressed ? input.ShootPressed.ToInt() : polled.shoot_pressed,
+                aim_right_axis = rightStick.AimAxis.ToModel(),
             };
 
             _context.UpdatePolledInput(newInput);

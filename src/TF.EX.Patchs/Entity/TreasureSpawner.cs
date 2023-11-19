@@ -7,11 +7,21 @@ namespace TF.EX.Patchs.Entity
         public void Load()
         {
             On.TowerFall.TreasureSpawner.GetChestSpawnsForLevel += TreasureSpawner_GetChestSpawnsForLevel;
+            On.TowerFall.TreasureSpawner.ctor_Session_Int32Array_float_bool += TreasureSpawner_ctor_Session_Int32Array_float_bool;
         }
 
         public void Unload()
         {
             On.TowerFall.TreasureSpawner.GetChestSpawnsForLevel -= TreasureSpawner_GetChestSpawnsForLevel;
+            On.TowerFall.TreasureSpawner.ctor_Session_Int32Array_float_bool -= TreasureSpawner_ctor_Session_Int32Array_float_bool;
+        }
+
+        private void TreasureSpawner_ctor_Session_Int32Array_float_bool(On.TowerFall.TreasureSpawner.orig_ctor_Session_Int32Array_float_bool orig, TowerFall.TreasureSpawner self, TowerFall.Session session, int[] mask, float arrowChance, bool arrowShuffle)
+        {
+            orig(self, session, mask, arrowChance, arrowShuffle);
+
+            var dynSpawner = MonoMod.Utils.DynamicData.For(self);
+            dynSpawner.Set("Random", Monocle.Calc.Random);
         }
 
         private List<TowerFall.TreasureChest> TreasureSpawner_GetChestSpawnsForLevel(On.TowerFall.TreasureSpawner.orig_GetChestSpawnsForLevel orig, TowerFall.TreasureSpawner self, List<Vector2> chestPositions, List<Vector2> bigChestPositions)
