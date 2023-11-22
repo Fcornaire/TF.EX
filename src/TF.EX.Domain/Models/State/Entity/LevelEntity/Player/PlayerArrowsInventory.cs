@@ -1,4 +1,5 @@
 ﻿using MessagePack;
+using TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows;
 
 namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Player
 {
@@ -6,8 +7,9 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Player
     public class PlayerArrowsInventory
     {
         [Key(0)]
-        public int Normal { get; set; }
+        public IEnumerable<ArrowTypes> Arrows { get; set; }
+
+        [Key(1)]
+        public IEnumerable<ArrowTypes> SortSet { get; set; }
     }
-
-
 }
