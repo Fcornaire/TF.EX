@@ -148,7 +148,7 @@ namespace TF.EX.TowerFallExtensions
             {
                 gameState.MatchStats = new TF.EX.Domain.Models.State.MatchStats[]
                 {
-                    self.Session.MatchStats[0].ToDomain(), self.Session.MatchStats[1].ToDomain(),
+                   self.Session.MatchStats[0].ToDomain(), self.Session.MatchStats[1].ToDomain(),
                 };
             }
             else
@@ -673,7 +673,7 @@ namespace TF.EX.TowerFallExtensions
             foreach (var playerCorpse in gs.Entities.PlayerCorpses.ToArray())
             {
                 var gamePlayerCorpse = self.GetEntityByDepth(playerCorpse.ActualDepth) as TowerFall.PlayerCorpse;
-                gamePlayerCorpse.LoadArrowCushion(playerCorpse);
+                gamePlayerCorpse.LoadArrowCushionDatas(playerCorpse);
             }
         }
 
