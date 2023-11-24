@@ -2,7 +2,7 @@
 {
     public static class Constants //TODO: move ton Common project
     {
-        public static readonly int NETPLAY_MAP_LIMIT = 2; //Not all map are supported in netplay right now...
+        public static readonly int NETPLAY_MAP_LIMIT = 3; //Not all map are supported in netplay right now...
         public static readonly int MAX_SFX_DELAY = 10;
         public static readonly int GAMEPLAY_LAYER = 0;
         public static readonly float INITIAL_END_COUNTER = 90.0f;
