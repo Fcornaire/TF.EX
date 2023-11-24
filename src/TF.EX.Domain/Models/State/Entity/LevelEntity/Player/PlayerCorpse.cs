@@ -1,4 +1,5 @@
 ﻿using MessagePack;
+using TF.EX.Domain.Models.State.Component;
 
 namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Player
 {
@@ -34,25 +35,6 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Player
 
         [Key(9)]
         public double ActualDepth { get; set; }
-    }
-
-    [MessagePackObject]
-    public class ArrowCushion
-    {
-        [Key(0)]
-        public Vector2f Offset { get; set; }
-
-        [Key(1)]
-        public float Rotation { get; set; }
-
-        [Key(2)]
-        public bool LockOffset { get; set; }
-
-        [Key(3)]
-        public bool LockDirection { get; set; }
-
-        [Key(4)]
-        public List<ArrowCushionData> ArrowCushionDatas { get; set; }
     }
 
     [MessagePackObject]

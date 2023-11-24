@@ -3,6 +3,7 @@ using Monocle;
 using MonoMod.Utils;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows;
+using TF.EX.TowerFallExtensions.Component;
 using TF.EX.TowerFallExtensions.ComponentExtensions;
 
 namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
@@ -20,35 +21,55 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             var counter = dynArrow.Get<Vector2>("counter");
             var flashCounter = dynArrow.Get<float>("flashCounter");
             var flashInterval = dynArrow.Get<float>("flashInterval");
+            var buriedIn = entity.BuriedIn;
 
-            return new Arrow
+            var builder = new ArrowBuilder();
+            builder.WithActualDepth(actualDepth);
+            builder.WithArrowType(entity.ArrowType);
+            builder.WithDirection(entity.Direction);
+            builder.WithPlayerIndex(entity.PlayerIndex);
+            builder.WithPosition(entity.Position.ToModel());
+            builder.WithShootingCounter(shootingCounter.Value);
+            builder.WithCannotPickupCounter(cannotPickupCounter.Value);
+            builder.WithCannotCatchCounter(cannotCatchCounter.Value);
+            builder.WithSpeed(entity.Speed.ToModel());
+            builder.WithState(entity.State);
+            builder.WithStuckDirection(stuckDir.ToModel());
+            builder.WithPositionCounter(counter.ToModel());
+            builder.WithIsActive(entity.Active);
+            builder.WithIsCollidable(entity.Collidable);
+            builder.WithIsFrozen(entity.Frozen);
+            builder.WithIsVisible(entity.Visible);
+            builder.WithMarkedForRemoval(entity.MarkedForRemoval);
+            builder.WithFireControl(entity.Fire.GetState());
+            builder.WithFlash(new Domain.Models.State.Entity.LevelEntity.Flash
             {
-                ActualDepth = actualDepth,
-                ArrowType = entity.ArrowType.ToModel(),
-                Direction = entity.Direction,
-                PlayerIndex = entity.PlayerIndex,
-                Position = entity.Position.ToModel(),
-                ShootingCounter = shootingCounter.Value,
-                CannotPickupCounter = cannotPickupCounter.Value,
-                CannotCatchCounter = cannotCatchCounter.Value,
-                Speed = entity.Speed.ToModel(),
-                State = entity.State.ToModel(),
-                StuckDirection = stuckDir.ToModel(),
-                PositionCounter = counter.ToModel(),
-                IsActive = entity.Active,
-                IsCollidable = entity.Collidable,
-                IsFrozen = entity.Frozen,
-                IsVisible = entity.Visible,
-                MarkedForRemoval = entity.MarkedForRemoval,
-                FireControl = entity.Fire.GetState(),
-                Flash = new Domain.Models.State.Entity.LevelEntity.Flash
-                {
-                    IsFlashing = entity.Flashing,
-                    FlashCounter = flashCounter,
-                    FlashInterval = flashInterval
-                },
-                HasUnhittableEntity = entity.CannotHit != null
-            };
+                IsFlashing = entity.Flashing,
+                FlashCounter = flashCounter,
+                FlashInterval = flashInterval
+            });
+            builder.WithHasUnhittableEntity(entity.CannotHit != null);
+            builder.WithBuriedIn(buriedIn?.GetState());
+
+            switch (entity.ArrowType)
+            {
+                case TowerFall.ArrowTypes.Bomb:
+                    var bombArrow = (TowerFall.BombArrow)entity;
+                    var dynBombArrow = DynamicData.For(bombArrow);
+                    bool canExplode = dynBombArrow.Get<bool>("canExplode");
+                    Alarm explodeAlarm = dynBombArrow.Get<Alarm>("explodeAlarm");
+                    Sprite<int> normalSprite = dynBombArrow.Get<Sprite<int>>("normalSprite");
+                    Sprite<int> buriedSprite = dynBombArrow.Get<Sprite<int>>("buriedSprite");
+
+                    builder.WithCanExplode(canExplode);
+                    builder.WithExplodeAlarm(explodeAlarm.GetState());
+                    builder.WithNormalSprite(normalSprite.GetState());
+                    builder.WithBuriedSprite(buriedSprite.GetState());
+
+                    break;
+            }
+
+            return builder.Build();
         }
 
         public static void LoadState(this TowerFall.Arrow entity, Arrow toLoad)
@@ -95,6 +116,37 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             {
                 entity.CannotHit = null;
             }
+
+            switch (toLoad.ArrowType)
+            {
+                case ArrowTypes.Bomb:
+                    var bombArrow = (TowerFall.BombArrow)entity;
+                    var dynBombArrow = DynamicData.For(bombArrow);
+                    var toLoadBombArrow = (BombArrow)toLoad;
+
+                    dynBombArrow.Set("canExplode", toLoadBombArrow.CanExplode);
+
+                    var explodeAlarm = dynBombArrow.Get<Alarm>("explodeAlarm");
+                    explodeAlarm.LoadState(toLoadBombArrow.ExplodeAlarm);
+
+                    var normalSprite = dynBombArrow.Get<Sprite<int>>("normalSprite");
+                    normalSprite.LoadState(toLoadBombArrow.NormalSprite);
+
+                    var buriedSprite = dynBombArrow.Get<Sprite<int>>("buriedSprite");
+                    buriedSprite.LoadState(toLoadBombArrow.BuriedSprite);
+
+                    if (toLoadBombArrow.BuriedIn != null)
+                    {
+                        //TODO: Always a player corpse?
+                        var arrowCushion = ((entity.Scene as TowerFall.Level).GetEntityByDepth(toLoad.BuriedIn.EntityActualDepth) as TowerFall.PlayerCorpse).ArrowCushion;
+
+                        dynBombArrow.Set("BuriedIn", arrowCushion);
+                        bombArrow.BuriedIn.LoadState(toLoadBombArrow.BuriedIn);
+                    }
+
+                    break;
+            }
+
         }
 
         public static void LoadCannotHit(this TowerFall.Arrow self, bool hasUnhittable, int playerIndex)

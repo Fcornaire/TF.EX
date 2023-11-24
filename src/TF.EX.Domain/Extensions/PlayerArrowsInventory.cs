@@ -1,29 +1,36 @@
-﻿using TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows;
+﻿using MonoMod.Utils;
+using TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows;
 using TF.EX.Domain.Models.State.Entity.LevelEntity.Player;
+using TowerFall;
 
 namespace TF.EX.Domain.Extensions
 {
     public static class PlayerArrowsInventoryExtensions
     {
-        public static PlayerArrowsInventory ToModel(this List<TowerFall.ArrowTypes> playerArrows)
+        public static PlayerArrowsInventory ToModel(this ArrowList arrowList)
         {
-            var normal = playerArrows.Where(arrow => arrow.ToModel().Equals(ArrowTypes.Normal)).Count();
+            var dynArrowList = DynamicData.For(arrowList);
+            List<TowerFall.ArrowTypes> sortSet = dynArrowList.Get<List<TowerFall.ArrowTypes>>("sortSet");
 
             return new PlayerArrowsInventory
             {
-                Normal = normal,
+                Arrows = arrowList.Arrows.Select(arrow => arrow.ToModel()),
+                SortSet = sortSet.Select(arrow => arrow.ToModel())
             };
 
         }
 
-        public static void Update(this List<TowerFall.ArrowTypes> playerArrows, PlayerArrowsInventory toLoad)
+        public static void ToLoad(this ArrowList arrowList, PlayerArrowsInventory toLoad)
         {
-            playerArrows.Clear();
+            arrowList.Arrows.Clear();
 
-            for (int i = 0; i < toLoad.Normal; i++)
+            foreach (var arrow in toLoad.Arrows)
             {
-                playerArrows.Add(TowerFall.ArrowTypes.Normal);
+                arrowList.Arrows.Add(arrow.ToTFModel());
             }
+
+            var dynArrowList = DynamicData.For(arrowList);
+            dynArrowList.Set("sortSet", toLoad.SortSet.Select(arrow => arrow.ToTFModel()).ToList());
         }
     }
 }

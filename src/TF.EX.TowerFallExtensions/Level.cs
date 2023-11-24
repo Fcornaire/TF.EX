@@ -148,7 +148,7 @@ namespace TF.EX.TowerFallExtensions
             {
                 gameState.MatchStats = new TF.EX.Domain.Models.State.MatchStats[]
                 {
-                    self.Session.MatchStats[0].ToDomain(), self.Session.MatchStats[1].ToDomain(),
+                   self.Session.MatchStats[0].ToDomain(), self.Session.MatchStats[1].ToDomain(),
                 };
             }
             else
@@ -161,8 +161,10 @@ namespace TF.EX.TowerFallExtensions
             }
 
             gameState.AddCrackedPlatform(self);
+            gameState.AddCrackedWalls(self);
             gameState.AddSpikeball(self);
             gameState.AddExplosions(self);
+            gameState.AddBGMushrooms(self);
 
             gameState.AdditionnalData = TF.EX.Domain.ServiceCollections.ResolveAPIManager().GetStates();
 
@@ -424,7 +426,6 @@ namespace TF.EX.TowerFallExtensions
             }
 
             hudService.Update(gameState.Entities.Hud);
-
             //Players
             foreach (Domain.Models.State.Entity.LevelEntity.Player.Player toLoad in gameState.Entities.Players.ToArray())
             {
@@ -585,6 +586,12 @@ namespace TF.EX.TowerFallExtensions
             //BGTorches load
             gameState.LoadBGTorches(level);
 
+            //CrackedWall load
+            gameState.LoadCrackedWalls(level);
+
+            //BGMushroom load
+            gameState.LoadBGMushrooms(level);
+
             //Background load
             foreach (BackgroundElement toLoad in gameState.Layer.BackgroundElements.ToArray())
             {
@@ -673,7 +680,7 @@ namespace TF.EX.TowerFallExtensions
             foreach (var playerCorpse in gs.Entities.PlayerCorpses.ToArray())
             {
                 var gamePlayerCorpse = self.GetEntityByDepth(playerCorpse.ActualDepth) as TowerFall.PlayerCorpse;
-                gamePlayerCorpse.LoadArrowCushion(playerCorpse);
+                gamePlayerCorpse.LoadArrowCushionDatas(playerCorpse);
             }
         }
 
@@ -1044,6 +1051,33 @@ namespace TF.EX.TowerFallExtensions
             }
         }
 
+        public static void AddCrackedWalls(this GameState gameState, TowerFall.Level level)
+        {
+            var crackedWalls = level.GetAll<TowerFall.CrackedWall>().ToArray();
+            if (crackedWalls != null && crackedWalls.Length > 0)
+            {
+                foreach (TowerFall.CrackedWall crackedWall in crackedWalls)
+                {
+                    var crackedWallState = crackedWall.GetState();
+                    gameState.Entities.CrackedWalls.Add(crackedWallState);
+                    ServiceCollections.AddEntityToCache(crackedWallState.ActualDepth, crackedWall);
+                }
+            }
+        }
+
+        private static void AddBGMushrooms(this GameState game, Level level)
+        {
+            var bgMushrooms = level.GetAll<TowerFall.BGMushroom>().ToArray();
+            if (bgMushrooms != null && bgMushrooms.Length > 0)
+            {
+                foreach (TowerFall.BGMushroom bgMushroom in bgMushrooms)
+                {
+                    var mush = bgMushroom.GetState();
+                    game.Entities.BGMushrooms.Add(mush);
+                }
+            }
+        }
+
         private static void LoadLavaControl(this GameState gameState, Level level)
         {
             var gameLavaControl = level.Get<LavaControl>();
@@ -1184,6 +1218,54 @@ namespace TF.EX.TowerFallExtensions
                     if (currentTorch != null)
                     {
                         torch.LoadState(currentTorch);
+                    }
+                }
+            }
+        }
+
+        public static void LoadCrackedWalls(this GameState gameState, TowerFall.Level level)
+        {
+            level.DeleteAll<TowerFall.CrackedWall>();
+
+            foreach (var crackedWallToLoad in gameState.Entities.CrackedWalls.ToArray())
+            {
+                var cachedCrackedWall = ServiceCollections.GetCachedEntity<TowerFall.CrackedWall>(crackedWallToLoad.ActualDepth);
+
+                if (cachedCrackedWall == null)
+                {
+                    cachedCrackedWall = new TowerFall.CrackedWall(crackedWallToLoad.Position.ToTFVector());
+                }
+
+                var dynCachedCrackedWall = DynamicData.For(cachedCrackedWall);
+                dynCachedCrackedWall.Set("Level", level);
+                dynCachedCrackedWall.Set("Scene", level);
+
+                var dynCachedCrackedWallScene = DynamicData.For(cachedCrackedWall.Scene);
+
+                dynCachedCrackedWallScene.Invoke("TagEntityInstant", cachedCrackedWall, GameTags.Solid);
+                dynCachedCrackedWallScene.Invoke("TagEntityInstant", cachedCrackedWall, GameTags.ExplosionCollider);
+
+
+                cachedCrackedWall.LoadState(crackedWallToLoad);
+
+                level.GetGameplayLayer().Entities.Insert(0, cachedCrackedWall);
+            }
+        }
+
+        public static void LoadBGMushrooms(this GameState gameState, TowerFall.Level level)
+        {
+            var gameBGMushrooms = level.GetAll<TowerFall.BGMushroom>().ToArray();
+            if (gameBGMushrooms != null && gameBGMushrooms.Length > 0)
+            {
+                foreach (TowerFall.BGMushroom bgMushroom in gameBGMushrooms)
+                {
+                    var dynBGMushroom = DynamicData.For(bgMushroom);
+                    var actualDepth = dynBGMushroom.Get<double>("actualDepth");
+
+                    var currentBGMushroom = gameState.Entities.BGMushrooms.FirstOrDefault(cp => cp.ActualDepth == actualDepth);
+                    if (currentBGMushroom != null)
+                    {
+                        bgMushroom.LoadState(currentBGMushroom);
                     }
                 }
             }
