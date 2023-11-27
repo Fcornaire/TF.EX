@@ -217,14 +217,21 @@ namespace TF.EX.Patchs.Scene
 
             self.Add(variants);
 
-            createEntityButton = new Monocle.Entity();
-            var createButton = new MenuButtonGuide(4);
-            createButton.SetDetails(MenuButtonGuide.ButtonModes.Start, "CREATE LOBBY");
-            createEntityButton.Add(createButton);
-            self.Add(createEntityButton);
+            try
+            {
+                createEntityButton = new Monocle.Entity();
+                var createButton = new MenuButtonGuide(4);
+                createButton.SetDetails(MenuButtonGuide.ButtonModes.Start, "CREATE LOBBY");
+                createEntityButton.Add(createButton);
+                self.Add(createEntityButton);
 
-            self.ButtonGuideA.SetDetails(MenuButtonGuide.ButtonModes.Confirm, "VARIANT SELECT");
-            self.ButtonGuideB.SetDetails(MenuButtonGuide.ButtonModes.Back, "CANCEL");
+                self.ButtonGuideA.SetDetails(MenuButtonGuide.ButtonModes.Confirm, "VARIANT SELECT");
+                self.ButtonGuideB.SetDetails(MenuButtonGuide.ButtonModes.Back, "CANCEL");
+            }
+            catch (System.Exception ex)
+            {
+                _logger.LogError<MainMenuPatch>("Error when creating lobby builder menu", ex);
+            }
 
             Sounds.ui_startGame.Play();
         }
