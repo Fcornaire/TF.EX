@@ -103,7 +103,17 @@ namespace TF.EX.Domain.CustomComponent
 
         private void UpdateMapIcon(int mapId)
         {
-            var imgs = MapButton.InitVersusGraphics(mapId);
+            var imgs = mapId == -1 ? MapButton.InitRandomVersusGraphics() : MapButton.InitVersusGraphics(mapId);
+
+            if (block != null)
+            {
+                block.RemoveSelf();
+            }
+
+            if (icon != null)
+            {
+                icon.RemoveSelf();
+            }
 
             block = imgs[0];
             icon = imgs[1];
@@ -118,12 +128,14 @@ namespace TF.EX.Domain.CustomComponent
 
         private void UpdateTitle(int mapId)
         {
-            var tower = TowerFall.GameData.VersusTowers[mapId];
+            var towerName = mapId == -1 ? "RANDOM" : TowerFall.GameData.VersusTowers[mapId].Theme.Name;
 
-            _title = new OutlineText(TFGame.Font, tower.Theme.Name);
-            _title.Scale = Vector2.One * 1.4f;
-            _title.Color = Color.WhiteSmoke;
-            _title.OutlineColor = Color.Black;
+            _title = new OutlineText(TFGame.Font, towerName)
+            {
+                Scale = Vector2.One * 1.4f,
+                Color = Color.WhiteSmoke,
+                OutlineColor = Color.Black
+            };
 
             _title.Position.Y -= 38;
 

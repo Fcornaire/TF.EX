@@ -1,5 +1,7 @@
+using FortRise.Adventure;
 using TF.EX.Domain;
 using TF.EX.Domain.Extensions;
+using TF.EX.Domain.Models.State;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
 using TF.EX.TowerFallExtensions;
@@ -14,12 +16,6 @@ namespace TF.EX.Patchs.Scene
         private readonly IRngService _rngService;
         private readonly INetplayManager netplayManager;
 
-        private static readonly IEnumerable<string> NETPLAY_SAFE_MAP = new List<string>
-        {
-            "SACRED GROUND",
-            "TWILIGHT SPIRE"
-        };
-
         public MapScenePatch(IInputService inputService, IMatchmakingService matchmakingService, IRngService rngService, INetplayManager netplayManager)
         {
             _inputService = inputService;
@@ -31,14 +27,14 @@ namespace TF.EX.Patchs.Scene
         public void Load()
         {
             On.TowerFall.MapScene.StartSession += MapScene_StartSession;
-            //On.TowerFall.MapScene.GetRandomVersusTower += MapScene_GetRandomVersusTower;
+            On.TowerFall.MapScene.GetRandomVersusTower += MapScene_GetRandomVersusTower;
             On.TowerFall.MapScene.Begin += MapScene_Begin;
         }
 
         public void Unload()
         {
             On.TowerFall.MapScene.StartSession -= MapScene_StartSession;
-            //On.TowerFall.MapScene.GetRandomVersusTower -= MapScene_GetRandomVersusTower;
+            On.TowerFall.MapScene.GetRandomVersusTower -= MapScene_GetRandomVersusTower;
             On.TowerFall.MapScene.Begin -= MapScene_Begin;
         }
 
@@ -63,7 +59,10 @@ namespace TF.EX.Patchs.Scene
             if (currentMode.IsNetplay())
             {
                 self.Selection.OnDeselect();
-                self.Selection = self.Buttons.First(button => matchmakingService.GetOwnLobby().GameData.MapId == button.Data?.ID.X);
+
+                var mapId = matchmakingService.GetOwnLobby().GameData.MapId;
+
+                self.Selection = self.Buttons.First(button => mapId == -1 ? (button is VersusRandomSelect && button is not AdventureChaoticRandomSelect) : mapId == button.Data?.ID.X);
                 self.Selection.OnSelect();
                 self.ScrollToButton(self.Selection);
             }
@@ -107,7 +106,7 @@ namespace TF.EX.Patchs.Scene
                 }
             }
 
-            _rngService.Get().ResetRandom(ref Monocle.Calc.Random);
+            _rngService.Reset();
             var shuffled = CalcExtensions.OwnMapButtonShuffle(list).ToArray();
             return shuffled[0];
             //return shuffled.SingleOrDefault(b => b.Data.ID.X == 1); //Usefull for debug
@@ -115,7 +114,7 @@ namespace TF.EX.Patchs.Scene
 
         private bool IsNetplaySafe(string title)
         {
-            return NETPLAY_SAFE_MAP.Contains(title);
+            return Constants.NETPLAY_SAFE_MAP.Contains(title);
         }
     }
 }
