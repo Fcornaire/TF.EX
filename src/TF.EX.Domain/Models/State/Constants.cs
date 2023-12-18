@@ -7,6 +7,7 @@
             "SACRED GROUND",
             "TWILIGHT SPIRE",
             "BACKFIRE",
+            "FLIGHT"
         };
 
         public static readonly int MAX_SFX_DELAY = 10;
