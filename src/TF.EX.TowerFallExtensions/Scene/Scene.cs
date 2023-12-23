@@ -5,6 +5,12 @@ namespace TF.EX.TowerFallExtensions.Scene
 {
     public static class SceneExtensions
     {
+        public static bool Has<T>(this Monocle.Scene self) where T : Monocle.Entity
+        {
+            return self.Layers.SelectMany(layer => layer.Value.Entities)
+                .Any(ent => ent is T);
+        }
+
         public static T Get<T>(this Monocle.Scene self) where T : Monocle.Entity
         {
             return self.Layers.SelectMany(layer => layer.Value.Entities)

@@ -77,6 +77,7 @@ namespace TF.EX.Patchs
             serviceCollection.AddSingleton<IHookable, MenuItemPatch>();
             serviceCollection.AddSingleton<IHookable, MatchVariantsPatchs>();
             serviceCollection.AddSingleton<IHookable, VariantPatch>();
+            serviceCollection.AddSingleton<IHookable, GifExporterPatch>();
         }
 
         public static LavaPatch GetLavaPatch(this IServiceProvider serviceProvider)

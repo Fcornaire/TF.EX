@@ -264,6 +264,8 @@ namespace TF.EX.Patchs.Engine
                                 _netplayManager.UpdateFramesToReSimulate(0);
                             }
 
+                            _replayService.RecordScreen();
+
                             _netplayManager.AdvanceGameState();
                             var dynScene = DynamicData.For(self.Scene);
                             dynScene.Set("FrameCounter", GGRSFFI.netplay_current_frame());

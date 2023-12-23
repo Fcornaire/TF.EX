@@ -275,7 +275,7 @@ namespace TF.EX.Patchs.PlayerInput
                 return true;
             }
 
-            if (netplayManager.IsDisconnected())
+            if (netplayManager.IsDisconnected() && TFGame.Instance.Scene is TowerFall.Level && !(TFGame.Instance.Scene as TowerFall.Level).Has<GifExporter>())
             {
                 return actualInput;
             }

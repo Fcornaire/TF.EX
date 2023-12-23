@@ -1,5 +1,7 @@
 ﻿using MessagePack;
 using Microsoft.Extensions.Logging;
+using Monocle;
+using MonoMod.Utils;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using TF.EX.Common.Extensions;
@@ -23,6 +25,9 @@ namespace TF.EX.Domain.Services
         private readonly INetplayManager _netplayManager;
         private readonly ILogger _logger;
         private int currentReplayFrame = 0;
+        private LinkedList<ReplayFrame> liveRecords = new LinkedList<ReplayFrame>();
+        private List<ReplayFrame> liveRecordsCache = new List<ReplayFrame>();
+
 
         private string REPLAYS_FOLDER => $"{Directory.GetCurrentDirectory()}\\Replays";
 
@@ -68,7 +73,8 @@ namespace TF.EX.Domain.Services
             replay.Informations.MatchLenght = FrameToTimestamp(replay.Record.Count);
             replay.Informations.Archers = _netplayManager.GetArchersInfo();
 
-            var filename = $"{DateTime.UtcNow.ToString("dd'-'MM'-'yyy'T'HH'-'mm'-'ss")}.tow";
+            var date = DateTime.UtcNow.ToString("dd'-'MM'-'yyy'T'HH'-'mm'-'ss");
+            var filename = $"{date}.tow";
 
             replay.Informations.Name = filename;
 
@@ -80,6 +86,19 @@ namespace TF.EX.Domain.Services
             WriteToFile(replay, fileStream);
 
             _gameContext.ResetReplay();
+
+            if (TFGame.Instance.Scene is Level level && (TFGame.Instance.Scene as Level).Session.GetWinner() == -1)
+            {
+                var replayData = new ReplayData(liveRecords.ToArray());
+                var exporter = new GifExporter(replayData, (v) => { });
+
+                var gifPath = $"{REPLAYS_FOLDER}\\{date}.gif";
+
+                var dynExporter = DynamicData.For(exporter);
+                dynExporter.Add("FilePath", gifPath);
+
+                TFGame.Instance.Scene.Add(exporter);
+            }
         }
 
         public void Initialize(Domain.Models.WebSocket.GameData gameData = null)
@@ -221,6 +240,8 @@ namespace TF.EX.Domain.Services
         public void Reset()
         {
             _gameContext.ResetReplay();
+            liveRecords.Clear();
+            liveRecordsCache.Clear();
         }
 
         public async Task<IEnumerable<Replay>> LoadAndGetReplays()
@@ -308,6 +329,37 @@ namespace TF.EX.Domain.Services
             }
 
             return res.OrderBy(replay => replay.Informations.Name);
+        }
+
+        public void RecordScreen()
+        {
+            ReplayFrame replayFrame;
+            if (liveRecords.Count >= 1500)
+            {
+                replayFrame = liveRecords.First.Value;
+                liveRecords.RemoveFirst();
+            }
+            else if (liveRecordsCache.Count > 0)
+            {
+                replayFrame = liveRecordsCache.First();
+                liveRecordsCache.RemoveAt(0);
+            }
+            else
+            {
+                replayFrame = new ReplayFrame();
+            }
+
+            var timeSinceLastFrame = Engine.DeltaTime;
+            var ticksSinceLastFrame = Engine.DeltaTicks;
+
+            replayFrame.Record(timeSinceLastFrame, ticksSinceLastFrame);
+            if (timeSinceLastFrame < 0.0156666674f && liveRecords.Count > 0)
+            {
+                liveRecordsCache.Add(replayFrame);
+                return;
+            }
+
+            liveRecords.AddLast(replayFrame);
         }
     }
 }

@@ -19,5 +19,7 @@ namespace TF.EX.Domain.Ports
         void GoTo(int numbreOfFrames);
         void Reset();
         Task<IEnumerable<Replay>> LoadAndGetReplays();
+
+        void RecordScreen();
     }
 }
