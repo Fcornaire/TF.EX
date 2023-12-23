@@ -83,6 +83,7 @@ namespace TF.EX.Domain.Models
         V2, //changed input struct to use int instead of bool
         V3, //added variants
         V4, //Switched serialization to MessagePack
+        V5, //Added StuckTo actualdepth to Arrow instead of saving the stuck entity
     }
 
     public static class ReplayVersionExtensions

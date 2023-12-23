@@ -70,5 +70,8 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
 
         [Key(20)]
         public ArrowCushion BuriedIn { get; set; }
+
+        [Key(21)]
+        public double StuckToActualDepth { get; set; }
     }
 }
