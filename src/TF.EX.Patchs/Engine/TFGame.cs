@@ -177,6 +177,7 @@ namespace TF.EX.Patchs.Engine
                 if (gameLoaded && self.Scene is Level && !(self.Scene as Level).Paused)
                 {
                     _replayService.RunFrame();
+                    //(self.Scene as Level).LoadState(_replayService.GetCurrentRecord().GameState);
                 }
                 orig(self, gameTime);
                 //self.Screen.Offset = Vector2.Zero; //Ignore camera offset on replay mode (used by some orb)

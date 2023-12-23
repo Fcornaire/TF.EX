@@ -51,6 +51,12 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             builder.WithHasUnhittableEntity(entity.CannotHit != null);
             builder.WithBuriedIn(buriedIn?.GetState());
 
+            if (entity.StuckTo != null && entity.State == TowerFall.Arrow.ArrowStates.Stuck)
+            {
+                var stuckToActualDepth = DynamicData.For(entity.StuckTo).Get<double>("actualDepth");
+                builder.WithStuckToActualDepth(stuckToActualDepth);
+            }
+
             switch (entity.ArrowType)
             {
                 case TowerFall.ArrowTypes.Bomb:
@@ -111,6 +117,11 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 
             var fireControl = dynArrow.Get<TowerFall.FireControl>("Fire");
             fireControl.LoadState(toLoad.FireControl);
+
+            if (toLoad.StuckToActualDepth != 0)
+            {
+                dynArrow.Set("StuckTo", entity.Level.GetEntityByDepth(toLoad.StuckToActualDepth));
+            }
 
             if (!toLoad.HasUnhittableEntity)
             {

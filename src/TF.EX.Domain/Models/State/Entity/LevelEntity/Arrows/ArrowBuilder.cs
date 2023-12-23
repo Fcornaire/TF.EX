@@ -177,6 +177,12 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
             return this;
         }
 
+        public ArrowBuilder WithStuckToActualDepth(double stuckToActualDepth)
+        {
+            arrow.StuckToActualDepth = stuckToActualDepth;
+            return this;
+        }
+
         public Arrow Build()
         {
             switch (arrow.ArrowType)
@@ -204,7 +210,8 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
                         FireControl = arrow.FireControl,
                         Flash = arrow.Flash,
                         HasUnhittableEntity = arrow.HasUnhittableEntity,
-                        BuriedIn = arrow.BuriedIn
+                        BuriedIn = arrow.BuriedIn,
+                        StuckToActualDepth = arrow.StuckToActualDepth
                     };
                 case ArrowTypes.Bomb:
                     return new BombArrow
@@ -233,7 +240,8 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
                         BuriedSprite = arrow.BuriedSprite,
                         CanExplode = arrow.CanExplode,
                         ExplodeAlarm = arrow.ExplodeAlarm,
-                        NormalSprite = arrow.NormalSprite
+                        NormalSprite = arrow.NormalSprite,
+                        StuckToActualDepth = arrow.StuckToActualDepth
                     };
                 default:
                     return arrow;

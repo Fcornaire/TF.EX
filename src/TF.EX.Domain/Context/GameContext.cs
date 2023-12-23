@@ -10,8 +10,6 @@ namespace TF.EX.Domain.Context
 {
     public interface IGameContext //TODO: internal context so that only services can access this API
     {
-        void AddStuckArrow(Vector2f arrowPosition, TowerFall.Platform platform);
-        Dictionary<Vector2f, TowerFall.Platform> GetPlatoformStuckArrows();
         void UpdateCurrentInputs(IEnumerable<Input> inputs);
         void UpdatePolledInput(Input input);
         Input GetPolledInput();
@@ -64,7 +62,6 @@ namespace TF.EX.Domain.Context
     {
         private const int NUM_PLAYER = 2; //TODO: variable
 
-        private readonly Dictionary<Vector2f, TowerFall.Platform> StuckArrows_Platforms; //Save Stuck arrow instead of serialising it TODO: clear when running a new netplay session
         private readonly AttributeManager<Input> CurrentInputs;
         private Input PolledInput;
         private Session Session;
@@ -83,7 +80,6 @@ namespace TF.EX.Domain.Context
 
         public GameContext()
         {
-            StuckArrows_Platforms = new Dictionary<Vector2f, TowerFall.Platform>();
             PolledInput = new Input();
             CurrentInputs = new AttributeManager<Input>(EmptyInput, NUM_PLAYER);
             Session = new Session
@@ -94,19 +90,6 @@ namespace TF.EX.Domain.Context
                 RoundStarted = false
             };
             _hudState = new HUD();
-        }
-
-        public void AddStuckArrow(Vector2f arrowPosition, TowerFall.Platform platform)
-        {
-            if (!StuckArrows_Platforms.ContainsKey(arrowPosition))
-            {
-                StuckArrows_Platforms.Add(arrowPosition, platform);
-            }
-        }
-
-        public Dictionary<Vector2f, TowerFall.Platform> GetPlatoformStuckArrows()
-        {
-            return StuckArrows_Platforms;
         }
 
         private Input EmptyInput() { return new Input(); }

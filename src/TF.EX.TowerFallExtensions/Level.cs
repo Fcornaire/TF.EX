@@ -174,7 +174,6 @@ namespace TF.EX.TowerFallExtensions
         public static void LoadState(this Level level, GameState gameState)
         {
             var hudService = ServiceCollections.ResolveHUDService();
-            var arrowService = ServiceCollections.ResolveArrowService();
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var sessionService = ServiceCollections.ResolveSessionService();
             var rngService = ServiceCollections.ResolveRngService();
@@ -461,6 +460,11 @@ namespace TF.EX.TowerFallExtensions
             {
                 var cachedPlayerCorpse = ServiceCollections.GetCachedEntity<TowerFall.PlayerCorpse>(toLoad.ActualDepth);
 
+                if (cachedPlayerCorpse == null)
+                {
+                    cachedPlayerCorpse = new TowerFall.PlayerCorpse(level.Player, toLoad.KillerIndex);
+                }
+
                 cachedPlayerCorpse.LoadState(toLoad);
 
                 level.GetGameplayLayer().Entities.Insert(0, cachedPlayerCorpse);
@@ -500,7 +504,6 @@ namespace TF.EX.TowerFallExtensions
 
                     var arrow = TowerFall.Arrow.Create(toLoad.ArrowType.ToTFModel(), entityHavingArrow, toLoad.Position.ToTFVector(), toLoad.Direction);
                     var dynArrow = DynamicData.For(arrow);
-                    dynArrow.Set("StuckTo", arrowService.GetPlatformStuck(toLoad.Position));
                     arrow.LoadState(toLoad);
 
                     level.GetGameplayLayer().Entities.Insert(0, arrow);
@@ -516,6 +519,11 @@ namespace TF.EX.TowerFallExtensions
                 foreach (var chestToLoad in gameState.Entities.Chests.ToArray())
                 {
                     var cachedChest = ServiceCollections.GetCachedEntity<TreasureChest>(chestToLoad.ActualDepth);
+
+                    if (cachedChest == null)
+                    {
+                        cachedChest = new TreasureChest(Vector2.Zero, TreasureChest.Types.Normal, TreasureChest.AppearModes.Time, chestToLoad.Pickups.ToTFModel());
+                    }
 
                     cachedChest.LoadState(chestToLoad);
 
@@ -778,8 +786,6 @@ namespace TF.EX.TowerFallExtensions
 
         private static void AddArrowState(this GameState gameState, Level level)
         {
-            var arrowService = ServiceCollections.ResolveArrowService();
-
             if (level[GameTags.Arrow] != null && level[GameTags.Arrow].Count > 0)
             {
                 var arrows = level[GameTags.Arrow].ToArray();
@@ -790,10 +796,6 @@ namespace TF.EX.TowerFallExtensions
                     dynArrow.Set("counter", Vector2.Zero);//For some weird reason, the counter is not reseted an ctor, so we do it here
                                                           //Oh i think i found why, it's might be du to the arrow cache 
 
-                    if (arrow.StuckTo != null && arrow.State == TowerFall.Arrow.ArrowStates.Stuck)
-                    {
-                        arrowService.AddStuckArrow(arrow.Position.ToModel(), arrow.StuckTo);
-                    }
                     gameState.Entities.Arrows.Add(arrow.GetState());
                 }
             }
