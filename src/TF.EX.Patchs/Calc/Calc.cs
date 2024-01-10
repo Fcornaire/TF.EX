@@ -1,4 +1,5 @@
-﻿using TF.EX.Domain;
+﻿using Microsoft.Xna.Framework;
+using TF.EX.Domain;
 using TF.EX.Domain.Models.State;
 using TF.EX.Domain.Ports.TF;
 
@@ -59,12 +60,26 @@ namespace TF.EX.Patchs.Calc
         {
             On.Monocle.Calc.NextFloat_Random += NextFloat_Patch;
             On.Monocle.Calc.Range_Random_int_int += RangleIntInt_Patch;
+            On.Monocle.Calc.Range_Random_Vector2_Vector2 += Range_Random_Vector2_Vector2;
         }
 
         public void Unload()
         {
             On.Monocle.Calc.NextFloat_Random -= NextFloat_Patch;
             On.Monocle.Calc.Range_Random_int_int -= RangleIntInt_Patch;
+            On.Monocle.Calc.Range_Random_Vector2_Vector2 -= Range_Random_Vector2_Vector2;
+        }
+
+        private Vector2 Range_Random_Vector2_Vector2(On.Monocle.Calc.orig_Range_Random_Vector2_Vector2 orig, Random random, Vector2 min, Vector2 add)
+        {
+            if (_shouldRegisterRng && !_shouldIgnoreToRegisterRng)
+            {
+                _rngService.Get().ResetRandom(ref Monocle.Calc.Random);
+                random = Monocle.Calc.Random;
+                _rngService.AddGen(RngGenType.Double);
+            }
+
+            return orig(random, min, add);
         }
 
         /// <summary>
