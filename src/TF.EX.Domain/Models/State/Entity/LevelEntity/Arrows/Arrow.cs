@@ -6,6 +6,7 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
     [MessagePackObject]
     [Union(0, typeof(DefaultArrow))]
     [Union(1, typeof(BombArrow))]
+    [Union(2, typeof(LaserArrow))]
     public abstract class Arrow
     {
         [Key(0)]
