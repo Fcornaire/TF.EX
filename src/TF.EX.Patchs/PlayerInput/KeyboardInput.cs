@@ -200,11 +200,6 @@ namespace TF.EX.Patchs.PlayerInput
 
             var isNetplayInit = netplayManager.IsInit();
 
-            if (isReplayMode)
-            {
-                return true;
-            }
-
             if (TFGame.Instance.Scene is MainMenu
                && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
                && inputService.GetInputIndex(self) != 0)
@@ -215,6 +210,11 @@ namespace TF.EX.Patchs.PlayerInput
             if (isPaused)
             {
                 return actualInput;
+            }
+
+            if (isReplayMode)
+            {
+                return true;
             }
 
             if (TFGame.Instance.Scene is Level && (TFGame.Instance.Scene as TowerFall.Level).Session.GetWinner() != -1)

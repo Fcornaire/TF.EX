@@ -7,9 +7,9 @@ namespace TF.EX.Domain.Models.State.Layer
     public class Layer
     {
         [Key(0)]
-        public IEnumerable<BackgroundElement> BackgroundElements { get; set; } = Enumerable.Empty<BackgroundElement>();
+        public IEnumerable<BGElement> BackgroundElements { get; set; } = Enumerable.Empty<BGElement>();
         [Key(1)]
-        public IEnumerable<ForegroundElement> ForegroundElements { get; set; } = Enumerable.Empty<ForegroundElement>();
+        public IEnumerable<BGElement> ForegroundElements { get; set; } = Enumerable.Empty<BGElement>();
 
         [Key(2)]
         public float LightingLayerSine { get; set; }

@@ -600,28 +600,8 @@ namespace TF.EX.TowerFallExtensions
             //BGMushroom load
             gameState.LoadBGMushrooms(level);
 
-            //Background load
-            foreach (BackgroundElement toLoad in gameState.Layer.BackgroundElements.ToArray())
-            {
-                var gameBackground = level.GetBGElementByIndex(toLoad.index);
-
-                if (gameBackground != null && gameBackground is Background.ScrollLayer)
-                {
-                    (gameBackground as Background.ScrollLayer).Image.Position = toLoad.Position.ToTFVector();
-                }
-            }
-
-            //Foreground load
-            foreach (ForegroundElement toLoad in gameState.Layer.ForegroundElements.ToArray())
-            {
-                var gameForeground = level.GetFGElementByIndex(toLoad.index);
-
-                if (gameForeground != null && gameForeground is Background.WavyLayer)
-                {
-                    var dynForegroundElement = DynamicData.For(gameForeground);
-                    dynForegroundElement.Set("counter", toLoad.counter);
-                }
-            }
+            //Background and Foreground load
+            gameState.LoadBackgroundAndForegroundElements(level);
 
             var sine = dynLightingLayer.Get<SineWave>("sine");
             sine.UpdateAttributes(gameState.Layer.LightingLayerSine);
@@ -970,15 +950,11 @@ namespace TF.EX.TowerFallExtensions
 
             //Background save
             var bgElements = level.Background.GetBGElements().ToArray();
-            List<BackgroundElement> bgs = new List<BackgroundElement>();
+            List<BGElement> bgs = new List<BGElement>();
             for (int i = 0; i < bgElements.Length; i++)
             {
-                TowerFall.Background.BGElement bg = bgElements[i];
-                if (bg is TowerFall.Background.ScrollLayer)
-                {
-                    var bgModel = (bg as TowerFall.Background.ScrollLayer).GetState(i);
-                    bgs.Add(bgModel);
-                }
+                var bgModel = bgElements[i].GetState(i);
+                bgs.Add(bgModel);
             }
             gameState.Layer.BackgroundElements = bgs;
 
@@ -986,15 +962,11 @@ namespace TF.EX.TowerFallExtensions
             if (level.Foreground != null)
             {
                 var fgElements = level.Foreground.GetBGElements().ToArray();
-                List<ForegroundElement> fgs = new List<ForegroundElement>();
+                List<BGElement> fgs = new List<BGElement>();
                 for (int i = 0; i < fgElements.Length; i++)
                 {
-                    TowerFall.Background.BGElement fg = fgElements[i];
-                    if (fg is TowerFall.Background.WavyLayer)
-                    {
-                        var fgModel = (fg as TowerFall.Background.WavyLayer).GetState(i);
-                        fgs.Add(fgModel);
-                    }
+                    var fgModel = fgElements[i].GetState(i);
+                    fgs.Add(fgModel);
                 }
                 gameState.Layer.ForegroundElements = fgs;
             }
@@ -1065,6 +1037,23 @@ namespace TF.EX.TowerFallExtensions
                     ServiceCollections.AddEntityToCache(crackedWallState.ActualDepth, crackedWall);
                 }
             }
+        }
+
+        private static TowerFall.Miasma AddMiasmaToGameplayLayer(this TowerFall.Level level, double actualDepth)
+        {
+            var miasma = new TowerFall.Miasma(TowerFall.Miasma.Modes.Versus);
+            var dynMiasma = DynamicData.For(miasma);
+            dynMiasma.Set("Scene", level);
+            dynMiasma.Set("Level", level);
+            dynMiasma.Set("actualDepth", actualDepth);
+
+            level.GetGameplayLayer().Entities.Add(miasma);
+            miasma.Added();
+
+            var dynamicRounlogic = DynamicData.For(level.Session.RoundLogic);
+            dynamicRounlogic.Set("miasma", miasma);
+
+            return miasma;
         }
 
         private static void AddBGMushrooms(this GameState game, Level level)
@@ -1160,7 +1149,7 @@ namespace TF.EX.TowerFallExtensions
             }
         }
 
-        public static void LoadCrackedPlatform(this GameState gameState, TowerFall.Level level)
+        private static void LoadCrackedPlatform(this GameState gameState, TowerFall.Level level)
         {
             var gameCrackedPlatforms = level.GetAll<TowerFall.CrackedPlatform>().ToArray();
             if (gameCrackedPlatforms != null && gameCrackedPlatforms.Length > 0)
@@ -1179,7 +1168,7 @@ namespace TF.EX.TowerFallExtensions
             }
         }
 
-        public static void LoadSpikeBall(this GameState gameState, TowerFall.Level level)
+        private static void LoadSpikeBall(this GameState gameState, TowerFall.Level level)
         {
             var spikeball = level.Get<Spikeball>();
 
@@ -1190,7 +1179,7 @@ namespace TF.EX.TowerFallExtensions
             }
         }
 
-        public static void LoadExplosions(this GameState gameState, TowerFall.Level level)
+        private static void LoadExplosions(this GameState gameState, TowerFall.Level level)
         {
             level.DeleteAll<TowerFall.Explosion>();
 
@@ -1225,7 +1214,7 @@ namespace TF.EX.TowerFallExtensions
             }
         }
 
-        public static void LoadCrackedWalls(this GameState gameState, TowerFall.Level level)
+        private static void LoadCrackedWalls(this GameState gameState, TowerFall.Level level)
         {
             level.DeleteAll<TowerFall.CrackedWall>();
 
@@ -1254,7 +1243,7 @@ namespace TF.EX.TowerFallExtensions
             }
         }
 
-        public static void LoadBGMushrooms(this GameState gameState, TowerFall.Level level)
+        private static void LoadBGMushrooms(this GameState gameState, TowerFall.Level level)
         {
             var gameBGMushrooms = level.GetAll<TowerFall.BGMushroom>().ToArray();
             if (gameBGMushrooms != null && gameBGMushrooms.Length > 0)
@@ -1272,22 +1261,28 @@ namespace TF.EX.TowerFallExtensions
                 }
             }
         }
-
-        private static TowerFall.Miasma AddMiasmaToGameplayLayer(this TowerFall.Level level, double actualDepth)
+        private static void LoadBackgroundAndForegroundElements(this GameState gameState, Level level)
         {
-            var miasma = new TowerFall.Miasma(TowerFall.Miasma.Modes.Versus);
-            var dynMiasma = DynamicData.For(miasma);
-            dynMiasma.Set("Scene", level);
-            dynMiasma.Set("Level", level);
-            dynMiasma.Set("actualDepth", actualDepth);
+            //Background load
+            foreach (BGElement toLoad in gameState.Layer.BackgroundElements.ToArray())
+            {
+                var gameBackground = level.GetBGElementByIndex(toLoad.Index);
+                if (gameBackground != null)
+                {
+                    gameBackground.LoadState(toLoad);
+                }
+            }
 
-            level.GetGameplayLayer().Entities.Add(miasma);
-            miasma.Added();
+            //Foreground load
+            foreach (BGElement toLoad in gameState.Layer.ForegroundElements.ToArray())
+            {
+                var gameForeground = level.GetFGElementByIndex(toLoad.Index);
 
-            var dynamicRounlogic = DynamicData.For(level.Session.RoundLogic);
-            dynamicRounlogic.Set("miasma", miasma);
-
-            return miasma;
+                if (gameForeground != null)
+                {
+                    gameForeground.LoadState(toLoad);
+                }
+            }
         }
     }
 }
