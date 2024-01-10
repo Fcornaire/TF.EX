@@ -14,6 +14,10 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
 
             public Sprite<int> BuriedSprite { get; set; }
 
+            public int Bounced { get; set; }
+
+            public bool CanBounceIndefinitely { get; set; }
+
             public IntermediateArrow()
             {
                 ArrowType = ArrowTypes.Normal;
@@ -183,6 +187,17 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
             return this;
         }
 
+
+        public void WithBounced(int bounced)
+        {
+            arrow.Bounced = bounced;
+        }
+
+        public void WithCanBounceIndefinitely(bool canBounceIndefinitely)
+        {
+            arrow.CanBounceIndefinitely = canBounceIndefinitely;
+        }
+
         public Arrow Build()
         {
             switch (arrow.ArrowType)
@@ -237,11 +252,39 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
                         Flash = arrow.Flash,
                         HasUnhittableEntity = arrow.HasUnhittableEntity,
                         BuriedIn = arrow.BuriedIn,
+                        StuckToActualDepth = arrow.StuckToActualDepth,
                         BuriedSprite = arrow.BuriedSprite,
                         CanExplode = arrow.CanExplode,
                         ExplodeAlarm = arrow.ExplodeAlarm,
                         NormalSprite = arrow.NormalSprite,
-                        StuckToActualDepth = arrow.StuckToActualDepth
+                    };
+                case ArrowTypes.Laser:
+                    return new LaserArrow
+                    {
+                        ActualDepth = arrow.ActualDepth,
+                        ArrowType = arrow.ArrowType,
+                        Direction = arrow.Direction,
+                        PlayerIndex = arrow.PlayerIndex,
+                        Position = arrow.Position,
+                        ShootingCounter = arrow.ShootingCounter,
+                        CannotPickupCounter = arrow.CannotPickupCounter,
+                        CannotCatchCounter = arrow.CannotCatchCounter,
+                        Speed = arrow.Speed,
+                        State = arrow.State,
+                        StuckDirection = arrow.StuckDirection,
+                        PositionCounter = arrow.PositionCounter,
+                        IsActive = arrow.IsActive,
+                        IsCollidable = arrow.IsCollidable,
+                        IsFrozen = arrow.IsFrozen,
+                        IsVisible = arrow.IsVisible,
+                        MarkedForRemoval = arrow.MarkedForRemoval,
+                        FireControl = arrow.FireControl,
+                        Flash = arrow.Flash,
+                        HasUnhittableEntity = arrow.HasUnhittableEntity,
+                        BuriedIn = arrow.BuriedIn,
+                        StuckToActualDepth = arrow.StuckToActualDepth,
+                        Bounced = arrow.Bounced,
+                        CanBounceIndefinitely = arrow.CanBounceIndefinitely,
                     };
                 default:
                     return arrow;

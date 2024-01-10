@@ -73,6 +73,16 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                     builder.WithBuriedSprite(buriedSprite.GetState());
 
                     break;
+                case TowerFall.ArrowTypes.Laser:
+                    var laserArrow = (TowerFall.LaserArrow)entity;
+                    var dynLaserArrow = DynamicData.For(laserArrow);
+                    int bounced = laserArrow.Bounced;
+                    bool canBounceIndefinitely = dynLaserArrow.Get<bool>("infiniteBounces");
+
+                    builder.WithBounced(bounced);
+                    builder.WithCanBounceIndefinitely(canBounceIndefinitely);
+
+                    break;
             }
 
             return builder.Build();
@@ -154,6 +164,15 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                         dynBombArrow.Set("BuriedIn", arrowCushion);
                         bombArrow.BuriedIn.LoadState(toLoadBombArrow.BuriedIn);
                     }
+
+                    break;
+                case ArrowTypes.Laser:
+                    var laserArrow = (TowerFall.LaserArrow)entity;
+                    var dynLaserArrow = DynamicData.For(laserArrow);
+                    var toLoadLaserArrow = (LaserArrow)toLoad;
+
+                    dynLaserArrow.Set("infiniteBounces", toLoadLaserArrow.CanBounceIndefinitely);
+                    dynLaserArrow.Set("Bounced", toLoadLaserArrow.Bounced);
 
                     break;
             }
