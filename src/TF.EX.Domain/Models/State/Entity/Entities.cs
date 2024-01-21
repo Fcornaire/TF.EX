@@ -1,7 +1,9 @@
 ﻿using MessagePack;
 using TF.EX.Domain.Models.State.Entity.LevelEntity;
 using TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows;
+using TF.EX.Domain.Models.State.Entity.LevelEntity.Background;
 using TF.EX.Domain.Models.State.Entity.LevelEntity.Chest;
+using TF.EX.Domain.Models.State.Entity.LevelEntity.Platform;
 using TF.EX.Domain.Models.State.Entity.LevelEntity.Player;
 
 namespace TF.EX.Domain.Models.State.Entity
@@ -44,5 +46,9 @@ namespace TF.EX.Domain.Models.State.Entity
 
         [Key(15)]
         public OrbLogic.OrbLogic OrbLogic { get; set; } = new OrbLogic.OrbLogic();
+        [Key(16)]
+        public ICollection<CrackedWall> CrackedWalls { get; set; } = new List<CrackedWall>();
+        [Key(17)]
+        public ICollection<BGMushroom> BGMushrooms { get; set; } = new List<BGMushroom>();
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using TF.EX.Patchs.Background;
 using TF.EX.Patchs.Calc;
 using TF.EX.Patchs.Commands;
 using TF.EX.Patchs.Component;
@@ -77,6 +78,7 @@ namespace TF.EX.Patchs
             serviceCollection.AddSingleton<IHookable, MenuItemPatch>();
             serviceCollection.AddSingleton<IHookable, MatchVariantsPatchs>();
             serviceCollection.AddSingleton<IHookable, VariantPatch>();
+            serviceCollection.AddSingleton<IHookable, FadeLayerPatch>();
         }
 
         public static LavaPatch GetLavaPatch(this IServiceProvider serviceProvider)

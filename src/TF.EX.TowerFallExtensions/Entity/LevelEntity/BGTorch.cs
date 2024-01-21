@@ -1,5 +1,5 @@
 ﻿using MonoMod.Utils;
-using TF.EX.Domain.Models.State.Entity.LevelEntity;
+using TF.EX.Domain.Models.State.Entity.LevelEntity.Background;
 
 namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 {

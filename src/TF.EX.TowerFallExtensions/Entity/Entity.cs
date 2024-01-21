@@ -5,12 +5,12 @@ namespace TF.EX.TowerFallExtensions.Entity
 {
     public static class EntityExtensions
     {
-        public static T GetComponent<T>(this Monocle.Entity entity) where T : Component
+        public static T GetComponent<T>(this Monocle.Entity entity) where T : Monocle.Component
         {
             return entity.Components.FirstOrDefault(component => component is T) as T;
         }
 
-        public static void DeleteComponent<T>(this Monocle.Entity entity) where T : Component
+        public static void DeleteComponent<T>(this Monocle.Entity entity) where T : Monocle.Component
         {
             var component = entity.GetComponent<T>();
             if (component != null)
@@ -20,7 +20,7 @@ namespace TF.EX.TowerFallExtensions.Entity
             }
         }
 
-        public static void DeleteAllComponents<T>(this Monocle.Entity entity) where T : Component
+        public static void DeleteAllComponents<T>(this Monocle.Entity entity) where T : Monocle.Component
         {
             var components = entity.Components.Where(component => component is T).ToList();
             foreach (var component in components)

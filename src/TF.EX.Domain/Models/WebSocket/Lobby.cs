@@ -19,7 +19,7 @@ namespace TF.EX.Domain.Models.WebSocket
     [MessagePackObject(keyAsPropertyName: true)]
     public class GameData
     {
-        public int MapId { get; set; } = 0;
+        public int MapId { get; set; } = -1;
         public int Mode { get; set; } = (int)TowerFall.Modes.LastManStanding;
         public int MatchLength { get; set; } = (int)MatchSettings.MatchLengths.Standard;
         public ICollection<string> Variants { get; set; } = new List<string>();

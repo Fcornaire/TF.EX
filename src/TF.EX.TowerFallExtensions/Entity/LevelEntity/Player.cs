@@ -76,7 +76,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 PositionCounter = dynPlayer.Get<Vector2>("counter").ToModel(),
                 Facing = (int)entity.Facing,
                 WallStickMax = dynPlayer.Get<float>("wallStickMax"),
-                ArrowsInventory = entity.Arrows.Arrows.ToModel(),
+                ArrowsInventory = entity.Arrows.ToModel(),
                 AutoMove = dynPlayer.Get<int>("autoMove"),
                 Speed = entity.Speed.ToModel(),
                 FlapGravity = dynPlayer.Get<float>("flapGravity"),
@@ -154,7 +154,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             dynPlayer.Set("counter", toLoad.PositionCounter.ToTFVector());
             dynPlayer.Set("Facing", (TowerFall.Facing)toLoad.Facing);
             dynPlayer.Set("wallStickMax", toLoad.WallStickMax);
-            entity.Arrows.Arrows.Update(toLoad.ArrowsInventory);
+            entity.Arrows.ToLoad(toLoad.ArrowsInventory);
             dynPlayer.Set("autoMove", toLoad.AutoMove);
             entity.Speed = toLoad.Speed.ToTFVector();
             dynPlayer.Set("flapGravity", toLoad.FlapGravity);

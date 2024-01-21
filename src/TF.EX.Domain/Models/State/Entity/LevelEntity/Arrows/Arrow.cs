@@ -4,7 +4,10 @@ using TF.EX.Domain.Models.State.Component;
 namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
 {
     [MessagePackObject]
-    public class Arrow
+    [Union(0, typeof(DefaultArrow))]
+    [Union(1, typeof(BombArrow))]
+    [Union(2, typeof(LaserArrow))]
+    public abstract class Arrow
     {
         [Key(0)]
         public Vector2f Position { get; set; }
@@ -66,25 +69,10 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
         [Key(19)]
         public FireControl FireControl { get; set; }
 
+        [Key(20)]
+        public ArrowCushion BuriedIn { get; set; }
 
-        public static Arrow EmptyArrow()
-        {
-            var arrow = new Arrow()
-            {
-                Position = new Vector2f { X = -1, Y = -1 },
-                PositionCounter = new Vector2f { X = -1, Y = -1 },
-                Speed = new Vector2f { X = -1, Y = -1 },
-                Direction = -1,
-                ShootingCounter = -1,
-                CannotPickupCounter = -1,
-                PlayerIndex = -1,
-                CannotCatchCounter = -1,
-                State = ArrowStates.Shooting,
-                ArrowType = ArrowTypes.Normal,
-                StuckDirection = new Vector2f { X = -1, Y = -1 },
-            };
-
-            return arrow;
-        }
+        [Key(21)]
+        public double StuckToActualDepth { get; set; }
     }
 }

@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using System.IO.Compression;
 using System.Net;
+using System.Net.Http;
 using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
 using TF.EX.Common.Extensions;

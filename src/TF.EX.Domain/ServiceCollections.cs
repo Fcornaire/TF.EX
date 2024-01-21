@@ -46,7 +46,6 @@ namespace TF.EX.Domain
             ServiceCollection.AddSingleton<ISyncTestUtilsService, SyncTestUtilsService>();
 
             ServiceCollection.AddTransient<IInputService, InputService>();
-            ServiceCollection.AddTransient<IArrowService, ArrowService>();
             ServiceCollection.AddTransient<ISessionService, SessionService>();
             ServiceCollection.AddTransient<IRngService, RngService>();
             ServiceCollection.AddTransient<IHUDService, HUDService>();
@@ -139,7 +138,6 @@ namespace TF.EX.Domain
 
         public static IHUDService ResolveHUDService() { return ServiceProvider.GetRequiredService<IHUDService>(); }
 
-        public static IArrowService ResolveArrowService() { return ServiceProvider.GetRequiredService<IArrowService>(); }
         public static ISFXService ResolveSFXService() { return ServiceProvider.GetRequiredService<ISFXService>(); }
 
         public static IAPIManager ResolveAPIManager()

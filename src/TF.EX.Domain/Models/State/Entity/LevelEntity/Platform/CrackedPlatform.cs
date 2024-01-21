@@ -1,7 +1,7 @@
 ﻿using MessagePack;
 using TF.EX.Domain.Models.State.Component;
 
-namespace TF.EX.Domain.Models.State.Entity.LevelEntity
+namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Platform
 {
     [MessagePackObject]
     public class CrackedPlatform
