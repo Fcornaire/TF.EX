@@ -10,6 +10,7 @@ namespace TF.EX.Domain.Ports.TF
         void Clear();
         IEnumerable<SFX> Get();
         void Load(IEnumerable<SFX> sFXes);
+        void Reset();
         void Synchronize(int currentFrame, bool isTestMode);
         void UpdateLastRollbackFrame(int frame);
     }
