@@ -596,6 +596,7 @@ namespace TF.EX.Domain.Services
 
                 ServiceCollections.ResolveMatchmakingService().DisconnectFromLobby();
                 ServiceCollections.ResolveSessionService().Reset();
+                ServiceCollections.ResolveSFXService().Reset();
 
                 _isInit = false;
                 _netplayRequests = new List<NetplayRequest>();

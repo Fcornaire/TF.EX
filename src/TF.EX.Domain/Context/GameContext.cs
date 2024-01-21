@@ -56,6 +56,7 @@ namespace TF.EX.Domain.Context
         void AddArcher(int index, Player player);
         void ResetArcherSelections();
         void RemoveArcher(int playerIndex);
+        void ClearSfxs();
     }
 
     internal class GameContext : IGameContext
@@ -71,7 +72,7 @@ namespace TF.EX.Domain.Context
         private HUD _hudState;
         private ICollection<SFX> _desiredSfxs = new List<SFX>();
         private ICollection<SoundEffectPlaying> _currentSfxs = new List<SoundEffectPlaying>();
-        private Dictionary<string, SoundEffect> _soundEffects = new Dictionary<string, SoundEffect>();
+        private Dictionary<string, SoundEffect> _soundEffects = new Dictionary<string, SoundEffect>(); //TODO: should be cached instead
         private Dictionary<int, Player> ArcherSelections = new Dictionary<int, Player>();
         private int _lastRollbackFrame = 0;
 
@@ -427,6 +428,13 @@ namespace TF.EX.Domain.Context
         public IEnumerable<(int, Player)> GetPlayers()
         {
             return ArcherSelections.Select(kvp => (kvp.Key, kvp.Value));
+        }
+
+        public void ClearSfxs()
+        {
+            ClearDesiredSfx();
+            _currentSfxs.Clear();
+            _soundEffects.Clear();
         }
     }
 }
