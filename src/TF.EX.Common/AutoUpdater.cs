@@ -51,12 +51,12 @@ namespace TF.EX.Common
                 var meta = File.ReadAllText(".\\Mods\\TF.EX\\meta.json");
                 currentVersion = GetVersion(meta);
 
-                _logger.LogDebug<AutoUpdater>($"TF.EX Mod current version : {currentVersion}");
-                _logger.LogDebug<AutoUpdater>($"Checking latest TF.EX mod version");
+                _logger.LogDebug<AutoUpdater>($"Current TF.EX version: {currentVersion}");
+                _logger.LogDebug<AutoUpdater>($"Checking latest TF.EX version");
 
                 latestVersion = await GetLatestVersion();
 
-                _logger.LogDebug<AutoUpdater>($"Latest TF.EX mod version : {latestVersion}");
+                _logger.LogDebug<AutoUpdater>($"Latest TF.EX version: {latestVersion}");
 
                 if (latestVersion > currentVersion)
                 {
@@ -71,7 +71,7 @@ namespace TF.EX.Common
                     _logger.LogDebug<AutoUpdater>("TF.EX Update available!");
                     await DownloadLatest();
                     ExtractUpdate();
-                    _logger.LogDebug<AutoUpdater>($"Donwloaded and extracted {latestVersion} update");
+                    _logger.LogDebug<AutoUpdater>($"Donwloaded and extracted Update {latestVersion}");
 
                     _isUpdateAvailable = true;
                 }
@@ -142,7 +142,7 @@ namespace TF.EX.Common
             File.Delete(ZipPath);
             _logger.LogDebug<AutoUpdater>("Deleted Update zip");
 
-            _logger.LogDebug<AutoUpdater>("Update complete! Please restart TowerFall");
+            _logger.LogDebug<AutoUpdater>("Update complete! Restarting TowerFall");
 
             return true;
         }
