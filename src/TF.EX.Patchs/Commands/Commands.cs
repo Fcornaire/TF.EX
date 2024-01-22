@@ -111,7 +111,7 @@ namespace TF.EX.Patchs.Commands
             var dynCommands = DynamicData.For(commands);
             var drawCommands = dynCommands.Get<List<string>>("drawCommands");
 
-            return string.Join(",", drawCommands).Contains("The name that will be showed as an indicator");
+            return string.Join(",", drawCommands).Contains("The name that will be shown as an indicator");
         }
     }
 }
