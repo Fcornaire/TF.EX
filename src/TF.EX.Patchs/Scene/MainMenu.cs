@@ -116,7 +116,7 @@ namespace TF.EX.Patchs.Scene
                         if (hasUnsafeMod)
                         {
                             Sounds.ui_clickSpecial.Play(160, 4);
-                            Notification.Create(TFGame.Instance.Scene, "TF.EX is incompatible with most mods! expect bugs!", 10, 600);
+                            Notification.Create(TFGame.Instance.Scene, "You have mods that might break with TF.EX! Expect bugs!", 10, 600);
                             hasShowedWarning = true;
                         }
                     }
