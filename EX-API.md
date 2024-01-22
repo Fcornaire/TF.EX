@@ -54,7 +54,7 @@ You can also look at this [PR](https://github.com/FortRise/ExampleFortRiseMod/pu
 
 There are 3 rules of thumb (and the first one is very important) for making your mod compatbile:
 
-- Your mod does not interfere with EX patchs. There isn't a specific rule but some EX patches require initial setup before executing the original method.
+- Your mod does not interfere with EX patches. There isn't a specific rule but some EX patches require initial setup before executing the original method.
 
 So for example, some EX patches check some RNG call to be able to track them; patching the same function make the original get called without being able to register the RNG stuff. (Maybe in the future, this will be handled differently)
 
