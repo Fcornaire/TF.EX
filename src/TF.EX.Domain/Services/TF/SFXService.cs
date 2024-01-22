@@ -144,5 +144,10 @@ namespace TF.EX.Domain.Services.TF
         {
             _gameContext.ClearDesiredSfx();
         }
+
+        public void Reset()
+        {
+            _gameContext.ClearSfxs();
+        }
     }
 }
