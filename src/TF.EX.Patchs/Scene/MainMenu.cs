@@ -116,7 +116,7 @@ namespace TF.EX.Patchs.Scene
                         if (hasUnsafeMod)
                         {
                             Sounds.ui_clickSpecial.Play(160, 4);
-                            Notification.Create(TFGame.Instance.Scene, "TF.EX has compatibility issues with other mods! expect bugs!", 10, 600);
+                            Notification.Create(TFGame.Instance.Scene, "TF.EX is incompatible with most mods! expect bugs!", 10, 600);
                             hasShowedWarning = true;
                         }
                     }
@@ -700,7 +700,7 @@ namespace TF.EX.Patchs.Scene
 
                     if (string.IsNullOrEmpty(lobbyToSpectate.RoomId) || string.IsNullOrEmpty(lobbyToSpectate.RoomChatId))
                     {
-                        _logger.LogError<MainMenuPatch>("Lobby to spectate is null ?");
+                        _logger.LogError<MainMenuPatch>("Lobby to spectate is null?");
 
                         return;
                     }
@@ -819,7 +819,7 @@ namespace TF.EX.Patchs.Scene
 
                     if (newLobby == null)
                     {
-                        _logger.LogError<MainMenuPatch>("Lobby is null ?");
+                        _logger.LogError<MainMenuPatch>("Lobby is null?");
 
                         continue;
                     }
@@ -847,7 +847,7 @@ namespace TF.EX.Patchs.Scene
 
                         if (string.IsNullOrEmpty(newLobby.RoomId) || string.IsNullOrEmpty(newLobby.RoomChatId))
                         {
-                            _logger.LogError<MainMenuPatch>("Lobby to join is null ?");
+                            _logger.LogError<MainMenuPatch>("Lobby to join is null?");
                             return;
                         }
 
