@@ -58,7 +58,7 @@ There are 3 rules of thumb (and the first one is very important) for making your
 
 So for example, some EX patches check some RNG call to be able to track them; patching the same function make the original get called without being able to register the RNG stuff. (Maybe in the future, this will be handled differently)
 
-You can check `TF.EX.Patchs` project to see what's being patched. I don't have a good solution right now otherr than contacting me to see how your patches are going to affect EX patches.
+You can check `TF.EX.Patchs` project to see what's being patched. I don't have a good solution right now other than contacting me to see how your patches are going to affect EX patches.
 
 - Your custom variant acts deterministically. That means applying the same input on an X frame always results in the same Y frame, every time with no exception.
 
