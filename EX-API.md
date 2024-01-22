@@ -40,7 +40,7 @@ public static bool IsPlayingOnline;
 
 EX has the ability to run custom variants as long as the mod is made compatible with EX.
 
-It's your responsibility to make sure the mod is netplay compatible (Ask the mod author)
+It's your responsibility to make sure the mod is netplay compatible (Ask the mod author).
 
 ## Making a custom variant compatible (For developers)
 
@@ -60,9 +60,9 @@ So for example, some EX patches check some RNG call to be able to track them; pa
 
 You can check `TF.EX.Patchs` project to see what's being patched. I don't have a good solution right now other than contacting me to see how your patches are going to affect EX patches.
 
-- Your custom variant acts deterministically. That means applying the same input on an X frame always results in the same Y frame, every time with no exception.
+- Your custom variant acts deterministically. That means applying the same input on an X frame always results in the same Y frame every time.
 
-- Your are only saving/loading the custom part of your variant. That means you shouldn't try (for example) to save the players position, because it's already made by EX. You should only focus on the things that are specific to your mod.
+- Your are only saving/loading the custom part of your variant. That means you shouldn't try (for example) to save the player's position, because it's already done by EX. You should only focus on the things that are specific to your mod.
 
 ### Context
 
@@ -85,11 +85,11 @@ This function takes 4 parameters:
 
 Let's look at the last two since they are more important:
 
-- The SaveState delegate: a function that will return a serialized version of the custom variant state as a string.
+- The ```SaveState``` delegate: a function that will return a serialized version of the custom variant state as a string.
 
 That means it's your responsibility to know what your custom variant adds to the game.
 
-- The LoadState delegate: a function that takes a serialized version of the mod state and expects you to load it.
+- The ```LoadState``` delegate: a function that takes a serialized version of the mod state and expects you to load it.
 
 ### Implementation
 
@@ -122,18 +122,18 @@ Call the previous delegate with something like this:
 TfExAPIModImports.RegisterVariantStateEvents(this, "customVariantName", OnSaveState, OnLoadState);
 ```
 
-with OnSaveState being your save state delegate and OnLoadState being your load state delegate
+with ```OnSaveState``` being your save state delegate and ```OnLoadState``` being your load state delegate.
 
 Note the register function should be called **after** all mods finish loading, not while the mod is loading.
 For now, you can do it using the FortRise event `FortRise.RiseCore.Events.OnPreInitialize`
 
-### Test
+### Testing
 
-You can test by launching EX in **test mode**, which is a special mode that triggers a rollback every check_distance frame and checks if the state on each frame is the same. (equality by checksum)
+You can test by launching EX in **test mode**, which is a special mode that triggers a rollback every ```check_distance``` frame and checks if the state on each frame is the same. (equality by checksum)
 
-For example, with a check_distance at 2, the game will rollback every 2 frames.
+For example, with a ```check_distance``` at 2, the game will rollback every 2 frames.
 
-If there is a checksum mismatch, there will be an exception thrown that will show why the mismatch happened. (DeepEqual.dll is needed for that!)
+If there is a checksum mismatch, there will be an exception thrown that will show why the mismatch happened. (```DeepEqual.dll``` is needed for that!)
 
 You can launch EX test mode by launching Towerfall, open the console by pressing ² and paste a command like
 
