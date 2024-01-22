@@ -116,7 +116,7 @@ This is straightforward. Create a class like this one:
 
 #### Register the custom Save/Load delegate
 
-Call the precedent delegate with something like this:
+Call the previous delegate with something like this:
 
 ```C#
 TfExAPIModImports.RegisterVariantStateEvents(this, "customVariantName", OnSaveState, OnLoadState);
