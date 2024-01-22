@@ -68,7 +68,7 @@ You can check `TF.EX.Patchs` project to see what's being patched. I don't have a
 
 Although I recommend having at least a basic knowledge of how rollback netcode works (there are some great explanations/videos on the web), it's not mandatory for making the mod compatible.
 
-EX already manages the work of saving/loading important pieces of information (State), it now only needs what should be saved/loaded from your mod.
+EX already manages the work of saving/loading important pieces of information (State), it only needs what should be saved/loaded from your mod.
 
 It uses an interop API to be able to let your mod interact with it.
 
