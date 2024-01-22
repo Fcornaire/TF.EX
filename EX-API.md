@@ -52,7 +52,7 @@ You can also look at this [PR](https://github.com/FortRise/ExampleFortRiseMod/pu
 
 ### Prerequisites
 
-There are 3 rules of thumb (and the first one is very important) for making your mod compatbile:
+There are 3 rules of thumb (and the first one is very important) for making your mod compatible:
 
 - Your mod does not interfere with EX patches. There isn't a specific rule but some EX patches require initial setup before executing the original method.
 
