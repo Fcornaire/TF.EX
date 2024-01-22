@@ -789,13 +789,13 @@ namespace TF.EX.Patchs.Scene
             self.ButtonGuideA.SetDetails(MenuButtonGuide.ButtonModes.Confirm, "JOIN");
             self.ButtonGuideB.SetDetails(MenuButtonGuide.ButtonModes.Back, "RETURN");
             self.ButtonGuideC.SetDetails(MenuButtonGuide.ButtonModes.Start, "CREATE");
-            self.ButtonGuideD.SetDetails(MenuButtonGuide.ButtonModes.Alt2, "REFRESH");
+            self.ButtonGuideD.SetDetails(MenuButtonGuide.ButtonModes.Alt, "REFRESH");
 
             if (spectateEntityButton == null)
             {
                 spectateEntityButton = new Monocle.Entity(-1);
                 var spectateButton = new MenuButtonGuide(4);
-                spectateButton.SetDetails(MenuButtonGuide.ButtonModes.Alt, "SPECTATE");
+                spectateButton.SetDetails(MenuButtonGuide.ButtonModes.Alt2, "SPECTATE");
                 spectateEntityButton.Add(spectateButton);
                 self.Add(spectateEntityButton);
             }
