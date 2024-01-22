@@ -81,7 +81,7 @@ Or even spectate! (Experimental)
 
 It fairly easy to install this mod:
 
-1. Install [FortRise](https://github.com/Terria-K/FortRise) with Debug ON , this can be changed by modifying the "PatchVersion.txt" file in the Towerfall root directory
+1. Install [FortRise](https://github.com/Terria-K/FortRise) with Debug ON , this can be changed by modifying the ```PatchVersion.txt``` file in the Towerfall root directory
 2. Download the latest TF EX [release](https://github.com/Fcornaire/TF.EX/releases)
 3. Create a `Mods` directory at the root of your Towerfall install directory if not done already
 4. Extract the `TF.EX` zip into the `Mods` folder.
