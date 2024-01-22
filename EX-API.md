@@ -124,7 +124,7 @@ TfExAPIModImports.RegisterVariantStateEvents(this, "customVariantName", OnSaveSt
 
 with OnSaveState being your save state delegate and OnLoadState being your load state delegate
 
-Note the register function should be called **after** all mods finish loading, so not while the mod is loading.
+Note the register function should be called **after** all mods finish loading, not while the mod is loading.
 For now, you can do it using the FortRise event `FortRise.RiseCore.Events.OnPreInitialize`
 
 ### Test
