@@ -122,9 +122,9 @@ This is your game waiting for the opponent to rematch. It's not perfect. I hope 
 This project uses:
 
 - [FortRise](https://github.com/Terria-K/FortRise) as the main loader (C#)
-- [ggrs-ffi](https://github.com/Fcornaire/ggrs-ffi) which is a lib that expose [GGRS](https://github.com/gschup/ggrs) api to be called by non rust project (Rust)
-- [matchbox-client-ffi](https://github.com/Fcornaire/matchbox-client-ffi) which is lib that expose some of the [matchbox](https://github.com/johanhelsing/matchbox) api to be called by non rust project (Rust)
-- A matchmaking server which main source are not exposed for now, it manage matchmaking and also run a signaling endpoint for easier connection (Rust)
+- [ggrs-ffi](https://github.com/Fcornaire/ggrs-ffi) which is a library that allows the [GGRS](https://github.com/gschup/ggrs) API to be called by non-rust projects (Rust)
+- [matchbox-client-ffi](https://github.com/Fcornaire/matchbox-client-ffi) which is a library that allows the [matchbox](https://github.com/johanhelsing/matchbox) API to be called by non-Rust projects (Rust)
+- A matchmaking server which is closed source for now, it manages matchmaking and also runs a signaling endpoint for easier connection (Rust)
 
 ## Installation
 
