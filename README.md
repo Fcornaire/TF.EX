@@ -90,16 +90,13 @@ It fairly easy to install this mod:
 You have the option to change your username in the in-game options.
 You can also change the input delay, but leaving it at 2 is usually fine.
 
-You should also be able to see 2 new versus modes (All the way to the right):
-
-1. Netplay Quickplay: Play against a randomly chosen opponent 'close' to your location. Choose the mode and wait until the game finds an opponent, then choose a character and play
-2. Netplay Direct: Play against someone in particular (by exchanging connection codes).
+You should also be able to see a new versus mode called Netplay (all the way to the right). This allows you to create and join online lobbies.
 
 If you've played some matches, a `Replays` directory should have been created in the Towerfall root directory.
 You can view the replays by:
 
 1. Launching Towerfall
-2. In the main menu, press ² to open it and enter the following command:
+2. In the main menu, press ` to open it and enter the following command
 
 ```
 replay {replay_name}
