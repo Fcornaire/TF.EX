@@ -1,4 +1,5 @@
 ﻿using MonoMod.Utils;
+using TF.EX.Domain.Models.State;
 using TowerFall;
 
 namespace TF.EX.Patchs.Entity.MenuItem
@@ -24,7 +25,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
 
             switch (title)
             {
-                case "NETPLAY INPUT DELAY":
+                case Constants.NETPLAY_INPUT_DELAY_TITLE:
                     TFGame.Instance.Commands.Open = true;
                     TFGame.Instance.Commands.Clear();
                     TFGame.Instance.Commands.Log("The input delay that will be applied.");
@@ -34,7 +35,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
                     TFGame.Instance.Commands.Log("0 or 1 is too low.");
 
                     break;
-                case "NETPLAY NAME":
+                case Constants.NETPLAY_USERNAME_TITLE:
                     TFGame.Instance.Commands.Open = true;
                     TFGame.Instance.Commands.Clear();
                     TFGame.Instance.Commands.Log("The name that will be shown as an indicator during netplay");
