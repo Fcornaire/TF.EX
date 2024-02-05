@@ -28,5 +28,7 @@
         public const string RIGHT_STICK_VARIANT_NAME = "RightStickShot";
         public const string RIGHT_STICK_VARIANT_TITLE = "RIGHT STICK SHOT";
 
+        public const string NETPLAY_INPUT_DELAY_TITLE = "NETPLAY INPUT DELAY";
+        public const string NETPLAY_USERNAME_TITLE = "NETPLAY USERNAME";
     }
 }

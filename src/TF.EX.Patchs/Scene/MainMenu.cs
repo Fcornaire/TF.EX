@@ -7,6 +7,7 @@ using TF.EX.Domain;
 using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models;
+using TF.EX.Domain.Models.State;
 using TF.EX.Domain.Models.WebSocket;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
@@ -28,7 +29,7 @@ namespace TF.EX.Patchs.Scene
 
         private bool hasShowedWarning = false;
 
-        private OptionsButton _netplayName;
+        private OptionsButton netplayName;
 
         private List<ReplayInfos> replays = new List<ReplayInfos>();
         private ReplaysPanel _replaysPanel = null;
@@ -583,13 +584,13 @@ namespace TF.EX.Patchs.Scene
 
         private void MainMenu_InitOptions(On.TowerFall.MainMenu.orig_InitOptions orig, TowerFall.MainMenu self, List<OptionsButton> buttons)
         {
-            OptionsButton inputDelay = new OptionsButton("NETPLAY INPUT DELAY");
+            OptionsButton inputDelay = new OptionsButton(Constants.NETPLAY_INPUT_DELAY_TITLE);
             inputDelay.SetCallbacks(inputDelay.InputDelayState, InputDelayRightCallback, InputDelayLeftCallback, null);
             buttons.Insert(0, inputDelay);
 
-            _netplayName = new OptionsButton("NETPLAY USERNAME");
-            _netplayName.SetCallbacks(_netplayName.NameState, null, null, null);
-            buttons.Insert(1, _netplayName);
+            netplayName = new OptionsButton(Constants.NETPLAY_USERNAME_TITLE);
+            netplayName.SetCallbacks(netplayName.NameState, null, null, null);
+            buttons.Insert(1, netplayName);
 
             orig(self, buttons);
         }
@@ -612,9 +613,9 @@ namespace TF.EX.Patchs.Scene
 
         private void MainMenu_Update(On.TowerFall.MainMenu.orig_Update orig, TowerFall.MainMenu self)
         {
-            if (_netplayName != null && _netplayName.State != _netplayManager.GetNetplayMeta().Name)
+            if (netplayName != null && netplayName.State != _netplayManager.GetNetplayMeta().Name)
             {
-                _netplayName.State = _netplayManager.GetNetplayMeta().Name;
+                netplayName.State = _netplayManager.GetNetplayMeta().Name;
             }
 
             if (TowerFall.MainMenu.VersusMatchSettings != null && self.State == TowerFall.MainMenu.MenuState.VersusOptions)
