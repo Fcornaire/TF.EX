@@ -110,10 +110,6 @@ I advise to not use this mod with mods that do other things than cosmetics/skins
 For example, [WiderSetMod](https://github.com/Terria-K/WiderSetMod) has been reported to break the mod.
 I will try to investigate why it's happening but for now, only use the TF EX mod by itself.
 
-## There is a blank screen when I try to rematch
-
-This is your game waiting for the opponent to rematch. It's not perfect. I hope in a future update, I will be able to have better UX to handle it.
-
 # Develop
 
 This project uses:
