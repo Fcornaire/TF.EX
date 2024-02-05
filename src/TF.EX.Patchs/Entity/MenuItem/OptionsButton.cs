@@ -28,17 +28,17 @@ namespace TF.EX.Patchs.Entity.MenuItem
                     TFGame.Instance.Commands.Open = true;
                     TFGame.Instance.Commands.Clear();
                     TFGame.Instance.Commands.Log("The input delay that will be applied.");
-                    TFGame.Instance.Commands.Log("Low input delay mean the gameplay will feel more close to a local session but at the cost of more rollback/jump during netplay.");
-                    TFGame.Instance.Commands.Log("Hight input delay mean less rollback/jump during netplay but more sluggish control.");
+                    TFGame.Instance.Commands.Log("Lower input delay means less input lag but at the cost of more rollback/jump during netplay.");
+                    TFGame.Instance.Commands.Log("Higher input delay mean less rollback/jump during netplay but more input lag.");
                     TFGame.Instance.Commands.Log("You should start low and adjust based off feeling.");
-                    TFGame.Instance.Commands.Log("Don't try 0 (even 1) because it's too low anyway.");
+                    TFGame.Instance.Commands.Log("0 or 1 is too low.");
 
                     break;
                 case "NETPLAY NAME":
                     TFGame.Instance.Commands.Open = true;
                     TFGame.Instance.Commands.Clear();
-                    TFGame.Instance.Commands.Log("The name that will be showed as an indicator during netplay");
-                    TFGame.Instance.Commands.Log("The maximum length allowed is 10 characters and the minimum 1");
+                    TFGame.Instance.Commands.Log("The name that will be shown as an indicator during netplay");
+                    TFGame.Instance.Commands.Log("Names can be from 1 character to 10 characters long");
 
                     break;
                 default:

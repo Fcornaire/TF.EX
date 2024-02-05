@@ -70,7 +70,7 @@ namespace TF.EX.Patchs
 
                 if (vsRoundResult != null && vsMatchResult != null)
                 {
-                    _logger.LogDebug<Session>("Hack! Setting roundResults on matchResults");
+                    _logger.LogDebug<Session>("Hack! Setting roundResults to matchResults");
 
                     vsRoundResult.MatchResults = vsMatchResult;
                     var dynMatchResult = DynamicData.For(vsMatchResult);

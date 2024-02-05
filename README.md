@@ -20,11 +20,11 @@
 
 # About The Project
 
-TF EX is a mod that attempt to bring netplay to TowerFall (EX as a Fighting game EX move, usually costing meter). It use [FortRise](https://github.com/Terria-K/FortRise) + Rollback netcode as infrastructure.
-Due to the nature of the project, the mod is also able to record + view precedents matchs.
-Also, this is project is still super WIP !
+TF EX is a mod that attempts to bring netplay to TowerFall (EX as in a Fighting game EX move, usually costing meter). It uses [FortRise](https://github.com/Terria-K/FortRise) + Rollback netcode as infrastructure.
+Due to the nature of the project, the mod is also able to record + view previous matches.
+Also, this project is still a WIP!
 
-# Feature
+# Features
 
 - Online Netplay
 
@@ -38,27 +38,27 @@ Also, this is project is still super WIP !
   <img src="images/lobbies.gif" alt="animated" />
 </p>
 
-Create a lobby for some online action !
+Create a lobby for some online action!
 
 <p align="center">
   <img src="images/createLobby.gif" alt="animated" />
 </p>
 
-Or join available one
+Or join an available one
 
 <p align="center">
   <img src="images/joiningLobby.gif" alt="animated" />
 </p>
 
-Or even spectate ! (Experimental)
+Or even spectate! (Experimental)
 
 <p align="center">
   <img src="images/spectate.gif" alt="animated" />
 </p>
 
-- Modded variant
+- Modded variants
 
-  Ability to run online play with custom variant as long as they are EX compatible. Read [EX API](EX-API.md) for mor details.
+  Ability to run online play with custom variants as long as they are EX compatible. Read [EX API](EX-API.md) for mor details.
 
   <p align="center">
     <img src="images/moddedVariant.gif" alt="animated" />
@@ -66,7 +66,7 @@ Or even spectate ! (Experimental)
 
 - Replays
 
-  Replay is "Normally" automatically exported at the end of a game.
+  Replay is "normally" automatically exported at the end of a game.
   Use the `replays` menu to watch precedent games
 
   <p align="center">
@@ -79,24 +79,24 @@ Or even spectate ! (Experimental)
 
 # Usage
 
-It fairly easy to use the mod:
+It fairly easy to install this mod:
 
-1. Download and install [FortRise](https://github.com/Terria-K/FortRise) if not already
+1. Install [FortRise](https://github.com/Terria-K/FortRise) with Debug ON , this can be changed by modifying the ```PatchVersion.txt``` file in the Towerfall root directory
 2. Download the latest TF EX [release](https://github.com/Fcornaire/TF.EX/releases)
 3. Create a `Mods` directory at the root of your Towerfall install directory if not done already
-4. Extract the `TF.EX` zip into the precedent `Mods` folder.
-5. You are now ready and the mod should be referenced and loaded by FortRise
+4. Extract the `TF.EX` zip into the `Mods` folder.
+5. You are now ready and the mod should be referenced and loaded by FortRise when the game starts
 
-You have the option to change your tag in the in game option.
-You can also change the input delay but leaving it 2 is a good start.
+You have the option to change your username in the in-game options.
+You can also change the input delay, but leaving it at 2 is usually fine.
 
-You should also be able to see 2 new versus mode (All the way to the right):
+You should also be able to see 2 new versus modes (All the way to the right):
 
-1. Netplay Quickplay : Play against a randomly choosed opponent 'close' to your location. Choose the mode and wait until the game find an opponent, then choose a character and play
-2. Netplay Direct: Play against someone in particular (by exchanging code connection).
+1. Netplay Quickplay: Play against a randomly chosen opponent 'close' to your location. Choose the mode and wait until the game finds an opponent, then choose a character and play
+2. Netplay Direct: Play against someone in particular (by exchanging connection codes).
 
-If you did played some matchs, a directory `Replays` should have been created in the Towerfall root directory.
-You can view one of those game by:
+If you've played some matches, a `Replays` directory should have been created in the Towerfall root directory.
+You can view the replays by:
 
 1. Launching Towerfall
 2. In the main menu, press ² to open it and enter the following command:
@@ -109,30 +109,26 @@ whith {replay_name} being something like "20-06-2023T22-17-46" (No file extensio
 
 # Troubleshooting
 
-I advise to not use this mod with mods that do other thing than cosmetics/skins.
-For eample [WiderSetMod](https://github.com/Terria-K/WiderSetMod) have been reported to break the mod
-I will try to investigate why it's happening but for now,only use the TF EX mod as standalone
+I advise to not use this mod with mods that do other things than cosmetics/skins.
+For example, [WiderSetMod](https://github.com/Terria-K/WiderSetMod) has been reported to break the mod.
+I will try to investigate why it's happening but for now, only use the TF EX mod by itself.
 
-## There is a blank screen when i try to rematch
+## There is a blank screen when I try to rematch
 
-This is your game waiting for the oppoenent to rematch. It's not perfect. I hope in some next update, i will be able to have better UX to handle it
+This is your game waiting for the opponent to rematch. It's not perfect. I hope in a future update, I will be able to have better UX to handle it.
 
 # Develop
 
-This project use:
+This project uses:
 
 - [FortRise](https://github.com/Terria-K/FortRise) as the main loader (C#)
-- [ggrs-ffi](https://github.com/Fcornaire/ggrs-ffi) which is a lib that expose [GGRS](https://github.com/gschup/ggrs) api to be called by non rust project (Rust)
-- [matchbox-client-ffi](https://github.com/Fcornaire/matchbox-client-ffi) which is lib that expose some of the [matchbox](https://github.com/johanhelsing/matchbox) api to be called by non rust project (Rust)
-- A matchmaking server which main source are not exposed for now, it manage matchmaking and also run a signaling endpoint for easier connection (Rust)
-
-## Prerequisites
-
-Install [FortRise](https://github.com/Terria-K/FortRise) with Debug ON , this can be changed by modifying the "PatchVersion.txt" file in the Towerfall root directory
+- [ggrs-ffi](https://github.com/Fcornaire/ggrs-ffi) which is a library that allows the [GGRS](https://github.com/gschup/ggrs) API to be called by non-rust projects (Rust)
+- [matchbox-client-ffi](https://github.com/Fcornaire/matchbox-client-ffi) which is a library that allows the [matchbox](https://github.com/johanhelsing/matchbox) API to be called by non-Rust projects (Rust)
+- A matchmaking server which is closed source for now, it manages matchmaking and also runs a signaling endpoint for easier connection (Rust)
 
 ## Installation
 
-To be able to add feature or fix things, you will need to :
+To be able to add features or fix things, you will need to:
 
 1. Clone the repo
 
@@ -141,36 +137,36 @@ To be able to add feature or fix things, you will need to :
    ```
 
 2. Launch the .sln with your favorite IDE
-3. Do some modification and build. If you didn't change Towerfall original installation folder, the mod dll will be copied automatically each build to your game Towerfall directory. Be aware that except of Core.dll, the other are copied to the root of Towerfall installation directory which let's us debug.
-4. Launch Towefall and on the main screen, open the Dev console wih the key ² (If not opening, ensure you enabled dev console in the game settings) and enter the following command
+3. Do some modifications and build. If you didn't change Towerfall original installation folder, the mod dll will be copied automatically each build to your game Towerfall directory. Be aware that with the exception of Core.dll, the others are copied to the root of Towerfall installation directory which lets us debug.
+4. Launch Towerfall and on the main screen, open the Dev console wih the key ² (If not opening, ensure you enabled dev console in the game settings) and enter the following command
 
 ```
 test LMS 0 1 42 2
 ```
 
-A LastManStanding game should be running in a GGRS [SyncTestSession](https://github.com/gschup/ggrs/wiki/2.-Sessions#sessionbuilder)
+A Last Man Standing game should be running in a GGRS [SyncTestSession](https://github.com/gschup/ggrs/wiki/2.-Sessions#sessionbuilder)
 
 <!-- ROADMAP -->
 
 ## Roadmap
 
-As you can guess, this project is still WIP and missing a lot of feature:
+As you can guess, this project is still WIP and missing a lot of features:
 
 - [ ] Automatically bump the version (meta + tag)
-- [ ] Refacto (There is a lot of thing i want to refactor)
+- [ ] Refactor (There is a lot of things I want to refactor)
 - [x] Less restrictive controller
 - [ ] Fix bugs
-- [x] Fix desynchronization (Atleat netplay code wise should be fine)
-- [ ] Support for all versus map
-- [ ] Check Twiligh Spear CrackedWall with teams on level 7
+- [x] Fix desynchronization (At least netplay code wise should be fine)
+- [ ] Support for all versus maps
+- [ ] Check Twilight Spire CrackedWall with teams on level 7
 - [ ] Support all items
 - [ ] Support 4 players (FFA and 2V2 teams )
 - [x] Integrate the replay viewer in the menu
 
 ## Contributing
 
-Whats the point of Github without contrib ? Any contributions you make are **greatly appreciated**.
-But since there is a ton of things to do, i advise either contact me directly or create an issue explaining the missing feature or the bug fix before starting to code. This is only to know what you are tying to do, provide help if needed and check if it's not already done or in the work 😉
+What's the point of Github without contributions? Any contributions you make are **greatly appreciated**.
+But since there is a ton of things to do, I advise either contact me directly or create an issue explaining the missing feature or the bug fix before starting to code. This is only so I know what you are tying to do, provide help if needed and check if it's not already done or in the works 😉
 
 1. Fork the Project
 2. Create your Feature Branch (`git checkout -b feature/cool-feature`)

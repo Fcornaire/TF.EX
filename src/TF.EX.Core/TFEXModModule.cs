@@ -44,7 +44,7 @@ namespace TF.EX
         {
             var rightStickArrow = new CustomVariantInfo(
                 Constants.RIGHT_STICK_VARIANT_NAME, Atlas["variants/freeAiming"],
-                "Shot arrow with your right stick!".ToUpperInvariant(),
+                "Shoot arrows with your right stick!".ToUpperInvariant(),
                 CustomVariantFlags.CanRandom
             );
 
