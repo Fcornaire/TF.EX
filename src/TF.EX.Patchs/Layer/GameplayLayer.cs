@@ -57,12 +57,15 @@ namespace TF.EX.Patchs.Layer
                 }
 
                 var inputRenderers = TFGamePatch.CustomInputRenderers;
+                var player1Index = _netplayManager.GetPlayerDraw() == PlayerDraw.Player1 ? 0 : 1;
+                var player2Index = _netplayManager.GetPlayerDraw() == PlayerDraw.Player1 ? 1 : 0;
 
                 for (int i = 0; i < inputRenderers.Length; i++)
                 {
                     if (inputRenderers[i] != null)
                     {
-                        InputState state = _inputService.GetCurrentInputs().ToArray()[i].ToTFInput();
+                        var index = i == 0 ? player1Index : player2Index;
+                        InputState state = _inputService.GetCurrentInputs().ToArray()[index].ToTFInput();
                         inputRenderers[i].Render(state);
                     }
                 }

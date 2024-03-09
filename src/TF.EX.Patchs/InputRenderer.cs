@@ -99,10 +99,10 @@ namespace TF.EX.Patchs
                     extraY = Vector2.Zero;
                     break;
                 case 1:
-                    extraY = Vector2.UnitX * 4;
+                    extraY = Vector2.UnitY * 4;
                     break;
                 case -1:
-                    extraY = -Vector2.UnitX * 4;
+                    extraY = -Vector2.UnitY * 4;
                     break;
             }
 
