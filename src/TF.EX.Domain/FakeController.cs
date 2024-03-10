@@ -1,4 +1,7 @@
 ﻿using Monocle;
+using TF.EX.Domain.Models;
+using TF.EX.Domain.Ports;
+using TF.EX.Domain.Ports.TF;
 using TowerFall;
 
 namespace TF.EX.Domain
@@ -29,6 +32,9 @@ namespace TF.EX.Domain
 
         private Subtexture iconAlt2;
 
+        private readonly IInputService inputService;
+        private readonly INetplayManager netplayManager;
+
         public FakeController()
         {
             icon = TFGame.MenuAtlas["controls/xb360/player1"];
@@ -43,6 +49,8 @@ namespace TF.EX.Domain
             iconAlt = TFGame.MenuAtlas["controls/xb360/rt"];
             iconAlt2 = TFGame.MenuAtlas["controls/xb360/lt"];
             iconSkipReplay = TFGame.MenuAtlas["controls/xb360/start"];
+            inputService = ServiceCollections.ResolveInputService();
+            netplayManager = ServiceCollections.ResolveNetplayManager();
         }
 
         public override bool MenuConfirm => false;
@@ -121,6 +129,12 @@ namespace TF.EX.Domain
 
         public override InputState GetState()
         {
+            if (netplayManager.IsReplayMode())
+            {
+                var player2Index = netplayManager.GetPlayerDraw() == PlayerDraw.Player1 ? 1 : 0; //TODO: Find a better way to do this when we have more than 2 players
+                return inputService.GetCurrentInput(player2Index).ToTFInput();
+            }
+
             return new InputState();
         }
     }
