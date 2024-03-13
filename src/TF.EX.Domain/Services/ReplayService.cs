@@ -156,6 +156,11 @@ namespace TF.EX.Domain.Services
             }
         }
 
+        public int GetFrame()
+        {
+            return currentReplayFrame;
+        }
+
         //TODO: Properly implement this
         public void GoTo(int numbreOfFrames)
         {

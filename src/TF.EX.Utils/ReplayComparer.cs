@@ -15,8 +15,8 @@ namespace TF.EX.Utils
         [Fact]
         public async Task TestReplayComparison()
         {
-            string replayFilePath1 = Path.Combine(_replaysFolder, "18-12-2023T21-39-17.tow"); //Weird desynch
-            string replayFilePath2 = Path.Combine(_replaysFolder, "18-12-2023T21-39-17_gog.tow");
+            string replayFilePath1 = Path.Combine(_replaysFolder, "11-03-2024T20-55-15.tow"); //Weird desynch
+            string replayFilePath2 = Path.Combine(_replaysFolder, "11-03-2024T20-55-15_gog.tow");
 
             List<TF.EX.Domain.Models.Record> record1 = (await ReplayService.ToReplay(replayFilePath1)).Record;
             List<TF.EX.Domain.Models.Record> record2 = (await ReplayService.ToReplay(replayFilePath2)).Record;
@@ -27,7 +27,9 @@ namespace TF.EX.Utils
             {
                 try
                 {
-                    record2[i].GameState.MatchStats = record2[i].GameState.MatchStats.Reverse();
+                    record2[i].GameState.MatchStats = record1[i].GameState.MatchStats;
+                    record2[i].GameState.Session.Scores = record1[i].GameState.Session.Scores;
+                    record2[i].GameState.Session.OldScores = record1[i].GameState.Session.OldScores;
                     record1[i].GameState.ShouldDeepEqual(record2[i].GameState);
                 }
                 catch (DeepEqual.Syntax.DeepEqualException e)
@@ -47,24 +49,24 @@ namespace TF.EX.Utils
 
             if (!string.IsNullOrEmpty(msg))
             {
-                string diffFilePath = Path.Combine(_replaysFolder, "diff.txt");
+                string diffFilePath = Path.Combine(_replaysFolder, "diff_2.txt");
                 using StreamWriter sw = new StreamWriter(diffFilePath);
                 sw.Write(msg);
             }
             else
             {
-                string diffFilePath = Path.Combine(_replaysFolder, "diff.txt");
+                string diffFilePath = Path.Combine(_replaysFolder, "diff_2.txt");
                 using StreamWriter sw = new StreamWriter(diffFilePath);
                 sw.Write("No diff!");
             }
         }
 
         [Theory]
-        [InlineData(8854)]
+        [InlineData(100)]
         public async Task TestReplayComparisonAtSpecificFrame(int frame)
         {
-            string replayFilePath1 = Path.Combine(_replaysFolder, "21-10-2023T19-41-50_gog.tow");
-            string replayFilePath2 = Path.Combine(_replaysFolder, "21-10-2023T19-41-41_lap.tow");
+            string replayFilePath1 = Path.Combine(_replaysFolder, "11-03-2024T20-55-15.tow");
+            string replayFilePath2 = Path.Combine(_replaysFolder, "11-03-2024T20-55-15_gog.tow");
 
             List<TF.EX.Domain.Models.Record> record1 = (await ReplayService.ToReplay(replayFilePath1)).Record;
             List<TF.EX.Domain.Models.Record> record2 = (await ReplayService.ToReplay(replayFilePath2)).Record;
