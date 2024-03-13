@@ -19,6 +19,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             var collidable = dynOrb.Get<bool>("Collidable");
             var sine = dynOrb.Get<SineWave>("sine");
             var ownerIndex = dynOrb.Get<int>("ownerIndex");
+            var startY = dynOrb.Get<float>("startY");
 
             return new Orb
             {
@@ -29,7 +30,8 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 PositionCounter = positionCounter.ToModel(),
                 VSpeed = vSpeed,
                 SineCounter = sine.Counter,
-                OwnerIndex = ownerIndex
+                OwnerIndex = ownerIndex,
+                StartY = startY
             };
         }
 
@@ -44,6 +46,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             dynOrb.Set("Position", toLoad.Position.ToTFVector());
             dynOrb.Set("Collidable", toLoad.IsCollidable);
             dynOrb.Set("ownerIndex", toLoad.OwnerIndex);
+            dynOrb.Set("startY", toLoad.StartY);
 
             var playerOrCorpse = entity.Level.GetPlayerOrCorpse(toLoad.OwnerIndex);
             entity.CannotHit = playerOrCorpse;

@@ -22,5 +22,8 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity
 
         [Key(7)]
         public int OwnerIndex { get; set; }
+
+        [Key(8)]
+        public float StartY { get; set; }
     }
 }
