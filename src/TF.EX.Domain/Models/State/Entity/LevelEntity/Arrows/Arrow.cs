@@ -74,5 +74,8 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
 
         [Key(21)]
         public double StuckToActualDepth { get; set; }
+
+        [Key(22)]
+        public float TravelFrames { get; set; }
     }
 }
