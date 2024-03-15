@@ -1,11 +1,15 @@
 ﻿using FortRise;
+using Microsoft.Extensions.Logging;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using Monocle;
 using MonoMod.Utils;
+using TF.EX.Common.Extensions;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models.State;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
+using TF.EX.TowerFallExtensions;
 using TowerFall;
 
 
@@ -15,11 +19,13 @@ namespace TF.EX.Patchs.Entity.LevelEntity
     {
         private readonly INetplayManager _netplayManager;
         private readonly IInputService _inputService;
+        private readonly ILogger logger;
 
-        public PlayerPatch(INetplayManager netplayManager, IInputService inputService)
+        public PlayerPatch(INetplayManager netplayManager, IInputService inputService, ILogger logger)
         {
             _netplayManager = netplayManager;
             _inputService = inputService;
+            this.logger = logger;
         }
 
         public void Load()
@@ -48,35 +54,58 @@ namespace TF.EX.Patchs.Entity.LevelEntity
         {
             orig(self);
 
-            if (_netplayManager.IsInit() && !TowerFall.Player.ShootLock && VariantManager.GetCustomVariant(Constants.RIGHT_STICK_VARIANT_NAME))
+            if (_netplayManager.IsInit())
             {
-                var playerIndex = self.PlayerIndex;
-                if (_netplayManager.ShouldSwapPlayer())
+                var dynPlayer = DynamicData.For(self);
+
+                // Sprite update are done in the DoWrapRender method, so we manually call it here to have it in the game state
+                var gameplayLayer = self.Level.GetGameplayLayer();
+                var blendState = gameplayLayer.BlendState;
+                var samplerState = gameplayLayer.SamplerState;
+                var effect = gameplayLayer.Effect;
+                var cameraMultiplier = gameplayLayer.CameraMultiplier;
+
+                Draw.SpriteBatch.Begin(SpriteSortMode.Deferred, blendState, samplerState, DepthStencilState.None, RasterizerState.CullNone, effect, Matrix.Lerp(Matrix.Identity, self.Scene.Camera.Matrix, cameraMultiplier));
+                try
                 {
-                    if (playerIndex == 0)
+                    self.DoWrapRender();
+                }
+                catch (Exception e)
+                {
+                    logger.LogDebug<PlayerPatch>($"Error when rendering player (may not cause issue ?) : {e.Message} => {e.StackTrace}");
+                }
+                Draw.SpriteBatch.End();
+
+
+                if (!TowerFall.Player.ShootLock && VariantManager.GetCustomVariant(Constants.RIGHT_STICK_VARIANT_NAME))
+                {
+                    var playerIndex = self.PlayerIndex;
+                    if (_netplayManager.ShouldSwapPlayer())
                     {
-                        playerIndex = _inputService.GetLocalPlayerInputIndex();
+                        if (playerIndex == 0)
+                        {
+                            playerIndex = _inputService.GetLocalPlayerInputIndex();
+                        }
+                        else
+                        {
+                            playerIndex = _inputService.GetRemotePlayerInputIndex();
+                        }
+                    }
+
+                    var input = _inputService.GetCurrentInput(playerIndex);
+
+                    if (input.aim_right_axis.IsAfterThreshold())
+                    {
+                        if (!dynPlayer.Get<bool>("isAimingRight"))
+                        {
+                            ShootArrowWithRightStick(self);
+                            dynPlayer.Set("isAimingRight", true);
+                        }
                     }
                     else
                     {
-                        playerIndex = _inputService.GetRemotePlayerInputIndex();
+                        dynPlayer.Set("isAimingRight", false);
                     }
-                }
-
-                var input = _inputService.GetCurrentInput(playerIndex);
-                var dynPlayer = DynamicData.For(self);
-
-                if (input.aim_right_axis.IsAfterThreshold())
-                {
-                    if (!dynPlayer.Get<bool>("isAimingRight"))
-                    {
-                        ShootArrowWithRightStick(self);
-                        dynPlayer.Set("isAimingRight", true);
-                    }
-                }
-                else
-                {
-                    dynPlayer.Set("isAimingRight", false);
                 }
             }
         }
