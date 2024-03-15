@@ -1,13 +1,11 @@
 ﻿using FortRise;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
 using Monocle;
 using MonoMod.Utils;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models.State;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
-using TF.EX.TowerFallExtensions;
 using TowerFall;
 
 
@@ -50,50 +48,35 @@ namespace TF.EX.Patchs.Entity.LevelEntity
         {
             orig(self);
 
-            if (_netplayManager.IsInit())
+            if (_netplayManager.IsInit() && !TowerFall.Player.ShootLock && VariantManager.GetCustomVariant(Constants.RIGHT_STICK_VARIANT_NAME))
             {
-                var dynPlayer = DynamicData.For(self);
-
-                // Sprite update are done in the DoWrapRender method, so we manually call it here to have it in the game state
-                var gameplayLayer = self.Level.GetGameplayLayer();
-                var blendState = gameplayLayer.BlendState;
-                var samplerState = gameplayLayer.SamplerState;
-                var effect = gameplayLayer.Effect;
-                var cameraMultiplier = gameplayLayer.CameraMultiplier;
-
-                Draw.SpriteBatch.Begin(SpriteSortMode.Deferred, blendState, samplerState, DepthStencilState.None, RasterizerState.CullNone, effect, Matrix.Lerp(Matrix.Identity, self.Scene.Camera.Matrix, cameraMultiplier));
-                dynPlayer.Invoke("DoWrapRender");
-                Draw.SpriteBatch.End();
-
-                if (!TowerFall.Player.ShootLock && VariantManager.GetCustomVariant(Constants.RIGHT_STICK_VARIANT_NAME))
+                var playerIndex = self.PlayerIndex;
+                if (_netplayManager.ShouldSwapPlayer())
                 {
-                    var playerIndex = self.PlayerIndex;
-                    if (_netplayManager.ShouldSwapPlayer())
+                    if (playerIndex == 0)
                     {
-                        if (playerIndex == 0)
-                        {
-                            playerIndex = _inputService.GetLocalPlayerInputIndex();
-                        }
-                        else
-                        {
-                            playerIndex = _inputService.GetRemotePlayerInputIndex();
-                        }
-                    }
-
-                    var input = _inputService.GetCurrentInput(playerIndex);
-
-                    if (input.aim_right_axis.IsAfterThreshold())
-                    {
-                        if (!dynPlayer.Get<bool>("isAimingRight"))
-                        {
-                            ShootArrowWithRightStick(self);
-                            dynPlayer.Set("isAimingRight", true);
-                        }
+                        playerIndex = _inputService.GetLocalPlayerInputIndex();
                     }
                     else
                     {
-                        dynPlayer.Set("isAimingRight", false);
+                        playerIndex = _inputService.GetRemotePlayerInputIndex();
                     }
+                }
+
+                var input = _inputService.GetCurrentInput(playerIndex);
+                var dynPlayer = DynamicData.For(self);
+
+                if (input.aim_right_axis.IsAfterThreshold())
+                {
+                    if (!dynPlayer.Get<bool>("isAimingRight"))
+                    {
+                        ShootArrowWithRightStick(self);
+                        dynPlayer.Set("isAimingRight", true);
+                    }
+                }
+                else
+                {
+                    dynPlayer.Set("isAimingRight", false);
                 }
             }
         }
