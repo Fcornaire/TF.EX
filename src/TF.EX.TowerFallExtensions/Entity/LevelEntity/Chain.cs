@@ -30,7 +30,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 Bottoms = bottoms.ToModel(),
                 CannotHitCounter = cannotHitCounter.Value,
                 Position = position.ToModel(),
-                Speeds = speeds,
+                Speeds = speeds.ToArray(),
                 Rotations = rotations
             };
         }
@@ -56,6 +56,11 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             for (int i = 0; i < toLoad.Rotations.Length; i++)
             {
                 links[i].Rotation = toLoad.Rotations[i];
+            }
+
+            for (int i = 0; i < toLoad.Speeds.Length; i++)
+            {
+                speeds[i] = toLoad.Speeds[i];
             }
 
             cannotHitCounter.Set("counter", counter);
