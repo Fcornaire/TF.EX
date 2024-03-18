@@ -134,7 +134,7 @@ namespace TF.EX.Domain.Services
                                 {
                                     _isInit = false;
                                     _hasFailedInitialConnection = true;
-                                    _logger.LogError<NetplayManager>($"Failed to etablish a connexion to the opponent, aborting session...");
+                                    _logger.LogError<NetplayManager>($"Failed to etablish a connection to the opponent, aborting session");
                                     TowerFall.Sounds.ui_invalid.Play();
 
                                     Reset();
