@@ -79,6 +79,7 @@ namespace TF.EX.Patchs
             serviceCollection.AddSingleton<IHookable, MatchVariantsPatchs>();
             serviceCollection.AddSingleton<IHookable, VariantPatch>();
             serviceCollection.AddSingleton<IHookable, FadeLayerPatch>();
+            serviceCollection.AddSingleton<IHookable, AlarmPatch>();
         }
 
         public static LavaPatch GetLavaPatch(this IServiceProvider serviceProvider)
