@@ -280,7 +280,13 @@ namespace TF.EX.TowerFallExtensions
             }
 
             var dynGameplayLayer = DynamicData.For(level.GetGameplayLayer());
-            dynGameplayLayer.Set("actualDepthLookup", gameState.Layer.GameplayLayerActualDepthLookup);
+            Dictionary<int, double> actualDepthLookup = dynGameplayLayer.Get<Dictionary<int, double>>("actualDepthLookup");
+            actualDepthLookup.Clear();
+
+            foreach (var item in gameState.Layer.GameplayLayerActualDepthLookup)
+            {
+                actualDepthLookup.Add(item.Key, item.Value);
+            }
 
             var dynScene = DynamicData.For(level as Monocle.Scene);
             dynScene.Set("FrameCounter", gameState.Frame);

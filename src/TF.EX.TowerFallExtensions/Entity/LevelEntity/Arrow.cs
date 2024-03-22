@@ -50,6 +50,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             });
             builder.WithHasUnhittableEntity(entity.CannotHit != null);
             builder.WithBuriedIn(buriedIn?.GetState());
+            builder.WithTravelFrames(entity.TravelFrames);
 
             if (entity.StuckTo != null && entity.State == TowerFall.Arrow.ArrowStates.Stuck)
             {
@@ -138,6 +139,17 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 entity.CannotHit = null;
             }
 
+            dynArrow.Set("TravelFrames", toLoad.TravelFrames);
+
+            if (toLoad.BuriedIn != null)
+            {
+                //TODO: Always a player corpse?
+                var arrowCushion = ((entity.Scene as TowerFall.Level).GetEntityByDepth(toLoad.BuriedIn.EntityActualDepth) as TowerFall.PlayerCorpse).ArrowCushion;
+
+                dynArrow.Set("BuriedIn", arrowCushion);
+                entity.BuriedIn.LoadState(toLoad.BuriedIn);
+            }
+
             switch (toLoad.ArrowType)
             {
                 case ArrowTypes.Bomb:
@@ -155,15 +167,6 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 
                     var buriedSprite = dynBombArrow.Get<Sprite<int>>("buriedSprite");
                     buriedSprite.LoadState(toLoadBombArrow.BuriedSprite);
-
-                    if (toLoadBombArrow.BuriedIn != null)
-                    {
-                        //TODO: Always a player corpse?
-                        var arrowCushion = ((entity.Scene as TowerFall.Level).GetEntityByDepth(toLoad.BuriedIn.EntityActualDepth) as TowerFall.PlayerCorpse).ArrowCushion;
-
-                        dynBombArrow.Set("BuriedIn", arrowCushion);
-                        bombArrow.BuriedIn.LoadState(toLoadBombArrow.BuriedIn);
-                    }
 
                     break;
                 case ArrowTypes.Laser:

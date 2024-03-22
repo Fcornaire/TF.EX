@@ -30,7 +30,13 @@ namespace TF.EX.Domain.Extensions
             }
 
             var dynArrowList = DynamicData.For(arrowList);
-            dynArrowList.Set("sortSet", toLoad.SortSet.Select(arrow => arrow.ToTFModel()).ToList());
+            List<TowerFall.ArrowTypes> sortSet = dynArrowList.Get<List<TowerFall.ArrowTypes>>("sortSet");
+            sortSet.Clear();
+
+            foreach (var arrow in toLoad.SortSet)
+            {
+                sortSet.Add(arrow.ToTFModel());
+            }
         }
     }
 }

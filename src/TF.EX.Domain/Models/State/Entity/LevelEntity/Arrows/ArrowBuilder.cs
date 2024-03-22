@@ -61,6 +61,12 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
             return this;
         }
 
+        public ArrowBuilder WithTravelFrames(float travelFrames)
+        {
+            arrow.TravelFrames = travelFrames;
+            return this;
+        }
+
         public ArrowBuilder WithShootingCounter(float shootingCounter)
         {
             arrow.ShootingCounter = shootingCounter;
@@ -226,7 +232,8 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
                         Flash = arrow.Flash,
                         HasUnhittableEntity = arrow.HasUnhittableEntity,
                         BuriedIn = arrow.BuriedIn,
-                        StuckToActualDepth = arrow.StuckToActualDepth
+                        StuckToActualDepth = arrow.StuckToActualDepth,
+                        TravelFrames = arrow.TravelFrames,
                     };
                 case ArrowTypes.Bomb:
                     return new BombArrow
@@ -257,6 +264,7 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
                         CanExplode = arrow.CanExplode,
                         ExplodeAlarm = arrow.ExplodeAlarm,
                         NormalSprite = arrow.NormalSprite,
+                        TravelFrames = arrow.TravelFrames,
                     };
                 case ArrowTypes.Laser:
                     return new LaserArrow
@@ -285,6 +293,7 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
                         StuckToActualDepth = arrow.StuckToActualDepth,
                         Bounced = arrow.Bounced,
                         CanBounceIndefinitely = arrow.CanBounceIndefinitely,
+                        TravelFrames = arrow.TravelFrames,
                     };
                 default:
                     return arrow;

@@ -1,9 +1,17 @@
 ﻿using Monocle;
+using TF.EX.Domain.Ports;
 
 namespace TF.EX.Patchs.Background
 {
     public class FadeLayerPatch : IHookable
     {
+        private readonly INetplayManager netplayManager;
+
+        public FadeLayerPatch(INetplayManager netplayManager)
+        {
+            this.netplayManager = netplayManager;
+        }
+
         public void Load()
         {
             On.TowerFall.Background.FadeLayer.UpdatePosition += FadeLayer_UpdatePosition;
@@ -16,11 +24,15 @@ namespace TF.EX.Patchs.Background
 
         private void FadeLayer_UpdatePosition(On.TowerFall.Background.FadeLayer.orig_UpdatePosition orig, TowerFall.Background.FadeLayer self, Sprite<int> s)
         {
-            // Used by FadeLayer, but this largely increase the number of RNG calls which is not good for performance, uncomment for test mode
-
-            //Calc.CalcPatch.RegisterRng();
-            orig(self, s);
-            //Calc.CalcPatch.UnregisterRng();
+            if (netplayManager.IsInit())
+            {
+                self.Sprite.Position = self.Position - self.Range;
+                self.Sprite.Rate = 0.6f;
+            }
+            else
+            {
+                orig(self, s);
+            }
         }
     }
 }
