@@ -142,6 +142,7 @@ namespace TF.EX.TowerFallExtensions
             gameState.AddOrbsState(self);
             gameState.AddLavaControlState(self);
             gameState.AddBGTorches(self);
+            gameState.AddMovingPlatformState(self);
             gameState.Rng = rngService.Get();
 
             if (netplayManager.IsTestMode())
@@ -609,6 +610,9 @@ namespace TF.EX.TowerFallExtensions
             //Background and Foreground load
             //gameState.LoadBackgroundAndForegroundElements(level);
 
+            //MovingPlatform load
+            gameState.LoadMovingPlatforms(level);
+
             var sine = dynLightingLayer.Get<SineWave>("sine");
             sine.UpdateAttributes(gameState.Layer.LightingLayerSine);
 
@@ -1075,6 +1079,18 @@ namespace TF.EX.TowerFallExtensions
             }
         }
 
+        private static void AddMovingPlatformState(this GameState gameState, Level level)
+        {
+
+            var movingPlatforms = level.GetAll<TowerFall.MovingPlatform>().ToArray();
+
+            foreach (TowerFall.MovingPlatform movingPlatform in movingPlatforms)
+            {
+                var state = movingPlatform.GetState();
+                gameState.Entities.MovingPlatforms.Add(state);
+            }
+        }
+
         private static void LoadLavaControl(this GameState gameState, Level level)
         {
             var gameLavaControl = level.Get<LavaControl>();
@@ -1287,6 +1303,25 @@ namespace TF.EX.TowerFallExtensions
                 if (gameForeground != null)
                 {
                     gameForeground.LoadState(toLoad);
+                }
+            }
+        }
+
+        private static void LoadMovingPlatforms(this GameState gameState, Level level)
+        {
+            var gameMovingPlatforms = level.GetAll<TowerFall.MovingPlatform>().ToArray();
+            if (gameMovingPlatforms != null && gameMovingPlatforms.Length > 0)
+            {
+                foreach (TowerFall.MovingPlatform movingPlatform in gameMovingPlatforms)
+                {
+                    var dynMovingPlatform = DynamicData.For(movingPlatform);
+                    var actualDepth = dynMovingPlatform.Get<double>("actualDepth");
+
+                    var currentMovingPlatform = gameState.Entities.MovingPlatforms.FirstOrDefault(cp => cp.ActualDepth == actualDepth);
+                    if (currentMovingPlatform != null)
+                    {
+                        movingPlatform.LoadState(currentMovingPlatform);
+                    }
                 }
             }
         }
