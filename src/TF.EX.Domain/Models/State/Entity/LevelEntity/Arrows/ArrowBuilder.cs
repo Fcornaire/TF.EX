@@ -18,6 +18,11 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
 
             public bool CanBounceIndefinitely { get; set; }
 
+            public bool CanDie { get; set; }
+            public bool IsUsed { get; set; }
+            public int BrambleCoroutineTimer { get; set; } = 0;
+
+
             public IntermediateArrow()
             {
                 ArrowType = ArrowTypes.Normal;
@@ -204,100 +209,89 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
             arrow.CanBounceIndefinitely = canBounceIndefinitely;
         }
 
+        public void WithCanDie(bool canDie)
+        {
+            arrow.CanDie = canDie;
+        }
+
+        public void WithIsUsed(bool isUsed)
+        {
+            arrow.IsUsed = isUsed;
+        }
+
+        public void WithBrambleCoroutineTimer(int brambleCoroutineTimer)
+        {
+            arrow.BrambleCoroutineTimer = brambleCoroutineTimer;
+        }
+
         public Arrow Build()
         {
+            Arrow built;
+
             switch (arrow.ArrowType)
             {
                 case ArrowTypes.Normal:
-                    return new DefaultArrow
-                    {
-                        ActualDepth = arrow.ActualDepth,
-                        ArrowType = arrow.ArrowType,
-                        Direction = arrow.Direction,
-                        PlayerIndex = arrow.PlayerIndex,
-                        Position = arrow.Position,
-                        ShootingCounter = arrow.ShootingCounter,
-                        CannotPickupCounter = arrow.CannotPickupCounter,
-                        CannotCatchCounter = arrow.CannotCatchCounter,
-                        Speed = arrow.Speed,
-                        State = arrow.State,
-                        StuckDirection = arrow.StuckDirection,
-                        PositionCounter = arrow.PositionCounter,
-                        IsActive = arrow.IsActive,
-                        IsCollidable = arrow.IsCollidable,
-                        IsFrozen = arrow.IsFrozen,
-                        IsVisible = arrow.IsVisible,
-                        MarkedForRemoval = arrow.MarkedForRemoval,
-                        FireControl = arrow.FireControl,
-                        Flash = arrow.Flash,
-                        HasUnhittableEntity = arrow.HasUnhittableEntity,
-                        BuriedIn = arrow.BuriedIn,
-                        StuckToActualDepth = arrow.StuckToActualDepth,
-                        TravelFrames = arrow.TravelFrames,
-                    };
+                    built = new DefaultArrow();
+                    break;
                 case ArrowTypes.Bomb:
-                    return new BombArrow
-                    {
-                        ActualDepth = arrow.ActualDepth,
-                        ArrowType = arrow.ArrowType,
-                        Direction = arrow.Direction,
-                        PlayerIndex = arrow.PlayerIndex,
-                        Position = arrow.Position,
-                        ShootingCounter = arrow.ShootingCounter,
-                        CannotPickupCounter = arrow.CannotPickupCounter,
-                        CannotCatchCounter = arrow.CannotCatchCounter,
-                        Speed = arrow.Speed,
-                        State = arrow.State,
-                        StuckDirection = arrow.StuckDirection,
-                        PositionCounter = arrow.PositionCounter,
-                        IsActive = arrow.IsActive,
-                        IsCollidable = arrow.IsCollidable,
-                        IsFrozen = arrow.IsFrozen,
-                        IsVisible = arrow.IsVisible,
-                        MarkedForRemoval = arrow.MarkedForRemoval,
-                        FireControl = arrow.FireControl,
-                        Flash = arrow.Flash,
-                        HasUnhittableEntity = arrow.HasUnhittableEntity,
-                        BuriedIn = arrow.BuriedIn,
-                        StuckToActualDepth = arrow.StuckToActualDepth,
-                        BuriedSprite = arrow.BuriedSprite,
-                        CanExplode = arrow.CanExplode,
-                        ExplodeAlarm = arrow.ExplodeAlarm,
-                        NormalSprite = arrow.NormalSprite,
-                        TravelFrames = arrow.TravelFrames,
-                    };
+                    built = new BombArrow();
+                    break;
                 case ArrowTypes.Laser:
-                    return new LaserArrow
-                    {
-                        ActualDepth = arrow.ActualDepth,
-                        ArrowType = arrow.ArrowType,
-                        Direction = arrow.Direction,
-                        PlayerIndex = arrow.PlayerIndex,
-                        Position = arrow.Position,
-                        ShootingCounter = arrow.ShootingCounter,
-                        CannotPickupCounter = arrow.CannotPickupCounter,
-                        CannotCatchCounter = arrow.CannotCatchCounter,
-                        Speed = arrow.Speed,
-                        State = arrow.State,
-                        StuckDirection = arrow.StuckDirection,
-                        PositionCounter = arrow.PositionCounter,
-                        IsActive = arrow.IsActive,
-                        IsCollidable = arrow.IsCollidable,
-                        IsFrozen = arrow.IsFrozen,
-                        IsVisible = arrow.IsVisible,
-                        MarkedForRemoval = arrow.MarkedForRemoval,
-                        FireControl = arrow.FireControl,
-                        Flash = arrow.Flash,
-                        HasUnhittableEntity = arrow.HasUnhittableEntity,
-                        BuriedIn = arrow.BuriedIn,
-                        StuckToActualDepth = arrow.StuckToActualDepth,
-                        Bounced = arrow.Bounced,
-                        CanBounceIndefinitely = arrow.CanBounceIndefinitely,
-                        TravelFrames = arrow.TravelFrames,
-                    };
+                    built = new LaserArrow();
+                    break;
+                case ArrowTypes.Bramble:
+                    built = new BrambleArrow();
+                    break;
                 default:
-                    return arrow;
+                    throw new Exception("Unknown arrow type");
             }
+
+            built.ActualDepth = arrow.ActualDepth;
+            built.ArrowType = arrow.ArrowType;
+            built.Direction = arrow.Direction;
+            built.PlayerIndex = arrow.PlayerIndex;
+            built.Position = arrow.Position;
+            built.ShootingCounter = arrow.ShootingCounter;
+            built.CannotPickupCounter = arrow.CannotPickupCounter;
+            built.CannotCatchCounter = arrow.CannotCatchCounter;
+            built.Speed = arrow.Speed;
+            built.State = arrow.State;
+            built.StuckDirection = arrow.StuckDirection;
+            built.PositionCounter = arrow.PositionCounter;
+            built.IsActive = arrow.IsActive;
+            built.IsCollidable = arrow.IsCollidable;
+            built.IsFrozen = arrow.IsFrozen;
+            built.IsVisible = arrow.IsVisible;
+            built.MarkedForRemoval = arrow.MarkedForRemoval;
+            built.FireControl = arrow.FireControl;
+            built.Flash = arrow.Flash;
+            built.HasUnhittableEntity = arrow.HasUnhittableEntity;
+            built.BuriedIn = arrow.BuriedIn;
+            built.StuckToActualDepth = arrow.StuckToActualDepth;
+            built.TravelFrames = arrow.TravelFrames;
+
+            if (built is BombArrow bombArrow)
+            {
+                bombArrow.BuriedSprite = arrow.BuriedSprite;
+                bombArrow.CanExplode = arrow.CanExplode;
+                bombArrow.ExplodeAlarm = arrow.ExplodeAlarm;
+                bombArrow.NormalSprite = arrow.NormalSprite;
+            }
+
+            if (built is LaserArrow laserArrow)
+            {
+                laserArrow.Bounced = arrow.Bounced;
+                laserArrow.CanBounceIndefinitely = arrow.CanBounceIndefinitely;
+            }
+
+            if (built is BrambleArrow brambleArrow)
+            {
+                brambleArrow.CanDie = arrow.CanDie;
+                brambleArrow.IsUsed = arrow.IsUsed;
+                brambleArrow.CoroutineTimer = arrow.BrambleCoroutineTimer;
+            }
+
+            return built;
         }
     }
 }

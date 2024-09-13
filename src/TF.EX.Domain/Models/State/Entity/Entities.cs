@@ -52,5 +52,8 @@ namespace TF.EX.Domain.Models.State.Entity
         public ICollection<BGMushroom> BGMushrooms { get; set; } = new List<BGMushroom>();
         [Key(18)]
         public ICollection<MovingPlatform> MovingPlatforms { get; set; } = new List<MovingPlatform>();
+
+        [Key(19)]
+        public ICollection<Brambles> Brambles { get; set; } = new List<Brambles>();
     }
 }

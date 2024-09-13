@@ -24,5 +24,7 @@ namespace TF.EX.Domain.Models.State
         public int[] Scores { get; set; } = new int[4];
         [Key(7)]
         public int[] OldScores { get; set; } = new int[4];
+        [Key(8)]
+        public IEnumerable<BramblesStartingState> BramblesStartingState { get; set; } = new List<BramblesStartingState>();
     }
 }

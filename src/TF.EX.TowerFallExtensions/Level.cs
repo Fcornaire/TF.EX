@@ -110,6 +110,7 @@ namespace TF.EX.TowerFallExtensions
             var sfxService = ServiceCollections.ResolveSFXService();
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var inputService = ServiceCollections.ResolveInputService();
+            var sessionService = ServiceCollections.ResolveSessionService();
 
             gameState.Frame = GGRSFFI.netplay_current_frame();
 
@@ -143,6 +144,9 @@ namespace TF.EX.TowerFallExtensions
             gameState.AddLavaControlState(self);
             gameState.AddBGTorches(self);
             gameState.AddMovingPlatformState(self);
+            gameState.AddBramblesState(self);
+
+            gameState.Session.BramblesStartingState = sessionService.GetBramblesStartingState();
             gameState.Rng = rngService.Get();
 
             if (netplayManager.IsTestMode())
@@ -181,6 +185,9 @@ namespace TF.EX.TowerFallExtensions
             var sfxService = ServiceCollections.ResolveSFXService();
             var currentMode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
             var inputService = ServiceCollections.ResolveInputService();
+
+            //To deal with coroutine brambles
+            sessionService.LoadBramblesStartingState(gameState.Session.BramblesStartingState);
 
             sfxService.UpdateLastRollbackFrame(gameState.Frame);
             sfxService.Load(gameState.SFXs.Select(sfx => new Domain.Models.State.SFX
@@ -510,8 +517,7 @@ namespace TF.EX.TowerFallExtensions
                     }
 
                     var arrow = TowerFall.Arrow.Create(toLoad.ArrowType.ToTFModel(), entityHavingArrow, toLoad.Position.ToTFVector(), toLoad.Direction);
-                    var dynArrow = DynamicData.For(arrow);
-                    arrow.LoadState(toLoad);
+                    arrow.LoadState(toLoad, gameState.Session.BramblesStartingState, gameState.Frame);
 
                     level.GetGameplayLayer().Entities.Insert(0, arrow);
                 }
@@ -613,6 +619,9 @@ namespace TF.EX.TowerFallExtensions
             //MovingPlatform load
             gameState.LoadMovingPlatforms(level);
 
+            //Brambles load
+            gameState.LoadBrambles(level);
+
             var sine = dynLightingLayer.Get<SineWave>("sine");
             sine.UpdateAttributes(gameState.Layer.LightingLayerSine);
 
@@ -686,7 +695,7 @@ namespace TF.EX.TowerFallExtensions
 
         private static Background.BGElement GetFGElementByIndex(this Level level, int index) { return level.Foreground.GetBGElements()[index]; }
 
-
+        //TODO: use generic method instead
         public static Monocle.Entity GetEntityByDepth(this Level self, double actualDepth)
         {
             Monocle.Entity entity = null;
@@ -1091,6 +1100,20 @@ namespace TF.EX.TowerFallExtensions
             }
         }
 
+        private static void AddBramblesState(this GameState gameState, Level level)
+        {
+            var brambles = level.GetAll<TowerFall.Brambles>().ToArray();
+            if (brambles != null && brambles.Length > 0)
+            {
+                foreach (TowerFall.Brambles bramble in brambles)
+                {
+                    var state = bramble.GetState();
+                    gameState.Entities.Brambles.Add(state);
+                    ServiceCollections.AddEntityToCache(state.ActualDepth, bramble);
+                }
+            }
+        }
+
         private static void LoadLavaControl(this GameState gameState, Level level)
         {
             var gameLavaControl = level.Get<LavaControl>();
@@ -1323,6 +1346,28 @@ namespace TF.EX.TowerFallExtensions
                         movingPlatform.LoadState(currentMovingPlatform);
                     }
                 }
+            }
+        }
+
+        private static void LoadBrambles(this GameState gameState, Level level)
+        {
+            level.DeleteAll<TowerFall.Brambles>();
+
+            var dynData = new DynamicData(typeof(TowerFall.Brambles));
+            var nextId = Calc.Random.Next();
+            dynData.Set("nextID", nextId);
+            int nextBramblesId = nextId;
+            foreach (var bramble in gameState.Entities.Brambles)
+            {
+                var cachedBramble = ServiceCollections.GetCachedEntity<TowerFall.Brambles>(bramble.ActualDepth);
+
+                if (cachedBramble == null)
+                {
+                    cachedBramble = TowerFall.Brambles.Create(nextBramblesId, bramble.Position.ToTFVector(), bramble.OwnerIndex, 0, false);
+                }
+
+                cachedBramble.LoadState(bramble);
+                level.GetGameplayLayer().Entities.Insert(0, cachedBramble);
             }
         }
     }

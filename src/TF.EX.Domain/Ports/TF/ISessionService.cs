@@ -1,4 +1,5 @@
 ﻿using TF.EX.Domain.Models.State;
+using TF.EX.Domain.Models.State.Entity.LevelEntity.Platform;
 
 namespace TF.EX.Domain.Ports.TF
 {
@@ -10,5 +11,8 @@ namespace TF.EX.Domain.Ports.TF
 
         Dictionary<int, double> GetGamePlayLayerActualDepthLookup();
         void SaveGamePlayLayerActualDepthLookup(Dictionary<int, double> toSave);
+        void AddBramblesState(float frameCounter, IEnumerable<MovingPlatform> movingPlatformsStates);
+        IEnumerable<BramblesStartingState> GetBramblesStartingState();
+        void LoadBramblesStartingState(IEnumerable<BramblesStartingState> bramblesStartingState);
     }
 }

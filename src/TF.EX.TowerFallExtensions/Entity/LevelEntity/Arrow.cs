@@ -84,12 +84,42 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                     builder.WithCanBounceIndefinitely(canBounceIndefinitely);
 
                     break;
+                case TowerFall.ArrowTypes.Bramble:
+                    var brambleArrow = (TowerFall.BrambleArrow)entity;
+                    var dynBrambleArrow = DynamicData.For(brambleArrow);
+                    bool canDie = dynBrambleArrow.Get<bool>("canDie");
+                    bool isUsed = dynBrambleArrow.Get<bool>("used");
+
+                    builder.WithCanDie(canDie);
+                    builder.WithIsUsed(isUsed);
+
+                    var coroutine = brambleArrow.GetComponent<Coroutine>();
+                    if (coroutine != null)
+                    {
+                        var dynCoroutine = DynamicData.For(coroutine);
+
+                        try
+                        {
+                            int coroutineTimer = dynCoroutine.Get<int>("CoroutineTimer");
+                            builder.WithBrambleCoroutineTimer(coroutineTimer);
+                        }
+                        catch
+                        {
+                            builder.WithBrambleCoroutineTimer(0);
+                        }
+                    }
+                    else
+                    {
+                        builder.WithBrambleCoroutineTimer(-1);
+                    }
+
+                    break;
             }
 
             return builder.Build();
         }
 
-        public static void LoadState(this TowerFall.Arrow entity, Arrow toLoad)
+        public static void LoadState(this TowerFall.Arrow entity, Arrow toLoad, IEnumerable<TF.EX.Domain.Models.State.BramblesStartingState> bramblesStartingStates, int currentFrame)
         {
             var dynArrow = DynamicData.For(entity);
             dynArrow.Set("Scene", TowerFall.TFGame.Instance.Scene);
@@ -132,6 +162,10 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             if (toLoad.StuckToActualDepth != 0)
             {
                 dynArrow.Set("StuckTo", entity.Level.GetEntityByDepth(toLoad.StuckToActualDepth));
+            }
+            else
+            {
+                dynArrow.Set("StuckTo", null);
             }
 
             if (!toLoad.HasUnhittableEntity)
@@ -178,9 +212,78 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                     dynLaserArrow.Set("Bounced", toLoadLaserArrow.Bounced);
 
                     break;
+                case ArrowTypes.Bramble:
+                    var brambleArrow = (TowerFall.BrambleArrow)entity;
+                    var dynBrambleArrow = DynamicData.For(brambleArrow);
+                    var toLoadBrambleArrow = (BrambleArrow)toLoad;
+
+                    dynBrambleArrow.Set("canDie", toLoadBrambleArrow.CanDie);
+                    dynBrambleArrow.Set("used", toLoadBrambleArrow.IsUsed);
+
+                    if (toLoadBrambleArrow.CoroutineTimer >= 0)
+                    {
+                        brambleArrow.DeleteAllComponents<Coroutine>();
+
+                        var brambleArrowCoroutine = new Coroutine(TowerFall.Brambles.CreateBrambles(
+                            brambleArrow.Level,
+                            brambleArrow.Position,
+                            brambleArrow.PlayerIndex,
+                            brambleArrow.FinishBrambles));
+
+                        brambleArrow.Add(brambleArrowCoroutine);
+
+                        var curentBrambleState = bramblesStartingStates.FirstOrDefault(state => state.FrameCounter == currentFrame - toLoadBrambleArrow.CoroutineTimer - 1);
+
+                        var movingPlatforms = entity.Level.GetAll<TowerFall.MovingPlatform>().ToList();
+
+                        if (curentBrambleState != null)
+                        {
+                            movingPlatforms.ForEach(mp =>
+                            {
+                                var dynMp = DynamicData.For(mp);
+                                double actualDepth = dynMp.Get<double>("actualDepth");
+                                var state = curentBrambleState.MovingPlatforms.FirstOrDefault(stateMV => stateMV.ActualDepth == actualDepth);
+                                if (state != null)
+                                {
+                                    mp.LoadState(state);
+                                }
+                            });
+                        }
+
+                        for (int i = 0; i < toLoadBrambleArrow.CoroutineTimer; i++)
+                        {
+                            brambleArrowCoroutine.Update();
+                            if (movingPlatforms.Any())
+                            {
+                                movingPlatforms.ForEach(mp => mp.Update());
+                            }
+                        }
+                    }
+
+                    break;
             }
 
         }
+
+        //private void PrepareForCoroutineLoad()
+        //{
+        //    var curentBrambleState = bramblesStartingStates.FirstOrDefault(state => state.FrameCounter == currentFrame - toLoadBrambleArrow.CoroutineTimer - 1);
+
+        //    if (curentBrambleState != null)
+        //    {
+        //        var movingPlatforms = entity.Level.GetAll<TowerFall.MovingPlatform>();
+        //        movingPlatforms.ToList().ForEach(mp =>
+        //        {
+        //            var dynMp = DynamicData.For(mp);
+        //            double actualDepth = dynMp.Get<double>("actualDepth");
+        //            var state = curentBrambleState.MovingPlatforms.FirstOrDefault(stateMV => stateMV.ActualDepth == actualDepth);
+        //            if (state != null)
+        //            {
+        //                mp.LoadState(state);
+        //            }
+        //        });
+        //    }
+        //}
 
         public static void LoadCannotHit(this TowerFall.Arrow self, bool hasUnhittable, int playerIndex)
         {
