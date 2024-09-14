@@ -328,7 +328,7 @@ namespace TF.EX.Patchs.Engine
                             Sounds.ui_clickSpecial.Play(160, 5);
                             _inputService.DisableAllControllers();
 
-                            Alarm alarm = Alarm.Create(Alarm.AlarmMode.Oneshot, null, 700, true);
+                            Alarm alarm = Alarm.Create(Alarm.AlarmMode.Oneshot, null, 550, true);
                             alarm.OnComplete = self.Exit;
 
                             notif.Add(alarm);
