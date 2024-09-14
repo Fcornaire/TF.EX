@@ -143,7 +143,7 @@ namespace TF.EX.Patchs.Engine
             LastUpdate = DateTime.Now;
             Accumulator = TimeSpan.Zero;
 
-            if (Config.SERVER.Contains(".com")) //TODO: find a better way to detect local / production
+            if (Config.SERVER.Contains(".scw.cloud")) //TODO: find a better way to detect local / production
             {
                 Task.Run(() => AutoUpdateIfNeeded()).GetAwaiter().GetResult();
             }
@@ -328,7 +328,7 @@ namespace TF.EX.Patchs.Engine
                             Sounds.ui_clickSpecial.Play(160, 5);
                             _inputService.DisableAllControllers();
 
-                            Alarm alarm = Alarm.Create(Alarm.AlarmMode.Oneshot, null, 500, true);
+                            Alarm alarm = Alarm.Create(Alarm.AlarmMode.Oneshot, null, 700, true);
                             alarm.OnComplete = self.Exit;
 
                             notif.Add(alarm);
