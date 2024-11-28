@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Monocle;
 using MonoMod.Utils;
 using System.Diagnostics;
+using System.Net;
 using System.Net.WebSockets;
 using TF.EX.Common.Extensions;
 using TF.EX.Common.Handle;
@@ -72,6 +73,8 @@ namespace TF.EX.Domain.Services
                 {
                     if (_webSocket.State != WebSocketState.Open)
                     {
+                        var ip = new WebClient().DownloadString("https://ipv4.icanhazip.com");
+                        _webSocket.Options.SetRequestHeader("x-tfex-real-ip", ip);
                         await _webSocket.ConnectAsync(new Uri(MATCHMAKING_URL), cancellationToken);
                     }
                 }).GetAwaiter().GetResult();
