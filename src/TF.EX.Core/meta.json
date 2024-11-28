@@ -1,6 +1,6 @@
 {
   "name": "TF.EX",
-  "version": "0.9.2",
+  "version": "0.9.3",
   "author": "DShad",
   "description": "A Netplay (Rollback netcode) + replay mod for Towerfall",
   "dll": "TF.EX.Core.dll",
