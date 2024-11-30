@@ -324,7 +324,7 @@ namespace TF.EX.Patchs.Engine
 
                         if (autoUpdater.IsUpdateAvailable())
                         {
-                            var notif = Notification.Create(self.Scene, $"EX mod update version {autoUpdater.GetLatestVersion()} ...");
+                            var notif = Notification.Create(self.Scene, $"EX mod new update! Applying version {autoUpdater.GetLatestVersion()} ...", stayingDuration: 500);
                             Sounds.ui_clickSpecial.Play(160, 5);
                             _inputService.DisableAllControllers();
 

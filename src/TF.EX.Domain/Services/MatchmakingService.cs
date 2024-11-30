@@ -73,8 +73,14 @@ namespace TF.EX.Domain.Services
                 {
                     if (_webSocket.State != WebSocketState.Open)
                     {
-                        var ip = new WebClient().DownloadString("https://ipv4.icanhazip.com");
-                        _webSocket.Options.SetRequestHeader("x-tfex-real-ip", ip);
+                        if (!IPAddress.TryParse(SERVER_URL.Split('/', '/', ':')[3], out var _))
+                        {
+                            var ipv4 = new WebClient().DownloadString("https://ipv4.icanhazip.com");
+                            var ipv6 = new WebClient().DownloadString("https://ipv6.icanhazip.com");
+                            _webSocket.Options.SetRequestHeader("x-tfex-real-ipv4", ipv4);
+                            _webSocket.Options.SetRequestHeader("x-tfex-real-ipv6", ipv6);
+                        }
+
                         await _webSocket.ConnectAsync(new Uri(MATCHMAKING_URL), cancellationToken);
                     }
                 }).GetAwaiter().GetResult();
