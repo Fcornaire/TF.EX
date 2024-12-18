@@ -75,10 +75,25 @@ namespace TF.EX.Domain.Services
                     {
                         if (!IPAddress.TryParse(SERVER_URL.Split('/', '/', ':')[3], out var _))
                         {
-                            var ipv4 = new WebClient().DownloadString("https://ipv4.icanhazip.com");
-                            var ipv6 = new WebClient().DownloadString("https://ipv6.icanhazip.com");
+                            using var webClient = new WebClient();
+                            var ipv4 = webClient.DownloadString("https://ipv4.icanhazip.com");
+                            var ipv6 = string.Empty;
+                            try
+                            {
+                                ipv6 = webClient.DownloadString("https://ipv6.icanhazip.com");
+                            }
+                            catch (Exception)
+                            {
+                                _logger.LogDebug<MatchmakingService>("Network/computer does not support ipv6");
+                                ipv6 = string.Empty;
+                            }
+
                             _webSocket.Options.SetRequestHeader("x-tfex-real-ipv4", ipv4);
-                            _webSocket.Options.SetRequestHeader("x-tfex-real-ipv6", ipv6);
+
+                            if (!string.IsNullOrEmpty(ipv6))
+                            {
+                                _webSocket.Options.SetRequestHeader("x-tfex-real-ipv6", ipv6);
+                            }
                         }
 
                         await _webSocket.ConnectAsync(new Uri(MATCHMAKING_URL), cancellationToken);
