@@ -1,7 +1,7 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using FortRise;
+using Microsoft.Extensions.Logging;
 using Microsoft.Xna.Framework;
 using Monocle;
-using TF.EX.Common.Extensions;
 using TF.EX.Domain;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
@@ -9,8 +9,30 @@ using TowerFall;
 
 namespace TF.EX.Core.RoundLogic
 {
-    [CustomRoundLogic("Netplay")]
-    internal class Netplay : CustomVersusRoundLogic
+    public class NetplayVersusMode : IVersusGameMode
+    {
+        public string Name => "Netplay";
+        public Color NameColor => Color.Yellow;
+        public ISubtextureEntry Icon => TFEXModModule.InternetIcon;
+
+        public bool IsTeamMode => false;
+
+        public TowerFall.RoundLogic OnCreateRoundLogic(Session session)
+        {
+            return new NetplayRoundLogic(session);
+        }
+
+        public void OnStartGame(Session session)
+        {
+        }
+
+        public int GetMinimumPlayers(MatchSettings matchSettings)
+        {
+            return 0;
+        }
+    }
+
+    public class NetplayRoundLogic : TowerFall.RoundLogic
     {
         private readonly INetplayManager netplayManager;
         private readonly IInputService inputInputService;
@@ -25,7 +47,7 @@ namespace TF.EX.Core.RoundLogic
 
         private bool wasFinalKill;
 
-        public Netplay(Session session, bool canHaveMiasma) : base(session, true)
+        public NetplayRoundLogic(Session session) : base(session, true)
         {
             roundEndCounter = new RoundEndCounter(session);
             netplayManager = ServiceCollections.ResolveNetplayManager();
@@ -36,15 +58,15 @@ namespace TF.EX.Core.RoundLogic
             mode = TowerFall.Modes.LastManStanding;
         }
 
-        public static RoundLogicInfo Create()
-        {
-            return new RoundLogicInfo
-            {
-                Name = "Netplay",
-                Icon = TFEXModModule.Atlas["gameModes/netplay"],
-                RoundType = RoundLogicType.FFA,
-            };
-        }
+        //public static RoundLogicInfo Create()
+        //{
+        //    return new RoundLogicInfo
+        //    {
+        //        Name = "Netplay",
+        //        Icon = TFEXModModule.Atlas["gameModes/netplay"],
+        //        RoundType = RoundLogicType.FFA,
+        //    };
+        //}
 
         public override void OnLevelLoadFinish()
         {
@@ -52,7 +74,7 @@ namespace TF.EX.Core.RoundLogic
 
             if (!netplayManager.IsInit())
             {
-                logger.LogDebug<Netplay>("Configuring and initializing current netplay session");
+                logger.LogInformation("Configuring and initializing current netplay session");
                 netplayManager.Init(this);
 
                 var lobby = matchmakingService.GetOwnLobby();
@@ -78,14 +100,14 @@ namespace TF.EX.Core.RoundLogic
         {
             base.OnUpdate();
 
-            switch (mode)
-            {
-                case TowerFall.Modes.LastManStanding:
-                    HandleLastManStandingUpdate();
-                    break;
-                default:
-                    break;
-            }
+            //switch (mode)
+            //{
+            //    case TowerFall.Modes.LastManStanding:
+            HandleLastManStandingUpdate();
+            //        break;
+            //    default:
+            //        break;
+            //}
         }
 
         private void HandleLastManStandingUpdate()
@@ -107,23 +129,25 @@ namespace TF.EX.Core.RoundLogic
             {
                 var playerIndex = base.Session.CurrentLevel.Player.PlayerIndex;
 
-                if (netplayManager.ShouldSwapPlayer())
-                {
-                    if (playerIndex == 0)
-                    {
-                        AddScore(inputInputService.GetLocalPlayerInputIndex(), 1);
-                    }
-                    else
-                    {
-                        AddScore(inputInputService.GetRemotePlayerInputIndex(), 1);
-                    }
-                }
-                else
-                {
-                    AddScore(base.Session.CurrentLevel.Player.PlayerIndex, 1);
-                }
-            }
+                //if (netplayManager.ShouldSwapPlayer())
+                //{
+                //    if (playerIndex == 0)
+                //    {
+                //        logger.LogInformation($"Adding score to local player {inputInputService.GetLocalPlayerInputIndex()}");
+                //        AddScore(inputInputService.GetLocalPlayerInputIndex(), 1);
+                //    }
+                //    else
+                //    {
+                //        logger.LogInformation($"Adding score to remote player {inputInputService.GetRemotePlayerInputIndex()}");
+                //        AddScore(inputInputService.GetRemotePlayerInputIndex(), 1);
+                //    }
+                //}
+                //else
+                //{
+                AddScore(base.Session.CurrentLevel.Player.PlayerIndex, 1);
+                //}
 
+            }
             InsertCrownEvent();
             base.Session.EndRound();
         }
@@ -132,14 +156,14 @@ namespace TF.EX.Core.RoundLogic
         {
             base.OnPlayerDeath(player, corpse, playerIndex, deathType, position, killerIndex);
 
-            switch (mode)
-            {
-                case TowerFall.Modes.LastManStanding:
-                    HandleLastManStandingPlayerDeath(player, corpse, playerIndex, deathType, position, killerIndex);
-                    break;
-                default:
-                    break;
-            }
+            //switch (mode)
+            //{
+            //    case TowerFall.Modes.LastManStanding:
+            HandleLastManStandingPlayerDeath(player, corpse, playerIndex, deathType, position, killerIndex);
+            //        break;
+            //    default:
+            //        break;
+            //}
 
         }
 
@@ -166,17 +190,17 @@ namespace TF.EX.Core.RoundLogic
                     }
                 }
 
-                if (netplayManager.ShouldSwapPlayer())
-                {
-                    if (num == 0)
-                    {
-                        num = inputInputService.GetLocalPlayerInputIndex();
-                    }
-                    else
-                    {
-                        num = inputInputService.GetRemotePlayerInputIndex();
-                    }
-                }
+                //if (netplayManager.ShouldSwapPlayer())
+                //{
+                //    if (num == 0)
+                //    {
+                //        num = inputInputService.GetLocalPlayerInputIndex();
+                //    }
+                //    else
+                //    {
+                //        num = inputInputService.GetRemotePlayerInputIndex();
+                //    }
+                //}
 
                 base.Session.CurrentLevel.Ending = true;
                 if (num != -1 && base.Session.Scores[num] >= base.Session.MatchSettings.GoalScore - 1)

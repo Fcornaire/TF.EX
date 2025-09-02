@@ -1,38 +1,38 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
+	
 	<PropertyGroup>
-		<TargetFramework>net472</TargetFramework>
-		<LangVersion>11</LangVersion>
+		<TargetFramework>net9.0</TargetFramework>
+		<!--<LangVersion>11</LangVersion>-->
 		<ImplicitUsings>enable</ImplicitUsings>
 	</PropertyGroup>
 
 	<ItemGroup>
 	  <PackageReference Include="MessagePack" Version="2.4.59" />
-	  <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.1" />
+	  <PackageReference Include="FortRise.Configuration" Version="1.5.6" />
 	</ItemGroup>
 
-	<ItemGroup>
+	<!--<ItemGroup>
 		<Reference Include="System.Net.Http" />
-	</ItemGroup>
+	</ItemGroup>-->
 
 	<ItemGroup>
-		<Reference Include="MMHOOK_TowerFall">
+		<!--<Reference Include="MMHOOK_TowerFall">
 			<HintPath>..\..\libs\MMHOOK_TowerFall.dll</HintPath>
 			<Private>False</Private>
-		</Reference>
-		<Reference Include="TowerFall" Condition=" '$(Configuration)' == 'Release'">
+		</Reference>-->
+		<!--<Reference Include="TowerFall" Condition=" '$(Configuration)' == 'Release'">
 			<HintPath>..\..\libs\TowerFall-publicized.exe</HintPath>
 			<Private>False</Private>
-		</Reference>
+		</Reference>-->
 
-		<Reference Include="TowerFall" Condition=" '$(Configuration)' == 'Debug'">
+		<!--<Reference Include="TowerFall" Condition=" '$(Configuration)' == 'Debug'">
 			<HintPath>..\..\libs\TowerFall.exe</HintPath>
 			<Private>False</Private>
-		</Reference>
+		</Reference>-->
 	</ItemGroup>
 
-	<Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Debug'">
+	<!--<Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Debug'">
 		<Exec Command="xcopy /y &quot;$(TargetPath)&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\TowerFall\&quot;" />
-	</Target>
+	</Target>-->
 
 </Project>

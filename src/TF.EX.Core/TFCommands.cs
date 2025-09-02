@@ -1,6 +1,6 @@
 ﻿using FortRise;
+using HarmonyLib;
 using Monocle;
-using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -16,9 +16,57 @@ using TowerFall;
 
 namespace TF.EX.Core
 {
-    internal static class TFCommands
+    internal class TFCommands
     {
-        [Command("test")]
+        public Dictionary<string, CommandConfiguration> Commands = new();
+
+        public TFCommands()
+        {
+            Initialize();
+        }
+
+        public Dictionary<string, CommandConfiguration> GetCommands()
+        {
+            return Commands;
+        }
+
+        private void Initialize()
+        {
+            Commands.Add("test", new CommandConfiguration
+            {
+                Callback = LaunchTestMode,
+            });
+            Commands.Add("local", new CommandConfiguration
+            {
+                Callback = LaunchLocalNetplay,
+            });
+            Commands.Add("replay", new CommandConfiguration
+            {
+                Callback = LaunchReplay,
+            });
+            Commands.Add("online", new CommandConfiguration
+            {
+                Callback = LaunchServerNetplay,
+            });
+            Commands.Add("menu", new CommandConfiguration
+            {
+                Callback = SwitchToMenu,
+            });
+            Commands.Add("vs", new CommandConfiguration
+            {
+                Callback = LaunchVersus,
+            });
+        }
+
+        public void Register(IModuleContext context)
+        {
+            foreach (var command in Commands)
+            {
+                context.Registry.Commands.RegisterCommands(command.Key, command.Value);
+            }
+        }
+
+        //[Command("test")]
         public static void LaunchTestMode(string[] args)
         {
             var mode = args.Length > 0 ? ParseMode(args[0]) : TowerFall.Modes.LastManStanding;
@@ -58,7 +106,7 @@ namespace TF.EX.Core
             TFGame.Instance.Commands.Open = false;
         }
 
-        [Command("local")]
+        //[Command("local")]
         public static void LaunchLocalNetplay(string[] args)
         {
             var mode = args.Length > 0 ? ParseMode(args[0]) : TowerFall.Modes.LastManStanding;
@@ -113,7 +161,7 @@ namespace TF.EX.Core
             TFGame.Instance.Commands.Open = false;
         }
 
-        [Command("replay")]
+        //[Command("replay")]
         public static void LaunchReplay(string[] args)
         {
             var replayName = args.Length > 0 ? args[0] : "";
@@ -145,7 +193,7 @@ namespace TF.EX.Core
             });
         }
 
-        [Command("online")]
+        //[Command("online")]
         public static void LaunchServerNetplay(string[] args)
         {
             var mode = args.Length > 0 ? ParseMode(args[0]) : TowerFall.Modes.LastManStanding;
@@ -178,7 +226,7 @@ namespace TF.EX.Core
             TFGame.Instance.Commands.Open = false;
         }
 
-        [Command("menu")]
+        //[Command("menu")]
         public static void SwitchToMenu(string[] args)
         {
             var netplayManager = ServiceCollections.ResolveNetplayManager();
@@ -190,7 +238,7 @@ namespace TF.EX.Core
             TFGame.Instance.Commands.Open = false;
         }
 
-        [Command("vs")]
+        //[Command("vs")]
         public static void LaunchVersus(string[] args)
         {
             var mode = args.Length > 0 ? ParseMode(args[0]) : TowerFall.Modes.LastManStanding;
@@ -254,8 +302,7 @@ namespace TF.EX.Core
             }
 
             var levels = (matchSettings.LevelSystem as VersusLevelSystem).OwnGenLevel(matchSettings, GameData.VersusTowers[map], null, ServiceCollections.ResolveRngService());
-            var dynVersusLevelSystem = DynamicData.For(matchSettings.LevelSystem);
-            dynVersusLevelSystem.Set("levels", levels);
+            Traverse.Create(matchSettings.LevelSystem).Field("levels").SetValue(levels);
             (matchSettings.LevelSystem as VersusLevelSystem).StartOnLevel(startLevel);
 
             var session = new Session(matchSettings);

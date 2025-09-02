@@ -1,48 +1,40 @@
-﻿using TF.EX.Domain.Extensions;
+﻿using HarmonyLib;
+using TF.EX.Domain.Extensions;
 using TF.EX.TowerFallExtensions.Scene;
 using TowerFall;
 
 namespace TF.EX.Patchs.Entity.MenuItem
 {
-    internal class MenuItemPatch : IHookable
+    [HarmonyPatch(typeof(TowerFall.MenuItem))]
+    internal class MenuItemPatch
     {
-        public void Load()
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(TowerFall.MenuItem.Update))]
+        public static void MenuItem_Update(TowerFall.MenuItem __instance)
         {
-            On.TowerFall.MenuItem.Update += MenuItem_Update;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.MenuItem.Update -= MenuItem_Update;
-        }
-
-        private void MenuItem_Update(On.TowerFall.MenuItem.orig_Update orig, TowerFall.MenuItem self)
-        {
-            orig(self);
-
-            if (TowerFall.MainMenu.VersusMatchSettings != null)
+            if (MainMenu.VersusMatchSettings != null)
             {
-                var currentMode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
-                var state = self.MainMenu.State.ToDomainModel();
+                var currentMode = MainMenu.VersusMatchSettings.Mode.ToModel();
+                var state = __instance.MainMenu.State.ToDomainModel();
 
-                if (self is VersusModeButton
+                if (__instance is VersusModeButton
                     && MenuInput.Down
                     && currentMode == Domain.Models.Modes.Netplay
                     && state == Domain.Models.MenuState.VersusOptions)
                 {
-                    self.Selected = false;
-                    self.DownItem.Selected = false;
-                    self.MainMenu.Get<VersusBeginButton>().Selected = true;
+                    __instance.Selected = false;
+                    __instance.DownItem.Selected = false;
+                    __instance.MainMenu.Get<VersusBeginButton>().Selected = true;
                 }
 
-                if (self is VersusBeginButton
+                if (__instance is VersusBeginButton
                     && MenuInput.Up
                     && currentMode == Domain.Models.Modes.Netplay
                     && state == Domain.Models.MenuState.VersusOptions)
                 {
-                    self.Selected = false;
-                    self.UpItem.Selected = false;
-                    self.MainMenu.Get<VersusModeButton>().Selected = true;
+                    __instance.Selected = false;
+                    __instance.UpItem.Selected = false;
+                    __instance.MainMenu.Get<VersusModeButton>().Selected = true;
                 }
             }
         }

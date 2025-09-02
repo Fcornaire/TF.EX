@@ -1,41 +1,51 @@
-﻿using TF.EX.Patchs.Calc;
+﻿using HarmonyLib;
+using TF.EX.Patchs.Calc;
+using TowerFall;
 
 namespace TF.EX.Patchs.Entity.LevelEntity
 {
-    public class LavaControlPatch : IHookable
+    [HarmonyPatch(typeof(LavaControl))]
+    public class LavaControlPatch
     {
-        public void Load()
-        {
-            On.TowerFall.LavaControl.ctor += LavaControl_ctor;
-            On.TowerFall.LavaControl.Added += LavaControl_Added;
-            On.TowerFall.LavaControl.Extend += LavaControl_Extend;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.LavaControl.ctor -= LavaControl_ctor;
-            On.TowerFall.LavaControl.Added -= LavaControl_Added;
-            On.TowerFall.LavaControl.Extend -= LavaControl_Extend;
-        }
-
-        private void LavaControl_Extend(On.TowerFall.LavaControl.orig_Extend orig, TowerFall.LavaControl self, int ownerIndex)
+        [HarmonyPrefix]
+        [HarmonyPatch("Extend")]
+        public static void LavaControl_Extend_Prefix()
         {
             CalcPatch.RegisterRng();
-            orig(self, ownerIndex);
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("Extend")]
+        public static void LavaControl_Extend_Postfix()
+        {
             CalcPatch.UnregisterRng();
         }
 
-        private void LavaControl_Added(On.TowerFall.LavaControl.orig_Added orig, TowerFall.LavaControl self)
+        [HarmonyPrefix]
+        [HarmonyPatch("Added")]
+        public static void LavaControl_Added_Prefix()
         {
             CalcPatch.RegisterRng();
-            orig(self);
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("Added")]
+        public static void LavaControl_Added_Postfix()
+        {
             CalcPatch.UnregisterRng();
         }
 
-        private void LavaControl_ctor(On.TowerFall.LavaControl.orig_ctor orig, TowerFall.LavaControl self, TowerFall.LavaControl.LavaMode mode, int ownerIndex)
+        [HarmonyPrefix]
+        [HarmonyPatch(MethodType.Constructor, [typeof(LavaControl.LavaMode), typeof(int)])]
+        public static void LavaControl_ctor_Prefix()
         {
             CalcPatch.RegisterRng();
-            orig(self, mode, ownerIndex);
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch(MethodType.Constructor, [typeof(LavaControl.LavaMode), typeof(int)])]
+        public static void LavaControl_ctor_Postfix()
+        {
             CalcPatch.UnregisterRng();
         }
     }

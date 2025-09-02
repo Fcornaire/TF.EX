@@ -1,10 +1,8 @@
-﻿using Monocle;
-using MonoMod.RuntimeDetour;
-using MonoMod.Utils;
+﻿using HarmonyLib;
+using Monocle;
 using TF.EX.Domain;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models;
-using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
 using TF.EX.TowerFallExtensions;
 using TF.EX.TowerFallExtensions.Scene;
@@ -13,179 +11,146 @@ using TowerFall;
 namespace TF.EX.Patchs.PlayerInput
 {
     //TODO: refactor
-    public class XGamePadInputPatch : IHookable
+    [HarmonyPatch(typeof(XGamepadInput))]
+    public class XGamePadInputPatch
     {
-        private readonly IInputService _inputService;
-        private INetplayManager _netplayManager;
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuConfirm")]
 
-        private delegate bool MenuConfirm_orig(XGamepadInput self);
-        private delegate bool MenuBack_orig(XGamepadInput self);
-        private delegate bool MenuLeft_orig(XGamepadInput self);
-        private delegate bool MenuRight_orig(XGamepadInput self);
-        private delegate bool MenuUp_orig(XGamepadInput self);
-        private delegate bool MenuDown_orig(XGamepadInput self);
-        private delegate bool MenuAlt_orig(XGamepadInput self);
-        private delegate bool MenuSkipReplay_orig(XGamepadInput self);
-        private delegate bool MenuSaveReplay_orig(XGamepadInput self);
-        private delegate bool MenuSaveReplayCheck_orig(XGamepadInput self);
-        private static IDetour MenuConfirm_hook;
-        private static IDetour MenuStart_hook;
-        private static IDetour MenuBack_hook;
-        private static IDetour MenuLeft_hook;
-        private static IDetour MenuRight_hook;
-        private static IDetour MenuUp_hook;
-        private static IDetour MenuDown_hook;
-        private static IDetour MenuAlt_hook;
-        private static IDetour MenuSkipReplay_hook;
-        private static IDetour MenuSaveReplay_hook;
-        private static IDetour MenuSaveReplayCheck_hook;
-
-
-        public XGamePadInputPatch(IInputService inputService, INetplayManager netplayManager)
+        public static void MenuConfirm_patch(ref bool __result, XGamepadInput __instance)
         {
-            _inputService = inputService;
-            _netplayManager = netplayManager;
+            __result = InterceptConfirm(__instance, __result);
         }
 
-        public void Load()
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuStart")]
+        public static void MenuStart_patch(ref bool __result, XGamepadInput __instance)
         {
-            On.TowerFall.XGamepadInput.GetState += XGamepadInput_GetState;
-
-            MenuConfirm_hook = new Hook(typeof(XGamepadInput).GetProperty("MenuConfirm").GetGetMethod(), MenuConfirm_patch);
-            MenuStart_hook = new Hook(typeof(XGamepadInput).GetProperty("MenuStart").GetGetMethod(), MenuStart_patch);
-            MenuBack_hook = new Hook(typeof(XGamepadInput).GetProperty("MenuBack").GetGetMethod(), MenuBack_patch);
-            MenuLeft_hook = new Hook(typeof(XGamepadInput).GetProperty("MenuLeft").GetGetMethod(), MenuLR_patch);
-            MenuRight_hook = new Hook(typeof(XGamepadInput).GetProperty("MenuRight").GetGetMethod(), MenuLR_patch);
-            MenuUp_hook = new Hook(typeof(XGamepadInput).GetProperty("MenuUp").GetGetMethod(), MenuUp_patch);
-            MenuDown_hook = new Hook(typeof(XGamepadInput).GetProperty("MenuDown").GetGetMethod(), MenuDown_patch);
-            MenuAlt_hook = new Hook(typeof(XGamepadInput).GetProperty("MenuAlt").GetGetMethod(), MenuConfirm_patch);
-            MenuSkipReplay_hook = new Hook(typeof(XGamepadInput).GetProperty("MenuSkipReplay").GetGetMethod(), MenuSkip_patch);
-            MenuSaveReplay_hook = new Hook(typeof(XGamepadInput).GetProperty("MenuSaveReplay").GetGetMethod(), MenuSave_patch);
-            MenuSaveReplayCheck_hook = new Hook(typeof(XGamepadInput).GetProperty("MenuSaveReplayCheck").GetGetMethod(), MenuSave_patch);
+            __result = InterceptStart(__instance, __result);
         }
 
-        public void Unload()
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuBack")]
+        public static void MenuBack_patch(ref bool __result, XGamepadInput __instance)
         {
-            On.TowerFall.XGamepadInput.GetState -= XGamepadInput_GetState;
-
-            MenuConfirm_hook.Dispose();
-            MenuStart_hook.Dispose();
-            MenuBack_hook.Dispose();
-            MenuLeft_hook.Dispose();
-            MenuRight_hook.Dispose();
-            MenuAlt_hook.Dispose();
-            MenuSkipReplay_hook.Dispose();
-            MenuSaveReplay_hook.Dispose();
-            MenuSaveReplayCheck_hook.Dispose();
-            MenuUp_hook.Dispose();
-            MenuDown_hook.Dispose();
+            __result = InterceptBack(__instance, __result);
         }
 
-        private static bool MenuConfirm_patch(MenuConfirm_orig orig, XGamepadInput self)
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuLeft")]
+        public static void MenuLeft_patch(ref bool __result, XGamepadInput __instance)
         {
-            return InterceptConfirm(self, orig(self));
+            __result = InterceptLR(__instance, __result);
         }
 
-        private static bool MenuStart_patch(MenuConfirm_orig orig, XGamepadInput self)
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuRight")]
+        public static void MenuRight_patch(ref bool __result, XGamepadInput __instance)
         {
-            return InterceptStart(self, orig(self));
+            __result = InterceptLR(__instance, __result);
         }
 
-        private static bool MenuBack_patch(MenuConfirm_orig orig, XGamepadInput self)
-        {
-            return InterceptBack(self, orig(self));
-        }
-
-        private static bool MenuLR_patch(MenuConfirm_orig orig, XGamepadInput self)
-        {
-            return InterceptLR(self, orig(self));
-        }
-
-        private static bool MenuUp_patch(MenuConfirm_orig orig, XGamepadInput self)
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuUp")]
+        public static void MenuUp_patch(ref bool __result, XGamepadInput __instance)
         {
             var inputService = ServiceCollections.ResolveInputService();
 
             if (TFGame.Instance.Scene is MainMenu
                && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
-               && inputService.GetInputIndex(self) != 0)
+               && inputService.GetInputIndex(__instance) != 0)
             {
-                return false;
+                __result = false;
             }
-
-            return orig(self);
         }
 
-        private static bool MenuDown_patch(MenuConfirm_orig orig, XGamepadInput self)
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuDown")]
+        public static void MenuDown_patch(ref bool __result, XGamepadInput __instance)
         {
             var inputService = ServiceCollections.ResolveInputService();
 
             if (TFGame.Instance.Scene is MainMenu
                 && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
-                && inputService.GetInputIndex(self) != 0)
+                && inputService.GetInputIndex(__instance) != 0)
             {
-                return false;
+                __result = false;
             }
-
-            return orig(self);
         }
 
-        private static bool MenuSkip_patch(MenuConfirm_orig orig, XGamepadInput self)
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuSkipReplay")]
+        public static void MenuSkipReplay_patch(ref bool __result)
         {
-            return true;
+            __result = true;
         }
 
-        private static bool MenuSave_patch(MenuConfirm_orig orig, XGamepadInput self)
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuSaveReplay")]
+        public static void MenuSaveReplay_patch(ref bool __result)
+        {
+            __result = false;
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch("get_MenuSaveReplayCheck")]
+        public static bool MenuSaveReplayCheck_patch()
         {
             return false;
         }
 
-        private InputState XGamepadInput_GetState(On.TowerFall.XGamepadInput.orig_GetState orig, XGamepadInput self)
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(XGamepadInput.GetState))]
+        public static void XGamepadInput_GetState(ref InputState __result, XGamepadInput __instance)
         {
-            if (_netplayManager.GetNetplayMode() != Domain.Models.NetplayMode.Test
-                && _netplayManager.GetNetplayMode() != Domain.Models.NetplayMode.Replay
-                && !_netplayManager.IsSynchronized())
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            var inputService = ServiceCollections.ResolveInputService();
+
+            if (netplayManager.GetNetplayMode() != Domain.Models.NetplayMode.Test
+                && netplayManager.GetNetplayMode() != Domain.Models.NetplayMode.Replay
+                && !netplayManager.IsSynchronized())
             {
-                return orig(self);
+                return;
             }
 
             var level = TFGame.Instance.Scene as TowerFall.Level;
 
             if (level == null)
             {
-                return orig(self);
+                return;
             }
 
             var roundStarted = level.Session.RoundLogic.RoundStarted;
 
             if (!roundStarted) //Ignore if round not started to prevent useless rollback
             {
-                _inputService.ResetPolledInput();
-                return new InputState();
+                inputService.ResetPolledInput();
+                __result = new InputState();
+                return;
             }
 
-            if (_netplayManager.IsInit() || _netplayManager.IsReplayMode())
+            if (netplayManager.IsInit() || netplayManager.IsReplayMode())
             {
-                var polledInput = orig(self);
-
-                if (IsLocalPlayerGamePad(self))
+                if (IsLocalPlayerGamePad(__instance, inputService))
                 {
-                    if (!_netplayManager.IsReplayMode())
+                    if (!netplayManager.IsReplayMode())
                     {
-                        _inputService.UpdatePolledInput(polledInput, self.GetRightStick());
+                        inputService.UpdatePolledInput(__result, __instance.GetRightStick());
                     }
                     else
                     {
                         //InterceptReplay(polledInput); TODO: implement replay interception
                     }
-                    return _inputService.GetCurrentInput(_inputService.GetLocalPlayerInputIndex()).ToTFInput();
+                    __result = inputService.GetCurrentInput(inputService.GetLocalPlayerInputIndex()).ToTFInput();
+                    return;
                 }
 
-                return _inputService.GetCurrentInput(_inputService.GetRemotePlayerInputIndex()).ToTFInput();
+                __result = inputService.GetCurrentInput(inputService.GetRemotePlayerInputIndex()).ToTFInput();
             }
-            else
-            {
-                return orig(self);
-            }
+            //else
+            //{
+            //    return orig(self);
+            //}
         }
 
         //TODO: refactor to have a unique intercept for all inputs
@@ -223,8 +188,7 @@ namespace TF.EX.Patchs.PlayerInput
 
             if (TFGame.Instance.Scene is TowerFall.Level && (TFGame.Instance.Scene as TowerFall.Level).Session.GetWinner() != -1)
             {
-                var dynMacthResults = DynamicData.For((TFGame.Instance.Scene as TowerFall.Level).Get<VersusMatchResults>());
-                var isFinished = dynMacthResults.Get<bool>("finished");
+                var isFinished = Traverse.Create((TFGame.Instance.Scene as TowerFall.Level).Get<VersusMatchResults>()).Field("finished").GetValue<bool>();
 
                 if (isFinished)
                 {
@@ -234,8 +198,7 @@ namespace TF.EX.Patchs.PlayerInput
 
             if (TFGame.Instance.Scene is MainMenu)
             {
-                var dynMenu = DynamicData.For(TFGame.Instance.Scene as MainMenu);
-                var state = dynMenu.Get<MainMenu.MenuState>("state");
+                var state = Traverse.Create(TFGame.Instance.Scene as MainMenu).Field("state").GetValue<MainMenu.MenuState>();
 
                 var currentMode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
 
@@ -253,14 +216,12 @@ namespace TF.EX.Patchs.PlayerInput
 
                     var rollcallElement = (TFGame.Instance.Scene as MainMenu).GetAll<RollcallElement>().First(rc =>
                     {
-                        var dyn = DynamicData.For(rc);
-                        var index = dyn.Get<int>("playerIndex");
+                        var index = Traverse.Create(rc).Field("playerIndex").GetValue<int>();
 
                         return index == 0;
                     });
 
-                    var dynRollcallElement = DynamicData.For(rollcallElement);
-                    StateMachine rollcallState = dynRollcallElement.Get<StateMachine>("state");
+                    var rollcallState = Traverse.Create(rollcallElement).Field("state").GetValue<StateMachine>();
                     if (rollcallState.State == 0)
                     {
                         return actualInput;
@@ -289,8 +250,7 @@ namespace TF.EX.Patchs.PlayerInput
 
             if (TFGame.Instance.Scene is MainMenu)
             {
-                var dynMenu = DynamicData.For(TFGame.Instance.Scene as MainMenu);
-                var state = dynMenu.Get<MainMenu.MenuState>("state");
+                var state = Traverse.Create(TFGame.Instance.Scene as MainMenu).Field("state").GetValue<MainMenu.MenuState>();
 
                 var currentMode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
 
@@ -308,14 +268,12 @@ namespace TF.EX.Patchs.PlayerInput
 
                     var rollcallElement = (TFGame.Instance.Scene as MainMenu).GetAll<RollcallElement>().First(rc =>
                     {
-                        var dyn = DynamicData.For(rc);
-                        var index = dyn.Get<int>("playerIndex");
+                        var index = Traverse.Create(rc).Field("playerIndex").GetValue<int>();
 
                         return index == 0;
                     });
 
-                    var dynRollcallElement = DynamicData.For(rollcallElement);
-                    StateMachine rollcallState = dynRollcallElement.Get<StateMachine>("state");
+                    var rollcallState = Traverse.Create(rollcallElement).Field("state").GetValue<StateMachine>();
                     if (rollcallState.State == 0)
                     {
                         return actualResult;
@@ -330,54 +288,47 @@ namespace TF.EX.Patchs.PlayerInput
 
         private static bool InterceptBack(XGamepadInput self, bool actualInput)
         {
-            try
-            {
-                var netplayManager = ServiceCollections.ResolveNetplayManager();
-                var inputService = ServiceCollections.ResolveInputService();
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            var inputService = ServiceCollections.ResolveInputService();
 
-                var isNetplayInit = netplayManager.IsInit();
-                var isPaused = TFGame.Instance.Scene is TowerFall.Level && (TFGame.Instance.Scene as TowerFall.Level).Paused;
+            var isNetplayInit = netplayManager.IsInit();
+            var isPaused = TFGame.Instance.Scene is TowerFall.Level && (TFGame.Instance.Scene as TowerFall.Level).Paused;
 
-                if (TFGame.Instance.Scene is MainMenu
+            if (TFGame.Instance.Scene is MainMenu
+                && TowerFall.MainMenu.VersusMatchSettings != null
                 && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
                 && inputService.GetInputIndex(self) != 0)
-                {
-                    return false; //Ignore input for other players in netplay
-                }
+            {
+                return false; //Ignore input for other players in netplay
+            }
 
-                if (isPaused)
+            if (isPaused)
+            {
+                return actualInput;
+            }
+
+            if (TFGame.Instance.Scene is TowerFall.Level && (TFGame.Instance.Scene as TowerFall.Level).Session.GetWinner() != -1)
+            {
+                var isFinished = Traverse.Create((TFGame.Instance.Scene as TowerFall.Level).Get<VersusMatchResults>()).Field("finished").GetValue<bool>();
+
+                if (isFinished)
                 {
                     return actualInput;
                 }
-
-                if (TFGame.Instance.Scene is TowerFall.Level && (TFGame.Instance.Scene as TowerFall.Level).Session.GetWinner() != -1)
-                {
-                    var dynMacthResults = DynamicData.For((TFGame.Instance.Scene as TowerFall.Level).Get<VersusMatchResults>());
-                    var isFinished = dynMacthResults.Get<bool>("finished");
-
-                    if (isFinished)
-                    {
-                        return actualInput;
-                    }
-                }
-
-                if (TFGame.Instance.Scene is MapScene)
-                {
-                    return false;
-                }
-
-                if (isNetplayInit)
-                {
-                    return true;
-                }
-
-                return actualInput;
             }
-            catch
+
+            if (TFGame.Instance.Scene is MapScene)
             {
-                // The game is probably still loading here, so we don't care about the exception
-                return actualInput;
+                return false;
             }
+
+            if (isNetplayInit)
+            {
+                return true;
+            }
+
+            return actualInput;
+
         }
 
         private static bool InterceptLR(XGamepadInput self, bool actualInput)
@@ -403,8 +354,7 @@ namespace TF.EX.Patchs.PlayerInput
 
             if (TFGame.Instance.Scene is MainMenu)
             {
-                var dynMenu = DynamicData.For(TFGame.Instance.Scene as MainMenu);
-                var state = dynMenu.Get<MainMenu.MenuState>("state");
+                var state = Traverse.Create(TFGame.Instance.Scene as MainMenu).Field("state").GetValue<MainMenu.MenuState>();
                 var currentMode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
 
                 if (state == MainMenu.MenuState.Rollcall && currentMode.IsNetplay())
@@ -421,8 +371,7 @@ namespace TF.EX.Patchs.PlayerInput
 
                     var rollcallElement = (TFGame.Instance.Scene as MainMenu).GetAll<RollcallElement>().First(rc =>
                     {
-                        var dyn = DynamicData.For(rc);
-                        var index = dyn.Get<int>("playerIndex");
+                        var index = Traverse.Create(rc).Field("playerIndex").GetValue<int>();
 
                         return index == 0;
                     });
@@ -444,9 +393,9 @@ namespace TF.EX.Patchs.PlayerInput
             return actualInput;
         }
 
-        private bool IsLocalPlayerGamePad(XGamepadInput self)
+        private static bool IsLocalPlayerGamePad(XGamepadInput self, IInputService inputService)
         {
-            return _inputService.GetInputIndex(self) == 0;
+            return inputService.GetInputIndex(self) == 0;
         }
     }
 }

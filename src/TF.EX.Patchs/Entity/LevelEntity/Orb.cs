@@ -1,29 +1,27 @@
-﻿using Microsoft.Xna.Framework;
-using MonoMod.Utils;
+﻿using HarmonyLib;
+using Microsoft.Xna.Framework;
 using TF.EX.Patchs.Calc;
+using TowerFall;
 
 namespace TF.EX.Patchs.Entity.LevelEntity
 {
-    internal class OrbPatch : IHookable
+    [HarmonyPatch(typeof(Orb))]
+    internal class OrbPatch
     {
-        public void Load()
-        {
-            On.TowerFall.Orb.ctor_Vector2_bool += Orb_ctor_Vector2_bool;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.Orb.ctor_Vector2_bool -= Orb_ctor_Vector2_bool;
-        }
-
-        private void Orb_ctor_Vector2_bool(On.TowerFall.Orb.orig_ctor_Vector2_bool orig, TowerFall.Orb self, Vector2 position, bool explodes)
+        [HarmonyPrefix]
+        [HarmonyPatch(MethodType.Constructor, [typeof(Vector2), typeof(bool)])]
+        public static void Orb_ctor_Vector2_bool_Prefix()
         {
             CalcPatch.RegisterRng();
-            orig(self, position, explodes);
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch(MethodType.Constructor, [typeof(Vector2), typeof(bool)])]
+        public static void Orb_ctor_Vector2_bool_PostFix(Orb __instance)
+        {
             CalcPatch.UnregisterRng();
 
-            var dynOrb = DynamicData.For(self);
-            dynOrb.Set("ownerIndex", -1);
+            Traverse.Create(__instance).Field("ownerIndex").SetValue(-1);
         }
     }
 }

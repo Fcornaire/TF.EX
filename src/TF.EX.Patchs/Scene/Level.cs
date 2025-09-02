@@ -1,58 +1,34 @@
-﻿using Microsoft.Xna.Framework;
+﻿using HarmonyLib;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Monocle;
 using MonoMod.Utils;
 using System.Xml;
 using TF.EX.Domain;
 using TF.EX.Domain.Externals;
-using TF.EX.Domain.Ports;
-using TF.EX.Domain.Ports.TF;
 using TF.EX.TowerFallExtensions;
 using TowerFall;
 
 namespace TF.EX.Patchs.Scene
 {
-    public class LevelPatch : IHookable
+    [HarmonyPatch(typeof(Level))]
+    public class LevelPatch
     {
-        private readonly INetplayManager _netplayManager;
-        private readonly ISFXService _sfxService;
+        private static Random random = new Random();
 
-        private Random random = new Random();
-
-        public LevelPatch(INetplayManager netplayManager, ISFXService sFXService)
+        [HarmonyPostfix]
+        [HarmonyPatch("CoreRender")]
+        public static void Level_CoreRender(Level __instance)
         {
-            _netplayManager = netplayManager;
-            _sfxService = sFXService;
-        }
-
-        public void Load()
-        {
-            On.TowerFall.Level.HandlePausing += Level_HandlePausing;
-            On.TowerFall.Level.Update += Level_Update;
-            On.TowerFall.Level.ctor += Level_ctor;
-            On.TowerFall.Level.CoreRender += Level_CoreRender;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.Level.HandlePausing -= Level_HandlePausing;
-            On.TowerFall.Level.Update -= Level_Update;
-            On.TowerFall.Level.ctor -= Level_ctor;
-            On.TowerFall.Level.CoreRender -= Level_CoreRender;
-        }
-
-        private void Level_CoreRender(On.TowerFall.Level.orig_CoreRender orig, Level self, RenderTarget2D canvas)
-        {
-            orig(self, canvas);
-            var dynLevel = DynamicData.For(self);
+            var dynLevel = DynamicData.For(__instance);
             var debugLayer = dynLevel.Get<DebugLayer>("DebugLayer");
 
             if (debugLayer.Visible)
             {
-                var playerColliders = self[GameTags.PlayerCollider].ToList();
-                if (playerColliders.Count > 0 && self.Layers.TryGetValue(0, out var layer))
+                var playerColliders = __instance[GameTags.PlayerCollider].ToList();
+                if (playerColliders.Count > 0 && __instance.Layers.TryGetValue(0, out var layer))
                 {
-                    Draw.SpriteBatch.Begin(SpriteSortMode.Deferred, layer.BlendState, layer.SamplerState, DepthStencilState.None, RasterizerState.CullNone, layer.Effect, Matrix.Lerp(Matrix.Identity, self.Camera.Matrix, layer.CameraMultiplier));
+                    Draw.SpriteBatch.Begin(SpriteSortMode.Deferred, layer.BlendState, layer.SamplerState, DepthStencilState.None, RasterizerState.CullNone, layer.Effect, Matrix.Lerp(Matrix.Identity, __instance.Camera.Matrix, layer.CameraMultiplier));
                     foreach (var collidable in playerColliders)
                     {
                         collidable.DebugRender();
@@ -65,58 +41,74 @@ namespace TF.EX.Patchs.Scene
             }
         }
 
-        private void Level_ctor(On.TowerFall.Level.orig_ctor orig, Level self, Session session, XmlElement xml)
+        [HarmonyPostfix]
+        [HarmonyPatch(MethodType.Constructor)]
+        [HarmonyPatch([typeof(Session), typeof(XmlElement)])]
+        public static void Level_ctor(Level __instance)
         {
-            orig(self, session, xml);
             var debugLayer = new DebugLayer();
-            var dynLevel = DynamicData.For(self);
-            dynLevel.Add("DebugLayer", debugLayer);
-            self.SetLayer(42, debugLayer);
+            var dynLevel = DynamicData.For(__instance);
+            dynLevel.Set("DebugLayer", debugLayer);
+            __instance.SetLayer(42, debugLayer);
         }
 
-        private void Level_Update(On.TowerFall.Level.orig_Update orig, Level self)
+        [HarmonyPrefix]
+        [HarmonyPatch("Update")]
+        public static void Level_Update__Prefix(Level __instance)
         {
-            if (_netplayManager.HaveFramesToReSimulate())
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            if (netplayManager.HaveFramesToReSimulate())
             {
                 var dynTFGame = DynamicData.For(TFGame.Instance);
                 dynTFGame.Set("TimeMult", TFGame.TimeRate); //In fixed timestep, TimeMult = TimeRate
             }
 
-            AddPlayersIndicators(self);
+            AddPlayersIndicators(__instance);
+        }
 
-            orig(self);
+        [HarmonyPostfix]
+        [HarmonyPatch("Update")]
+        public static void Level_Update__Postfix(Level __instance)
+        {
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            var sfxService = ServiceCollections.ResolveSFXService();
 
-            _netplayManager.SetIsRollbackFrame(false); //Mark the end of the First RBF
+            netplayManager.SetIsRollbackFrame(false); //Mark the end of the First RBF
 
             ///Always Update the layer entity list
             ///Normally it should happen naturally at the start of the next frame
             ///But since we need to update the game state with all entities (we don't care about spawned or will be spawned)
             ///It doesn't alter the game because it's done after the original update
             ///Which means the entities that will be spawned next frame won't update in this frame
-            UpdateLayersEntityList(self);
+            UpdateLayersEntityList(__instance);
 
-            if (_netplayManager.IsReplayMode())
+            if (netplayManager.IsReplayMode())
             {
-                _netplayManager.UpdateFramesToReSimulate(0);
+                netplayManager.UpdateFramesToReSimulate(0);
             }
 
-            if (!_netplayManager.HaveFramesToReSimulate() && _netplayManager.IsSynchronized())
+            if (!netplayManager.HaveFramesToReSimulate() && netplayManager.IsSynchronized())
             {
-                _sfxService.Synchronize(GGRSFFI.netplay_current_frame(), _netplayManager.IsTestMode());
+                sfxService.Synchronize(GGRSFFI.netplay_current_frame(), netplayManager.IsTestMode());
             }
 
             SkipLevelLoaderIfNeeded();
         }
 
-        private void Level_HandlePausing(On.TowerFall.Level.orig_HandlePausing orig, Level self)
+        [HarmonyPrefix]
+        [HarmonyPatch("HandlePausing")]
+        private static bool Level_HandlePausing(Level __instance)
         {
-            if (_netplayManager.IsReplayMode() || _netplayManager.IsDisconnected())
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            if (netplayManager.IsReplayMode() || netplayManager.IsDisconnected())
             {
-                orig(self);
+                return true;
             }
+
+            return false;
         }
 
-        private void UpdateLayersEntityList(Level level)
+        private static void UpdateLayersEntityList(Level level)
         {
             var gameplayLayer = level.GetGameplayLayer();
             var dynGameplayLayer = DynamicData.For(gameplayLayer);
@@ -127,7 +119,7 @@ namespace TF.EX.Patchs.Scene
             dynVersusStartLayer.Invoke("UpdateEntityList");
         }
 
-        private void AddPlayersIndicators(Level self)
+        private static void AddPlayersIndicators(Level self)
         {
             var players = self[GameTags.Player].ToArray();
 
@@ -163,13 +155,14 @@ namespace TF.EX.Patchs.Scene
             }
         }
 
-        private void SkipLevelLoaderIfNeeded()
+        private static void SkipLevelLoaderIfNeeded()
         {
             var dynEngine = DynamicData.For(TowerFall.TFGame.Instance);
             var nextScene = dynEngine.Get<Monocle.Scene>("nextScene");
             if (nextScene is LevelLoaderXML)
             {
-                _sfxService.Clear();
+                var sfxService = ServiceCollections.ResolveSFXService();
+                sfxService.Clear();
                 dynEngine.Set("scene", dynEngine.Get<Monocle.Scene>("nextScene"));
                 while (!(TFGame.Instance.Scene as LevelLoaderXML).Finished)
                 {

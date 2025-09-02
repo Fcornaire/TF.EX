@@ -1,64 +1,51 @@
-﻿using Microsoft.Xna.Framework;
+﻿using HarmonyLib;
+using Microsoft.Xna.Framework;
+using TF.EX.Domain;
 using TF.EX.Domain.Extensions;
-using TF.EX.Domain.Ports;
 using TF.EX.TowerFallExtensions;
 using TowerFall;
 
 namespace TF.EX.Patchs.Entity.MenuItem
 {
-    internal class VersusBeginButtonPatch : IHookable
+    [HarmonyPatch(typeof(VersusBeginButton))]
+    internal class VersusBeginButtonPatch
     {
-        private readonly IMatchmakingService _matchmakingService;
-        private readonly IArcherService _archerService;
-        public VersusBeginButtonPatch(IMatchmakingService matchmakingService, IArcherService archerService)
+        [HarmonyPrefix]
+        [HarmonyPatch("OnConfirm")]
+        public static bool VersusBeginButton_OnConfirm(VersusBeginButton __instance)
         {
-            _matchmakingService = matchmakingService;
-            _archerService = archerService;
-        }
-
-        public void Load()
-        {
-            On.TowerFall.VersusBeginButton.ctor += VersusBeginButton_ctor;
-            On.TowerFall.VersusBeginButton.OnConfirm += VersusBeginButton_OnConfirm;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.VersusBeginButton.ctor -= VersusBeginButton_ctor;
-            On.TowerFall.VersusBeginButton.OnConfirm -= VersusBeginButton_OnConfirm;
-        }
-
-        private void VersusBeginButton_OnConfirm(On.TowerFall.VersusBeginButton.orig_OnConfirm orig, VersusBeginButton self)
-        {
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
             var currentMode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
             if (!currentMode.IsNetplay())
             {
                 MainMenu.CurrentMatchSettings = MainMenu.VersusMatchSettings;
                 MainMenu.RollcallMode = MainMenu.RollcallModes.Versus;
-                self.MainMenu.State = MainMenu.MenuState.Rollcall;
-                return;
+                __instance.MainMenu.State = MainMenu.MenuState.Rollcall;
+                return false;
             }
 
             if (currentMode == TF.EX.Domain.Models.Modes.Netplay)
             {
-                _matchmakingService.ResetLobby();
-                self.MainMenu.State = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
-                return;
+                matchmakingService.ResetLobby();
+                __instance.MainMenu.State = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
+                return false;
             }
 
-            orig(self);
+            return true;
         }
 
-        private void VersusBeginButton_ctor(On.TowerFall.VersusBeginButton.orig_ctor orig, TowerFall.VersusBeginButton self, Vector2 position, Vector2 tweenFrom)
+        [HarmonyPostfix]
+        [HarmonyPatch(MethodType.Constructor, [typeof(Vector2), typeof(Vector2)])]
+        public static void VersusBeginButton_ctor()
         {
-            orig(self, position, tweenFrom);
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+            var archerService = ServiceCollections.ResolveArcherService();
+            archerService.Reset();
 
-            _archerService.Reset();
-
-            var lobby = _matchmakingService.GetOwnLobby();
+            var lobby = matchmakingService.GetOwnLobby();
             if (!lobby.IsEmpty)
             {
-                _matchmakingService.LeaveLobby(_matchmakingService.ResetLobby, _matchmakingService.ResetLobby);
+                matchmakingService.LeaveLobby(matchmakingService.ResetLobby, matchmakingService.ResetLobby);
             }
         }
     }

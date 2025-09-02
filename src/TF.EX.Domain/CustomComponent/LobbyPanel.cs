@@ -2,6 +2,7 @@
 using Monocle;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models.WebSocket;
+using TF.EX.Domain.Utils;
 using TowerFall;
 
 namespace TF.EX.Domain.CustomComponent
@@ -103,7 +104,7 @@ namespace TF.EX.Domain.CustomComponent
 
         private void UpdateMapIcon(int mapId)
         {
-            var imgs = mapId == -1 ? MapButton.InitRandomVersusGraphics() : MapButton.InitVersusGraphics(mapId);
+            var imgs = mapId == -1 ? MapButton.InitRandomVersusGraphics() : VersusGraphics.GetVersusGraphics(mapId);
 
             if (block != null)
             {

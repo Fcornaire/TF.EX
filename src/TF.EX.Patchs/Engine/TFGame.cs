@@ -1,11 +1,12 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using HarmonyLib;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Xna.Framework;
 using Monocle;
 using MonoMod.Utils;
 using System.Diagnostics;
 using System.Reflection;
-using System.Windows.Forms;
+using TextCopy;
 using TF.EX.Common;
 using TF.EX.Common.Extensions;
 using TF.EX.Domain;
@@ -21,77 +22,42 @@ using TowerFall;
 
 namespace TF.EX.Patchs.Engine
 {
-    public class TFGamePatch : IHookable
+    [HarmonyPatch(typeof(TowerFall.TFGame))]
+    public class TFGamePatch
     {
         public static InputRenderer[] CustomInputRenderers;
 
-        private bool _shouldShowUpdateNotif = true;
+        private static bool _shouldShowUpdateNotif = true;
 
-        private readonly INetplayManager _netplayManager;
-        private readonly IInputService _inputService;
-        private readonly IReplayService _replayService;
-        private readonly IMatchmakingService _matchmakingService;
-        private readonly IAutoUpdater autoUpdater;
-        private readonly ISyncTestUtilsService _syncTestUtilsService;
-        private readonly ILogger _logger;
-
-        private DateTime LastUpdate;
-        private TimeSpan Accumulator;
+        private static DateTime LastUpdate;
+        private static TimeSpan Accumulator;
 
         private const double FPS = 60;
         private const double SLOW_RATIO = 1.1;
-        private readonly MethodInfo _mInputUpdate = typeof(MInput).GetMethod("Update", BindingFlags.NonPublic | BindingFlags.Static); //Minput Update is an internal static method...
+        private static readonly MethodInfo _mInputUpdate = AccessTools.Method(typeof(MInput), "Update"); //Minput Update is an internal static method...
 
-        private bool frameByFrame { get; set; } = false;
+        private static bool frameByFrame { get; set; } = false;
 
-        public TFGamePatch(
-            INetplayManager netplayManager,
-            IInputService inputService,
-            IReplayService replayService,
-            IMatchmakingService matchmakingService,
-            IAutoUpdater autoUpdater,
-            ISyncTestUtilsService syncTestUtilsService,
-            ILogger logger
-            )
+        [HarmonyPrefix]
+        [HarmonyPatch("OnExiting")]
+        public static void TFGame_OnExiting(TFGame __instance)
         {
-            _netplayManager = netplayManager;
-            _inputService = inputService;
-            _replayService = replayService;
-            _matchmakingService = matchmakingService;
-            this.autoUpdater = autoUpdater;
-            _logger = logger;
-            _syncTestUtilsService = syncTestUtilsService;
-        }
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            var replayService = ServiceCollections.ResolveReplayService();
+            var autoUpdater = ServiceCollections.ResolveAutoUpdater();
 
-        public void Load()
-        {
-            On.TowerFall.TFGame.Update += TFGameUpdate_Patch;
-            On.TowerFall.TFGame.Load += TFGame_Load;
-            On.TowerFall.TFGame.OnSceneTransition += TFGame_OnSceneTransition;
-            On.TowerFall.TFGame.OnExiting += TFGame_OnExiting;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.TFGame.Update -= TFGameUpdate_Patch;
-            On.TowerFall.TFGame.Load -= TFGame_Load;
-            On.TowerFall.TFGame.OnSceneTransition -= TFGame_OnSceneTransition;
-            On.TowerFall.TFGame.OnExiting -= TFGame_OnExiting;
-        }
-
-        private void TFGame_OnExiting(On.TowerFall.TFGame.orig_OnExiting orig, TFGame self, object sender, EventArgs args)
-        {
-            if (self.Scene is Level && _netplayManager.IsServerMode())
+            if (__instance.Scene is Level && netplayManager.IsServerMode())
             {
-                _replayService.Export();
+                replayService.Export();
             }
 
             if (autoUpdater.IsUpdateAvailable())
             {
-                if (!FortRise.RiseCore.DebugMode)
-                {
-                    FortRise.Logger.AttachConsole(new FortRise.WindowConsole());
-                }
+                //TODO: logger
+                //if (!FortRise.RiseCore.DebugMode)
+                //{
+                //    FortRise.Logger.AttachConsole(new FortRise.WindowConsole());
+                //}
 
                 var logger = ServiceCollections.ResolveLogger();
                 var stopWatch = new Stopwatch();
@@ -105,41 +71,41 @@ namespace TF.EX.Patchs.Engine
 
                 logger.LogDebug($"TF.EX mod updated in {time}");
             }
-
-            orig(self, sender, args);
         }
 
-        private void TFGame_OnSceneTransition(On.TowerFall.TFGame.orig_OnSceneTransition orig, TFGame self)
+        [HarmonyPostfix]
+        [HarmonyPatch("OnSceneTransition")]
+        public static void TFGame_OnSceneTransition(TFGame __instance)
         {
-            orig(self);
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
 
-            if (self.PreviousScene is Level && self.Scene is TowerFall.MainMenu)
+            if (__instance.PreviousScene is Level && __instance.Scene is TowerFall.MainMenu)
             {
                 CalcPatch.Reset();
 
                 CustomInputRenderers = null;
 
-                if (!_netplayManager.IsReplayMode())
+                if (!netplayManager.IsReplayMode())
                 {
                     ServiceCollections.PurgeCache();
                 }
 
-                if (!_netplayManager.IsTestMode())
+                if (!netplayManager.IsTestMode())
                 {
-                    _netplayManager.Reset();
+                    netplayManager.Reset();
                     //TowerFall.PlayerInput.AssignInputs(); //Reset inputs
                 }
 
-                _netplayManager.ResetMode();
+                netplayManager.ResetMode();
 
                 TFGameExtensions.ResetVersusChoices();
             }
         }
 
-        private void TFGame_Load(On.TowerFall.TFGame.orig_Load orig)
+        [HarmonyPostfix]
+        [HarmonyPatch("Load")]
+        public static void TFGame_Load()
         {
-            orig();
-
             LastUpdate = DateTime.Now;
             Accumulator = TimeSpan.Zero;
 
@@ -149,93 +115,109 @@ namespace TF.EX.Patchs.Engine
             }
         }
 
-        private async Task AutoUpdateIfNeeded()
+        private static async Task AutoUpdateIfNeeded()
         {
             var autoUpdate = ServiceCollections.ServiceProvider.GetRequiredService<IAutoUpdater>();
             await autoUpdate.CheckForUpdate();
         }
 
-        private void TFGameUpdate_Patch(On.TowerFall.TFGame.orig_Update orig, TowerFall.TFGame self, GameTime gameTime)
+        [HarmonyReversePatch]
+        [HarmonyPatch("Update")]
+        public static void TFGame_Update_orig(TFGame __instance, GameTime gameTime)
         {
-            if (self.Scene is TowerFall.MainMenu)
+            throw new NotImplementedException("This method should be patched by Harmony, not called directly.");
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch("Update")]
+        public static bool TFGameUpdate_Patch(TowerFall.TFGame __instance, GameTime gameTime)
+        {
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            var replayService = ServiceCollections.ResolveReplayService();
+            var inputService = ServiceCollections.ResolveInputService();
+            var autoUpdater = ServiceCollections.ResolveAutoUpdater();
+            var syncTestUtilsService = ServiceCollections.ResolveSyncTestUtilsService();
+            var logger = ServiceCollections.ResolveLogger();
+
+            if (__instance.Scene is TowerFall.MainMenu)
             {
-                HandleMenuAction(self);
+                HandleMenuAction(__instance, autoUpdater, inputService);
             }
 
-            ManageTimeStep(self);
+            ManageTimeStep(__instance);
 
-            if (!HandleFrameByFrame())
+            if (!handleFrameByFrame(netplayManager))
             {
-                return;
+                return false;
             }
 
-            if (_netplayManager.IsReplayMode())
+            if (netplayManager.IsReplayMode())
             {
-                var dynTFGame = DynamicData.For(self);
+                var dynTFGame = DynamicData.For(__instance);
                 var gameLoaded = dynTFGame.Get<bool>("GameLoaded");
 
-                if (gameLoaded && self.Scene is Level && !(self.Scene as Level).Paused)
+                if (gameLoaded && __instance.Scene is Level && !(__instance.Scene as Level).Paused)
                 {
-                    _replayService.RunFrame();
+                    replayService.RunFrame();
                     //(self.Scene as Level).LoadState(_replayService.GetCurrentRecord().GameState);
                 }
-                orig(self, gameTime);
+                TFGame_Update_orig(__instance, gameTime);
                 //self.Screen.Offset = Vector2.Zero; //Ignore camera offset on replay mode (used by some orb)
 
-                return;
+                return false;
             }
 
-            if (!_netplayManager.IsSynchronized() && _netplayManager.GetNetplayMode() != NetplayMode.Test)
+            if (!netplayManager.IsSynchronized() && netplayManager.GetNetplayMode() != NetplayMode.Test)
             {
                 LastUpdate = DateTime.Now;
                 Accumulator = TimeSpan.Zero;
             }
 
-            if (!CanRunNetplayFrames(self.Scene) || (!_netplayManager.IsInit() && (self.Scene as Level).Session.RoundLogic is LastManStandingRoundLogic))
+            if (!CanRunNetplayFrames(__instance.Scene) || (!netplayManager.IsInit() && (__instance.Scene as Level).Session.RoundLogic is LastManStandingRoundLogic))
             {
-                orig(self, gameTime);
-                return;
+                TFGame_Update_orig(__instance, gameTime);
+                return false;
             }
 
-            if (_netplayManager.IsDisconnected())
+            if (netplayManager.IsDisconnected())
             {
-                orig(self, gameTime);
-                return;
+                TFGame_Update_orig(__instance, gameTime);
+                return false;
             }
 
-            if (_netplayManager.HasFailedInitialConnection())
+            if (netplayManager.HasFailedInitialConnection())
             {
-                orig(self, gameTime);
-                return;
+                TFGame_Update_orig(__instance, gameTime);
+                return false;
             }
 
 
-            if (!_netplayManager.IsSynchronized() && !_netplayManager.IsInit())
+            if (!netplayManager.IsSynchronized() && !netplayManager.IsInit())
             {
                 if (TFGame.Instance.Scene is TowerFall.Level && (TFGame.Instance.Scene as TowerFall.Level).Session.GetWinner() != -1)
                 {
                     var vs = (TFGame.Instance.Scene as TowerFall.Level).Get<VersusMatchResults>();
                     if (vs != null)
                     {
-                        orig(self, gameTime);
+                        TFGame_Update_orig(__instance, gameTime);
                     }
                 }
 
-                return;
+                return false;
             }
 
-            if (!_netplayManager.GetNetplayMode().Equals(NetplayMode.Test))
+            if (!netplayManager.GetNetplayMode().Equals(NetplayMode.Test))
             {
-                _netplayManager.Poll();
+                netplayManager.Poll();
             }
 
-            if (!_netplayManager.IsDisconnected())
+            if (!netplayManager.IsDisconnected())
             {
                 //ArtificialSlow(); //Only useful to test choppy/freezing condition
 
                 double fpsDelta = 1.0 / FPS;
 
-                if (_netplayManager.IsFramesAhead())
+                if (netplayManager.IsFramesAhead())
                 {
                     fpsDelta *= SLOW_RATIO;
                 }
@@ -248,41 +230,42 @@ namespace TF.EX.Patchs.Engine
                 {
                     Accumulator = Accumulator.Subtract(TimeSpan.FromSeconds(fpsDelta));
 
-                    if (_netplayManager.IsSynchronized() || _netplayManager.GetNetplayMode().Equals(NetplayMode.Test))
+                    if (netplayManager.IsSynchronized() || netplayManager.GetNetplayMode().Equals(NetplayMode.Test))
                     {
-                        var canAdvance = NetplayLogic(self.Scene as Level);
+                        var canAdvance = NetplayLogic(__instance.Scene as Level, netplayManager, inputService, replayService, syncTestUtilsService);
 
                         if (canAdvance)
                         {
-                            if (_netplayManager.CanAdvanceFrame())
+                            if (netplayManager.CanAdvanceFrame())
                             {
-                                _netplayManager.ConsumeNetplayRequest(); //We should had one last advance Frame request to consume if no rollback
+                                netplayManager.ConsumeNetplayRequest(); //We should had one last advance Frame request to consume if no rollback if ggrs estime we can advance
+
+                                if (!netplayManager.HaveRequestToHandle())
+                                {
+                                    netplayManager.UpdateFramesToReSimulate(0);
+                                }
+
+                                netplayManager.AdvanceGameState();
+                                var dynScene = DynamicData.For(__instance.Scene);
+                                dynScene.Set("FrameCounter", (float)GGRSFFI.netplay_current_frame());
+
+                                TFGame_Update_orig(__instance, gameTime);
                             }
-
-                            if (!_netplayManager.HaveRequestToHandle())
-                            {
-                                _netplayManager.UpdateFramesToReSimulate(0);
-                            }
-
-                            _netplayManager.AdvanceGameState();
-                            var dynScene = DynamicData.For(self.Scene);
-                            dynScene.Set("FrameCounter", GGRSFFI.netplay_current_frame());
-
-                            orig(self, gameTime);
                         }
                     }
                     else
                     {
-                        _logger.LogDebug<TFGame>($"Not syncrhonized {GGRSFFI.netplay_current_frame()}");
+                        logger.LogWarning($"Not syncrhonized {GGRSFFI.netplay_current_frame()}");
                     }
                 }
             }
 
+            return false;
         }
 
-        private bool HandleFrameByFrame()
+        private static bool handleFrameByFrame(INetplayManager netplayManager)
         {
-            if (!_netplayManager.IsReplayMode())
+            if (!netplayManager.IsReplayMode())
             {
                 return true;
             }
@@ -310,13 +293,13 @@ namespace TF.EX.Patchs.Engine
             return true;
         }
 
-        private void HandleMenuAction(TFGame self)
+        private static void HandleMenuAction(TFGame instance, IAutoUpdater autoUpdater, IInputService inputService)
         {
-            var scene = self.Scene as TowerFall.MainMenu;
+            var scene = instance.Scene as TowerFall.MainMenu;
             switch (scene.State)
             {
                 case TowerFall.MainMenu.MenuState.PressStart:
-                    UpdateClipped(self.Commands);
+                    UpdateClipped(instance.Commands);
 
                     if (_shouldShowUpdateNotif)
                     {
@@ -324,22 +307,22 @@ namespace TF.EX.Patchs.Engine
 
                         if (autoUpdater.IsUpdateAvailable())
                         {
-                            var notif = Notification.Create(self.Scene, $"EX mod new update! Applying version {autoUpdater.GetLatestVersion()} ...", stayingDuration: 500);
+                            var notif = Notification.Create(instance.Scene, $"EX mod new update! Applying version {autoUpdater.GetLatestVersion()} ...", stayingDuration: 500);
                             Sounds.ui_clickSpecial.Play(160, 5);
-                            _inputService.DisableAllControllers();
+                            inputService.DisableAllControllers();
 
                             Alarm alarm = Alarm.Create(Alarm.AlarmMode.Oneshot, null, 550, true);
-                            alarm.OnComplete = self.Exit;
+                            alarm.OnComplete = instance.Exit;
 
                             notif.Add(alarm);
 
-                            self.Scene.Add(notif);
+                            instance.Scene.Add(notif);
                         }
                     }
 
                     break;
                 case TowerFall.MainMenu.MenuState.VersusOptions:
-                    var dynCommands = DynamicData.For(self.Commands);
+                    var dynCommands = DynamicData.For(instance.Commands);
                     dynCommands.Set("currentText", string.Empty);
                     break;
                 case TowerFall.MainMenu.MenuState.Main:
@@ -348,36 +331,36 @@ namespace TF.EX.Patchs.Engine
             }
         }
 
-        public bool CanRunNetplayFrames(Monocle.Scene scene)
+        public static bool CanRunNetplayFrames(Monocle.Scene scene)
         {
             return scene is Level;
         }
 
-        private bool NetplayLogic(Level level)
+        private static bool NetplayLogic(Level level, INetplayManager netplayManager, IInputService inputService, IReplayService replayService, ISyncTestUtilsService syncTestUtilsService)
         {
-            if (!_netplayManager.HaveRequestToHandle())
+            if (!netplayManager.HaveRequestToHandle())
             {
-                var playerInput = _inputService.GetPolledInput();
+                var playerInput = inputService.GetPolledInput();
 
-                var status = _netplayManager.AdvanceFrame(playerInput);
+                var status = netplayManager.AdvanceFrame(playerInput);
 
                 if (!status.IsOk)
                 {
                     return false;
                 }
 
-                _inputService.ResetPolledInput();
-                _netplayManager.UpdateNetplayRequests();
+                inputService.ResetPolledInput();
+                netplayManager.UpdateNetplayRequests();
             }
 
-            if (!_netplayManager.HaveRequestToHandle())
+            if (!netplayManager.HaveRequestToHandle())
             {
                 return false;
             }
 
-            while (_netplayManager.HaveRequestToHandle() && !_netplayManager.CanAdvanceFrame())
+            while (netplayManager.HaveRequestToHandle() && !netplayManager.CanAdvanceFrame())
             {
-                var request = _netplayManager.ConsumeNetplayRequest();
+                var request = netplayManager.ConsumeNetplayRequest();
 
                 level = TFGame.Instance.Scene as Level; //We need to get the level again because it can be changed by Level Update (LevelLoader)
 
@@ -386,36 +369,36 @@ namespace TF.EX.Patchs.Engine
                     case NetplayRequest.SaveGameState:
                         var gameState = level.GetState();
 
-                        _netplayManager.SaveGameState(gameState);
+                        netplayManager.SaveGameState(gameState);
 
-                        if (!_netplayManager.IsReplayMode())
+                        if (!netplayManager.IsReplayMode())
                         {
-                            _replayService.AddRecord(gameState, _netplayManager.ShouldSwapPlayer());
+                            replayService.AddRecord(gameState, netplayManager.ShouldSwapPlayer());
                         }
 
-                        if (_netplayManager.IsTestMode())
+                        if (netplayManager.IsTestMode())
                         {
-                            _syncTestUtilsService.AddFrame(gameState.Frame, gameState);
+                            syncTestUtilsService.AddFrame(gameState.Frame, gameState);
                         }
 
                         break;
                     case NetplayRequest.LoadGameState:
-                        _netplayManager.SetIsRollbackFrame(true);
-                        var gameStateToLoad = _netplayManager.LoadGameState();
+                        netplayManager.SetIsRollbackFrame(true);
+                        var gameStateToLoad = netplayManager.LoadGameState();
 
-                        _netplayManager.SetIsUpdating(true);
+                        netplayManager.SetIsUpdating(true);
                         level.LoadState(gameStateToLoad);
-                        _netplayManager.SetIsUpdating(false);
-                        _replayService.RemovePredictedRecords(gameStateToLoad.Frame);
+                        netplayManager.SetIsUpdating(false);
+                        replayService.RemovePredictedRecords(gameStateToLoad.Frame);
 
-                        if (_netplayManager.IsTestMode())
+                        if (netplayManager.IsTestMode())
                         {
-                            _syncTestUtilsService.Remove(gameStateToLoad.Frame);
+                            syncTestUtilsService.Remove(gameStateToLoad.Frame);
                         }
 
                         break;
                     case NetplayRequest.AdvanceFrame:
-                        _netplayManager.AdvanceGameState();
+                        netplayManager.AdvanceGameState();
 
                         _mInputUpdate.Invoke(null, null);
                         level.Update();
@@ -438,7 +421,7 @@ namespace TF.EX.Patchs.Engine
             }
         }
 
-        private void ArtificialSlow()
+        private static void ArtificialSlow()
         {
             Random random = new Random();
 
@@ -446,26 +429,33 @@ namespace TF.EX.Patchs.Engine
             {
                 Console.WriteLine("Sleepy !");
 
-                int delay = random.Next(200, 500);
+                int delay = random.Next(100, 300);
                 Thread.Sleep(delay);
             }
         }
 
-        private void UpdateClipped(Monocle.Commands commands)
+        private static void UpdateClipped(Monocle.Commands commands)
         {
-            var dynCommands = DynamicData.For(commands);
-            var currentText = dynCommands.Get<string>("currentText");
-
-            var clipped = Clipboard.GetText().Trim();
-
-            if (!string.IsNullOrEmpty(clipped) && currentText != clipped)
+            try
             {
-                dynCommands.Set("currentText", clipped);
-                Clipboard.Clear();
+                var dynCommands = DynamicData.For(commands);
+                var currentText = dynCommands.Get<string>("currentText");
+
+                var clipped = ClipboardService.GetText()?.Trim();
+
+                if (!string.IsNullOrEmpty(clipped) && currentText != clipped)
+                {
+                    dynCommands.Set("currentText", clipped);
+                    ClipboardService.SetText("");
+                }
+            }
+            catch
+            {
+                //Cannot access clipboard because :/
             }
         }
 
-        private void ManageTimeStep(TowerFall.TFGame self)
+        private static void ManageTimeStep(TowerFall.TFGame self)
         {
             switch (self.Scene)
             {

@@ -106,7 +106,7 @@ namespace TF.EX.Domain.Services.TF
                 .ToList()
                 .ForEach(sfx =>
                 {
-                    if (!IsSfxSynchedToCurrent(sfx) && sfx.Frame <= currentFrame && sfx.Frame >= _gameContext.GetLastRollbackFrame())
+                    if (!IsSfxSynchedToCurrent(sfx) && sfx.Frame <= currentFrame && sfx.Frame >= _gameContext.GetLastRollbackFrame() && sfx.Data != null)
                     {
                         var toPlay = sfx.ToSoundEffectInstance();
 
@@ -148,6 +148,11 @@ namespace TF.EX.Domain.Services.TF
         public void Reset()
         {
             _gameContext.ClearSfxs();
+        }
+
+        public string GetSoundEffectName(SoundEffect data)
+        {
+            return _gameContext.GetSoundEffectName(data);
         }
     }
 }

@@ -1,61 +1,47 @@
-﻿using Microsoft.Xna.Framework;
+﻿using HarmonyLib;
+using Microsoft.Xna.Framework;
 using Monocle;
 using MonoMod.Utils;
-using TF.EX.Domain.Ports;
-using TF.EX.Domain.Ports.TF;
+using TF.EX.Domain;
 using TowerFall;
 
 namespace TF.EX.Patchs.Entity.HUD
 {
-    internal class VersusPlayerMatchResultsPatch : IHookable
+    [HarmonyPatch(typeof(VersusPlayerMatchResults))]
+    internal class VersusPlayerMatchResultsPatch
     {
-        private readonly INetplayManager _netplayManager;
-        private readonly IInputService _inputService;
-
-        public VersusPlayerMatchResultsPatch(INetplayManager netplayManager, IInputService inputService)
+        [HarmonyPostfix]
+        [HarmonyPatch(MethodType.Constructor, [typeof(TowerFall.Session), typeof(TowerFall.VersusMatchResults), typeof(int), typeof(Vector2), typeof(Vector2), typeof(List<TowerFall.AwardInfo>)])]
+        public static void VersusPlayerMatchResults_ctor(TowerFall.VersusPlayerMatchResults __instance, TowerFall.Session session, TowerFall.VersusMatchResults matchResults, int playerIndex, Vector2 tweenFrom, Vector2 tweenTo, List<TowerFall.AwardInfo> awards)
         {
-            _netplayManager = netplayManager;
-            _inputService = inputService;
-        }
 
-        public void Load()
-        {
-            On.TowerFall.VersusPlayerMatchResults.ctor += VersusPlayerMatchResults_ctor;
-        }
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            var inputService = ServiceCollections.ResolveInputService();
 
-        public void Unload()
-        {
-            On.TowerFall.VersusPlayerMatchResults.ctor -= VersusPlayerMatchResults_ctor;
-        }
-
-        private void VersusPlayerMatchResults_ctor(On.TowerFall.VersusPlayerMatchResults.orig_ctor orig, TowerFall.VersusPlayerMatchResults self, TowerFall.Session session, TowerFall.VersusMatchResults matchResults, int playerIndex, Vector2 tweenFrom, Vector2 tweenTo, List<TowerFall.AwardInfo> awards)
-        {
-            orig(self, session, matchResults, playerIndex, tweenFrom, tweenTo, awards);
-
-            var dynVersusPlayerMatchResults = DynamicData.For(self);
+            var dynVersusPlayerMatchResults = DynamicData.For(__instance);
             var gem = dynVersusPlayerMatchResults.Get<Sprite<string>>("gem");
 
             var netplayIndex = playerIndex;
 
-            if (_netplayManager.ShouldSwapPlayer())
-            {
-                if (netplayIndex == 0)
-                {
-                    netplayIndex = _inputService.GetLocalPlayerInputIndex();
-                }
-                else
-                {
-                    netplayIndex = _inputService.GetRemotePlayerInputIndex();
-                }
-            }
+            //if (netplayManager.ShouldSwapPlayer())
+            //{
+            //    if (netplayIndex == 0)
+            //    {
+            //        netplayIndex = inputService.GetLocalPlayerInputIndex();
+            //    }
+            //    else
+            //    {
+            //        netplayIndex = inputService.GetRemotePlayerInputIndex();
+            //    }
+            //}
 
-            var playerName = netplayIndex == 0 ? _netplayManager.GetNetplayMeta().Name : _netplayManager.GetPlayer2Name();
+            var playerName = netplayIndex == 0 ? netplayManager.GetNetplayMeta().Name : netplayManager.GetPlayer2Name();
 
             var playerNameText = new OutlineText(TFGame.Font, playerName, gem.Position + Vector2.UnitY * 15);
             playerNameText.Color = Color.White;
             var dynPlayerNameText = DynamicData.For(playerNameText);
             dynPlayerNameText.Add("IsPlayerName", true);
-            self.Add(playerNameText);
+            __instance.Add(playerNameText);
         }
     }
 }

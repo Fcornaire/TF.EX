@@ -1,54 +1,41 @@
-﻿using MonoMod.Utils;
-using TF.EX.Domain.Ports;
+﻿using HarmonyLib;
+using MonoMod.Utils;
+using TF.EX.Domain;
 using TowerFall;
 
 namespace TF.EX.Patchs.Entity
 {
-    internal class EntityPatch : IHookable
+    [HarmonyPatch(typeof(Monocle.Entity))]
+    internal class EntityPatch
     {
-        private INetplayManager _netplayManager;
-
-        public EntityPatch(INetplayManager netplayManager)
+        [HarmonyPrefix]
+        [HarmonyPatch("Removed")]
+        public static void Entity_Removed(Monocle.Entity __instance)
         {
-            _netplayManager = netplayManager;
-        }
-
-        public void Load()
-        {
-            On.Monocle.Entity.RemoveSelf += Entity_RemoveSelf;
-            On.Monocle.Entity.Removed += Entity_Removed;
-        }
-
-        public void Unload()
-        {
-            On.Monocle.Entity.RemoveSelf -= Entity_RemoveSelf;
-            On.Monocle.Entity.Removed -= Entity_Removed;
-        }
-
-        private void Entity_Removed(On.Monocle.Entity.orig_Removed orig, Monocle.Entity self)
-        {
-            if (self is TowerFall.Lava) //Hack !!
+            if (__instance is TowerFall.Lava) //Hack !!
             {
-                var dynLava = DynamicData.For(self);
-                dynLava.Set("Scene", TowerFall.TFGame.Instance.Scene); //TODO: Remove this hack, we should have a scene here, dunno why it's null
+                Traverse.Create(__instance).Property("Scene").SetValue(TowerFall.TFGame.Instance.Scene as Level); //TODO: Remove this hack, we should have a scene here, dunno why it's null
             }
-
-            orig(self);
         }
 
-        private void Entity_RemoveSelf(On.Monocle.Entity.orig_RemoveSelf orig, Monocle.Entity self)
+        [HarmonyPrefix]
+        [HarmonyPatch("RemoveSelf")]
+        public static bool Entity_RemoveSelf(Monocle.Entity __instance)
         {
-            if (!_netplayManager.IsUpdating()) //This is mainly to prevent arrowCushion deleting arrow on RBF but should be usefull for all entities/scenario
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            if (!netplayManager.IsUpdating()) //This is mainly to prevent arrowCushion deleting arrow on RBF but should be usefull for all entities/scenario
             {
-                if (self is Explosion)  //Hack because cache i think
+                if (__instance is Explosion)  //Hack because cache i think
                 {
-                    var dynExplosion = DynamicData.For(self);
+                    var dynExplosion = DynamicData.For(__instance);
                     dynExplosion.Set("Scene", TowerFall.TFGame.Instance.Scene);
                     dynExplosion.Set("Level", TowerFall.TFGame.Instance.Scene as Level);
                 }
 
-                orig(self);
+                return true;
             }
+
+            return false;
         }
     }
 }

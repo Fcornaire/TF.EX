@@ -1,34 +1,46 @@
-﻿using Microsoft.Xna.Framework;
+﻿using HarmonyLib;
+using Microsoft.Xna.Framework;
 using Monocle;
 using MonoMod.Utils;
 using TowerFall;
 
 namespace TF.EX.Patchs
 {
-    internal class InputRendererPatch : IHookable
+    [HarmonyPatch(typeof(InputRenderer))]
+    internal class InputRendererPatch
     {
-        public void Load()
-        {
-            On.TowerFall.InputRenderer.ctor += InputRenderer_ctor;
-            On.TowerFall.InputRenderer.Render += InputRenderer_Render;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.InputRenderer.ctor -= InputRenderer_ctor;
-            On.TowerFall.InputRenderer.Render -= InputRenderer_Render;
-        }
-
-        private void InputRenderer_ctor(On.TowerFall.InputRenderer.orig_ctor orig, TowerFall.InputRenderer self, int playerIndex, float widthSoFar)
+        [HarmonyPrefix]
+        [HarmonyPatch(MethodType.Constructor, [typeof(int), typeof(float)])]
+        public static bool InputRenderer_ctor_Prefix()
         {
             if (TFGame.Instance.Scene is LevelLoaderXML)
             {
-                return;
+                return false;
             }
 
-            orig(self, playerIndex, widthSoFar);
+            return true;
+        }
 
-            var dynInputRender = DynamicData.For(self);
+        private static void EnsureSubtexture(InputRenderer inputRenderer)
+        {
+            var dynInputRender = DynamicData.For(inputRenderer);
+            var jump = dynInputRender.Get<Subtexture>("jump");
+            var shoot = dynInputRender.Get<Subtexture>("shoot");
+            var dodge = dynInputRender.Get<Subtexture>("dodge");
+            if (jump == null || shoot == null || dodge == null)
+            {
+                dynInputRender.Set("jump", TFGame.PlayerInputs[0].JumpIcon);
+                dynInputRender.Set("shoot", TFGame.PlayerInputs[0].ShootIcon);
+                dynInputRender.Set("dodge", TFGame.PlayerInputs[0].DodgeIcon);
+            }
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch(MethodType.Constructor, [typeof(int), typeof(float)])]
+        public static void InputRenderer_ctor_Postfix(InputRenderer __instance, float widthSoFar)
+        {
+            EnsureSubtexture(__instance);
+            var dynInputRender = DynamicData.For(__instance);
             var jump = dynInputRender.Get<Subtexture>("jump");
             var shoot = dynInputRender.Get<Subtexture>("shoot");
             var dodge = dynInputRender.Get<Subtexture>("dodge");
@@ -40,18 +52,18 @@ namespace TF.EX.Patchs
             Subtexture move = TFGame.MenuAtlas["controls/xb360/stick"];
             dynInputRender.Add("move", move);
 
-            self.Width = 12 + move.Width + jump.Width + shoot.Width + dodge.Width + 12;
-            Vector2 vector = new Vector2(widthSoFar + (float)(self.Width / 2), 226f);
-            Vector2 moveAt = vector + Vector2.UnitX * (-self.Width / 2 + 6 + move.Width / 2);
-            dynInputRender.Set("jumpAt", vector + Vector2.UnitX * (-self.Width / 2 + 25 + jump.Width / 2));
-            dynInputRender.Set("shootAt", vector + Vector2.UnitX * (self.Width / 2 - 25 - dodge.Width + 15 - shoot.Width / 2));
-            dynInputRender.Set("dodgeAt", vector + Vector2.UnitX * (self.Width / 2 - 6 - dodge.Width / 2));
+            __instance.Width = 12 + move.Width + jump.Width + shoot.Width + dodge.Width + 12;
+            Vector2 vector = new Vector2(widthSoFar + (float)(__instance.Width / 2), 226f);
+            Vector2 moveAt = vector + Vector2.UnitX * (-__instance.Width / 2 + 6 + move.Width / 2);
+            dynInputRender.Set("jumpAt", vector + Vector2.UnitX * (-__instance.Width / 2 + 25 + jump.Width / 2));
+            dynInputRender.Set("shootAt", vector + Vector2.UnitX * (__instance.Width / 2 - 25 - dodge.Width + 15 - shoot.Width / 2));
+            dynInputRender.Set("dodgeAt", vector + Vector2.UnitX * (__instance.Width / 2 - 6 - dodge.Width / 2));
 
             Vector2 moveAtReference = moveAt;
 
             var bg = default(Rectangle);
-            bg.X = (int)(vector.X - (float)(self.Width / 2) + 6f - 2f);
-            bg.Width = self.Width - 12 + 4;
+            bg.X = (int)(vector.X - (float)(__instance.Width / 2) + 6f - 2f);
+            bg.Width = __instance.Width - 12 + 4;
             bg.Y = (int)(vector.Y - 2f);
             bg.Height = 11;
             var bg2 = default(Rectangle);
@@ -66,11 +78,11 @@ namespace TF.EX.Patchs
             dynInputRender.Add("moveAtReference", moveAtReference);
         }
 
-        private void InputRenderer_Render(On.TowerFall.InputRenderer.orig_Render orig, InputRenderer self, InputState state)
+        [HarmonyPostfix]
+        [HarmonyPatch("Render")]
+        public static void InputRenderer_Render(InputRenderer __instance, InputState state)
         {
-            orig(self, state);
-
-            var dynInputRender = DynamicData.For(self);
+            var dynInputRender = DynamicData.For(__instance);
             var move = dynInputRender.Get<Subtexture>("move");
             var moveAt = dynInputRender.Get<Vector2>("moveAt");
             var moveAtReference = dynInputRender.Get<Vector2>("moveAtReference");

@@ -133,7 +133,7 @@ namespace TF.EX.Domain.Services.TF
             {
                 TFGame.PlayerInputs[i] = null;
                 MenuInput.MenuInputs[i] = null;
-            };
+            }
         }
     }
 }

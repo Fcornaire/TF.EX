@@ -1,27 +1,18 @@
-﻿using MonoMod.Utils;
+﻿using HarmonyLib;
 using TF.EX.Domain.Models.State;
 using TowerFall;
 
 namespace TF.EX.Patchs.Entity.MenuItem
 {
-    internal class OptionsButtonPatch : IHookable
+    [HarmonyPatch(typeof(OptionsButton))]
+    internal class OptionsButtonPatch
     {
-        public void Load()
-        {
-            On.TowerFall.OptionsButton.OnSelect += OptionsButton_OnSelect;
-            On.TowerFall.OptionsButton.OnDeselect += OptionsButton_OnDeselect;
-        }
 
-        public void Unload()
+        [HarmonyPrefix]
+        [HarmonyPatch("OnSelect")]
+        public static void OptionsButton_OnSelect(OptionsButton __instance)
         {
-            On.TowerFall.OptionsButton.OnSelect -= OptionsButton_OnSelect;
-            On.TowerFall.OptionsButton.OnDeselect -= OptionsButton_OnDeselect;
-        }
-
-        private void OptionsButton_OnSelect(On.TowerFall.OptionsButton.orig_OnSelect orig, TowerFall.OptionsButton self)
-        {
-            var dynOptionsButton = DynamicData.For(self);
-            var title = dynOptionsButton.Get<string>("title");
+            var title = Traverse.Create(__instance).Field<string>("title").Value;
 
             switch (title)
             {
@@ -45,16 +36,14 @@ namespace TF.EX.Patchs.Entity.MenuItem
                 default:
                     break;
             }
-
-            orig(self);
         }
 
-        private void OptionsButton_OnDeselect(On.TowerFall.OptionsButton.orig_OnDeselect orig, TowerFall.OptionsButton self)
+        [HarmonyPrefix]
+        [HarmonyPatch("OnDeselect")]
+        public static void OptionsButton_OnDeselect()
         {
             TFGame.Instance.Commands.Open = false;
             TFGame.Instance.Commands.Clear();
-
-            orig(self);
         }
     }
 }

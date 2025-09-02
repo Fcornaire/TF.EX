@@ -7,7 +7,7 @@ namespace TF.EX.Common.Handle
 {
     public class SafeBytes<T> : SafeHandleZeroOrMinusOneIsInvalid
     {
-        private readonly int size;
+        private readonly nuint size;
         private readonly Action cleanup;
         public SafeBytes(T obj, bool useJson)
             : base(true)
@@ -19,7 +19,7 @@ namespace TF.EX.Common.Handle
             Marshal.Copy(bytes, 0, ptr, length);
 
             SetHandle(ptr);
-            this.size = length;
+            this.size = (nuint)length;
             this.cleanup = () => { Marshal.FreeHGlobal(handle); };
         }
 
@@ -38,8 +38,8 @@ namespace TF.EX.Common.Handle
                 return new byte[0];
             }
 
-            byte[] result = new byte[size];
-            Marshal.Copy(handle, result, 0, size);
+            byte[] result = new byte[(int)size];
+            Marshal.Copy(handle, result, 0, (int)size);
 
             return result;
         }
@@ -103,6 +103,6 @@ namespace TF.EX.Common.Handle
     public struct SafeBytesFFI
     {
         public IntPtr ptr;
-        public int size;
+        public nuint size;
     }
 }

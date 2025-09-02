@@ -16,7 +16,7 @@ namespace TF.EX.Domain.Extensions
             }
             catch (Exception)
             {
-                FortRise.Logger.Warning($"Invalid archer index received : {index} , might be an inexisting custom archer. Randomly choosing one");
+                //FortRise.Logger.Warning($"Invalid archer index received : {index} , might be an inexisting custom archer. Randomly choosing one");
 
                 bool hasFound = false;
 

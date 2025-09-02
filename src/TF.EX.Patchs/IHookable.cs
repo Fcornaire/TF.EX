@@ -2,7 +2,7 @@
 {
     public interface IHookable
     {
-        void Load();
-        void Unload();
+        //void Load();
+        //void Unload();
     }
 }

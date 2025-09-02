@@ -1,85 +1,52 @@
-﻿using Microsoft.Xna.Framework;
+﻿using HarmonyLib;
+using Microsoft.Xna.Framework;
 using Monocle;
 using MonoMod.Utils;
+using TF.EX.Domain;
 using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models;
-using TF.EX.Domain.Ports;
-using TF.EX.Domain.Ports.TF;
 using TowerFall;
 
 namespace TF.EX.Patchs.Entity.MenuItem
 {
-    public class RollCallElementPatch : IHookable
+    [HarmonyPatch(typeof(RollcallElement))]
+    public class RollCallElementPatch
     {
-        private readonly IMatchmakingService _matchmakingService;
-        private readonly IArcherService archerService;
-        private readonly IInputService inputService;
-        private readonly INetplayManager netplayManager;
-
-        public RollCallElementPatch(IMatchmakingService matchmakingService,
-            IArcherService archerService,
-            IInputService inputService,
-            INetplayManager netplayManager)
+        [HarmonyPostfix]
+        [HarmonyPatch("Render")]
+        public static void RollcallElement_Render()
         {
-            _matchmakingService = matchmakingService;
-            this.archerService = archerService;
-            this.inputService = inputService;
-            this.netplayManager = netplayManager;
-        }
-
-        public void Load()
-        {
-            On.TowerFall.RollcallElement.StartVersus += RollcallElement_StartVersus;
-            On.TowerFall.RollcallElement.Update += RollcallElement_Update;
-            On.TowerFall.RollcallElement.NotJoinedUpdate += RollcallElement_NotJoinedUpdate;
-            On.TowerFall.RollcallElement.EnterJoined += RollcallElement_EnterJoined;
-            On.TowerFall.RollcallElement.JoinedUpdate += RollcallElement_JoinedUpdate;
-            On.TowerFall.RollcallElement.LeaveJoined += RollcallElement_LeaveJoined;
-            On.TowerFall.RollcallElement.Render += RollcallElement_Render;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.RollcallElement.StartVersus -= RollcallElement_StartVersus;
-            On.TowerFall.RollcallElement.Update -= RollcallElement_Update;
-            On.TowerFall.RollcallElement.NotJoinedUpdate -= RollcallElement_NotJoinedUpdate;
-            On.TowerFall.RollcallElement.EnterJoined -= RollcallElement_EnterJoined;
-            On.TowerFall.RollcallElement.JoinedUpdate -= RollcallElement_JoinedUpdate;
-            On.TowerFall.RollcallElement.LeaveJoined -= RollcallElement_LeaveJoined;
-            On.TowerFall.RollcallElement.Render -= RollcallElement_Render;
-        }
-
-        private void RollcallElement_Render(On.TowerFall.RollcallElement.orig_Render orig, RollcallElement self)
-        {
-            orig(self);
-
-            var lobby = _matchmakingService.GetOwnLobby();
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+            var lobby = matchmakingService.GetOwnLobby();
             if (lobby.Spectators.Any())
             {
                 Draw.OutlineTextCentered(TFGame.Font, $"SPECTATORS : {lobby.Spectators.Count}", new Vector2(40f, 20f), Color.White, Color.Black);
             }
         }
 
-
-        private void RollcallElement_LeaveJoined(On.TowerFall.RollcallElement.orig_LeaveJoined orig, RollcallElement self)
+        [HarmonyPostfix]
+        [HarmonyPatch("LeaveJoined")]
+        public static void RollcallElement_LeaveJoined(RollcallElement __instance)
         {
-            orig(self);
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+            var archerService = ServiceCollections.ResolveArcherService();
+            var inputService = ServiceCollections.ResolveInputService();
 
             var currentMode = MainMenu.VersusMatchSettings.Mode.ToModel();
             if (currentMode == Domain.Models.Modes.Netplay)
             {
-                var dynRollcallElement = DynamicData.For(self);
-                var playerIndex = dynRollcallElement.Get<int>("playerIndex");
-                StateMachine state = dynRollcallElement.Get<StateMachine>("state");
+                var dynRollcallElement = Traverse.Create(__instance);
+                var playerIndex = dynRollcallElement.Field<int>("playerIndex").Value;
+                StateMachine state = dynRollcallElement.Field<StateMachine>("state").Value;
 
                 //We only care about joined update (1)
                 if (state == 1 && MenuInput.Back)
                 {
                     if (playerIndex == 0)
                     {
-                        var lobby = _matchmakingService.GetOwnLobby();
-                        var player = lobby.Players.First(pl => pl.RoomChatPeerId == _matchmakingService.GetRoomChatPeerId());
+                        var lobby = matchmakingService.GetOwnLobby();
+                        var player = lobby.Players.First(pl => pl.RoomChatPeerId == matchmakingService.GetRoomChatPeerId());
                         if (player.Ready)
                         {
                             player.Ready = false;
@@ -87,18 +54,18 @@ namespace TF.EX.Patchs.Entity.MenuItem
 
                             inputService.DisableAllControllers();
 
-                            _matchmakingService.UpdatePlayer(player, () =>
+                            matchmakingService.UpdatePlayer(player, () =>
                             {
                                 inputService.EnableAllControllers();
                                 inputService.DisableAllControllerExceptLocal();
-                                dynRollcallElement.Set("input", TFGame.PlayerInputs[0]);
+                                dynRollcallElement.Field<TowerFall.PlayerInput>("input").Value = TFGame.PlayerInputs[0];
                             }, () =>
                             {
                                 inputService.EnableAllControllers();
                                 inputService.DisableAllControllerExceptLocal();
-                                dynRollcallElement.Set("input", TFGame.PlayerInputs[0]);
+                                dynRollcallElement.Field<TowerFall.PlayerInput>("input").Value = TFGame.PlayerInputs[0];
                                 Sounds.ui_invalid.Play();
-                                Notification.Create(self.Scene, "Failed to notify server");
+                                Notification.Create(__instance.Scene, "Failed to notify server");
                             });
                         }
                     }
@@ -110,40 +77,44 @@ namespace TF.EX.Patchs.Entity.MenuItem
             }
         }
 
-        private int RollcallElement_JoinedUpdate(On.TowerFall.RollcallElement.orig_JoinedUpdate orig, RollcallElement self)
+        [HarmonyPostfix]
+        [HarmonyPatch("JoinedUpdate")]
+        public static void RollcallElement_JoinedUpdate(RollcallElement __instance, ref int __result)
         {
             var currentMode = MainMenu.VersusMatchSettings.Mode.ToModel();
 
             if (currentMode == Domain.Models.Modes.Netplay)
             {
-                var dynRollcallElement = DynamicData.For(self);
-                var playerIndex = dynRollcallElement.Get<int>("playerIndex");
+                var playerIndex = Traverse.Create(__instance).Field<int>("playerIndex").Value;
 
                 if (playerIndex == 0)
                 {
-                    return orig(self);
+                    return;
                 }
 
-                return 1;
+                __result = 1;
+                return;
             }
-
-            return orig(self);
         }
 
-        private void RollcallElement_EnterJoined(On.TowerFall.RollcallElement.orig_EnterJoined orig, RollcallElement self)
+        [HarmonyPostfix]
+        [HarmonyPatch("EnterJoined")]
+        public static void RollcallElement_EnterJoined(RollcallElement __instance)
         {
-            orig(self);
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+            var archerService = ServiceCollections.ResolveArcherService();
+            var inputService = ServiceCollections.ResolveInputService();
 
             var currentMode = MainMenu.VersusMatchSettings.Mode.ToModel();
             if (currentMode == Domain.Models.Modes.Netplay)
             {
-                var lobby = _matchmakingService.GetOwnLobby();
-                var dynRollcallElement = DynamicData.For(self);
+                var lobby = matchmakingService.GetOwnLobby();
+                var dynRollcallElement = DynamicData.For(__instance);
                 var playerIndex = dynRollcallElement.Get<int>("playerIndex");
 
-                if (playerIndex == 0 && !_matchmakingService.IsSpectator())
+                if (playerIndex == 0 && !matchmakingService.IsSpectator())
                 {
-                    var player = lobby.Players.First(pl => pl.RoomChatPeerId == _matchmakingService.GetRoomChatPeerId());
+                    var player = lobby.Players.First(pl => pl.RoomChatPeerId == matchmakingService.GetRoomChatPeerId());
                     if (!player.Ready)
                     {
                         player.Ready = true;
@@ -154,21 +125,21 @@ namespace TF.EX.Patchs.Entity.MenuItem
 
                         inputService.DisableAllControllers();
 
-                        _matchmakingService.UpdatePlayer(player, () =>
+                        matchmakingService.UpdatePlayer(player, () =>
                             {
                                 inputService.EnableAllControllers();
                                 inputService.DisableAllControllerExceptLocal();
                                 dynRollcallElement.Set("input", TFGame.PlayerInputs[0]);
-                                self.HandleControlChange();
+                                __instance.HandleControlChange();
                             }, () =>
                             {
                                 inputService.EnableAllControllers();
                                 inputService.DisableAllControllerExceptLocal();
                                 dynRollcallElement.Set("input", TFGame.PlayerInputs[0]);
 
-                                self.HandleControlChange();
+                                __instance.HandleControlChange();
                                 Sounds.ui_invalid.Play();
-                                Notification.Create(self.Scene, "Failed to notify server");
+                                Notification.Create(__instance.Scene, "Failed to notify server");
                             });
                     }
                 }
@@ -179,11 +150,12 @@ namespace TF.EX.Patchs.Entity.MenuItem
             }
         }
 
-        private int RollcallElement_NotJoinedUpdate(On.TowerFall.RollcallElement.orig_NotJoinedUpdate orig, RollcallElement self)
+        [HarmonyPostfix]
+        [HarmonyPatch("NotJoinedUpdate")]
+        public static void RollcallElement_NotJoinedUpdate(RollcallElement __instance)
         {
-            var dynRollcallElement = DynamicData.For(self);
-
-            var res = orig(self);
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+            var dynRollcallElement = DynamicData.For(__instance);
 
             int playerIndex = dynRollcallElement.Get<int>("playerIndex");
 
@@ -197,14 +169,14 @@ namespace TF.EX.Patchs.Entity.MenuItem
                 {
                     Task.Run(async () =>
                     {
-                        await _matchmakingService.LeaveLobby(() =>
+                        await matchmakingService.LeaveLobby(() =>
                         {
                             (TFGame.Instance.Scene as MainMenu).State = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
-                            if (!_matchmakingService.IsSpectator())
+                            if (!matchmakingService.IsSpectator())
                             {
-                                _matchmakingService.DisconnectFromLobby();
+                                matchmakingService.DisconnectFromLobby();
                             }
-                            _matchmakingService.ResetPeer();
+                            matchmakingService.ResetPeer();
                         }, () =>
                         {
                             (TFGame.Instance.Scene as MainMenu).State = MainMenu.MenuState.VersusOptions;
@@ -214,14 +186,15 @@ namespace TF.EX.Patchs.Entity.MenuItem
                     (TFGame.Instance.Scene as MainMenu).State = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
                 }
             }
-
-            return res;
         }
 
-        private void RollcallElement_Update(On.TowerFall.RollcallElement.orig_Update orig, RollcallElement self)
+        [HarmonyPrefix]
+        [HarmonyPatch("Update")]
+        public static void RollcallElement_Update(RollcallElement __instance)
         {
-            var lobby = _matchmakingService.GetOwnLobby();
-            var dynRollcallElement = DynamicData.For(self);
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+            var lobby = matchmakingService.GetOwnLobby();
+            var dynRollcallElement = DynamicData.For(__instance);
             int playerIndex = dynRollcallElement.Get<int>("playerIndex");
 
             if (playerIndex != 0 && playerIndex < lobby.Players.Count)
@@ -229,22 +202,28 @@ namespace TF.EX.Patchs.Entity.MenuItem
                 var player = lobby.Players.ToArray()[playerIndex];
                 if (player != null)
                 {
-                    UpdateControllerIcon(self, dynRollcallElement, playerIndex);
+                    UpdateControllerIcon(__instance, dynRollcallElement, playerIndex);
                 }
             }
-
-            orig(self);
         }
 
-        private void RollcallElement_StartVersus(On.TowerFall.RollcallElement.orig_StartVersus orig, RollcallElement self)
+        [HarmonyPrefix]
+        [HarmonyPatch("StartVersus")]
+        public static void RollcallElement_StartVersus_Prefix()
         {
             TFGame.Instance.Commands.Clear();
             TFGame.Instance.Commands.Open = false;
+        }
 
-            orig(self);
+        [HarmonyPostfix]
+        [HarmonyPatch("StartVersus")]
+        public static void RollcallElement_StartVersus_Postfix(RollcallElement __instance)
+        {
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
 
             var currentMode = MainMenu.VersusMatchSettings.Mode.ToModel();
-            var lobby = _matchmakingService.GetOwnLobby();
+            var lobby = matchmakingService.GetOwnLobby();
             if (currentMode.IsNetplay() && lobby.Spectators.Any())
             {
                 netplayManager.AddSpectators(lobby.Spectators);
@@ -254,15 +233,15 @@ namespace TF.EX.Patchs.Entity.MenuItem
 
             if (MainMenu.VersusMatchSettings.TeamMode)
             {
-                self.MainMenu.State = MainMenu.MenuState.TeamSelect;
+                __instance.MainMenu.State = MainMenu.MenuState.TeamSelect;
                 return;
             }
 
-            self.MainMenu.FadeAction = MainMenu.GotoVersusLevelSelect;
-            self.MainMenu.State = MainMenu.MenuState.Fade;
+            __instance.MainMenu.FadeAction = MainMenu.GotoVersusLevelSelect;
+            __instance.MainMenu.State = MainMenu.MenuState.Fade;
         }
 
-        private void UpdatePlayerUI(DynamicData rollcallElement)
+        private static void UpdatePlayerUI(DynamicData rollcallElement)
         {
             var playerIndex = rollcallElement.Get<int>("playerIndex");
             rollcallElement.Set("archerType", TFGame.AltSelect[playerIndex]);
@@ -274,16 +253,16 @@ namespace TF.EX.Patchs.Entity.MenuItem
             TFGame.Players[playerIndex] = true;
         }
 
-        private void LeavePlayerUI(DynamicData rollcallElement)
+        private static void LeavePlayerUI(Traverse rollcallElement)
         {
-            var playerIndex = rollcallElement.Get<int>("playerIndex");
-            var portrait = rollcallElement.Get<ArcherPortrait>("portrait");
+            var playerIndex = rollcallElement.Field<int>("playerIndex").Value;
+            var portrait = rollcallElement.Field<ArcherPortrait>("portrait").Value;
 
             portrait.Leave();
             TFGame.Players[playerIndex] = false;
         }
 
-        private void UpdateControllerIcon(RollcallElement self, DynamicData rollcallElement, int playerIndex)
+        private static void UpdateControllerIcon(RollcallElement self, DynamicData rollcallElement, int playerIndex)
         {
             var alt = TFGame.MenuAtlas[$"controls/xb360/rt"];
             var controlIcon = rollcallElement.Get<Image>("controlIcon");

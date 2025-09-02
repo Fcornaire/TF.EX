@@ -1,4 +1,5 @@
-﻿using MessagePack;
+﻿using HarmonyLib;
+using MessagePack;
 using Microsoft.Extensions.Logging;
 using Monocle;
 using MonoMod.Utils;
@@ -328,7 +329,8 @@ namespace TF.EX.Domain.Services
 
                     currentAction = WSAction.None;
                 }
-            };
+            }
+            ;
 
             if (message.Contains("JoinLobby"))
             {
@@ -365,7 +367,8 @@ namespace TF.EX.Domain.Services
                 }
 
                 currentAction = WSAction.None;
-            };
+            }
+            ;
 
             if (message.Contains("LobbyUpdate"))
             {
@@ -531,6 +534,14 @@ namespace TF.EX.Domain.Services
                             TFGame.Characters[playerIndex] = archerIndex;
                             TFGame.AltSelect[playerIndex] = (ArcherData.ArcherTypes)altIndex;
                             _archerService.AddArcher(playerIndex, updatedPlayer);
+
+                            _inputService.EnsureRemoteController(); //TODO: should be sooner
+
+                            var input = Traverse.Create(rollCall).Field("input").GetValue<PlayerInput>();
+                            if (input == null)
+                            {
+                                Traverse.Create(rollCall).Field("input").SetValue(TFGame.PlayerInputs[playerIndex]);
+                            }
 
                             state.State = 1;
                         }

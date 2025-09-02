@@ -1,45 +1,32 @@
-﻿using MonoMod.Utils;
+﻿using HarmonyLib;
+using Monocle;
+using MonoMod.Utils;
 using System.Collections;
-using TF.EX.Domain.Ports.TF;
+using TF.EX.Domain;
 
 namespace TF.EX.Patchs.Component
 {
-    public class CoroutinePatch : IHookable
+    [HarmonyPatch(typeof(Coroutine))]
+    public class CoroutinePatch
     {
-        private ISessionService _sessionService;
-        private IHUDService _hudService;
-
-        public CoroutinePatch(ISessionService sessionService, IHUDService hudService)
+        [HarmonyPostfix]
+        [HarmonyPatch(MethodType.Constructor, [typeof(IEnumerator)])]
+        public static void Coroutine_ctor_IEnumerator(Coroutine __instance, IEnumerator functionCall)
         {
-            _sessionService = sessionService;
-            _hudService = hudService;
-        }
-
-        public void Load()
-        {
-            On.Monocle.Coroutine.Update += Coroutine_Update;
-            On.Monocle.Coroutine.ctor_IEnumerator += Coroutine_ctor_IEnumerator;
-        }
-
-        public void Unload()
-        {
-            On.Monocle.Coroutine.Update -= Coroutine_Update;
-            On.Monocle.Coroutine.ctor_IEnumerator -= Coroutine_ctor_IEnumerator;
-        }
-
-        private void Coroutine_ctor_IEnumerator(On.Monocle.Coroutine.orig_ctor_IEnumerator orig, Monocle.Coroutine self, IEnumerator functionCall)
-        {
-            orig(self, functionCall);
-
-            var dynCoroutine = DynamicData.For(self);
+            var dynCoroutine = DynamicData.For(__instance);
             dynCoroutine.Set("NAME", functionCall.GetType().Name);
         }
 
-        private void Coroutine_Update(On.Monocle.Coroutine.orig_Update orig, Monocle.Coroutine self)
+        [HarmonyPrefix]
+        [HarmonyPatch("Update")]
+        public static void Coroutine_Update(Coroutine __instance)
         {
-            if (self.Entity is TowerFall.Miasma)
+            var sessionService = ServiceCollections.ResolveSessionService();
+            var hudService = ServiceCollections.ResolveHUDService();
+
+            if (__instance.Entity is TowerFall.Miasma)
             {
-                var session = _sessionService.GetSession();
+                var session = sessionService.GetSession();
 
                 if (session.Miasma.IsDissipating)
                 {
@@ -51,29 +38,27 @@ namespace TF.EX.Patchs.Component
                 }
             }
 
-            if (self.Entity is TowerFall.VersusStart)
+            if (__instance.Entity is TowerFall.VersusStart)
             {
-                var dynCoroutine = DynamicData.For(self);
+                var dynCoroutine = DynamicData.For(__instance);
                 if (dynCoroutine.TryGet("NAME", out string name))
                 {
                     if (name.Contains("SetupSequence"))
                     {
-                        var hud = _hudService.Get();
+                        var hud = hudService.Get();
                         hud.VersusStart.CoroutineState += 1;
-                        _hudService.Update(hud);
+                        hudService.Update(hud);
                     }
                 }
             }
 
-            if (self.Entity is TowerFall.VersusRoundResults)
+            if (__instance.Entity is TowerFall.VersusRoundResults)
             {
-                var hud = _hudService.Get();
+                var hud = hudService.Get();
                 hud.VersusRoundResults.CoroutineState += 1;
 
-                _hudService.Update(hud);
+                hudService.Update(hud);
             }
-
-            orig(self);
         }
     }
 }

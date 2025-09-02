@@ -11,23 +11,23 @@ namespace TF.EX.API
         private ConcurrentDictionary<string, IStateEvents> stateEvents = new ConcurrentDictionary<string, IStateEvents>();
         private ConcurrentBag<string> safeModules = new ConcurrentBag<string>();
 
-        public void RegisterVariantStateEvents(FortModule module, string name, IStateEvents events)
+        public void RegisterVariantStateEvents(Mod module, string name, IStateEvents events)
         {
-            var id = $"{module.ID}-{name}";
+            var id = $"{module.Meta.Name}-{name}";
 
             if (stateEvents.ContainsKey(id))
             {
-                FortRise.Logger.Log("[TF.EX.API] State Events already registered for " + id, FortRise.Logger.LogLevel.Info);
+                //FortRise.Logger.Log("[TF.EX.API] State Events already registered for " + id, FortRise.Logger.LogLevel.Info);
                 return;
             }
 
             if (!stateEvents.TryAdd(id, events))
             {
-                FortRise.Logger.Log("[TF.EX.API] Failed to register State Events for " + id, FortRise.Logger.LogLevel.Info);
+                //FortRise.Logger.Log("[TF.EX.API] Failed to register State Events for " + id, FortRise.Logger.LogLevel.Info);
                 return;
             }
 
-            FortRise.Logger.Log("[TF.EX.API] State Events registered for " + id, FortRise.Logger.LogLevel.Info);
+            //FortRise.Logger.Log("[TF.EX.API] State Events registered for " + id, FortRise.Logger.LogLevel.Info);
         }
 
         public Dictionary<string, string> GetStates()
@@ -53,15 +53,15 @@ namespace TF.EX.API
             }
         }
 
-        public void MarkModuleAsSafe(FortModule module)
+        public void MarkModuleAsSafe(Mod module)
         {
-            if (safeModules.Any((mod) => mod == module.ID))
+            if (safeModules.Any((mod) => mod == module.Meta.Name))
             {
-                FortRise.Logger.Log("[TF.EX.API] Module already marked as safe " + module.ID, FortRise.Logger.LogLevel.Info);
+                //FortRise.Logger.Log("[TF.EX.API] Module already marked as safe " + module.ID, FortRise.Logger.LogLevel.Info);
                 return;
             }
 
-            safeModules.Add(module.ID);
+            safeModules.Add(module.Meta.Name);
         }
 
         public bool IsModuleSafe(string id)

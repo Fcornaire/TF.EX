@@ -1,70 +1,57 @@
-using FortRise.Adventure;
+using HarmonyLib;
 using TF.EX.Domain;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models.State;
-using TF.EX.Domain.Ports;
-using TF.EX.Domain.Ports.TF;
 using TF.EX.TowerFallExtensions;
 using TowerFall;
 
 namespace TF.EX.Patchs.Scene
 {
-    internal class MapScenePatch : IHookable
+    [HarmonyPatch(typeof(MapScene))]
+    internal class MapScenePatch
     {
-        private readonly IInputService _inputService;
-        private readonly IMatchmakingService matchmakingService;
-        private readonly IRngService _rngService;
-        private readonly INetplayManager netplayManager;
-
-        public MapScenePatch(IInputService inputService, IMatchmakingService matchmakingService, IRngService rngService, INetplayManager netplayManager)
+        [HarmonyPrefix]
+        [HarmonyPatch("StartSession")]
+        public static void StartSession_Prefix()
         {
-            _inputService = inputService;
-            this.matchmakingService = matchmakingService;
-            _rngService = rngService;
-            this.netplayManager = netplayManager;
-        }
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
 
-        public void Load()
-        {
-            On.TowerFall.MapScene.StartSession += MapScene_StartSession;
-            On.TowerFall.MapScene.GetRandomVersusTower += MapScene_GetRandomVersusTower;
-            On.TowerFall.MapScene.Begin += MapScene_Begin;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.MapScene.StartSession -= MapScene_StartSession;
-            On.TowerFall.MapScene.GetRandomVersusTower -= MapScene_GetRandomVersusTower;
-            On.TowerFall.MapScene.Begin -= MapScene_Begin;
-        }
-
-        private void MapScene_StartSession(On.TowerFall.MapScene.orig_StartSession orig, TowerFall.MapScene self)
-        {
             var lobby = matchmakingService.GetOwnLobby();
             netplayManager.UpdatePlayers(lobby.Players, lobby.Spectators);
             matchmakingService.DisconnectFromLobby();
+        }
 
-            orig(self);
+        [HarmonyPostfix]
+        [HarmonyPatch("StartSession")]
+        public static void StartSession_Postfix()
+        {
+            var rgnService = ServiceCollections.ResolveRngService();
+            var inputService = ServiceCollections.ResolveInputService();
 
-            _rngService.Reset();
-            _inputService.EnsureRemoteController();
+            rgnService.Reset();
+            inputService.EnsureRemoteController();
             ServiceCollections.PurgeCache();
         }
 
-        private void MapScene_Begin(On.TowerFall.MapScene.orig_Begin orig, MapScene self)
+        [HarmonyPostfix]
+        [HarmonyPatch("Begin")]
+        public static void Begin_Postfix(MapScene __instance)
         {
-            orig(self);
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
 
             var currentMode = MainMenu.VersusMatchSettings.Mode.ToModel();
             if (currentMode.IsNetplay())
             {
-                self.Selection.OnDeselect();
+                __instance.Selection.OnDeselect();
 
                 var mapId = matchmakingService.GetOwnLobby().GameData.MapId;
 
-                self.Selection = self.Buttons.First(button => mapId == -1 ? (button is VersusRandomSelect && button is not AdventureChaoticRandomSelect) : mapId == button.Data?.ID.X);
-                self.Selection.OnSelect();
-                self.ScrollToButton(self.Selection);
+                //TODO: && button is not AdventureChaoticRandomSelect
+
+                __instance.Selection = __instance.Buttons.First(button => mapId == -1 ? (button is VersusRandomSelect) : mapId == button.Data?.ID.X);
+                __instance.Selection.OnSelect();
+                __instance.ScrollToButton(__instance.Selection);
             }
         }
 
@@ -74,9 +61,14 @@ namespace TF.EX.Patchs.Scene
         /// <param name="orig"></param>
         /// <param name="self"></param>
         /// <returns></returns>
-        private TowerFall.MapButton MapScene_GetRandomVersusTower(On.TowerFall.MapScene.orig_GetRandomVersusTower orig, TowerFall.MapScene self)
+        /// 
+        [HarmonyPostfix]
+        [HarmonyPatch("GetRandomVersusTower")]
+        public static void MapScene_GetRandomVersusTower(TowerFall.MapScene __instance, ref TowerFall.MapButton __result)
         {
-            List<MapButton> list = new List<MapButton>(self.Buttons);
+            var rngService = ServiceCollections.ResolveRngService();
+
+            List<MapButton> list = new List<MapButton>(__instance.Buttons);
             list.RemoveAll((MapButton b) => b is not VersusMapButton);
             list.RemoveAll((MapButton b) => !IsNetplaySafe(b.Title));
             if (!GameData.DarkWorldDLC)
@@ -106,13 +98,13 @@ namespace TF.EX.Patchs.Scene
                 }
             }
 
-            _rngService.Reset();
+            rngService.Reset();
             var shuffled = CalcExtensions.OwnMapButtonShuffle(list).ToArray();
-            return shuffled[0];
+            __result = shuffled[0];
             //return shuffled.SingleOrDefault(b => b.Data.ID.X == 1); //Usefull for debug
         }
 
-        private bool IsNetplaySafe(string title)
+        private static bool IsNetplaySafe(string title)
         {
             return Constants.NETPLAY_SAFE_MAP.Contains(title);
         }

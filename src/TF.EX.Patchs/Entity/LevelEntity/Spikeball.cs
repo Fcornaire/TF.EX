@@ -1,45 +1,29 @@
-﻿using Microsoft.Xna.Framework;
+﻿using HarmonyLib;
+using Microsoft.Xna.Framework;
 using Monocle;
 using MonoMod.Utils;
-using TF.EX.Domain.Ports.TF;
+using TF.EX.Domain;
+using TowerFall;
 
 namespace TF.EX.Patchs.Entity.LevelEntity
 {
-    internal class SpikeballPatch : IHookable
+    [HarmonyPatch(typeof(Spikeball))]
+    internal class SpikeballPatch
     {
-        private readonly IRngService _rngService;
-
-        public SpikeballPatch(IRngService rngService)
-        {
-            _rngService = rngService;
-        }
-
-        public void Load()
-        {
-            On.TowerFall.Spikeball.ctor_Vector2_Vector2_bool += Spikeball_ctor_Vector2_Vector2_bool;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.Spikeball.ctor_Vector2_Vector2_bool -= Spikeball_ctor_Vector2_Vector2_bool;
-        }
-
         /// <summary>
         /// Patch fot spawning spikeball to use our RNG
         /// </summary>
-        /// <param name="orig"></param>
-        /// <param name="self"></param>
-        /// <param name="position"></param>
-        /// <param name="pivot"></param>
-        /// <param name="exploding"></param>
-        private void Spikeball_ctor_Vector2_Vector2_bool(On.TowerFall.Spikeball.orig_ctor_Vector2_Vector2_bool orig, TowerFall.Spikeball self, Vector2 position, Vector2 pivot, bool exploding)
+        /// <param name="__instance"></param>
+        [HarmonyPostfix]
+        [HarmonyPatch(MethodType.Constructor, [typeof(Vector2), typeof(Vector2), typeof(bool)])]
+        public static void Spikeball_ctor_Vector2_Vector2_bool(Spikeball __instance)
         {
-            orig(self, position, pivot, exploding);
+            var rngService = ServiceCollections.ResolveRngService();
 
-            _rngService.Get().ResetRandom(ref Monocle.Calc.Random);
-            var dynSpikeball = DynamicData.For(self);
+            rngService.Get().ResetRandom(ref Monocle.Calc.Random);
+            var dynSpikeball = DynamicData.For(__instance);
             dynSpikeball.Set("spinDir", Monocle.Calc.Random.Choose(1, -1));
-            _rngService.AddGen(Domain.Models.State.RngGenType.Integer);
+            rngService.AddGen(Domain.Models.State.RngGenType.Integer);
         }
     }
 }

@@ -1,46 +1,30 @@
-﻿using MonoMod.Utils;
+﻿using HarmonyLib;
 using TF.EX.Domain;
-using TF.EX.Domain.Ports;
 using TowerFall;
 
 namespace TF.EX.Patchs.Entity.HUD
 {
-    internal class HUDPatch : IHookable
+    [HarmonyPatch(typeof(TowerFall.HUD))]
+    internal class HUDPatch
     {
-        private readonly IReplayService _replayService;
-        private readonly INetplayManager _netplayManager;
-
-        public HUDPatch(IReplayService replayService, INetplayManager netplayManager)
+        [HarmonyPostfix]
+        [HarmonyPatch("Update")]
+        public static void HUD_Update(TowerFall.HUD __instance)
         {
-            _replayService = replayService;
-            _netplayManager = netplayManager;
-        }
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            var replayService = ServiceCollections.ResolveReplayService();
 
-        public void Load()
-        {
-            On.TowerFall.HUD.Update += HUD_Update;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.HUD.Update -= HUD_Update;
-        }
-
-        private void HUD_Update(On.TowerFall.HUD.orig_Update orig, TowerFall.HUD self)
-        {
-            orig(self);
-
-            if (self is VersusMatchResults && !_netplayManager.IsReplayMode())
+            if (__instance is VersusMatchResults && !netplayManager.IsReplayMode())
             {
-                var dynVersusMatchResults = DynamicData.For(self);
-                var finished = dynVersusMatchResults.Get<bool>("finished");
-                var hasReset = dynVersusMatchResults.Get<bool>("HasReset");
+                var dynVersusMatchResults = Traverse.Create(__instance);
+                var finished = dynVersusMatchResults.Field("finished").GetValue<bool>();
+                var hasReset = dynVersusMatchResults.Field("HasReset").GetValue<bool>(); //TODO: huh ?
 
                 if (finished && !hasReset)
                 {
-                    _replayService.Export();
+                    replayService.Export();
                     ServiceCollections.ResolveNetplayManager().Reset();
-                    dynVersusMatchResults.Set("HasReset", true);
+                    dynVersusMatchResults.Field("HasReset").SetValue(true);
                 }
             }
         }

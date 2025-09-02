@@ -1,22 +1,16 @@
-﻿using Microsoft.Xna.Framework;
+﻿using HarmonyLib;
+using Microsoft.Xna.Framework;
 using TF.EX.Domain;
 using TF.EX.Domain.Models.State;
-using TF.EX.Domain.Ports.TF;
 
 namespace TF.EX.Patchs.Calc
 {
-    public class CalcPatch : IHookable
+    [HarmonyPatch(typeof(Monocle.Calc))]
+    public class CalcPatch
     {
         private static bool _shouldRegisterRng = false;
         private static bool _shouldIgnoreToRegisterRng = false;
         private static int _rngRegisteringCount = 0;
-
-        private readonly IRngService _rngService;
-
-        public CalcPatch(IRngService rngService)
-        {
-            _rngService = rngService;
-        }
 
         public static void RegisterRng()
         {
@@ -56,30 +50,18 @@ namespace TF.EX.Patchs.Calc
             _shouldIgnoreToRegisterRng = false;
         }
 
-        public void Load()
+        [HarmonyPrefix]
+        [HarmonyPatch("Range", [typeof(Random), typeof(Vector2), typeof(Vector2)])]
+        public static void Range_Random_Vector2_Vector2(ref Random random)
         {
-            On.Monocle.Calc.NextFloat_Random += NextFloat_Patch;
-            On.Monocle.Calc.Range_Random_int_int += RangleIntInt_Patch;
-            On.Monocle.Calc.Range_Random_Vector2_Vector2 += Range_Random_Vector2_Vector2;
-        }
+            var rngService = ServiceCollections.ResolveRngService();
 
-        public void Unload()
-        {
-            On.Monocle.Calc.NextFloat_Random -= NextFloat_Patch;
-            On.Monocle.Calc.Range_Random_int_int -= RangleIntInt_Patch;
-            On.Monocle.Calc.Range_Random_Vector2_Vector2 -= Range_Random_Vector2_Vector2;
-        }
-
-        private Vector2 Range_Random_Vector2_Vector2(On.Monocle.Calc.orig_Range_Random_Vector2_Vector2 orig, Random random, Vector2 min, Vector2 add)
-        {
             if (_shouldRegisterRng && !_shouldIgnoreToRegisterRng)
             {
-                _rngService.Get().ResetRandom(ref Monocle.Calc.Random);
+                rngService.Get().ResetRandom(ref Monocle.Calc.Random);
                 random = Monocle.Calc.Random;
-                _rngService.AddGen(RngGenType.Double);
+                rngService.AddGen(RngGenType.Double);
             }
-
-            return orig(random, min, add);
         }
 
         /// <summary>
@@ -100,28 +82,32 @@ namespace TF.EX.Patchs.Calc
             }
         }
 
-        private float NextFloat_Patch(On.Monocle.Calc.orig_NextFloat_Random orig, Random random)
+        [HarmonyPrefix]
+        [HarmonyPatch("NextFloat", [typeof(Random)])]
+        public static void NextFloat_Patch(ref Random random)
         {
+            var rngService = ServiceCollections.ResolveRngService();
+
             if (_shouldRegisterRng && !_shouldIgnoreToRegisterRng)
             {
-                _rngService.Get().ResetRandom(ref Monocle.Calc.Random);
+                rngService.Get().ResetRandom(ref Monocle.Calc.Random);
                 random = Monocle.Calc.Random;
-                _rngService.AddGen(RngGenType.Double);
+                rngService.AddGen(RngGenType.Double);
             }
-
-            return orig(random);
         }
 
-        private int RangleIntInt_Patch(On.Monocle.Calc.orig_Range_Random_int_int orig, Random random, int min, int add)
+        [HarmonyPrefix]
+        [HarmonyPatch("Range", [typeof(Random), typeof(int), typeof(int)])]
+        public static void RangleIntInt_Patch(ref Random random)
         {
+            var rngService = ServiceCollections.ResolveRngService();
+
             if (_shouldRegisterRng && !_shouldIgnoreToRegisterRng)
             {
-                _rngService.Get().ResetRandom(ref Monocle.Calc.Random);
+                rngService.Get().ResetRandom(ref Monocle.Calc.Random);
                 random = Monocle.Calc.Random;
-                _rngService.AddGen(RngGenType.Integer);
+                rngService.AddGen(RngGenType.Integer);
             }
-
-            return orig(random, min, add);
         }
     }
 }

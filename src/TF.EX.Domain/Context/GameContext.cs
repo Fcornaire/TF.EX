@@ -57,6 +57,7 @@ namespace TF.EX.Domain.Context
         void ResetArcherSelections();
         void RemoveArcher(int playerIndex);
         void ClearSfxs();
+        string GetSoundEffectName(SoundEffect data);
     }
 
     internal class GameContext : IGameContext
@@ -361,7 +362,7 @@ namespace TF.EX.Domain.Context
             var toLoad = sFXes.ToList();
             toLoad.ForEach(sfx =>
             {
-                if (_soundEffects.ContainsKey(sfx.Name))
+                if (sfx != null && !string.IsNullOrEmpty(sfx.Name) && _soundEffects.ContainsKey(sfx.Name))
                 {
                     sfx.Data = _soundEffects[sfx.Name];
                 }
@@ -412,7 +413,7 @@ namespace TF.EX.Domain.Context
                 return;
             }
 
-            FortRise.Logger.Log($"Archer already selected for player {index}");
+            //FortRise.Logger.Log($"Archer already selected for player {index}");
         }
 
         public void ResetArcherSelections()
@@ -435,6 +436,11 @@ namespace TF.EX.Domain.Context
             ClearDesiredSfx();
             _currentSfxs.Clear();
             _soundEffects.Clear();
+        }
+
+        public string GetSoundEffectName(SoundEffect data)
+        {
+            return _soundEffects.FirstOrDefault(kvp => kvp.Value == data).Key;
         }
     }
 }

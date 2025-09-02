@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-	  <TargetFramework>net472</TargetFramework>
-	  <LangVersion>11</LangVersion>
+	  <TargetFramework>net9.0</TargetFramework>
+	  <!--<LangVersion>11</LangVersion>-->
 	  <PackageCopyToOutput>true</PackageCopyToOutput>
   </PropertyGroup>
 
@@ -16,24 +16,24 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Reference Include="FNA">
+		<!--<Reference Include="FNA">
 		  <HintPath>..\..\libs\FNA.dll</HintPath>
 		  <Private>False</Private>
 		</Reference>
 		<Reference Include="MMHOOK_TowerFall">
 		  <HintPath>..\..\libs\MMHOOK_TowerFall.dll</HintPath>
 		  <Private>False</Private>
-		</Reference>
-		<Reference Include="System.Windows.Forms" />
-		<Reference Include="TowerFall" Condition=" '$(Configuration)' == 'Release'">
+		</Reference>-->
+		<!--<Reference Include="System.Windows.Forms" />-->
+		<!--<Reference Include="TowerFall" Condition=" '$(Configuration)' == 'Release'">
 			<HintPath>..\..\libs\TowerFall-publicized.exe</HintPath>
 		  <Private>False</Private>
-		</Reference>
+		</Reference>-->
 
-		<Reference Include="TowerFall" Condition=" '$(Configuration)' == 'Debug'">
+		<!--<Reference Include="TowerFall" Condition=" '$(Configuration)' == 'Debug'">
 			<HintPath>..\..\libs\TowerFall.exe</HintPath>
 			<Private>False</Private>
-		</Reference>
+		</Reference>-->
   </ItemGroup>
 
   <ItemGroup>
@@ -42,6 +42,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="7.0.0" />
+	<PackageReference Include="FortRise.Configuration" Version="1.5.6" />
   </ItemGroup>
 
   <ItemGroup>
@@ -51,9 +52,8 @@
 		<ProjectReference Include="..\TF.EX.TowerFallExtensions\TF.EX.TowerFallExtensions.csproj" />
   </ItemGroup>
 
-	<Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Debug'">
-		<Exec Command="xcopy /y &quot;$(TargetPath)&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\TowerFall\Mods\TF.EX&quot;" />
-		<Exec Command="xcopy /y &quot;meta.json&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\TowerFall\Mods\TF.EX&quot;" />
-	</Target>
+	<!--<Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Debug'">
+		<Exec Command="xcopy /y /s /i &quot;$(OutDir)*&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\TowerFall\FortRise\Mods\TF.EX&quot;" />
+	</Target>-->
 
 </Project>

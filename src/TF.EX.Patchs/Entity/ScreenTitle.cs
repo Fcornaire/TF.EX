@@ -1,35 +1,27 @@
-﻿using MonoMod.Utils;
+﻿using HarmonyLib;
 using TF.EX.Domain.Extensions;
 using TowerFall;
 
 namespace TF.EX.Patchs.Entity
 {
-    internal class ScreenTitlePatch : IHookable
+    [HarmonyPatch(typeof(ScreenTitle))]
+    internal class ScreenTitlePatch
     {
-        public void Load()
-        {
-            On.TowerFall.ScreenTitle.ChangeState += ScreenTitle_ChangeState;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.ScreenTitle.ChangeState -= ScreenTitle_ChangeState;
-        }
-
-        private void ScreenTitle_ChangeState(On.TowerFall.ScreenTitle.orig_ChangeState orig, TowerFall.ScreenTitle self, TowerFall.MainMenu.MenuState state)
+        [HarmonyPrefix]
+        [HarmonyPatch("ChangeState")]
+        public static bool ScreenTitle_ChangeState(ScreenTitle __instance, MainMenu.MenuState state)
         {
             var currentState = state.ToDomainModel();
             if (currentState == Domain.Models.MenuState.ReplaysBrowser
                 || currentState == Domain.Models.MenuState.LobbyBrowser
                 || currentState == Domain.Models.MenuState.LobbyBuilder)
             {
-                var dynScreenTitle = DynamicData.For(self);
-                dynScreenTitle.Set("targetTexture", TFGame.MenuAtlas["menuTitles/fight"]);
+                Traverse.Create(__instance).Field("targetTexture").SetValue(TFGame.MenuAtlas["menuTitles/fight"]);
+
+                return false;
             }
-            else
-            {
-                orig(self, state);
-            }
+
+            return true;
         }
     }
 }

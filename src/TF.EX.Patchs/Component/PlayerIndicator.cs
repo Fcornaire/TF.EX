@@ -1,42 +1,28 @@
-﻿using Microsoft.Xna.Framework;
+﻿using HarmonyLib;
+using Microsoft.Xna.Framework;
 using Monocle;
 using MonoMod.Utils;
+using TF.EX.Domain;
 using TF.EX.Domain.Models;
-using TF.EX.Domain.Ports;
 using TF.EX.TowerFallExtensions;
 using TowerFall;
 
 namespace TF.EX.Patchs.Component
 {
-    public class PlayerIndicatorPatch : IHookable
+    [HarmonyPatch(typeof(PlayerIndicator))]
+    public class PlayerIndicatorPatch
     {
-        public INetplayManager _netplayManager;
-
-        public PlayerIndicatorPatch(INetplayManager netplayManager)
-        {
-            _netplayManager = netplayManager;
-        }
-
-        public void Load()
-        {
-            On.TowerFall.PlayerIndicator.Update += PlayerIndicator_Update;
-            On.TowerFall.PlayerIndicator.ctor += PlayerIndicator_ctor;
-            On.TowerFall.PlayerIndicator.Render += PlayerIndicator_Render;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.PlayerIndicator.Update -= PlayerIndicator_Update;
-            On.TowerFall.PlayerIndicator.ctor -= PlayerIndicator_ctor;
-            On.TowerFall.PlayerIndicator.Render -= PlayerIndicator_Render;
-        }
-
         /// <summary>
         /// Same as original but with a small font size
         /// </summary>
-        private void PlayerIndicator_Render(On.TowerFall.PlayerIndicator.orig_Render orig, TowerFall.PlayerIndicator self)
+        /// 
+        [HarmonyPrefix]
+        [HarmonyPatch("Render")]
+        public static bool PlayerIndicator_Render(PlayerIndicator __instance)
         {
-            var dynPlayerIndcator = DynamicData.For(self);
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+
+            var dynPlayerIndcator = DynamicData.For(__instance);
             var colorSwitch = dynPlayerIndcator.Get<bool>("colorSwitch");
             var characterIndex = dynPlayerIndcator.Get<int>("characterIndex");
             var offset = dynPlayerIndcator.Get<Vector2>("offset");
@@ -45,7 +31,7 @@ namespace TF.EX.Patchs.Component
             var text = dynPlayerIndcator.Get<string>("text");
             var crown = dynPlayerIndcator.Get<bool>("crown");
 
-            if (_netplayManager.IsInit() || _netplayManager.IsReplayMode())
+            if (netplayManager.IsInit() || netplayManager.IsReplayMode())
             {
                 Color color = (colorSwitch ? ArcherData.Archers[characterIndex].ColorB : ArcherData.Archers[characterIndex].ColorA);
                 Vector2 vector = entity.Position + offset + new Vector2(0f, -32f);
@@ -59,61 +45,71 @@ namespace TF.EX.Patchs.Component
 
                 Draw.OutlineTextCentered(TFGame.Font, text, vector + new Vector2(1f, 0f), color, 1.2f);
                 Draw.OutlineTextureCentered(TFGame.Atlas["versus/playerIndicator"], vector + new Vector2(0f, 8f), color);
+                return false;
             }
-            else
-            {
-                orig(self);
-            }
+
+            return true;
         }
 
-        private void PlayerIndicator_Update(On.TowerFall.PlayerIndicator.orig_Update orig, TowerFall.PlayerIndicator self)
+        [HarmonyPrefix]
+        [HarmonyPatch("Update")]
+        public static void PlayerIndicator_Update_Prefix(PlayerIndicator __instance)
         {
-            var dynPlayerIndcator = DynamicData.For(self);
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
 
-            if (_netplayManager.IsInit() || _netplayManager.IsReplayMode())
+            var dynPlayerIndcator = DynamicData.For(__instance);
+
+            if (netplayManager.IsInit() || netplayManager.IsReplayMode())
             {
                 var sine = dynPlayerIndcator.Get<Monocle.SineWave>("sine");
 
                 sine.UpdateAttributes(0.0f);
                 dynPlayerIndcator.Set("colorSwitch", false);
             }
+        }
 
-            orig(self);
-
+        [HarmonyPostfix]
+        [HarmonyPatch("Update")]
+        public static void PlayerIndicator_Update_Postfix(PlayerIndicator __instance)
+        {
+            var dynPlayerIndcator = DynamicData.For(__instance);
             dynPlayerIndcator.Set("colorSwitch", false);
         }
 
-        private void PlayerIndicator_ctor(On.TowerFall.PlayerIndicator.orig_ctor orig, TowerFall.PlayerIndicator self, Vector2 offset, int playerIndex, bool crown)
+        [HarmonyPostfix]
+        [HarmonyPatch(MethodType.Constructor)]
+        [HarmonyPatch([typeof(Vector2), typeof(int), typeof(bool)])]
+        public static void PlayerIndicator_ctor(PlayerIndicator __instance)
         {
-            orig(self, offset, playerIndex, crown);
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            var dynPlayerIndcator = Traverse.Create(__instance);
+            var text = dynPlayerIndcator.Field("text").GetValue<string>();
+            var playerIndex = dynPlayerIndcator.Field("playerIndex").GetValue<int>();
 
-            var dynPlayerIndcator = DynamicData.For(self);
-            var text = dynPlayerIndcator.Get<string>("text");
-
-            if (_netplayManager.ShouldSwapPlayer())
+            if (netplayManager.ShouldSwapPlayer())
             {
                 if ((PlayerDraw)playerIndex == PlayerDraw.Player1)
                 {
-                    text = _netplayManager.GetPlayer2Name();
+                    text = netplayManager.GetPlayer2Name();
                 }
                 else
                 {
-                    text = _netplayManager.GetNetplayMeta().Name;
+                    text = netplayManager.GetNetplayMeta().Name;
                 }
             }
             else
             {
                 if ((PlayerDraw)playerIndex == PlayerDraw.Player1)
                 {
-                    text = _netplayManager.GetNetplayMeta().Name;
+                    text = netplayManager.GetNetplayMeta().Name;
                 }
                 else
                 {
-                    text = _netplayManager.GetPlayer2Name();
+                    text = netplayManager.GetPlayer2Name();
                 }
             }
 
-            dynPlayerIndcator.Set("text", text);
+            dynPlayerIndcator.Field("text").SetValue(text);
         }
     }
 }

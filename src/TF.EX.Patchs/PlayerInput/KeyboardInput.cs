@@ -1,10 +1,9 @@
-﻿using Monocle;
-using MonoMod.RuntimeDetour;
+﻿using HarmonyLib;
+using Monocle;
 using MonoMod.Utils;
 using TF.EX.Domain;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models;
-using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
 using TF.EX.TowerFallExtensions.Scene;
 using TowerFall;
@@ -12,181 +11,139 @@ using TowerFall;
 namespace TF.EX.Patchs.PlayerInput
 {
     //TODO: refactor
-    public class KeyboardInputPatch : IHookable
+    [HarmonyPatch(typeof(KeyboardInput))]
+    public class KeyboardInputPatch
     {
-        private IInputService _inputService;
-        private INetplayManager _netplayManager;
-
-        private delegate bool MenuConfirm_orig(KeyboardInput self);
-        private delegate bool MenuSkipReplay_orig(KeyboardInput self);
-        private delegate bool MenuSaveReplay_orig(KeyboardInput self);
-        private delegate bool MenuSaveReplayCheck_orig(KeyboardInput self);
-        private delegate bool MenuLeft_orig(KeyboardInput self);
-        private delegate bool MenuRight_orig(KeyboardInput self);
-        private delegate bool MenuUp_orig(KeyboardInput self);
-        private delegate bool MenuDown_orig(KeyboardInput self);
-
-        private static IDetour MenuConfirm_hook;
-        private static IDetour MenuStart_hook;
-        private static IDetour MenuSkipReplay_hook;
-        private static IDetour MenuSaveReplay_hook;
-        private static IDetour MenuSaveReplayCheck_hook;
-        private static IDetour MenuLeft_hook;
-        private static IDetour MenuRight_hook;
-        private static IDetour MenuUp_hook;
-        private static IDetour MenuDown_hook;
-
-        public KeyboardInputPatch(IInputService inputService, INetplayManager netplayManager)
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuConfirm")]
+        public static void MenuConfirm_patch(ref bool __result, KeyboardInput __instance)
         {
-            _inputService = inputService;
-            _netplayManager = netplayManager;
+            __result = Intercept(__instance, __result);
         }
 
-
-        public void Load()
-        {
-            On.TowerFall.KeyboardInput.GetState += KeyboardInput_GetState;
-
-            MenuConfirm_hook = new Hook(typeof(KeyboardInput).GetProperty("MenuConfirm").GetGetMethod(), MenuConfirm_patch);
-            //MenuStart_hook = new Hook(typeof(KeyboardInput).GetProperty("MenuStart").GetGetMethod(), MenuConfirm_patch);
-            MenuSkipReplay_hook = new Hook(typeof(KeyboardInput).GetProperty("MenuSkipReplay").GetGetMethod(), MenuSkipReplay_patch);
-            MenuSaveReplay_hook = new Hook(typeof(KeyboardInput).GetProperty("MenuSaveReplay").GetGetMethod(), MenuSaveReplay_patch);
-            MenuSaveReplayCheck_hook = new Hook(typeof(KeyboardInput).GetProperty("MenuSaveReplayCheck").GetGetMethod(), MenuSaveReplayCheck_patch);
-            MenuLeft_hook = new Hook(typeof(KeyboardInput).GetProperty("MenuLeft").GetGetMethod(), MenuLeft_patch);
-            MenuRight_hook = new Hook(typeof(KeyboardInput).GetProperty("MenuRight").GetGetMethod(), MenuRight_patch);
-            MenuUp_hook = new Hook(typeof(KeyboardInput).GetProperty("MenuUp").GetGetMethod(), MenuUp_patch);
-            MenuDown_hook = new Hook(typeof(KeyboardInput).GetProperty("MenuDown").GetGetMethod(), MenuDown_patch);
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.KeyboardInput.GetState -= KeyboardInput_GetState;
-
-            MenuConfirm_hook.Dispose();
-            //MenuStart_hook.Dispose();
-            MenuSkipReplay_hook.Dispose();
-            MenuSaveReplay_hook.Dispose();
-            MenuSaveReplayCheck_hook.Dispose();
-            MenuLeft_hook.Dispose();
-            MenuRight_hook.Dispose();
-            MenuUp_hook.Dispose();
-            MenuDown_hook.Dispose();
-        }
-
-        private static bool MenuConfirm_patch(MenuConfirm_orig orig, KeyboardInput self)
-        {
-            return Intercept(self, orig(self));
-        }
-
-        private static bool MenuSkipReplay_patch(MenuSkipReplay_orig orig, KeyboardInput self)
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuSkipReplay")]
+        public static void MenuSkipReplay_patch(ref bool __result, KeyboardInput __instance)
         {
             var netplayManager = ServiceCollections.ResolveNetplayManager();
 
-            return netplayManager != null && netplayManager.IsInit() || netplayManager.IsReplayMode() ? true : orig(self);
+            if (netplayManager != null && netplayManager.IsInit() || netplayManager.IsReplayMode())
+            {
+                __result = true;
+            }
         }
 
-        private static bool MenuSaveReplay_patch(MenuSkipReplay_orig orig, KeyboardInput self)
+        [HarmonyPrefix]
+        [HarmonyPatch("get_MenuSaveReplay")]
+        public static bool MenuSaveReplay_patch()
         {
             return false;
         }
 
-        private static bool MenuSaveReplayCheck_patch(MenuSkipReplay_orig orig, KeyboardInput self)
+        [HarmonyPrefix]
+        [HarmonyPatch("get_MenuSaveReplayCheck")]
+        public static bool MenuSaveReplayCheck_patch()
         {
             return false;
         }
 
-        private static bool MenuLeft_patch(MenuConfirm_orig orig, KeyboardInput self)
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuLeft")]
+        public static void MenuLeft_patch(ref bool __result, KeyboardInput __instance)
         {
             var inputService = ServiceCollections.ResolveInputService();
 
             if (TFGame.Instance.Scene is MainMenu
                && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
-               && inputService.GetInputIndex(self) != 0)
+               && inputService.GetInputIndex(__instance) != 0)
             {
-                return false;
+                __result = false;
             }
-
-            return orig(self);
         }
 
-        private static bool MenuRight_patch(MenuConfirm_orig orig, KeyboardInput self)
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuRight")]
+        public static void MenuRight_patch(ref bool __result, KeyboardInput __instance)
         {
             var inputService = ServiceCollections.ResolveInputService();
 
             if (TFGame.Instance.Scene is MainMenu
                 && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
-                && inputService.GetInputIndex(self) != 0)
+                && inputService.GetInputIndex(__instance) != 0)
             {
-                return false;
+                __result = false;
             }
-
-            return orig(self);
         }
 
-        private static bool MenuUp_patch(MenuConfirm_orig orig, KeyboardInput self)
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuUp")]
+        public static void MenuUp_patch(ref bool __result, KeyboardInput __instance)
         {
             var inputService = ServiceCollections.ResolveInputService();
 
             if (TFGame.Instance.Scene is MainMenu
                 && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
-                && inputService.GetInputIndex(self) != 0)
+                && inputService.GetInputIndex(__instance) != 0)
             {
-                return false;
+                __result = false;
             }
-
-            return orig(self);
         }
 
-        private static bool MenuDown_patch(MenuConfirm_orig orig, KeyboardInput self)
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuDown")]
+        public static void MenuDown_patch(ref bool __result, KeyboardInput __instance)
         {
             var inputService = ServiceCollections.ResolveInputService();
 
             if (TFGame.Instance.Scene is MainMenu
                 && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
-                && inputService.GetInputIndex(self) != 0)
+                && inputService.GetInputIndex(__instance) != 0)
             {
-                return false;
+                __result = false;
             }
-
-            return orig(self);
         }
 
-        private InputState KeyboardInput_GetState(On.TowerFall.KeyboardInput.orig_GetState orig, KeyboardInput self)
+        [HarmonyPostfix]
+        [HarmonyPatch("GetState")]
+        public static void KeyboardInput_GetState(ref InputState __result, KeyboardInput __instance)
         {
-            if (_netplayManager.GetNetplayMode() != Domain.Models.NetplayMode.Test
-               && _netplayManager.GetNetplayMode() != Domain.Models.NetplayMode.Replay
-               && !_netplayManager.IsSynchronized())
+            var inputService = ServiceCollections.ResolveInputService();
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+
+            if (netplayManager.GetNetplayMode() != Domain.Models.NetplayMode.Test
+               && netplayManager.GetNetplayMode() != Domain.Models.NetplayMode.Replay
+               && !netplayManager.IsSynchronized())
             {
-                return orig(self);
+                return;
             }
 
             var level = TFGame.Instance.Scene as TowerFall.Level;
 
             if (level == null)
             {
-                return orig(self);
+                return;
             }
 
             var roundStarted = level.Session.RoundLogic.RoundStarted;
 
             if (!roundStarted) //Ignore if round not started to prevent useless rollback
             {
-                _inputService.ResetPolledInput();
-                return new InputState();
+                inputService.ResetPolledInput();
+                __result = new InputState();
+                return;
             }
 
-            var polledInput = orig(self);
-
-            if (IsLocalPlayerKeyboard(self))
+            if (IsLocalPlayerKeyboard(__instance, inputService))
             {
-                if (!_netplayManager.IsReplayMode())
+                if (!netplayManager.IsReplayMode())
                 {
-                    _inputService.UpdatePolledInput(polledInput);
+                    inputService.UpdatePolledInput(__result);
                 }
-                return _inputService.GetCurrentInput(_inputService.GetLocalPlayerInputIndex()).ToTFInput(); //TODO: get by player instead of index
+                __result = inputService.GetCurrentInput(inputService.GetLocalPlayerInputIndex()).ToTFInput(); //TODO: get by player instead of index
+                return;
             }
 
-            return _inputService.GetCurrentInput(_inputService.GetRemotePlayerInputIndex()).ToTFInput();
+            __result = inputService.GetCurrentInput(inputService.GetRemotePlayerInputIndex()).ToTFInput();
         }
 
         //TODO: refactor to have a unique intercept for all inputs
@@ -195,6 +152,7 @@ namespace TF.EX.Patchs.PlayerInput
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
             var inputService = ServiceCollections.ResolveInputService();
+
             var isReplayMode = netplayManager.IsReplayMode();
             var isPaused = TFGame.Instance.Scene is TowerFall.Level && (TFGame.Instance.Scene as TowerFall.Level).Paused;
 
@@ -233,10 +191,9 @@ namespace TF.EX.Patchs.PlayerInput
                 return true;
             }
 
-            if (TFGame.Instance.Scene is MainMenu)
+            if (TFGame.Instance.Scene is MainMenu && TowerFall.MainMenu.VersusMatchSettings != null)
             {
-                var dynMenu = DynamicData.For(TFGame.Instance.Scene as MainMenu);
-                var state = dynMenu.Get<MainMenu.MenuState>("state");
+                var state = Traverse.Create(TFGame.Instance.Scene as MainMenu).Field<MainMenu.MenuState>("state").Value;
                 var currentMode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
 
                 if (state == MainMenu.MenuState.Rollcall && currentMode.IsNetplay())
@@ -283,11 +240,12 @@ namespace TF.EX.Patchs.PlayerInput
             {
                 return actualInput;
             }
+
         }
 
-        private bool IsLocalPlayerKeyboard(KeyboardInput self)
+        private static bool IsLocalPlayerKeyboard(KeyboardInput self, IInputService inputService)
         {
-            return _inputService.GetInputIndex(self) == 0;
+            return inputService.GetInputIndex(self) == 0;
         }
     }
 }

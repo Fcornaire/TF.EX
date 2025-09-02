@@ -1,38 +1,24 @@
-﻿using Monocle;
-using TF.EX.Domain.Ports;
+﻿//using HarmonyLib;
+//using TF.EX.Domain;
 
-namespace TF.EX.Patchs.Background
-{
-    public class FadeLayerPatch : IHookable
-    {
-        private readonly INetplayManager netplayManager;
+//namespace TF.EX.Patchs.Background
+//{
+//    [HarmonyPatch(typeof(TowerFall.Background.FadeLayer))]
+//    public class FadeLayerPatch
+//    {
+//        [HarmonyPrefix]
+//        [HarmonyPatch("UpdatePosition")]
+//        public static bool FadeLayer_UpdatePosition(TowerFall.Background.FadeLayer __instance)
+//        {
+//            var netplayManager = ServiceCollections.ResolveNetplayManager();
+//            if (netplayManager.IsInit())
+//            {
+//                __instance.Sprite.Position = __instance.Position - __instance.Range;
+//                __instance.Sprite.Rate = 0.6f;
+//                return false;
+//            }
 
-        public FadeLayerPatch(INetplayManager netplayManager)
-        {
-            this.netplayManager = netplayManager;
-        }
-
-        public void Load()
-        {
-            On.TowerFall.Background.FadeLayer.UpdatePosition += FadeLayer_UpdatePosition;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.Background.FadeLayer.UpdatePosition -= FadeLayer_UpdatePosition;
-        }
-
-        private void FadeLayer_UpdatePosition(On.TowerFall.Background.FadeLayer.orig_UpdatePosition orig, TowerFall.Background.FadeLayer self, Sprite<int> s)
-        {
-            if (netplayManager.IsInit())
-            {
-                self.Sprite.Position = self.Position - self.Range;
-                self.Sprite.Rate = 0.6f;
-            }
-            else
-            {
-                orig(self, s);
-            }
-        }
-    }
-}
+//            return true;
+//        }
+//    }
+//}

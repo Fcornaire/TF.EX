@@ -1,58 +1,81 @@
-﻿using Microsoft.Xna.Framework;
+﻿using HarmonyLib;
+using Microsoft.Xna.Framework;
 using Monocle;
+using TF.EX.Domain;
 using TF.EX.Patchs.Calc;
 
 namespace TF.EX.Patchs.Entity
 {
-    internal class ParticleSystemPatch : IHookable
+    [HarmonyPatch(typeof(ParticleSystem))]
+    internal class ParticleSystemPatch
     {
-        private readonly Random _random = new Random();
+        private static Random _random = new Random();
 
-        public void Load()
+        [HarmonyPrefix]
+        [HarmonyPatch("Update")]
+        public static bool ParticleSystem_Update(ParticleSystem __instance)
         {
-            On.Monocle.ParticleSystem.Emit_ParticleType_int_Vector2_Vector2 += ParticleSystem_Emit_ParticleType_int_Vector2_Vector2;
-            On.Monocle.ParticleSystem.Emit_ParticleType_int_Vector2_Vector2_float += ParticleSystem_Emit_ParticleType_int_Vector2_Vector2_float;
-        }
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
 
-        public void Unload()
-        {
-            On.Monocle.ParticleSystem.Emit_ParticleType_int_Vector2_Vector2 -= ParticleSystem_Emit_ParticleType_int_Vector2_Vector2;
-            On.Monocle.ParticleSystem.Emit_ParticleType_int_Vector2_Vector2_float -= ParticleSystem_Emit_ParticleType_int_Vector2_Vector2_float;
+            if (netplayManager.IsRollbackFrame())
+            {
+                return false;
+            }
+
+            return true;
         }
 
         //Same as original, but with custom random since calc is being used deterministically
-        private void ParticleSystem_Emit_ParticleType_int_Vector2_Vector2_float(
-            On.Monocle.ParticleSystem.orig_Emit_ParticleType_int_Vector2_Vector2_float orig,
-            Monocle.ParticleSystem self,
+        [HarmonyPrefix]
+        [HarmonyPatch("Emit", [typeof(Monocle.ParticleType), typeof(int), typeof(Vector2), typeof(Vector2), typeof(float)])]
+        public static bool ParticleSystem_Emit_ParticleType_int_Vector2_Vector2_float(
+            Monocle.ParticleSystem __instance,
             Monocle.ParticleType type,
             int amount,
             Vector2 position,
             Vector2 positionRange,
             float direction)
         {
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+
+            if (netplayManager.IsRollbackFrame())
+            {
+                return false;
+            }
+
             CalcPatch.IgnoreToRegisterRng();
             for (int i = 0; i < amount; i++)
             {
-                self.Emit(type, _random.Range(position - positionRange, positionRange * 2f), direction);
+                __instance.Emit(type, _random.Range(position - positionRange, positionRange * 2f), direction);
             }
             CalcPatch.UnignoreToRegisterRng();
+            return false;
         }
 
         //Same as original, but with custom random since calc is being used deterministically
-        private void ParticleSystem_Emit_ParticleType_int_Vector2_Vector2(
-            On.Monocle.ParticleSystem.orig_Emit_ParticleType_int_Vector2_Vector2 orig,
-            Monocle.ParticleSystem self,
+        [HarmonyPrefix]
+        [HarmonyPatch("Emit", [typeof(Monocle.ParticleType), typeof(int), typeof(Vector2), typeof(Vector2)])]
+        public static bool ParticleSystem_Emit_ParticleType_int_Vector2_Vector2(
+            Monocle.ParticleSystem __instance,
             Monocle.ParticleType type,
             int amount,
             Vector2 position,
             Vector2 positionRange)
         {
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+
+            if (netplayManager.IsRollbackFrame())
+            {
+                return false;
+            }
+
             CalcPatch.IgnoreToRegisterRng();
             for (int i = 0; i < amount; i++)
             {
-                self.Emit(type, _random.Range(position - positionRange, positionRange * 2f));
+                __instance.Emit(type, _random.Range(position - positionRange, positionRange * 2f));
             }
             CalcPatch.UnignoreToRegisterRng();
+            return false;
         }
     }
 }

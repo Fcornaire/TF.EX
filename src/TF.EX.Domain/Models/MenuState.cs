@@ -18,10 +18,9 @@
         Credits,
         ControlOptions,
         KeyboardConfig,
-        Mods,
-        ModOptions,
-        ReplaysBrowser = 18,
-        LobbyBrowser = 19,
-        LobbyBuilder = 20,
+        Unknown = 57,
+        ReplaysBrowser = 58,
+        LobbyBrowser = 59,
+        LobbyBuilder = 60,
     }
 }

@@ -1,22 +1,17 @@
-﻿using TowerFall;
+﻿using HarmonyLib;
+using TowerFall;
 
 namespace TF.EX.Patchs.Entity.MenuItem
 {
-    public class FightButtonPatch : IHookable
+    [HarmonyPatch(typeof(FightButton))]
+    public class FightButtonPatch
     {
-        public void Load()
-        {
-            On.TowerFall.FightButton.MenuAction += MenuAction_Patch;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.FightButton.MenuAction -= MenuAction_Patch;
-        }
-
-        private static void MenuAction_Patch(On.TowerFall.FightButton.orig_MenuAction orig, TowerFall.FightButton self)
+        [HarmonyPrefix]
+        [HarmonyPatch("MenuAction")]
+        public static bool MenuAction_Prefix()
         {
             (Monocle.Engine.Instance.Scene as MainMenu).State = MainMenu.MenuState.VersusOptions;
+            return false;
         }
     }
 
