@@ -6,12 +6,12 @@ namespace TF.EX.Domain.Ports
 {
     public interface IReplayService
     {
-        void Initialize(GameData gameData = null);
+        void Initialize(GameData gameData = null, ICollection<CustomMod> mods = null);
 
         void AddRecord(GameState gameState, bool shouldSwapPlayer);
         void RemovePredictedRecords(int frame);
         void Export();
-        Task LoadAndStart(string pathWithReplayToLoad);
+        Task LoadAndStart(string pathWithReplayToLoad, string currentSong = "");
         void RunFrame();
         Replay GetReplay();
 

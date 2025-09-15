@@ -11,6 +11,7 @@ using TF.EX.Common.Handle;
 using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Externals;
+using TF.EX.Domain.Models.State.Entity.LevelEntity.Player;
 using TF.EX.Domain.Models.WebSocket;
 using TF.EX.Domain.Models.WebSocket.Client;
 using TF.EX.Domain.Models.WebSocket.Server;
@@ -36,6 +37,7 @@ namespace TF.EX.Domain.Services
         private Lobby ownLobby = new Lobby();
         private string peerId = string.Empty;
         private string roomChatPeerId = string.Empty;
+        private int previousPlayersCount = 1;
 
         private Dictionary<string, Action> onResult = new Dictionary<string, Action>();
         private WSAction currentAction = WSAction.None;
@@ -450,7 +452,7 @@ namespace TF.EX.Domain.Services
 
         private void HandleLobbyUpdate(Lobby lobby)
         {
-            Sounds.ui_altCostumeShift.Play();
+            Sounds.ui_clickSpecialAsc.Play();
 
             if (lobby.GameData.Seed != _rngService.GetSeed())
             {
@@ -512,6 +514,12 @@ namespace TF.EX.Domain.Services
                     var dynRollCall = DynamicData.For(rollCall);
                     Monocle.StateMachine state = dynRollCall.Get<Monocle.StateMachine>("state");
 
+                    if (previousPlayersCount < lobby.Players.Count)
+                    {
+                        previousPlayersCount = lobby.Players.Count;
+                        Notification.Create(TFGame.Instance.Scene, $"{player.Name} joined", 10, 200);
+                    }
+
                     if (player.Ready)
                     {
                         if (state.State == 0)
@@ -561,6 +569,12 @@ namespace TF.EX.Domain.Services
                     }
 
                     playerIndex++;
+                }
+
+                if (previousPlayersCount > lobby.Players.Count)
+                {
+                    previousPlayersCount = lobby.Players.Count;
+                    Notification.Create(TFGame.Instance.Scene, $"Player left", 10, 200);
                 }
             }
 
@@ -831,7 +845,8 @@ namespace TF.EX.Domain.Services
                 RoomChatId = lobby.RoomChatId,
                 Players = lobby.Players,
                 GameData = lobby.GameData,
-                Spectators = lobby.Spectators
+                Spectators = lobby.Spectators,
+                Mods = lobby.Mods
             };
         }
 
@@ -881,6 +896,7 @@ namespace TF.EX.Domain.Services
         public void ResetLobby()
         {
             ownLobby = new Lobby();
+            previousPlayersCount = 1;
         }
 
         public bool IsSpectator()

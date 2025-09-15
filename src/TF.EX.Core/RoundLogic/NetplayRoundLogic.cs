@@ -78,7 +78,7 @@ namespace TF.EX.Core.RoundLogic
                 netplayManager.Init(this);
 
                 var lobby = matchmakingService.GetOwnLobby();
-                replayService.Initialize(lobby.GameData);
+                replayService.Initialize(lobby.GameData, lobby.Mods);
                 mode = (TowerFall.Modes)lobby.GameData.Mode;
 
                 TowerFall.TFGame.ConsoleEnabled = false;

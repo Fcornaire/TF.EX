@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoMod.Utils;
 using TF.EX.Common.Extensions;
+using TF.EX.Common.Interop;
 using TF.EX.Domain;
 using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Extensions;
@@ -274,7 +275,7 @@ namespace TF.EX.Patchs.Scene
 
             self.AddLoader("FINDING LOBBIES...");
 
-            self.BackState = TowerFall.MainMenu.MenuState.VersusOptions;
+            self.BackState = TowerFall.MainMenu.MenuState.Rollcall;
             MainMenu.VersusMatchSettings.Mode = TF.EX.Domain.Models.Modes.Netplay.ToTF();
 
             Task.Run(async () =>
@@ -405,7 +406,7 @@ namespace TF.EX.Patchs.Scene
 
             if (toLaunch != null)
             {
-                RemoveReplays();
+                var currentSong = Monocle.Music.CurrentSong;
                 Monocle.Music.Stop();
                 Sounds.ui_mapZoom.Play();
 
@@ -417,7 +418,7 @@ namespace TF.EX.Patchs.Scene
 
                     TFGame.Instance.Scene.AddLoader("LOADING REPLAY...");
 
-                    await replayService.LoadAndStart(toLaunch.OriginalName);
+                    await replayService.LoadAndStart(toLaunch.OriginalName, currentSong);
 
                     TFGame.Instance.Scene.RemoveLoader();
 
@@ -431,6 +432,12 @@ namespace TF.EX.Patchs.Scene
         [HarmonyPatch("CreateMain")]
         public static void MainMenu_CreateMain(MainMenu __instance)
         {
+            var widerSetModApi = ServiceCollections.ResolveWiderSetModApi();
+            if (widerSetModApi != null && widerSetModApi.IsWide)
+            {
+                widerSetModApi.IsWide = false;
+            }
+
             var trials = __instance.GetToBeSpawned<TrialsButton>();
             var archivesButton = __instance.GetToBeSpawned<ArchivesButton>();
             var workshopButton = __instance.GetToBeSpawned<WorkshopButton>();
@@ -532,15 +539,15 @@ namespace TF.EX.Patchs.Scene
                         var posPing = rollcallElement.Position;
                         var dynRollcall = DynamicData.For(rollcallElement);
 
-                        var controlIconPos = dynRollcall.Get<Vector2>("ControlIconPos");
-                        var posName = rollcallElement.Position + controlIconPos + Vector2.UnitY * 15f;
+                        //var controlIconPos = dynRollcall.Get<Vector2>("ControlIconPos");
+                        //var posName = rollcallElement.Position + controlIconPos + Vector2.UnitY * 15f;
                         posPing.Y -= 66f;
 
                         Monocle.Draw.OutlineTextCentered(TFGame.Font, $"{latency} MS", posPing, color, 1.5f);
 
-                        var state = dynRollcall.Get<Monocle.StateMachine>("state");
-                        var nameColor = ((state.State == 1) ? ArcherData.Archers[playerIndex].ColorB : ArcherData.Archers[playerIndex].ColorA);
-                        Monocle.Draw.OutlineTextCentered(TFGame.Font, opponent.Name, posName, nameColor, Color.Black);
+                        //var state = dynRollcall.Get<Monocle.StateMachine>("state");
+                        //var nameColor = ((state.State == 1) ? ArcherData.Archers[playerIndex].ColorB : ArcherData.Archers[playerIndex].ColorA);
+                        //Monocle.Draw.OutlineTextCentered(TFGame.Font, opponent.Name, posName, nameColor, Color.Black);
                     }
 
                     playerIndex++;
@@ -606,6 +613,17 @@ namespace TF.EX.Patchs.Scene
             return true;
         }
 
+        [HarmonyPostfix]
+        [HarmonyPatch("CreateVersusOptions")]
+        public static void MainMenu_CreateVersusOptions(MainMenu __instance)
+        {
+            if (MainMenu.VersusMatchSettings.Mode == TowerFall.Modes.LastManStanding)
+            {
+                var button = TFGame.Instance.Scene.GetToBeSpawned<VersusModeButton>();
+                __instance.ToStartSelected = button;
+            }
+        }
+
         [HarmonyPrefix]
         [HarmonyPatch("Update")]
         public static void MainMenu_Update_Postfix(MainMenu __instance)
@@ -616,6 +634,23 @@ namespace TF.EX.Patchs.Scene
             var replayService = ServiceCollections.ResolveReplayService();
             var inputService = ServiceCollections.ResolveInputService();
             var logger = ServiceCollections.ResolveLogger();
+
+            if (__instance.State == MainMenu.MenuState.Rollcall)
+            {
+                if (matchmakingService.GetOwnLobby().IsEmpty && TFGame.PlayerAmount == 0)
+                {
+                    __instance.ButtonGuideA.SetDetails(MenuButtonGuide.ButtonModes.SaveReplay, "PLAY EX (SOLO)");
+                }
+                else
+                {
+                    __instance.ButtonGuideA.Clear();
+                }
+
+                if (MenuInput.SaveReplay && TFGame.PlayerAmount == 0)
+                {
+                    __instance.State = MainMenu.MenuState.VersusOptions;
+                }
+            }
 
             if (__instance.State.ToDomainModel() == Domain.Models.MenuState.LobbyBrowser)
             {
@@ -667,21 +702,11 @@ namespace TF.EX.Patchs.Scene
                     }
 
                     var lobbyToSpectate = lobbies.Single(lobby => lobby.Selected).Lobby;
+                    var (canSpectate, message) = (lobbyToSpectate.CanJoin, lobbyToSpectate.CanNotJoinReason);
 
-                    inputService.DisableAllControllers();
-
-                    var variantsToggle = variants
-                        .Where(v => v is VariantToggle)
-                        .Select(v => (v as VariantToggle).Variant.Title)
-                    .ToList();
-
-                    bool canJoin = lobbyToSpectate.GameData.Variants.All(str => variantsToggle.Contains(str));
-
-                    if (!canJoin)
+                    if (!canSpectate)
                     {
-                        logger.LogError<MainMenuPatch>("Can't join lobby because of custom variants");
-
-                        inputService.EnableAllControllers();
+                        logger.LogError<MainMenuPatch>($"Can't join lobby because of custom mod: {message}");
 
                         TowerFall.Sounds.ui_invalid.Play();
                         return;
@@ -694,6 +719,7 @@ namespace TF.EX.Patchs.Scene
                         return;
                     }
 
+                    inputService.DisableAllControllers();
                     __instance.AddLoader("JOINING LOBBY AS SPECTATOR");
 
                     matchmakingService.JoinLobby(lobbyToSpectate.RoomId, false, () => OnJoinSuccess(__instance, lobbyToSpectate, false), () => OnFailedToJoinLobby(__instance));
@@ -726,6 +752,18 @@ namespace TF.EX.Patchs.Scene
                         Addr = string.Empty,
                         IsHost = true
                     });
+                    var widerSetModApi = ServiceCollections.ResolveWiderSetModApi();
+                    if (widerSetModApi != null && widerSetModApi.IsWide)
+                    {
+                        lobby.Mods.Add(new Domain.Models.WebSocket.CustomMod
+                        {
+                            Name = WiderSetModApiData.Name,
+                            Data = new Dictionary<string, string>
+                            {
+                                { "IsWide", "true" }
+                            }
+                        });
+                    }
 
                     __instance.AddLoader("CREATING LOBBY...");
                     Sounds.ui_click.Play();
@@ -748,11 +786,11 @@ namespace TF.EX.Patchs.Scene
                         //Apply length
                         MainMenu.VersusMatchSettings.MatchLength = (MatchSettings.MatchLengths)lobby.GameData.MatchLength;
 
-                        if (MainMenu.VersusMatchSettings.Variants.ContainsCustomVariant(lobby.GameData.Variants))
-                        {
-                            Sounds.ui_clickSpecial.Play(160, 4);
-                            Notification.Create(__instance, $"Be CAREFUL! Custom variants might not work properly", 15, 500);
-                        }
+                        //if (MainMenu.VersusMatchSettings.Variants.ContainsCustomVariant(lobby.GameData.Variants))
+                        //{
+                        //    Sounds.ui_clickSpecial.Play(160, 4);
+                        //    Notification.Create(__instance, $"Be CAREFUL! Custom variants might not work properly", 15, 500);
+                        //}
                     };
 
                     Action onFail = () =>
@@ -817,22 +855,42 @@ namespace TF.EX.Patchs.Scene
                         continue;
                     }
 
-                    Action onClick = () =>
+                    if (newLobby.Mods.Count > 0)
                     {
-                        inputService.DisableAllControllers();
+                        foreach (var mod in newLobby.Mods)
+                        {
+                            if (mod.Name == WiderSetModApiData.Name)
+                            {
+                                (bool canJoin, string reason) = WiderSetModApiData.CanUseWiderSet(mod.Data, ServiceCollections.ResolveWiderSetModApi());
 
+                                newLobby.CanNotJoinReason = reason;
+                                newLobby.CanJoin = canJoin;
+                            }
+                        }
+                    }
+
+                    if (newLobby.CanJoin)
+                    {
                         var variantsToggle = variants
-                            .Where(v => v is VariantToggle)
-                            .Select(v => (v as VariantToggle).Variant.Title)
-                        .ToList();
+                           .Where(v => v is VariantToggle)
+                           .Select(v => (v as VariantToggle).Variant.Title)
+                       .ToList();
 
-                        bool canJoin = newLobby.GameData.Variants.All(str => variantsToggle.Contains(str));
+                        bool doesHaveAllVariant = newLobby.GameData.Variants.All(str => variantsToggle.Contains(str));
 
-                        if (!canJoin)
+                        if (!doesHaveAllVariant)
                         {
                             logger.LogError<MainMenuPatch>("Can't join lobby because of custom variants");
+                            newLobby.CanNotJoinReason = "MISSING CUSTOM VARIANTS";
+                            newLobby.CanJoin = false;
+                        }
+                    }
 
-                            inputService.EnableAllControllers();
+                    Action onClick = () =>
+                    {
+                        if (!newLobby.CanJoin)
+                        {
+                            logger.LogError<MainMenuPatch>($"Can't join lobby because of custom mod: {newLobby.CanNotJoinReason}");
 
                             TowerFall.Sounds.ui_invalid.Play();
                             return;
@@ -843,6 +901,8 @@ namespace TF.EX.Patchs.Scene
                             logger.LogError<MainMenuPatch>("Lobby to join is null?");
                             return;
                         }
+
+                        inputService.DisableAllControllers();
 
                         self.AddLoader("JOINING LOBBY");
 
@@ -935,11 +995,11 @@ namespace TF.EX.Patchs.Scene
 
             self.State = MainMenu.MenuState.Rollcall;
 
-            if (MainMenu.VersusMatchSettings.Variants.ContainsCustomVariant(newLobby.GameData.Variants))
-            {
-                Sounds.ui_clickSpecial.Play(160, 4);
-                Notification.Create(self, $"Be CAREFUL! Custom variants might not work properly", 15, 500);
-            }
+            //if (MainMenu.VersusMatchSettings.Variants.ContainsCustomVariant(newLobby.GameData.Variants))
+            //{
+            //    Sounds.ui_clickSpecial.Play(160, 4);
+            //    Notification.Create(self, $"Be CAREFUL! Custom variants might not work properly", 15, 500);
+            //}
         }
 
         private static void OnFailedToJoinLobby(MainMenu self)

@@ -89,7 +89,10 @@ namespace TF.EX.Patchs.PlayerInput
         [HarmonyPatch("get_MenuSaveReplay")]
         public static void MenuSaveReplay_patch(ref bool __result)
         {
-            __result = false;
+            if (TFGame.Instance.Scene is not MainMenu || TFGame.Instance.Scene is MainMenu mainMenu && mainMenu.State != MainMenu.MenuState.Rollcall)
+            {
+                __result = false;
+            }
         }
 
         [HarmonyPrefix]
@@ -171,7 +174,7 @@ namespace TF.EX.Patchs.PlayerInput
                 return false; //Ignore input for other players in netplay
             }
 
-            if (TFGame.Instance.Scene is MapScene)
+            if (TFGame.Instance.Scene is MapScene && !matchmakingService.GetOwnLobby().IsEmpty)
             {
                 return true;
             }
@@ -317,7 +320,9 @@ namespace TF.EX.Patchs.PlayerInput
                 }
             }
 
-            if (TFGame.Instance.Scene is MapScene)
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+
+            if (TFGame.Instance.Scene is MapScene && matchmakingService.GetOwnLobby().IsEmpty)
             {
                 return false;
             }
@@ -380,7 +385,7 @@ namespace TF.EX.Patchs.PlayerInput
                 }
             }
 
-            if (TFGame.Instance.Scene is MapScene)
+            if (TFGame.Instance.Scene is MapScene && matchmakingService.GetOwnLobby().IsEmpty)
             {
                 return false;
             }

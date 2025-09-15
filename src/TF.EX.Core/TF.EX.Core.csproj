@@ -4,6 +4,7 @@
 	  <TargetFramework>net9.0</TargetFramework>
 	  <!--<LangVersion>11</LangVersion>-->
 	  <PackageCopyToOutput>true</PackageCopyToOutput>
+	  <ModName>DShad.TF.EX</ModName>
   </PropertyGroup>
 
 	<ItemGroup>

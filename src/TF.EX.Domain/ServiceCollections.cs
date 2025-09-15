@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using TF.EX.Common;
+using TF.EX.Common.Interop;
 using TF.EX.Domain.Context;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Ports;
@@ -146,6 +147,12 @@ namespace TF.EX.Domain
         public static IHUDService ResolveHUDService() { return ServiceProvider.GetRequiredService<IHUDService>(); }
 
         public static ISFXService ResolveSFXService() { return ServiceProvider.GetRequiredService<ISFXService>(); }
+
+        public static IWiderSetModApi ResolveWiderSetModApi()
+        {
+            var context = ServiceProvider.GetRequiredService<IModuleContext>();
+            return context.Interop.GetApi<IWiderSetModApi>(WiderSetModApiData.Name);
+        }
 
         public static IAPIManager ResolveAPIManager()
         {

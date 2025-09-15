@@ -29,6 +29,8 @@ namespace TF.EX.Domain.CustomComponent
 
         public Vector2 InitialPosition => initialPosition;
 
+        private OutlineText cantJoinReason;
+
         public LobbyPanel(float x, float y) : base(-1)
         {
             Position = new Vector2(x, y);
@@ -83,6 +85,11 @@ namespace TF.EX.Domain.CustomComponent
                 Remove(variant);
             }
 
+            if (cantJoinReason != null)
+            {
+                Remove(cantJoinReason);
+            }
+
             variantsImages.Clear();
         }
 
@@ -91,8 +98,25 @@ namespace TF.EX.Domain.CustomComponent
             RemoveComponents();
 
             UpdateMapIcon(lobby.GameData.MapId);
-            UpdateTitle(lobby.GameData.MapId);
             UpdateMode(lobby.GameData.Mode);
+            UpdateTitle(lobby.GameData.MapId);
+
+            var (canJoin, reason) = (lobby.CanJoin, lobby.CanNotJoinReason);
+            if (!canJoin)
+            {
+                cantJoinReason = new OutlineText(TFGame.Font, reason)
+                {
+                    Scale = Vector2.One * 1.3f,
+                    Color = Color.Red,
+                    OutlineColor = Color.Black
+                };
+
+                cantJoinReason.Position.Y += 5;
+
+                Add(cantJoinReason);
+                return;
+            }
+
             UpdateVariant(lobby.GameData.Variants);
             UpdateMatchLength(lobby.GameData.MatchLength);
         }

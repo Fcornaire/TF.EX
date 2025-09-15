@@ -222,6 +222,11 @@ namespace TF.EX.Patchs.Entity.MenuItem
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
             var netplayManager = ServiceCollections.ResolveNetplayManager();
 
+            if (matchmakingService.GetOwnLobby().IsEmpty)
+            {
+                return;
+            }
+
             var currentMode = MainMenu.VersusMatchSettings.Mode.ToModel();
             var lobby = matchmakingService.GetOwnLobby();
             if (currentMode.IsNetplay() && lobby.Spectators.Any())
@@ -231,7 +236,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
 
             netplayManager.UpdateNumPlayers(lobby.Players.Count);
 
-            if (MainMenu.VersusMatchSettings.TeamMode)
+            if (MainMenu.VersusMatchSettings.TeamMode) //TODO: UNTESTED
             {
                 __instance.MainMenu.State = MainMenu.MenuState.TeamSelect;
                 return;

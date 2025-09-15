@@ -22,7 +22,7 @@ namespace TF.EX.Domain.Context
         int GetSeed();
         Rng GetRng();
         void UpdateRng(Rng rng);
-        void InitializeReplay(int id, GameData gameData = null);
+        void InitializeReplay(int id, GameData gameData = null, ICollection<CustomMod> mods = null);
         void AddRecord(GameState gameState, bool shouldSwapPlayer);
         void RemovePredictedRecords(int frame);
         Replay GetReplay();
@@ -166,7 +166,7 @@ namespace TF.EX.Domain.Context
             _rng = new Rng { Seed = rng.Seed, Gen_type = rng.Gen_type.ToList() };
         }
 
-        public void InitializeReplay(int towerId, GameData gameData = null)
+        public void InitializeReplay(int towerId, GameData gameData = null, ICollection<CustomMod> mods = null)
         {
             if (_replay == null)
             {
@@ -177,6 +177,7 @@ namespace TF.EX.Domain.Context
                         Id = towerId,
                         PlayerDraw = PlayerDraw.Unkown,
                         Version = ServiceCollections.CurrentReplayVersion,
+                        Mods = mods.ToList() ?? new List<CustomMod>(),
                     },
                 };
 

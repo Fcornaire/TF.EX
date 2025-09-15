@@ -33,11 +33,14 @@ namespace TF.EX.Patchs.PlayerInput
             }
         }
 
-        [HarmonyPrefix]
+        [HarmonyPostfix]
         [HarmonyPatch("get_MenuSaveReplay")]
-        public static bool MenuSaveReplay_patch()
+        public static void MenuSaveReplay_patch(ref bool __result)
         {
-            return false;
+            if (TFGame.Instance.Scene is not MainMenu || TFGame.Instance.Scene is MainMenu mainMenu && mainMenu.State != MainMenu.MenuState.Rollcall)
+            {
+                __result = false;
+            }
         }
 
         [HarmonyPrefix]
@@ -186,7 +189,7 @@ namespace TF.EX.Patchs.PlayerInput
                 }
             }
 
-            if (TFGame.Instance.Scene is MapScene)
+            if (TFGame.Instance.Scene is MapScene && !matchmakingService.GetOwnLobby().IsEmpty)
             {
                 return true;
             }

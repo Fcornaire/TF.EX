@@ -23,5 +23,17 @@ namespace TF.EX.Patchs
                 __result = 10;
             }
         }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("CleanSettingsVersus")]
+        public static void MatchSettings_CleanSettingsVersus(MatchSettings __instance)
+        {
+            var inputService = ServiceCollections.ResolveInputService();
+
+            if (TFGame.PlayerAmount == 0)
+            {
+                __instance.Mode = Modes.LastManStanding;
+            }
+        }
     }
 }
