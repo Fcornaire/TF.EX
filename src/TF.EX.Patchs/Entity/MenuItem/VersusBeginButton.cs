@@ -1,6 +1,7 @@
 ﻿using HarmonyLib;
 using Microsoft.Xna.Framework;
 using TF.EX.Domain;
+using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Extensions;
 using TF.EX.TowerFallExtensions;
 using TowerFall;
@@ -16,17 +17,16 @@ namespace TF.EX.Patchs.Entity.MenuItem
         {
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
             var currentMode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
-            if (!currentMode.IsNetplay())
-            {
-                MainMenu.CurrentMatchSettings = MainMenu.VersusMatchSettings;
-                MainMenu.RollcallMode = MainMenu.RollcallModes.Versus;
-                __instance.MainMenu.State = MainMenu.MenuState.Rollcall;
-                return false;
-            }
 
             if (currentMode == TF.EX.Domain.Models.Modes.Netplay)
             {
-                matchmakingService.ResetLobby();
+                if (TFGame.PlayerAmount >= 2)
+                {
+                    Sounds.ui_invalid.Play();
+                    Notification.Create(TFGame.Instance.Scene, "Cannot start Netplay with more than 2 players");
+                    return false;
+                }
+
                 __instance.MainMenu.State = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
                 return false;
             }

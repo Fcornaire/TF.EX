@@ -11,13 +11,23 @@
 
         public static (bool, string) CanUseWiderSet(Dictionary<string, string> widerSetData, IWiderSetModApi widerSetModApi, bool isReplay = false)
         {
-            if (widerSetModApi == null)
+            if (!widerSetData.TryGetValue("IsWide", out string isWide))
             {
-                return (false, "WIDERSET MOD REQUIRED");
+                return (true, "");
             }
 
-            if (widerSetData.TryGetValue("IsWide", out string isWide) && bool.TryParse(isWide, out bool parsed) && parsed)
+            if (!bool.TryParse(isWide, out bool parsed))
             {
+                return (false, "WIDERSET MOD MISSING VALUE");
+            }
+
+            if (parsed)
+            {
+                if (widerSetModApi == null)
+                {
+                    return (false, "WIDERSET MOD REQUIRED");
+                }
+
                 var canUse = isReplay ?
                       widerSetModApi != null :
                       widerSetModApi != null && widerSetModApi.IsWide;
@@ -28,8 +38,17 @@
 
                 return (true, "");
             }
+            else
+            {
+                var canUse = widerSetModApi == null || !widerSetModApi.IsWide;
 
-            return (false, "WIDERSET MOD ON WIDE REQUIRED");
+                if (!canUse)
+                {
+                    return (false, "WIDERSET MOD NOT WIDE REQUIRED");
+                }
+
+                return (true, "");
+            }
         }
     }
 }

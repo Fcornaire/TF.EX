@@ -15,22 +15,6 @@
 		<Reference Include="System.Net.Http" />
 	</ItemGroup>-->
 
-	<ItemGroup>
-		<!--<Reference Include="MMHOOK_TowerFall">
-			<HintPath>..\..\libs\MMHOOK_TowerFall.dll</HintPath>
-			<Private>False</Private>
-		</Reference>-->
-		<!--<Reference Include="TowerFall" Condition=" '$(Configuration)' == 'Release'">
-			<HintPath>..\..\libs\TowerFall-publicized.exe</HintPath>
-			<Private>False</Private>
-		</Reference>-->
-
-		<!--<Reference Include="TowerFall" Condition=" '$(Configuration)' == 'Debug'">
-			<HintPath>..\..\libs\TowerFall.exe</HintPath>
-			<Private>False</Private>
-		</Reference>-->
-	</ItemGroup>
-
 	<!--<Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Debug'">
 		<Exec Command="xcopy /y &quot;$(TargetPath)&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\TowerFall\&quot;" />
 	</Target>-->

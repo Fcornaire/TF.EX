@@ -173,13 +173,13 @@ namespace TF.EX.Patchs.Engine
                 Accumulator = TimeSpan.Zero;
             }
 
-            if (!CanRunNetplayFrames(__instance.Scene) || (!netplayManager.IsInit() && (__instance.Scene as Level).Session.RoundLogic is LastManStandingRoundLogic))
+            if (netplayManager.IsDisconnected())
             {
                 TFGame_Update_orig(__instance, gameTime);
                 return false;
             }
 
-            if (netplayManager.IsDisconnected())
+            if (!CanRunNetplayFrames(__instance.Scene, netplayManager))
             {
                 TFGame_Update_orig(__instance, gameTime);
                 return false;
@@ -331,9 +331,9 @@ namespace TF.EX.Patchs.Engine
             }
         }
 
-        public static bool CanRunNetplayFrames(Monocle.Scene scene)
+        public static bool CanRunNetplayFrames(Monocle.Scene scene, INetplayManager netplayManager)
         {
-            return scene is Level;
+            return scene is Level && netplayManager.IsSynchronized();
         }
 
         private static bool NetplayLogic(Level level, INetplayManager netplayManager, IInputService inputService, IReplayService replayService, ISyncTestUtilsService syncTestUtilsService)

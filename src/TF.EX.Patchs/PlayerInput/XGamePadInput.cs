@@ -167,9 +167,12 @@ namespace TF.EX.Patchs.PlayerInput
             var isReplayMode = netplayManager.IsReplayMode();
             var isPaused = TFGame.Instance.Scene is TowerFall.Level && (TFGame.Instance.Scene as TowerFall.Level).Paused;
 
+            var lobby = matchmakingService.GetOwnLobby();
+
             if (TFGame.Instance.Scene is MainMenu
                 && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
-                && inputService.GetInputIndex(self) != 0)
+                && inputService.GetInputIndex(self) != 0
+                && !lobby.IsEmpty)
             {
                 return false; //Ignore input for other players in netplay
             }
@@ -205,7 +208,7 @@ namespace TF.EX.Patchs.PlayerInput
 
                 var currentMode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
 
-                if (state == MainMenu.MenuState.Rollcall && currentMode.IsNetplay())
+                if (state == MainMenu.MenuState.Rollcall && currentMode.IsNetplay() && !lobby.IsEmpty)
                 {
                     if (ServiceCollections.ResolveMatchmakingService().IsLobbyReady())
                     {
@@ -256,8 +259,9 @@ namespace TF.EX.Patchs.PlayerInput
                 var state = Traverse.Create(TFGame.Instance.Scene as MainMenu).Field("state").GetValue<MainMenu.MenuState>();
 
                 var currentMode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
+                var lobby = matchmakingService.GetOwnLobby();
 
-                if (state == MainMenu.MenuState.Rollcall && currentMode.IsNetplay())
+                if (state == MainMenu.MenuState.Rollcall && currentMode.IsNetplay() && !lobby.IsEmpty)
                 {
                     if (ServiceCollections.ResolveMatchmakingService().IsLobbyReady())
                     {
@@ -362,7 +366,9 @@ namespace TF.EX.Patchs.PlayerInput
                 var state = Traverse.Create(TFGame.Instance.Scene as MainMenu).Field("state").GetValue<MainMenu.MenuState>();
                 var currentMode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
 
-                if (state == MainMenu.MenuState.Rollcall && currentMode.IsNetplay())
+                var lobby = matchmakingService.GetOwnLobby();
+
+                if (state == MainMenu.MenuState.Rollcall && currentMode.IsNetplay() && !lobby.IsEmpty)
                 {
                     if (ServiceCollections.ResolveMatchmakingService().IsLobbyReady())
                     {
@@ -385,7 +391,7 @@ namespace TF.EX.Patchs.PlayerInput
                 }
             }
 
-            if (TFGame.Instance.Scene is MapScene && matchmakingService.GetOwnLobby().IsEmpty)
+            if (TFGame.Instance.Scene is MapScene && !matchmakingService.GetOwnLobby().IsEmpty)
             {
                 return false;
             }
