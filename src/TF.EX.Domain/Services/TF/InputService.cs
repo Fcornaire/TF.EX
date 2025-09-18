@@ -117,7 +117,9 @@ namespace TF.EX.Domain.Services.TF
 
         public void DisableAllControllers()
         {
-            TFGame.PlayerInputs = new PlayerInput[4];
+            var playerCount = ServiceCollections.ResolveWiderSetModApi() != null ? 8 : 4;
+
+            TFGame.PlayerInputs = new PlayerInput[playerCount];
             MenuInput.MenuInputs = new PlayerInput[5];
         }
 
@@ -129,10 +131,16 @@ namespace TF.EX.Domain.Services.TF
 
         public void DisableAllControllerExceptLocal()
         {
-            for (int i = 1; i < 4; i++)
+            var playerCount = ServiceCollections.ResolveWiderSetModApi() != null ? 8 : 4;
+
+            for (int i = 1; i < playerCount; i++)
             {
                 TFGame.PlayerInputs[i] = null;
-                MenuInput.MenuInputs[i] = null;
+
+                if (i < 5)
+                {
+                    MenuInput.MenuInputs[i] = null;
+                }
             }
         }
     }

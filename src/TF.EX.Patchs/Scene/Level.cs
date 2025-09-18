@@ -97,15 +97,17 @@ namespace TF.EX.Patchs.Scene
 
         [HarmonyPrefix]
         [HarmonyPatch("HandlePausing")]
-        private static bool Level_HandlePausing(Level __instance)
+        public static bool Level_HandlePausing(Level __instance)
         {
-            var netplayManager = ServiceCollections.ResolveNetplayManager();
-            if (netplayManager.IsReplayMode() || netplayManager.IsDisconnected())
+            var matchMakingService = ServiceCollections.ResolveMatchmakingService();
+
+            var lobby = matchMakingService.GetOwnLobby();
+            if (lobby != null && (matchMakingService.IsLobbyReady() || !lobby.IsEmpty))
             {
-                return true;
+                return false;
             }
 
-            return false;
+            return true;
         }
 
         private static void UpdateLayersEntityList(Level level)

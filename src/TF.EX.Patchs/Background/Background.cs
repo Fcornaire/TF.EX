@@ -11,7 +11,8 @@ namespace TF.EX.Patchs.Background
         public static bool Background_Update(TowerFall.Background __instance)
         {
             var netplayManager = ServiceCollections.ResolveNetplayManager();
-            if (netplayManager.IsRollbackFrame())
+
+            if (netplayManager.IsRollbackFrame() && __instance.Scene is TowerFall.Level level && !level.Frozen)
             {
                 return false;
             }

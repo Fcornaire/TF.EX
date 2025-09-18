@@ -177,7 +177,7 @@ namespace TF.EX.Patchs.Entity
         public static bool PauseMenu_VersusMatchSettingsAndSave(PauseMenu __instance)
         {
             var netplayManager = ServiceCollections.ResolveNetplayManager();
-            if (netplayManager.IsReplayMode())
+            if (netplayManager.IsReplayMode() || netplayManager.IsDisconnected())
             {
                 Sounds.ui_clickBack.Play();
                 MainMenu mainMenu = new MainMenu(MainMenu.MenuState.Main);
@@ -187,6 +187,10 @@ namespace TF.EX.Patchs.Entity
                 var level = dynPauseMenu.Get<Level>("level");
 
                 level.Session.MatchSettings.LevelSystem.Dispose();
+
+                var inputService = ServiceCollections.ResolveInputService();
+                inputService.DisableAllControllers();
+                inputService.EnableAllControllers();
 
                 return false;
             }

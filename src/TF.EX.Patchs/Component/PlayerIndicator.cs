@@ -22,17 +22,17 @@ namespace TF.EX.Patchs.Component
         {
             var netplayManager = ServiceCollections.ResolveNetplayManager();
 
-            var dynPlayerIndcator = DynamicData.For(__instance);
-            var colorSwitch = dynPlayerIndcator.Get<bool>("colorSwitch");
-            var characterIndex = dynPlayerIndcator.Get<int>("characterIndex");
-            var offset = dynPlayerIndcator.Get<Vector2>("offset");
-            var entity = dynPlayerIndcator.Get<Monocle.Entity>("Entity");
-            var sine = dynPlayerIndcator.Get<Monocle.SineWave>("sine");
-            var text = dynPlayerIndcator.Get<string>("text");
-            var crown = dynPlayerIndcator.Get<bool>("crown");
-
             if (netplayManager.IsInit() || netplayManager.IsReplayMode())
             {
+                var dynPlayerIndcator = DynamicData.For(__instance);
+                var colorSwitch = dynPlayerIndcator.Get<bool>("colorSwitch");
+                var characterIndex = dynPlayerIndcator.Get<int>("characterIndex");
+                var offset = dynPlayerIndcator.Get<Vector2>("offset");
+                var entity = dynPlayerIndcator.Get<Monocle.Entity>("Entity");
+                var sine = dynPlayerIndcator.Get<Monocle.SineWave>("sine");
+                var text = dynPlayerIndcator.Get<string>("text");
+                var crown = dynPlayerIndcator.Get<bool>("crown");
+
                 Color color = (colorSwitch ? ArcherData.Archers[characterIndex].ColorB : ArcherData.Archers[characterIndex].ColorA);
                 Vector2 vector = entity.Position + offset + new Vector2(0f, -32f);
                 vector.Y = Math.Max(10f, vector.Y);
@@ -72,6 +72,12 @@ namespace TF.EX.Patchs.Component
         [HarmonyPatch("Update")]
         public static void PlayerIndicator_Update_Postfix(PlayerIndicator __instance)
         {
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            if (netplayManager.IsInit())
+            {
+                return;
+            }
+
             var dynPlayerIndcator = DynamicData.For(__instance);
             dynPlayerIndcator.Set("colorSwitch", false);
         }
@@ -82,6 +88,12 @@ namespace TF.EX.Patchs.Component
         public static void PlayerIndicator_ctor(PlayerIndicator __instance)
         {
             var netplayManager = ServiceCollections.ResolveNetplayManager();
+
+            if (!netplayManager.IsInit())
+            {
+                return;
+            }
+
             var dynPlayerIndcator = Traverse.Create(__instance);
             var text = dynPlayerIndcator.Field("text").GetValue<string>();
             var playerIndex = dynPlayerIndcator.Field("playerIndex").GetValue<int>();

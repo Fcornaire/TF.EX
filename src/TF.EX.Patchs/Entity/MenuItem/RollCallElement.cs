@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using Microsoft.Extensions.Logging;
 using Microsoft.Xna.Framework;
 using Monocle;
 using MonoMod.Utils;
@@ -34,7 +35,9 @@ namespace TF.EX.Patchs.Entity.MenuItem
             var inputService = ServiceCollections.ResolveInputService();
 
             var currentMode = MainMenu.VersusMatchSettings.Mode.ToModel();
-            if (currentMode == Domain.Models.Modes.Netplay)
+            var lobby = matchmakingService.GetOwnLobby();
+
+            if (currentMode == Domain.Models.Modes.Netplay && !lobby.IsEmpty)
             {
                 var dynRollcallElement = Traverse.Create(__instance);
                 var playerIndex = dynRollcallElement.Field<int>("playerIndex").Value;
@@ -45,9 +48,8 @@ namespace TF.EX.Patchs.Entity.MenuItem
                 {
                     if (playerIndex == 0)
                     {
-                        var lobby = matchmakingService.GetOwnLobby();
-                        var player = lobby.Players.First(pl => pl.RoomChatPeerId == matchmakingService.GetRoomChatPeerId());
-                        if (player.Ready)
+                        var player = lobby.Players.FirstOrDefault(pl => pl.RoomChatPeerId == matchmakingService.GetRoomChatPeerId());
+                        if (player != null && player.Ready)
                         {
                             player.Ready = false;
                             archerService.RemoveArcher(playerIndex);
@@ -82,6 +84,12 @@ namespace TF.EX.Patchs.Entity.MenuItem
         public static void RollcallElement_JoinedUpdate(RollcallElement __instance, ref int __result)
         {
             var currentMode = MainMenu.VersusMatchSettings.Mode.ToModel();
+            var lobby = ServiceCollections.ResolveMatchmakingService().GetOwnLobby();
+
+            if (lobby.IsEmpty)
+            {
+                return;
+            }
 
             if (currentMode == Domain.Models.Modes.Netplay)
             {
@@ -106,16 +114,16 @@ namespace TF.EX.Patchs.Entity.MenuItem
             var inputService = ServiceCollections.ResolveInputService();
 
             var currentMode = MainMenu.VersusMatchSettings.Mode.ToModel();
-            if (currentMode == Domain.Models.Modes.Netplay)
+            var lobby = matchmakingService.GetOwnLobby();
+            if (currentMode == Domain.Models.Modes.Netplay && !lobby.IsEmpty)
             {
-                var lobby = matchmakingService.GetOwnLobby();
                 var dynRollcallElement = DynamicData.For(__instance);
                 var playerIndex = dynRollcallElement.Get<int>("playerIndex");
 
                 if (playerIndex == 0 && !matchmakingService.IsSpectator())
                 {
-                    var player = lobby.Players.First(pl => pl.RoomChatPeerId == matchmakingService.GetRoomChatPeerId());
-                    if (!player.Ready)
+                    var player = lobby.Players.FirstOrDefault(pl => pl.RoomChatPeerId == matchmakingService.GetRoomChatPeerId());
+                    if (player != null && !player.Ready)
                     {
                         player.Ready = true;
                         player.ArcherIndex = TFGame.Characters[playerIndex];
@@ -164,8 +172,9 @@ namespace TF.EX.Patchs.Entity.MenuItem
                 var input = dynRollcallElement.Get<TowerFall.PlayerInput>("input");
 
                 var currentMode = MainMenu.VersusMatchSettings.Mode.ToModel();
+                var lobby = matchmakingService.GetOwnLobby();
 
-                if (currentMode == Domain.Models.Modes.Netplay && input != null && input.MenuBack)
+                if (currentMode == Domain.Models.Modes.Netplay && !lobby.IsEmpty && input != null && input.MenuBack)
                 {
                     Task.Run(async () =>
                     {
@@ -254,7 +263,15 @@ namespace TF.EX.Patchs.Entity.MenuItem
             var archerType = rollcallElement.Get<ArcherData.ArcherTypes>("archerType");
 
             portrait.SetCharacter(TFGame.Characters[playerIndex], archerType, 1);
-            portrait.Join(unlock: false);
+            try
+            {
+                portrait.Join(unlock: false);
+            }
+            catch (Exception e)
+            {
+                var logger = ServiceCollections.ResolveLogger();
+                logger.LogWarning($"Failed to join portrait for player {playerIndex}: {e}");
+            }
             TFGame.Players[playerIndex] = true;
         }
 

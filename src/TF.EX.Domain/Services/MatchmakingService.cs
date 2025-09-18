@@ -161,7 +161,7 @@ namespace TF.EX.Domain.Services
 
                     if (_webSocket.State == WebSocketState.Closed)
                     {
-                        if (_webSocket.CloseStatus.HasValue)
+                        if (_webSocket.CloseStatus != null && _webSocket.CloseStatus.HasValue)
                         {
                             _logger.LogError<MatchmakingService>($"Connection closed with status {_webSocket.CloseStatus.Value} : {_webSocket.CloseStatusDescription}");
                         }
@@ -193,10 +193,10 @@ namespace TF.EX.Domain.Services
                         DisconnectFromLobby();
                     }
 
-                    if (TFGame.Instance.Scene is MainMenu)
-                    {
-                        (TFGame.Instance.Scene as MainMenu).State = MainMenu.MenuState.VersusOptions;
-                    }
+                    //if (TFGame.Instance.Scene is MainMenu)
+                    //{
+                    //    (TFGame.Instance.Scene as MainMenu).State = MainMenu.MenuState.VersusOptions;
+                    //}
                 }
             }, cancellationToken);
 
@@ -468,6 +468,7 @@ namespace TF.EX.Domain.Services
                 ownLobby = new Lobby();
 
                 _inputService.EnableAllControllers();
+                _inputService.EnsureRemoteController();
 
                 ResetPeer();
                 return;

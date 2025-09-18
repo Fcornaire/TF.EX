@@ -284,6 +284,7 @@ namespace TF.EX.Patchs.Scene
                 {
                     var inputService = ServiceCollections.ResolveInputService();
                     var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+                    matchmakingService.ResetLobby();
 
                     inputService.DisableAllControllers();
 
@@ -590,9 +591,9 @@ namespace TF.EX.Patchs.Scene
             netplayManager.SaveConfig();
         }
 
-        [HarmonyPrefix]
+        [HarmonyPostfix]
         [HarmonyPatch("Update")]
-        public static bool MainMenu_Update_Prefix(MainMenu __instance)
+        public static void MainMenu_Update_Prefix(MainMenu __instance)
         {
             var netplayManager = ServiceCollections.ResolveNetplayManager();
 
@@ -601,16 +602,14 @@ namespace TF.EX.Patchs.Scene
                 netplayName.State = netplayManager.GetNetplayMeta().Name;
             }
 
-            if (TowerFall.MainMenu.VersusMatchSettings != null && __instance.State == TowerFall.MainMenu.MenuState.VersusOptions)
-            {
-                if (MenuInput.Back)
-                {
-                    __instance.State = TowerFall.MainMenu.MenuState.Main;
-                    return false;
-                }
-            }
-
-            return true;
+            //if (TowerFall.MainMenu.VersusMatchSettings != null && __instance.State == TowerFall.MainMenu.MenuState.VersusOptions)
+            //{
+            //    if (MenuInput.Back)
+            //    {
+            //        __instance.State = TowerFall.MainMenu.MenuState.Main;
+            //        return false;
+            //    }
+            //}
         }
 
         [HarmonyPostfix]
@@ -635,9 +634,9 @@ namespace TF.EX.Patchs.Scene
             var inputService = ServiceCollections.ResolveInputService();
             var logger = ServiceCollections.ResolveLogger();
 
-            if (__instance.State == MainMenu.MenuState.Rollcall)
+            if (__instance.State == MainMenu.MenuState.Rollcall && matchmakingService.GetOwnLobby().IsEmpty)
             {
-                if (matchmakingService.GetOwnLobby().IsEmpty && TFGame.PlayerAmount == 0)
+                if (TFGame.PlayerAmount == 0)
                 {
                     __instance.ButtonGuideA.SetDetails(MenuButtonGuide.ButtonModes.SaveReplay, "PLAY EX (SOLO)");
                 }
@@ -753,14 +752,14 @@ namespace TF.EX.Patchs.Scene
                         IsHost = true
                     });
                     var widerSetModApi = ServiceCollections.ResolveWiderSetModApi();
-                    if (widerSetModApi != null && widerSetModApi.IsWide)
+                    if (widerSetModApi != null)
                     {
                         lobby.Mods.Add(new Domain.Models.WebSocket.CustomMod
                         {
                             Name = WiderSetModApiData.Name,
                             Data = new Dictionary<string, string>
                             {
-                                { "IsWide", "true" }
+                                { "IsWide", widerSetModApi.IsWide.ToString() }
                             }
                         });
                     }
@@ -866,6 +865,15 @@ namespace TF.EX.Patchs.Scene
                                 newLobby.CanNotJoinReason = reason;
                                 newLobby.CanJoin = canJoin;
                             }
+                        }
+                    }
+                    else
+                    {
+                        var widerSetModApi = ServiceCollections.ResolveWiderSetModApi();
+                        if (widerSetModApi != null && widerSetModApi.IsWide)
+                        {
+                            newLobby.CanNotJoinReason = "WIDERSET MOD ON OFF REQUIRED";
+                            newLobby.CanJoin = false;
                         }
                     }
 
