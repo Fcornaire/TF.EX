@@ -20,7 +20,7 @@
 
 # About The Project
 
-TF EX is a mod that attempts to bring netplay to TowerFall (EX as in a Fighting game EX move, usually costing meter). It uses [FortRise](https://github.com/Terria-K/FortRise) (the supported version is [4.7.2](https://github.com/FortRise/FortRise/releases/tag/4.7.2))+ Rollback netcode as infrastructure.
+TF EX is a mod that attempts to bring netplay to TowerFall (EX as in a Fighting game EX move, usually costing meter). It uses [FortRise](https://github.com/Terria-K/FortRise) (the supported version is [4.7.2](https://github.com/FortRise/FortRise/releases/tag/4.7.2) , there is a [pre release](https://github.com/Fcornaire/TF.EX/releases/tag/1.0.0-rc) compatible with 5.0.0)+ Rollback netcode as infrastructure.
 Due to the nature of the project, the mod is also able to record + view previous matches.
 Also, this project is still WIP!
 
@@ -83,7 +83,7 @@ It fairly easy to install this mod:
 
 1. Install [FortRise](https://github.com/Terria-K/FortRise) with Debug ON , this can be changed by modifying the ```PatchVersion.txt``` file in the Towerfall root directory
 > [!WARNING]  
-> The last supported version is [4.7.2](https://github.com/FortRise/FortRise/releases/tag/4.7.2), This mean the mod won't load/work on version 5.X.X and beyond.
+> The last supported version is [4.7.2](https://github.com/FortRise/FortRise/releases/tag/4.7.2), This mean the mod won't load/work on version 5.X.X and beyond (PS : there is a [pre release](https://github.com/Fcornaire/TF.EX/releases/tag/1.0.0-rc) compatible with 5.0.0).
 > Effort will be made to upgrade at some point
 2. Download the latest TF EX [release](https://github.com/Fcornaire/TF.EX/releases)
 3. Create a `Mods` directory at the root of your Towerfall install directory if not done already
