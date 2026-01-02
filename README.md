@@ -9,6 +9,7 @@
 
 <!-- Shield -->
 
+[![Support me on Patreon](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fshieldsio-patreon.vercel.app%2Fapi%3Fusername%3DDShadModdingAdventure%26type%3Dpatrons&style=for-the-badge)](https://patreon.com/DShadModdingAdventure)
 [![Contributors][contributors-shield]][contributors-url]
 [![Download][download-shield]][download-url]
 [![Forks][forks-shield]][forks-url]
