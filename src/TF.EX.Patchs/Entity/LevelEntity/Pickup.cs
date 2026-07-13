@@ -1,42 +1,35 @@
-﻿using Microsoft.Xna.Framework;
+﻿using HarmonyLib;
+using Microsoft.Xna.Framework;
 using Monocle;
 using MonoMod.Utils;
 using TF.EX.TowerFallExtensions.Entity;
+using TowerFall;
 
 namespace TF.EX.Patchs.Entity.LevelEntity
 {
-    public class PickupPatch : IHookable
+    [HarmonyPatch(typeof(Pickup))]
+    public class PickupPatch
     {
-        public void Load()
+        [HarmonyPostfix]
+        [HarmonyPatch("FinishUnpack")]
+        public static void Pickup_FinishUnpack(Pickup __instance)
         {
-            On.TowerFall.Pickup.ctor += Pickup_ctor;
-            On.TowerFall.Pickup.FinishUnpack += Pickup_FinishUnpack;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.Pickup.ctor -= Pickup_ctor;
-            On.TowerFall.Pickup.FinishUnpack -= Pickup_FinishUnpack;
-        }
-
-        private void Pickup_FinishUnpack(On.TowerFall.Pickup.orig_FinishUnpack orig, TowerFall.Pickup self, Tween t)
-        {
-            orig(self, t);
-            var dynPickup = DynamicData.For(self);
+            var dynPickup = DynamicData.For(__instance);
             dynPickup.Set("FinishedUnpack", true);
         }
 
-        private void Pickup_ctor(On.TowerFall.Pickup.orig_ctor orig, TowerFall.Pickup self, Vector2 position, Vector2 targetPosition)
+        [HarmonyPostfix]
+        [HarmonyPatch(MethodType.Constructor, typeof(Vector2), typeof(Vector2))]
+        public static void Pickup_ctor(Pickup __instance, Vector2 targetPosition)
         {
-            orig(self, position, targetPosition);
-            var dynPickup = DynamicData.For(self);
+            var dynPickup = DynamicData.For(__instance);
             dynPickup.Add("TargetPosition", targetPosition);
             dynPickup.Add("FinishedUnpack", false);
 
-            ProperlySetTween(self, targetPosition);
+            ProperlySetTween(__instance, targetPosition);
         }
 
-        private void ProperlySetTween(TowerFall.Pickup self, Vector2 targetPosition)
+        private static void ProperlySetTween(Pickup self, Vector2 targetPosition)
         {
             self.DeleteComponent<Tween>();
 

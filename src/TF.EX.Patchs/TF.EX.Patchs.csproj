@@ -1,15 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>net472</TargetFramework>
-		<LangVersion>11</LangVersion>
+		<TargetFramework>net9.0</TargetFramework>
+		<!--<LangVersion>11</LangVersion>-->
 		<ImplicitUsings>enable</ImplicitUsings>
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="FortRise.Configuration" Version="1.5.6" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
-		<PackageReference Include="MonoMod" Version="22.5.1.1" />
-		<PackageReference Include="MonoMod.RuntimeDetour" Version="22.5.1.1" />
+		<PackageReference Include="TextCopy" Version="6.2.1" />
+		<!--<PackageReference Include="MonoMod" Version="22.5.1.1" />
+		<PackageReference Include="MonoMod.RuntimeDetour" Version="22.5.1.1" />-->
 	</ItemGroup>
 
 	<ItemGroup>
@@ -27,21 +29,21 @@
 			<HintPath>..\..\libs\MMHOOK_TowerFall.dll</HintPath>
 			<Private>False</Private>
 		</Reference>
-		<Reference Include="System.Windows.Forms" />
-		<Reference Include="TowerFall" Condition=" '$(Configuration)' == 'Release'">
+		<!--<Reference Include="System.Windows.Forms" />-->
+		<!--<Reference Include="TowerFall" Condition=" '$(Configuration)' == 'Release'">
 			<HintPath>..\..\libs\TowerFall-publicized.exe</HintPath>
 			<Private>False</Private>
-		</Reference>
+		</Reference>-->
 
-		<Reference Include="TowerFall" Condition=" '$(Configuration)' == 'Debug'">
+		<!--<Reference Include="TowerFall" Condition=" '$(Configuration)' == 'Debug'">
 			<HintPath>..\..\libs\TowerFall.exe</HintPath>
 			<Private>False</Private>
-		</Reference>
+		</Reference>-->
 	</ItemGroup>
 
-	<Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Debug'">
+	<!--<Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Debug'">
 		<Exec Command="xcopy /y &quot;$(TargetPath)&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\TowerFall&quot;" />
-	</Target>
+	</Target>-->
 
 
 </Project>

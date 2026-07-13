@@ -1,12 +1,15 @@
-﻿using System.Globalization;
+﻿using HarmonyLib;
+using System.Globalization;
 using TF.EX.Domain.Models.State;
+using TowerFall;
 
 namespace TF.EX.Patchs
 {
-    internal class MatchVariantsPatchs : IHookable
+    [HarmonyPatch(typeof(MatchVariants))]
+    internal class MatchVariantsPatchs
     {
-        private List<string> UnauthorizedVariant = new List<string>
-        {
+        private static List<string> UnauthorizedVariant =
+        [
             "SuddenDeath",
             "TeamRevive",
             "AlwaysBigTreasure",
@@ -43,40 +46,32 @@ namespace TF.EX.Patchs
             "ClumsyArchers",
             "TreasureDraft",
             "ShowTreasureSpawns"
-        };
+        ];
 
+        private static bool hasInit = false;
 
-        public MatchVariantsPatchs()
+        [HarmonyPostfix]
+        [HarmonyPatch(MethodType.Constructor, [typeof(bool)])]
+        public static void MatchVariants_ctor(MatchVariants __instance)
         {
-            UnauthorizedVariant = UnauthorizedVariant.Select(GetVariantTitle).ToList();
-        }
-
-        public void Load()
-        {
-            On.TowerFall.MatchVariants.ctor += MatchVariants_ctor;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.MatchVariants.ctor -= MatchVariants_ctor;
-        }
-
-        private void MatchVariants_ctor(On.TowerFall.MatchVariants.orig_ctor orig, TowerFall.MatchVariants self, bool noPerPlayer)
-        {
-            orig(self, noPerPlayer);
-
-            self.Variants = self.Variants.Where(v => !UnauthorizedVariant.Contains(v.Title)).ToArray();
-            self.TournamentRules();
-            self.Variants.First(variant => variant.Title == "FREE AIMING").Value = true;
-            if (self.CustomVariants.ContainsKey(Constants.RIGHT_STICK_VARIANT_NAME))
+            if (!hasInit)
             {
-                self.CustomVariants.TryGetValue(Constants.RIGHT_STICK_VARIANT_NAME, out var variant);
+                UnauthorizedVariant = UnauthorizedVariant.Select(GetVariantTitle).ToList();
+                hasInit = true;
+            }
+
+            __instance.Variants = __instance.Variants.Where(v => !UnauthorizedVariant.Contains(v.Title)).ToArray();
+            __instance.TournamentRules();
+            __instance.Variants.First(variant => variant.Title == "FREE AIMING").Value = true;
+            if (__instance.CustomVariants.ContainsKey(Constants.RIGHT_STICK_VARIANT_NAME))
+            {
+                __instance.CustomVariants.TryGetValue(Constants.RIGHT_STICK_VARIANT_NAME, out var variant);
                 variant.Value = true;
             }
         }
 
 
-        private string GetVariantTitle(string text)
+        private static string GetVariantTitle(string text)
         {
             for (int i = 1; i < text.Length; i++)
             {

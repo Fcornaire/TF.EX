@@ -1,59 +1,51 @@
-﻿using TF.EX.Domain.Ports;
+﻿using HarmonyLib;
+using TF.EX.Domain;
+using TowerFall;
 
 namespace TF.EX.Patchs.Entity.LevelEntity
 {
-    public class ArrowPatch : IHookable
+    [HarmonyPatch(typeof(Arrow))]
+    public class ArrowPatch
     {
-        private readonly INetplayManager _netplayManager;
-
-        public ArrowPatch(INetplayManager netplayManager)
-        {
-            _netplayManager = netplayManager;
-        }
-
-        public void Load()
-        {
-            On.TowerFall.Arrow.EnterFallMode += Arrow_EnterFallMode;
-            On.TowerFall.Arrow.DoWrapRender += Arrow_DoWrapRender;
-            On.TowerFall.Arrow.Removed += Arrow_Removed;
-            On.TowerFall.Arrow.EnforceLimit += Arrow_EnforceLimit;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.Arrow.EnterFallMode -= Arrow_EnterFallMode;
-            On.TowerFall.Arrow.DoWrapRender -= Arrow_DoWrapRender;
-            On.TowerFall.Arrow.Removed -= Arrow_Removed;
-            On.TowerFall.Arrow.EnforceLimit -= Arrow_EnforceLimit;
-        }
-
         //TODO: Properly track arrow decay to remove this
-        private void Arrow_EnforceLimit(On.TowerFall.Arrow.orig_EnforceLimit orig, TowerFall.Level level)
+        [HarmonyPrefix]
+        [HarmonyPatch("EnforceLimit")]
+        public static bool Arrow_EnforceLimit()
         {
             //Console.WriteLine("Arrow EnforceLimit Ignore for now");
+            return false;
         }
 
         //TODO: remove this when a test without this is done
-        private void Arrow_Removed(On.TowerFall.Arrow.orig_Removed orig, TowerFall.Arrow self)
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(Arrow.Removed))]
+        public static void Arrow_Removed()
         {
-            orig(self);
             TowerFall.Arrow.FlushCache();
         }
 
-        private void Arrow_DoWrapRender(On.TowerFall.Arrow.orig_DoWrapRender orig, TowerFall.Arrow self)
+        [HarmonyPrefix]
+        [HarmonyPatch("DoWrapRender")]
+        public static void Arrow_DoWrapRender(Arrow __instance)
         {
-            if (_netplayManager.IsTestMode() || _netplayManager.IsReplayMode())
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            if (netplayManager.IsTestMode() || netplayManager.IsReplayMode())
             {
-                self.DebugRender();
+                __instance.DebugRender();
             }
-
-            orig(self);
         }
 
-        private void Arrow_EnterFallMode(On.TowerFall.Arrow.orig_EnterFallMode orig, TowerFall.Arrow self, bool bounce, bool zeroX, bool sound)
+        [HarmonyPrefix]
+        [HarmonyPatch("EnterFallMode")]
+        public static void Arrow_EnterFallMode_Prefix()
         {
             Calc.CalcPatch.RegisterRng();
-            orig(self, bounce, zeroX, sound);
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("EnterFallMode")]
+        public static void Arrow_EnterFallMode_Postfix()
+        {
             Calc.CalcPatch.UnregisterRng();
         }
     }

@@ -1,43 +1,32 @@
-﻿using Microsoft.Xna.Framework;
+﻿using HarmonyLib;
+using Microsoft.Xna.Framework;
 using Monocle;
 using MonoMod.Utils;
+using TF.EX.Domain;
 using TF.EX.Domain.Extensions;
-using TF.EX.Domain.Ports;
 using TowerFall;
 
 namespace TF.EX.Patchs.RoundLogic
 {
-    public class LevelTestRoundLogicPatch : IHookable
+    [HarmonyPatch(typeof(LevelTestRoundLogic))]
+    public class LevelTestRoundLogicPatch
     {
-        private readonly INetplayManager _netplayManager;
-
-        public LevelTestRoundLogicPatch(INetplayManager netplayManager)
-        {
-            _netplayManager = netplayManager;
-        }
-
-        public void Load()
-        {
-            On.TowerFall.RoundLogic.OnLevelLoadFinish += RoundLogic_OnLevelLoadFinish;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.RoundLogic.OnLevelLoadFinish -= RoundLogic_OnLevelLoadFinish;
-        }
-
         /// <summary>
         /// Same but without shuffle and swapping depend of player port
         /// </summary>
-        private void RoundLogic_OnLevelLoadFinish(On.TowerFall.RoundLogic.orig_OnLevelLoadFinish orig, TowerFall.RoundLogic self)
+        /// 
+        [HarmonyPrefix]
+        [HarmonyPatch("OnLevelLoadFinish")]
+        public static bool RoundLogic_OnLevelLoadFinish(TowerFall.RoundLogic __instance)
         {
-            if (!(self is LevelTestRoundLogic))
+            if (!(__instance is LevelTestRoundLogic))
             {
-                orig(self);
-                return;
+                return false;
             }
 
-            var session = self.Session;
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+
+            var session = __instance.Session;
 
             List<Vector2> xMLPositions = session.CurrentLevel.GetXMLPositions("PlayerSpawn");
             if (xMLPositions.Count == 0)
@@ -55,7 +44,7 @@ namespace TF.EX.Patchs.RoundLogic
                 {
                     Player player = new Player(
                         i,
-                        xMLPositions.GetPositionByPlayerDraw(_netplayManager.ShouldSwapPlayer(), i) + Vector2.UnitY * 2f,
+                        xMLPositions.GetPositionByPlayerDraw(netplayManager.ShouldSwapPlayer(), i) + Vector2.UnitY * 2f,
                         session.TestTeam,
                         session.TestTeam,
                         PlayerInventory.Default,
@@ -73,6 +62,8 @@ namespace TF.EX.Patchs.RoundLogic
             }
 
             session.StartRound();
+
+            return false;
         }
     }
 }

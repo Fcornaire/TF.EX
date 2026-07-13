@@ -15,8 +15,8 @@ namespace TF.EX.Utils
         [Fact]
         public async Task TestReplayComparison()
         {
-            string replayFilePath1 = Path.Combine(_replaysFolder, "15-03-2024T20-54-27.tow"); //Weird desynch
-            string replayFilePath2 = Path.Combine(_replaysFolder, "15-03-2024T20-54-20_gog.tow");
+            string replayFilePath1 = Path.Combine(_replaysFolder, "06-09-2025T20-11-45.tow"); //Weird desynch
+            string replayFilePath2 = Path.Combine(_replaysFolder, "06-09-2025T20-11-46.tow");
 
             List<TF.EX.Domain.Models.Record> record1 = (await ReplayService.ToReplay(replayFilePath1)).Record;
             List<TF.EX.Domain.Models.Record> record2 = (await ReplayService.ToReplay(replayFilePath2)).Record;

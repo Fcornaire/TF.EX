@@ -2,6 +2,7 @@
 using Monocle;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models.WebSocket;
+using TF.EX.Domain.Utils;
 using TowerFall;
 
 namespace TF.EX.Domain.CustomComponent
@@ -27,6 +28,8 @@ namespace TF.EX.Domain.CustomComponent
         private string[] lengthNames = new string[4] { "INSTANT MATCH", "QUICK MATCH", "STANDARD MATCH", "EPIC MATCH" };
 
         public Vector2 InitialPosition => initialPosition;
+
+        private OutlineText cantJoinReason;
 
         public LobbyPanel(float x, float y) : base(-1)
         {
@@ -82,6 +85,11 @@ namespace TF.EX.Domain.CustomComponent
                 Remove(variant);
             }
 
+            if (cantJoinReason != null)
+            {
+                Remove(cantJoinReason);
+            }
+
             variantsImages.Clear();
         }
 
@@ -90,8 +98,25 @@ namespace TF.EX.Domain.CustomComponent
             RemoveComponents();
 
             UpdateMapIcon(lobby.GameData.MapId);
-            UpdateTitle(lobby.GameData.MapId);
             UpdateMode(lobby.GameData.Mode);
+            UpdateTitle(lobby.GameData.MapId);
+
+            var (canJoin, reason) = (lobby.CanJoin, lobby.CanNotJoinReason);
+            if (!canJoin)
+            {
+                cantJoinReason = new OutlineText(TFGame.Font, reason)
+                {
+                    Scale = Vector2.One * 1.3f,
+                    Color = Color.Red,
+                    OutlineColor = Color.Black
+                };
+
+                cantJoinReason.Position.Y += 5;
+
+                Add(cantJoinReason);
+                return;
+            }
+
             UpdateVariant(lobby.GameData.Variants);
             UpdateMatchLength(lobby.GameData.MatchLength);
         }
@@ -103,7 +128,7 @@ namespace TF.EX.Domain.CustomComponent
 
         private void UpdateMapIcon(int mapId)
         {
-            var imgs = mapId == -1 ? MapButton.InitRandomVersusGraphics() : MapButton.InitVersusGraphics(mapId);
+            var imgs = mapId == -1 ? MapButton.InitRandomVersusGraphics() : VersusGraphics.GetVersusGraphics(mapId);
 
             if (block != null)
             {

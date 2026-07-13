@@ -26,6 +26,7 @@
         public const string INVENTORY_INVISIBLE_DELEGATE = "InvisibleDelegate";
         public const string INVENTORY_SHIELD_DELEGATE = "ShieldDelegate";
         public const string RIGHT_STICK_VARIANT_NAME = "RightStickShot";
+        public const string RIGHT_STICK_VARIANT_FULLNAME = "TF.EX/RightStickShot";
         public const string RIGHT_STICK_VARIANT_TITLE = "RIGHT STICK SHOT";
 
         public const string NETPLAY_INPUT_DELAY_TITLE = "NETPLAY INPUT DELAY";

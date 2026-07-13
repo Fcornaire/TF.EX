@@ -4,10 +4,10 @@ namespace TF.EX.Domain.Ports
 {
     public interface IAPIManager
     {
-        void RegisterVariantStateEvents(FortModule module, string name, IStateEvents events);
+        void RegisterVariantStateEvents(Mod module, string name, IStateEvents events);
         Dictionary<string, string> GetStates();
         void LoadStates(Dictionary<string, string> state);
-        void MarkModuleAsSafe(FortModule module);
+        void MarkModuleAsSafe(Mod module);
         bool IsModuleSafe(string id);
     }
 

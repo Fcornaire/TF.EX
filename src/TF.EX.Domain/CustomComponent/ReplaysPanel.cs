@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework;
 using Monocle;
 using TF.EX.Common.Extensions;
 using TF.EX.Domain.Extensions;
+using TF.EX.Domain.Utils;
 using TowerFall;
 
 namespace TF.EX.Domain.CustomComponent
@@ -249,7 +250,7 @@ namespace TF.EX.Domain.CustomComponent
 
         private void UpdateMapIcon(int mapId)
         {
-            var imgs = MapButton.InitVersusGraphics(mapId);
+            var imgs = VersusGraphics.GetVersusGraphics(mapId);
 
             block = imgs[0];
             icon = imgs[1];

@@ -1,74 +1,55 @@
-﻿using FortRise;
-using Microsoft.Extensions.Logging;
+﻿using HarmonyLib;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Monocle;
 using MonoMod.Utils;
 using TF.EX.Common.Extensions;
+using TF.EX.Domain;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models.State;
-using TF.EX.Domain.Ports;
-using TF.EX.Domain.Ports.TF;
 using TF.EX.TowerFallExtensions;
 using TowerFall;
+using static TowerFall.Player;
 
 
 namespace TF.EX.Patchs.Entity.LevelEntity
 {
-    public class PlayerPatch : IHookable
+    [HarmonyPatch(typeof(Player))]
+    public class PlayerPatch
     {
-        private readonly INetplayManager _netplayManager;
-        private readonly IInputService _inputService;
-        private readonly ILogger logger;
-
-        public PlayerPatch(INetplayManager netplayManager, IInputService inputService, ILogger logger)
+        [HarmonyPostfix]
+        [HarmonyPatch(MethodType.Constructor)]
+        [HarmonyPatch([typeof(int), typeof(Vector2), typeof(Allegiance), typeof(Allegiance), typeof(PlayerInventory), typeof(HatStates), typeof(bool), typeof(bool), typeof(bool)])]
+        public static void Player_ctor(Player __instance)
         {
-            _netplayManager = netplayManager;
-            _inputService = inputService;
-            this.logger = logger;
-        }
-
-        public void Load()
-        {
-            On.TowerFall.Player.DoWrapRender += Player_DoWrapRender;
-            On.TowerFall.Player.Update += Player_Update;
-            On.TowerFall.Player.ctor += Player_ctor;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.Player.DoWrapRender -= Player_DoWrapRender;
-            On.TowerFall.Player.Update -= Player_Update;
-            On.TowerFall.Player.ctor -= Player_ctor;
-        }
-
-        private void Player_ctor(On.TowerFall.Player.orig_ctor orig, TowerFall.Player self, int playerIndex, Vector2 position, Allegiance allegiance, Allegiance teamColor, TowerFall.PlayerInventory inventory, TowerFall.Player.HatStates hatState, bool frozen, bool flash, bool indicator)
-        {
-            orig(self, playerIndex, position, allegiance, teamColor, inventory, hatState, frozen, flash, indicator);
-
-            var dynPlayer = DynamicData.For(self);
+            var dynPlayer = DynamicData.For(__instance);
             dynPlayer.Add("isAimingRight", false);
         }
 
-        private void Player_Update(On.TowerFall.Player.orig_Update orig, TowerFall.Player self)
+        [HarmonyPostfix]
+        [HarmonyPatch("Update")]
+        public static void Player_Update_Postfix(TowerFall.Player __instance)
         {
-            orig(self);
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            var inputService = ServiceCollections.ResolveInputService();
+            var logger = ServiceCollections.ResolveLogger();
+            var context = ServiceCollections.ResolveContext();
 
-            if (_netplayManager.IsInit())
+            if (netplayManager.IsInit())
             {
-                var dynPlayer = DynamicData.For(self);
+                var dynPlayer = DynamicData.For(__instance);
 
                 // Sprite update are done in the DoWrapRender method, so we manually call it here to have it in the game state
-                var gameplayLayer = self.Level.GetGameplayLayer();
+                var gameplayLayer = __instance.Level.GetGameplayLayer();
                 var blendState = gameplayLayer.BlendState;
                 var samplerState = gameplayLayer.SamplerState;
                 var effect = gameplayLayer.Effect;
                 var cameraMultiplier = gameplayLayer.CameraMultiplier;
 
-                Draw.SpriteBatch.Begin(SpriteSortMode.Deferred, blendState, samplerState, DepthStencilState.None, RasterizerState.CullNone, effect, Matrix.Lerp(Matrix.Identity, self.Scene.Camera.Matrix, cameraMultiplier));
+                Draw.SpriteBatch.Begin(SpriteSortMode.Deferred, blendState, samplerState, DepthStencilState.None, RasterizerState.CullNone, effect, Matrix.Lerp(Matrix.Identity, __instance.Scene.Camera.Matrix, cameraMultiplier));
                 try
                 {
-                    self.DoWrapRender();
+                    __instance.DoWrapRender();
                 }
                 catch (Exception e)
                 {
@@ -76,29 +57,30 @@ namespace TF.EX.Patchs.Entity.LevelEntity
                 }
                 Draw.SpriteBatch.End();
 
+                var hasRightStickVariant = context.Registry.Variants.GetVariant(Constants.RIGHT_STICK_VARIANT_NAME) != null;
 
-                if (!TowerFall.Player.ShootLock && VariantManager.GetCustomVariant(Constants.RIGHT_STICK_VARIANT_NAME))
+                if (!TowerFall.Player.ShootLock && hasRightStickVariant)
                 {
-                    var playerIndex = self.PlayerIndex;
-                    if (_netplayManager.ShouldSwapPlayer())
+                    var playerIndex = __instance.PlayerIndex;
+                    if (netplayManager.ShouldSwapPlayer())
                     {
                         if (playerIndex == 0)
                         {
-                            playerIndex = _inputService.GetLocalPlayerInputIndex();
+                            playerIndex = inputService.GetLocalPlayerInputIndex();
                         }
                         else
                         {
-                            playerIndex = _inputService.GetRemotePlayerInputIndex();
+                            playerIndex = inputService.GetRemotePlayerInputIndex();
                         }
                     }
 
-                    var input = _inputService.GetCurrentInput(playerIndex);
+                    var input = inputService.GetCurrentInput(playerIndex);
 
                     if (input.aim_right_axis.IsAfterThreshold())
                     {
                         if (!dynPlayer.Get<bool>("isAimingRight"))
                         {
-                            ShootArrowWithRightStick(self);
+                            ShootArrowWithRightStick(__instance);
                             dynPlayer.Set("isAimingRight", true);
                         }
                     }
@@ -110,34 +92,39 @@ namespace TF.EX.Patchs.Entity.LevelEntity
             }
         }
 
-        private void Player_DoWrapRender(On.TowerFall.Player.orig_DoWrapRender orig, TowerFall.Player self)
+        [HarmonyPrefix]
+        [HarmonyPatch("DoWrapRender")]
+        public static void Player_DoWrapRender_Prefix(TowerFall.Player __instance)
         {
-            if (_netplayManager.IsTestMode() || _netplayManager.IsReplayMode())
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            if (netplayManager.IsTestMode() || netplayManager.IsReplayMode())
             {
-                self.DebugRender();
+                __instance.DebugRender();
             }
-            orig(self);
         }
 
-        private void ShootArrowWithRightStick(Player self)
+        private static void ShootArrowWithRightStick(Player self)
         {
-            var dynPlayer = DynamicData.For(self);
-            Counter spamShotCounter = dynPlayer.Get<Counter>("spamShotCounter");
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            var inputService = ServiceCollections.ResolveInputService();
+
+            var dynPlayer = Traverse.Create(self);
+            var spamShotCounter = dynPlayer.Field("spamShotCounter").GetValue<Counter>();
 
             var playerIndex = self.PlayerIndex;
-            if (_netplayManager.ShouldSwapPlayer())
+            if (netplayManager.ShouldSwapPlayer())
             {
                 if (playerIndex == 0)
                 {
-                    playerIndex = _inputService.GetLocalPlayerInputIndex();
+                    playerIndex = inputService.GetLocalPlayerInputIndex();
                 }
                 else
                 {
-                    playerIndex = _inputService.GetRemotePlayerInputIndex();
+                    playerIndex = inputService.GetRemotePlayerInputIndex();
                 }
             }
 
-            var input = _inputService.GetCurrentInput(playerIndex);
+            var input = inputService.GetCurrentInput(playerIndex);
             var rightAimDirection = TowerFall.PlayerInput.GetAimDirection(input.aim_right_axis.ToTFVector(), false);
 
             if (rightAimDirection.HasValue)
@@ -150,9 +137,9 @@ namespace TF.EX.Patchs.Entity.LevelEntity
                     }
                     var currentAimDirection = self.AimDirection;
 
-                    dynPlayer.Set("AimDirection", rightAimDirection.Value);
-                    var autoLockAngle = dynPlayer.Invoke<float>("FindAutoLockAngle");
-                    dynPlayer.Set("AimDirection", currentAimDirection);
+                    dynPlayer.Property("AimDirection").SetValue(rightAimDirection.Value);
+                    var autoLockAngle = dynPlayer.Method("FindAutoLockAngle").GetValue<float>();
+                    dynPlayer.Property("AimDirection").SetValue(currentAimDirection);
 
                     spamShotCounter.Set(10);
                     self.ArrowHUD.OnShoot();

@@ -289,7 +289,7 @@ namespace TF.EX.TowerFallExtensions
             }
 
             var dynScene = DynamicData.For(level as Monocle.Scene);
-            dynScene.Set("FrameCounter", gameState.Frame);
+            dynScene.Set("FrameCounter", (float)gameState.Frame);
             level.EndScreenShake();
 
             level.Frozen = gameState.IsLevelFrozen;
@@ -607,7 +607,7 @@ namespace TF.EX.TowerFallExtensions
             gameState.LoadBGMushrooms(level);
 
             //Background and Foreground load
-            gameState.LoadBackgroundAndForegroundElements(level);
+            //gameState.LoadBackgroundAndForegroundElements(level);
 
             var sine = dynLightingLayer.Get<SineWave>("sine");
             sine.UpdateAttributes(gameState.Layer.LightingLayerSine);
@@ -955,27 +955,27 @@ namespace TF.EX.TowerFallExtensions
             var sessionService = ServiceCollections.ResolveSessionService();
 
             //Background save
-            var bgElements = level.Background.GetBGElements().ToArray();
-            List<BGElement> bgs = new List<BGElement>();
-            for (int i = 0; i < bgElements.Length; i++)
-            {
-                var bgModel = bgElements[i].GetState(i);
-                bgs.Add(bgModel);
-            }
-            gameState.Layer.BackgroundElements = bgs;
+            //var bgElements = level.Background.GetBGElements().ToArray();
+            //List<BGElement> bgs = new List<BGElement>();
+            //for (int i = 0; i < bgElements.Length; i++)
+            //{
+            //    var bgModel = bgElements[i].GetState(i);
+            //    bgs.Add(bgModel);
+            //}
+            //gameState.Layer.BackgroundElements = bgs;
 
             //Foreground save
-            if (level.Foreground != null)
-            {
-                var fgElements = level.Foreground.GetBGElements().ToArray();
-                List<BGElement> fgs = new List<BGElement>();
-                for (int i = 0; i < fgElements.Length; i++)
-                {
-                    var fgModel = fgElements[i].GetState(i);
-                    fgs.Add(fgModel);
-                }
-                gameState.Layer.ForegroundElements = fgs;
-            }
+            //if (level.Foreground != null)
+            //{
+            //    var fgElements = level.Foreground.GetBGElements().ToArray();
+            //    List<BGElement> fgs = new List<BGElement>();
+            //    for (int i = 0; i < fgElements.Length; i++)
+            //    {
+            //        var fgModel = fgElements[i].GetState(i);
+            //        fgs.Add(fgModel);
+            //    }
+            //    gameState.Layer.ForegroundElements = fgs;
+            //}
 
             var dynLightingLayer = DynamicData.For(level.LightingLayer);
 

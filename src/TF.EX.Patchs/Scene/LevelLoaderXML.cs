@@ -1,54 +1,38 @@
-﻿using Microsoft.Xna.Framework;
+﻿using HarmonyLib;
+using Microsoft.Xna.Framework;
 using MonoMod.Utils;
 using TF.EX.Domain;
 using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models.State;
-using TF.EX.Domain.Ports;
 using TF.EX.TowerFallExtensions;
 using TowerFall;
 
 namespace TF.EX.Patchs.Scene
 {
-    public class LevelLoaderXMLPatch : IHookable
+    [HarmonyPatch(typeof(LevelLoaderXML))]
+    public class LevelLoaderXMLPatch
     {
-        private readonly INetplayManager _netplayManager;
-
-        public LevelLoaderXMLPatch(INetplayManager netplayManager)
+        [HarmonyPostfix]
+        [HarmonyPatch("Update")]
+        public static void LevelLoaderXML_Update(LevelLoaderXML __instance)
         {
-            _netplayManager = netplayManager;
-        }
-
-        public void Load()
-        {
-            On.TowerFall.LevelLoaderXML.ctor += LevelLoaderXML_ctor;
-            On.TowerFall.LevelLoaderXML.Update += LevelLoaderXML_Update;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.LevelLoaderXML.ctor -= LevelLoaderXML_ctor;
-            On.TowerFall.LevelLoaderXML.Update -= LevelLoaderXML_Update;
-        }
-
-        private void LevelLoaderXML_Update(On.TowerFall.LevelLoaderXML.orig_Update orig, LevelLoaderXML self)
-        {
-            orig(self);
-
-            if (self.Finished
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            if (__instance.Finished
                 && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
-                && !_netplayManager.IsReplayMode()
-                && !_netplayManager.IsSynchronized()
-                && self.Level.Session.RoundIndex == 0
+                && !netplayManager.IsReplayMode()
+                && !netplayManager.IsSynchronized()
+                && __instance.Level.Session.RoundIndex == 0
                 )
             {
-                Notification.Create(self.Level, "Waiting for other players...", 20, 0, false, true);
+                Notification.Create(__instance.Level, "Waiting for other players...", 20, 0, false, true);
             }
         }
 
-        private void LevelLoaderXML_ctor(On.TowerFall.LevelLoaderXML.orig_ctor orig, LevelLoaderXML self, TowerFall.Session session)
+        [HarmonyPostfix]
+        [HarmonyPatch(MethodType.Constructor, [typeof(TowerFall.Session)])]
+        public static void LevelLoaderXML_ctor(TowerFall.Session session)
         {
-            orig(self, session);
             Reset(session);
         }
 
@@ -56,7 +40,7 @@ namespace TF.EX.Patchs.Scene
         /// Reset for next round
         /// </summary>
         /// <param name="session"></param>
-        private void Reset(TowerFall.Session session)
+        private static void Reset(TowerFall.Session session)
         {
             TFGame.Instance.Screen.Offset = Vector2.Zero;
 

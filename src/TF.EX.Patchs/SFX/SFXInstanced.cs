@@ -1,49 +1,34 @@
-﻿using Monocle;
+﻿using HarmonyLib;
+using Monocle;
 using MonoMod.Utils;
-using TF.EX.Domain.Ports;
-using TF.EX.Domain.Ports.TF;
+using TF.EX.Domain;
 
 namespace TF.EX.Patchs.SFX
 {
-    public class SFXInstancedPatch : IHookable
+    [HarmonyPatch(typeof(SFXInstanced))]
+    public class SFXInstancedPatch
     {
-        private readonly INetplayManager _netplayManager;
-        private readonly ISFXService _sfxService;
-
-        public SFXInstancedPatch(INetplayManager netplayManager, ISFXService sfxService)
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(SFXInstanced.Play))]
+        public static bool SFXInstanced_Play(SFXInstanced __instance, float panX, float volume)
         {
-            _netplayManager = netplayManager;
-            _sfxService = sfxService;
-        }
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
 
-        public void Load()
-        {
-            On.Monocle.SFXInstanced.Play += SFXInstanced_Play;
-        }
-
-        public void Unload()
-        {
-            On.Monocle.SFXInstanced.Play -= SFXInstanced_Play;
-        }
-
-        private void SFXInstanced_Play(On.Monocle.SFXInstanced.orig_Play orig, Monocle.SFXInstanced self, float panX, float volume)
-        {
-
-            if (!_netplayManager.IsInit())
+            if (!netplayManager.IsInit())
             {
-                orig(self, panX, volume);
-                return;
+                return true;
             }
 
-            if (_netplayManager.IsUpdating())
+            if (netplayManager.IsUpdating())
             {
-                return; //Ignore SFXs on the first frame of a rollback (Coroutines update might play a sound)
+                return true; //Ignore SFXs on the first frame of a rollback (Coroutines update might play a sound)
             }
 
-            var dynSFX = DynamicData.For(self);
+            var dynSFX = DynamicData.For(__instance);
 
-            if (self.Data != null && !(Audio.MasterVolume <= 0f))
+            if (__instance.Data != null && !(Audio.MasterVolume <= 0f))
             {
+                var sfxService = ServiceCollections.ResolveSFXService();
                 dynSFX.Invoke("AddToPlayedList", panX, volume);
 
                 volume *= Audio.MasterVolume;
@@ -51,14 +36,16 @@ namespace TF.EX.Patchs.SFX
                 var sfxToPlay = new Domain.Models.State.SFX
                 {
                     Frame = (int)Monocle.Engine.Instance.Scene.FrameCounter,
-                    Name = dynSFX.Get<string>("SFXName"),
+                    Name = sfxService.GetSoundEffectName(__instance.Data),
                     Volume = volume,
                     Pan = Monocle.SFX.CalculatePan(panX),
-                    Data = self.Data
+                    Data = __instance.Data
                 };
 
-                _sfxService.AddDesired(sfxToPlay);
+                sfxService.AddDesired(sfxToPlay);
             }
+
+            return false;
         }
     }
 }

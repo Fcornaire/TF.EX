@@ -1,34 +1,34 @@
-﻿using Microsoft.Xna.Framework;
+﻿using HarmonyLib;
+using Microsoft.Xna.Framework;
+using TowerFall;
 
 namespace TF.EX.Patchs.Entity
 {
-    public class TreasureSpawnerPatch : IHookable
+    [HarmonyPatch(typeof(TreasureSpawner))]
+    public class TreasureSpawnerPatch
     {
-        public void Load()
+        [HarmonyPostfix]
+        [HarmonyPatch(MethodType.Constructor, [typeof(Session), typeof(int[]), typeof(float), typeof(bool)])]
+        public static void TreasureSpawner_ctor_Session_Int32Array_float_bool(TreasureSpawner __instance)
         {
-            On.TowerFall.TreasureSpawner.GetChestSpawnsForLevel += TreasureSpawner_GetChestSpawnsForLevel;
-            On.TowerFall.TreasureSpawner.ctor_Session_Int32Array_float_bool += TreasureSpawner_ctor_Session_Int32Array_float_bool;
+            Traverse.Create(__instance).Property("Random").SetValue(Monocle.Calc.Random);
+            //var dynSpawner = MonoMod.Utils.DynamicData.For(__instance);
+            //dynSpawner.Set("Random", Monocle.Calc.Random);
         }
 
-        public void Unload()
-        {
-            On.TowerFall.TreasureSpawner.GetChestSpawnsForLevel -= TreasureSpawner_GetChestSpawnsForLevel;
-            On.TowerFall.TreasureSpawner.ctor_Session_Int32Array_float_bool -= TreasureSpawner_ctor_Session_Int32Array_float_bool;
-        }
-
-        private void TreasureSpawner_ctor_Session_Int32Array_float_bool(On.TowerFall.TreasureSpawner.orig_ctor_Session_Int32Array_float_bool orig, TowerFall.TreasureSpawner self, TowerFall.Session session, int[] mask, float arrowChance, bool arrowShuffle)
-        {
-            orig(self, session, mask, arrowChance, arrowShuffle);
-
-            var dynSpawner = MonoMod.Utils.DynamicData.For(self);
-            dynSpawner.Set("Random", Monocle.Calc.Random);
-        }
-
-        private List<TowerFall.TreasureChest> TreasureSpawner_GetChestSpawnsForLevel(On.TowerFall.TreasureSpawner.orig_GetChestSpawnsForLevel orig, TowerFall.TreasureSpawner self, List<Vector2> chestPositions, List<Vector2> bigChestPositions)
+        [HarmonyPrefix]
+        [HarmonyPatch("GetChestSpawnsForLevel")]
+        public static void TreasureSpawner_GetChestSpawnsForLevel_Prefix(List<Vector2> chestPositions, ref List<Vector2> bigChestPositions)
         {
             Calc.CalcPatch.RegisterRng();
             Calc.CalcPatch.RegisterShuffle(chestPositions);
-            var res = orig(self, chestPositions, new List<Vector2>()); //TODO: re enable big chests
+            bigChestPositions = new List<Vector2>(); //TODO: re enable big chests
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("GetChestSpawnsForLevel")]
+        public static void TreasureSpawner_GetChestSpawnsForLevel_Postfix()
+        {
             Calc.CalcPatch.UnregisterRng();
 
             //if (res.Count > 0) //Useful for test only
@@ -39,8 +39,6 @@ namespace TF.EX.Patchs.Entity
             //        dynPickup.Set("pickups", new List<TowerFall.Pickups> { TowerFall.Pickups.LavaOrb });
             //    }
             //}
-
-            return res;
         }
     }
 }

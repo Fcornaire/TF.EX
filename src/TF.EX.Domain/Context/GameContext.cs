@@ -22,7 +22,7 @@ namespace TF.EX.Domain.Context
         int GetSeed();
         Rng GetRng();
         void UpdateRng(Rng rng);
-        void InitializeReplay(int id, GameData gameData = null);
+        void InitializeReplay(int id, GameData gameData = null, ICollection<CustomMod> mods = null);
         void AddRecord(GameState gameState, bool shouldSwapPlayer);
         void RemovePredictedRecords(int frame);
         Replay GetReplay();
@@ -57,6 +57,7 @@ namespace TF.EX.Domain.Context
         void ResetArcherSelections();
         void RemoveArcher(int playerIndex);
         void ClearSfxs();
+        string GetSoundEffectName(SoundEffect data);
     }
 
     internal class GameContext : IGameContext
@@ -165,7 +166,7 @@ namespace TF.EX.Domain.Context
             _rng = new Rng { Seed = rng.Seed, Gen_type = rng.Gen_type.ToList() };
         }
 
-        public void InitializeReplay(int towerId, GameData gameData = null)
+        public void InitializeReplay(int towerId, GameData gameData = null, ICollection<CustomMod> mods = null)
         {
             if (_replay == null)
             {
@@ -176,6 +177,7 @@ namespace TF.EX.Domain.Context
                         Id = towerId,
                         PlayerDraw = PlayerDraw.Unkown,
                         Version = ServiceCollections.CurrentReplayVersion,
+                        Mods = mods.ToList() ?? new List<CustomMod>(),
                     },
                 };
 
@@ -361,7 +363,7 @@ namespace TF.EX.Domain.Context
             var toLoad = sFXes.ToList();
             toLoad.ForEach(sfx =>
             {
-                if (_soundEffects.ContainsKey(sfx.Name))
+                if (sfx != null && !string.IsNullOrEmpty(sfx.Name) && _soundEffects.ContainsKey(sfx.Name))
                 {
                     sfx.Data = _soundEffects[sfx.Name];
                 }
@@ -412,7 +414,7 @@ namespace TF.EX.Domain.Context
                 return;
             }
 
-            FortRise.Logger.Log($"Archer already selected for player {index}");
+            //FortRise.Logger.Log($"Archer already selected for player {index}");
         }
 
         public void ResetArcherSelections()
@@ -435,6 +437,11 @@ namespace TF.EX.Domain.Context
             ClearDesiredSfx();
             _currentSfxs.Clear();
             _soundEffects.Clear();
+        }
+
+        public string GetSoundEffectName(SoundEffect data)
+        {
+            return _soundEffects.FirstOrDefault(kvp => kvp.Value == data).Key;
         }
     }
 }

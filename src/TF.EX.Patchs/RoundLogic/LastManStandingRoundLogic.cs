@@ -1,33 +1,23 @@
-﻿using TF.EX.Domain.Ports;
+﻿using HarmonyLib;
+using TF.EX.Domain;
+using TowerFall;
 
 namespace TF.EX.Patchs.RoundLogic
 {
-    internal class LastManStandingRoundLogicPatch : IHookable
+    [HarmonyPatch(typeof(LastManStandingRoundLogic))]
+    internal class LastManStandingRoundLogicPatch
     {
-        private readonly INetplayManager _netplayManager;
-
-        public LastManStandingRoundLogicPatch(INetplayManager netplayManager)
+        [HarmonyPrefix]
+        [HarmonyPatch("OnLevelLoadFinish")]
+        public static bool LastManStandingRoundLogic_OnLevelLoadFinish()
         {
-            _netplayManager = netplayManager;
-        }
-
-        public void Load()
-        {
-            On.TowerFall.LastManStandingRoundLogic.OnLevelLoadFinish += LastManStandingRoundLogic_OnLevelLoadFinish; ;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.LastManStandingRoundLogic.OnLevelLoadFinish -= LastManStandingRoundLogic_OnLevelLoadFinish;
-        }
-
-        private void LastManStandingRoundLogic_OnLevelLoadFinish(On.TowerFall.LastManStandingRoundLogic.orig_OnLevelLoadFinish orig, TowerFall.LastManStandingRoundLogic self)
-        {
-            if (!_netplayManager.IsRollbackFrame()) //Prevent adding a VersusStart on a rollback frame
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            if (!netplayManager.IsRollbackFrame()) //Prevent adding a VersusStart on a rollback frame
             {
-                orig(self);
+                return true;
             }
+
+            return false;
         }
     }
-
 }

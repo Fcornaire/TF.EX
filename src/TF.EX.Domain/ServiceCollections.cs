@@ -1,10 +1,11 @@
-﻿using LazyCache;
+﻿using FortRise;
+using LazyCache;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using TF.EX.Common;
-using TF.EX.Common.Logging;
+using TF.EX.Common.Interop;
 using TF.EX.Domain.Context;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Ports;
@@ -23,7 +24,7 @@ namespace TF.EX.Domain
         private static CancellationTokenSource _resetCacheToken = new CancellationTokenSource();
         public static readonly ReplayVersion CurrentReplayVersion = ReplayVersionExtensions.GetLatest();
 
-        public static void RegisterServices()
+        public static void RegisterServices(IModuleContext context, ILogger logger)
         {
             if (ServiceCollection != null)
             {
@@ -35,7 +36,8 @@ namespace TF.EX.Domain
             ServiceCollection.AddLazyCache();
 
             ServiceCollection.AddSingleton<IAutoUpdater, AutoUpdater>();
-            ServiceCollection.AddSingleton<ILogger, Logger>();
+            ServiceCollection.AddSingleton(logger);
+            ServiceCollection.AddSingleton(context);
 
             //TODO: refactor , only game context should be registered as singleton
             ServiceCollection.AddSingleton<IGameContext, GameContext>();
@@ -130,9 +132,15 @@ namespace TF.EX.Domain
 
         public static IMatchmakingService ResolveMatchmakingService() { return ServiceProvider.GetRequiredService<IMatchmakingService>(); }
 
+        public static IArcherService ResolveArcherService() { return ServiceProvider.GetRequiredService<IArcherService>(); }
+
         public static IRngService ResolveRngService() { return ServiceProvider.GetRequiredService<IRngService>(); }
 
         public static IReplayService ResolveReplayService() { return ServiceProvider.GetRequiredService<IReplayService>(); }
+
+        public static IAutoUpdater ResolveAutoUpdater() { return ServiceProvider.GetRequiredService<IAutoUpdater>(); }
+
+        public static ISyncTestUtilsService ResolveSyncTestUtilsService() { return ServiceProvider.GetRequiredService<ISyncTestUtilsService>(); }
 
         public static IInputService ResolveInputService() { return ServiceProvider.GetRequiredService<IInputService>(); }
 
@@ -140,12 +148,23 @@ namespace TF.EX.Domain
 
         public static ISFXService ResolveSFXService() { return ServiceProvider.GetRequiredService<ISFXService>(); }
 
+        public static IWiderSetModApi ResolveWiderSetModApi()
+        {
+            var context = ServiceProvider.GetRequiredService<IModuleContext>();
+            return context.Interop.GetApi<IWiderSetModApi>(WiderSetModApiData.Name);
+        }
+
         public static IAPIManager ResolveAPIManager()
         {
             return ServiceProvider.GetService<IAPIManager>();
         }
 
         public static ILogger ResolveLogger() { return ServiceProvider.GetRequiredService<ILogger>(); }
+
+        public static IModuleContext ResolveContext()
+        {
+            return ServiceProvider.GetRequiredService<IModuleContext>();
+        }
 
         public static void ResetState()
         {

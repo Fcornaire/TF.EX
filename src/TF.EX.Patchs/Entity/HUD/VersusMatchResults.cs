@@ -1,40 +1,28 @@
-﻿using MonoMod.Utils;
-using TF.EX.Domain.Ports.TF;
+﻿using HarmonyLib;
+using MonoMod.Utils;
+using TF.EX.Domain;
 using TowerFall;
 
 namespace TF.EX.Patchs.Entity.HUD
 {
-    public class VersusMatchResultsPatch : IHookable
+    [HarmonyPatch(typeof(VersusMatchResults))]
+    public class VersusMatchResultsPatch
     {
-        private readonly IRngService _rngService;
-
-        public VersusMatchResultsPatch(IRngService rngService)
+        [HarmonyPostfix]
+        [HarmonyPatch(MethodType.Constructor)]
+        [HarmonyPatch([typeof(Session), typeof(VersusRoundResults)])]
+        public static void VersusMatchResults_ctor(VersusMatchResults __instance, Session session)
         {
-            _rngService = rngService;
-        }
-
-        public void Load()
-        {
-            On.TowerFall.VersusMatchResults.ctor += VersusMatchResults_ctor;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.VersusMatchResults.ctor -= VersusMatchResults_ctor;
-        }
-
-        private void VersusMatchResults_ctor(On.TowerFall.VersusMatchResults.orig_ctor orig, TowerFall.VersusMatchResults self, TowerFall.Session session, TowerFall.VersusRoundResults roundResults)
-        {
-            orig(self, session, roundResults);
+            var rngService = ServiceCollections.ResolveRngService();
 
             (TFGame.Instance.Scene as Level).Frozen = true;
 
-            var dynVersusMatchResults = DynamicData.For(self);
+            var dynVersusMatchResults = DynamicData.For(__instance);
             dynVersusMatchResults.Add("HasReset", false);
 
-            session.MatchSettings.RandomLevelSeed = _rngService.GetSeed();
+            session.MatchSettings.RandomLevelSeed = rngService.GetSeed();
 
-            var entity = new TowerFall.VersusSeedDisplay(session.MatchSettings.RandomSeedIcons);
+            var entity = new VersusSeedDisplay(session.MatchSettings.RandomSeedIcons);
             session.CurrentLevel.Layers[entity.LayerIndex].Entities.Add(entity);
         }
     }

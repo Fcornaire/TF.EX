@@ -7,6 +7,9 @@ namespace TF.EX.Domain.Ports.TF
     {
         void AddDesired(SFX toPlay);
         void AddSoundEffect(SoundEffect data, string filename);
+
+        string GetSoundEffectName(SoundEffect data);
+
         void Clear();
         IEnumerable<SFX> Get();
         void Load(IEnumerable<SFX> sFXes);

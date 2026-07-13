@@ -1,5 +1,4 @@
-﻿using System;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using System.Text;
 using TF.EX.Domain.Extensions;
 
@@ -53,6 +52,7 @@ namespace TF.EX.Domain.Models
 
         protected override bool ReleaseHandle()
         {
+            //TODO: huh ?
             if (!this.IsInvalid)
             {
                 _free(handle);

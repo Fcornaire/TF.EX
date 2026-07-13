@@ -1,33 +1,28 @@
-﻿using Microsoft.Xna.Framework;
+﻿using HarmonyLib;
+using Microsoft.Xna.Framework;
+using TF.EX.Domain;
 using TF.EX.Domain.Models.State;
-using TF.EX.Domain.Ports.TF;
+using TowerFall;
 
 namespace TF.EX.Patchs.Entity.LevelEntity
 {
-    internal class ChainPatch : IHookable
+    [HarmonyPatch(typeof(Chain))]
+    internal class ChainPatch
     {
-        private readonly IRngService _rngService;
-
-        public ChainPatch(IRngService rngService)
+        [HarmonyPrefix]
+        [HarmonyPatch(MethodType.Constructor, [typeof(Vector2), typeof(int)])]
+        public static void Chain_ctor_Vector2_int_Prefix()
         {
-            _rngService = rngService;
+            var rngService = ServiceCollections.ResolveRngService();
+            rngService.Get().ResetRandom(ref Monocle.Calc.Random);
         }
 
-        public void Load()
+        [HarmonyPostfix]
+        [HarmonyPatch(MethodType.Constructor, [typeof(Vector2), typeof(int)])]
+        public static void Chain_ctor_Vector2_int_Postfix()
         {
-            On.TowerFall.Chain.ctor_Vector2_int += Chain_ctor_Vector2_int;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.Chain.ctor_Vector2_int -= Chain_ctor_Vector2_int;
-        }
-
-        private void Chain_ctor_Vector2_int(On.TowerFall.Chain.orig_ctor_Vector2_int orig, TowerFall.Chain self, Vector2 position, int height)
-        {
-            _rngService.Get().ResetRandom(ref Monocle.Calc.Random);
-            orig(self, position, height);
-            _rngService.AddGen(RngGenType.Integer);
+            var rngService = ServiceCollections.ResolveRngService();
+            rngService.AddGen(RngGenType.Integer);
         }
     }
 }

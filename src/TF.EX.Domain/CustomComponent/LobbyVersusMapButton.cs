@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Monocle;
 using TF.EX.Domain.Models.State;
+using TF.EX.Domain.Utils;
 using TowerFall;
 
 namespace TF.EX.Domain.CustomComponent
@@ -100,7 +101,7 @@ namespace TF.EX.Domain.CustomComponent
 
         private void UpdateMapIcon()
         {
-            var imgs = ownLobby.GameData.MapId == -1 ? MapButton.InitRandomVersusGraphics() : MapButton.InitVersusGraphics(ownLobby.GameData.MapId);
+            var imgs = ownLobby.GameData.MapId == -1 ? MapButton.InitRandomVersusGraphics() : VersusGraphics.GetVersusGraphics(ownLobby.GameData.MapId);
 
             if (block != null)
             {

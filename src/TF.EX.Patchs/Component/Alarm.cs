@@ -1,36 +1,21 @@
-﻿using Monocle;
-using MonoMod.Utils;
-using TF.EX.Domain.Ports;
+﻿using HarmonyLib;
+using Monocle;
+using TF.EX.Domain;
 
 namespace TF.EX.Patchs.Component
 {
-    public class AlarmPatch : IHookable
+    [HarmonyPatch(typeof(Alarm))]
+    public class AlarmPatch
     {
-        private readonly INetplayManager netplayManager;
-
-        public AlarmPatch(INetplayManager netplayManager)
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(Alarm.Removed))]
+        public static void Alarm_Removed(Alarm __instance)
         {
-            this.netplayManager = netplayManager;
-        }
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
 
-        public void Load()
-        {
-            On.Monocle.Alarm.Removed += Alarm_Removed;
-        }
-
-        public void Unload()
-        {
-            On.Monocle.Alarm.Removed -= Alarm_Removed;
-        }
-
-        private void Alarm_Removed(On.Monocle.Alarm.orig_Removed orig, Monocle.Alarm self)
-        {
-            orig(self);
-
-            if (this.netplayManager.IsInit())
+            if (netplayManager.IsInit())
             {
-                var dynAlarm = DynamicData.For(self);
-                Stack<Alarm> cached = dynAlarm.Get<Stack<Alarm>>("cached");
+                var cached = Traverse.Create(__instance).Field("cached").GetValue<Stack<Alarm>>();
 
                 if (cached != null && cached.Any())
                 {

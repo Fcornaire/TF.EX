@@ -1,57 +1,41 @@
-﻿using Microsoft.Xna.Framework;
+﻿using HarmonyLib;
+using Microsoft.Xna.Framework;
 using Monocle;
 using MonoMod.Utils;
-using TF.EX.Domain.Ports.TF;
+using TF.EX.Domain;
 using TF.EX.Patchs.Calc;
 using TowerFall;
 
 namespace TF.EX.Patchs
 {
-    public class OrbLogicPatch : IHookable
+    [HarmonyPatch(typeof(OrbLogic))]
+    public class OrbLogicPatch
     {
-        private readonly IRngService _rngService;
-
-        public OrbLogicPatch(IRngService rngService)
-        {
-            _rngService = rngService;
-        }
-
-        public void Load()
-        {
-            On.TowerFall.OrbLogic.Update += OrbLogic_Update;
-            On.TowerFall.OrbLogic.DoTimeOrb += OrbLogic_DoTimeOrb;
-            On.TowerFall.OrbLogic.DoDarkOrb += OrbLogic_DoDarkOrb;
-            On.TowerFall.OrbLogic.DoSpaceOrb += OrbLogic_DoSpaceOrb;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.OrbLogic.Update -= OrbLogic_Update;
-            On.TowerFall.OrbLogic.DoTimeOrb -= OrbLogic_DoTimeOrb;
-            On.TowerFall.OrbLogic.DoDarkOrb -= OrbLogic_DoDarkOrb;
-            On.TowerFall.OrbLogic.DoSpaceOrb -= OrbLogic_DoSpaceOrb;
-        }
-
+        //TODO: Try with harmony generic patch
         /// <summary>
         /// Reworked since the original use Random.Choose which is generic and not patchable
         /// </summary>
-        /// <param name="orig"></param>
-        /// <param name="self"></param>
-        private void OrbLogic_DoSpaceOrb(On.TowerFall.OrbLogic.orig_DoSpaceOrb orig, TowerFall.OrbLogic self)
+        /// <param name="__instance"></param>
+
+        [HarmonyPrefix]
+        [HarmonyPatch("DoSpaceOrb")]
+        public static bool OrbLogic_DoSpaceOrb(OrbLogic __instance)
         {
-            if (!self.Level.Ending)
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            if (!__instance.Level.Ending && netplayManager.IsInit())
             {
-                _rngService.Get().ResetRandom(ref Monocle.Calc.Random);
+                var rngService = ServiceCollections.ResolveRngService();
+                rngService.Get().ResetRandom(ref Monocle.Calc.Random);
 
                 Vector2 start = TFGame.Instance.Screen.Offset;
                 Vector2 end = start;
-                end.X = Monocle.Calc.Snap(end.X, 320f, self.Level.Session.MatchSettings.Variants.OffsetWorld ? 160 : 0);
-                end.Y = Monocle.Calc.Snap(end.Y, 240f, self.Level.Session.MatchSettings.Variants.OffsetWorld ? 120 : 0);
+                end.X = Monocle.Calc.Snap(end.X, 320f, __instance.Level.Session.MatchSettings.Variants.OffsetWorld ? 160 : 0);
+                end.Y = Monocle.Calc.Snap(end.Y, 240f, __instance.Level.Session.MatchSettings.Variants.OffsetWorld ? 120 : 0);
                 end += Monocle.Calc.Random.Choose(new Vector2(-320f, 0f), new Vector2(320f, 0f), new Vector2(0f, -240f), new Vector2(0f, 240f));
 
-                _rngService.AddGen(Domain.Models.State.RngGenType.Integer);
+                rngService.AddGen(Domain.Models.State.RngGenType.Integer);
 
-                var dynOrbLogic = DynamicData.For(self);
+                var dynOrbLogic = DynamicData.For(__instance);
                 var spaceTween = dynOrbLogic.Get<Tween>("spaceTween");
 
                 spaceTween = Tween.Create(Tween.TweenMode.Persist, Ease.CubeInOut, 360, start: true);
@@ -70,27 +54,52 @@ namespace TF.EX.Patchs
                 dynSpaceTween.Add("ScreenOffsetEnd", end);
 
                 dynOrbLogic.Set("spaceTween", spaceTween);
+
+                return false;
             }
+
+            return true;
         }
 
-        private void OrbLogic_DoDarkOrb(On.TowerFall.OrbLogic.orig_DoDarkOrb orig, TowerFall.OrbLogic self)
+        [HarmonyPrefix]
+        [HarmonyPatch("DoDarkOrb")]
+        public static void OrbLogic_DoDarkOrb_Prefix()
         {
             CalcPatch.RegisterRng();
-            orig(self);
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("DoDarkOrb")]
+        public static void OrbLogic_DoDarkOrb_Postfix()
+        {
             CalcPatch.UnregisterRng();
         }
 
-        private void OrbLogic_DoTimeOrb(On.TowerFall.OrbLogic.orig_DoTimeOrb orig, TowerFall.OrbLogic self, bool delay)
+        [HarmonyPrefix]
+        [HarmonyPatch("DoTimeOrb")]
+        public static void OrbLogic_DoTimeOrb_Prefix()
         {
             CalcPatch.RegisterRng();
-            orig(self, delay);
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("DoTimeOrb")]
+        public static void OrbLogic_DoTimeOrb_Postfix()
+        {
             CalcPatch.UnregisterRng();
         }
 
-        private void OrbLogic_Update(On.TowerFall.OrbLogic.orig_Update orig, TowerFall.OrbLogic self)
+        [HarmonyPrefix]
+        [HarmonyPatch("Update")]
+        public static void OrbLogic_Update_Prefix()
         {
             CalcPatch.RegisterRng();
-            orig(self);
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("Update")]
+        public static void OrbLogic_Update_Postfix()
+        {
             CalcPatch.UnregisterRng();
         }
     }

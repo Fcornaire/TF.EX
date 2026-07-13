@@ -27,7 +27,7 @@ namespace TF.EX.Domain.Services
         private double _framesToReSimulate;
         private NetplayMode _netplayMode;
         private bool _isRollbackFrame;
-        private double _framesAhead;
+        private int _framesAhead;
         private bool _isUpdating = false;
         private bool _hasFailedInitialConnection = false;
 
@@ -332,14 +332,12 @@ namespace TF.EX.Domain.Services
                 else if (info.Contains("Detected checksum mismatch"))
                 {
                     string mismatch = "";
-                    string patternToFindTheLastNumber = @"\b(\d+)\b";
-                    Match match = Regex.Match(info, patternToFindTheLastNumber);
-
-                    if (match.Success)
+                    string patternToFindNumbers = @"\b(\d+)\b";
+                    MatchCollection matches = Regex.Matches(info, patternToFindNumbers);
+                    if (matches.Count > 0)
                     {
-                        string lastNumber = match.Value;
+                        string lastNumber = matches[matches.Count - 1].Value;
                         int frame = int.Parse(lastNumber);
-
                         mismatch = $"\n\n {_syncTestUtilsService.Compare(frame)}";
                     }
 

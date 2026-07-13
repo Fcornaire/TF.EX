@@ -1,6 +1,7 @@
 ﻿using MessagePack;
 using System.ComponentModel;
 using TF.EX.Domain.Models.State;
+using TF.EX.Domain.Models.WebSocket;
 
 namespace TF.EX.Domain.Models
 {
@@ -47,6 +48,9 @@ namespace TF.EX.Domain.Models
         [Key(8)]
         public ICollection<string> Variants { get; set; } = new List<string>();
 
+        [Key(9)]
+        public ICollection<CustomMod> Mods { get; set; } = new List<CustomMod>();
+
     }
 
     [MessagePackObject]
@@ -84,6 +88,7 @@ namespace TF.EX.Domain.Models
         V3, //added variants
         V4, //Switched serialization to MessagePack
         V5, //Added StuckTo actualdepth to Arrow instead of saving the stuck entity
+        V6, //Added CustomMods to ReplayInfo
     }
 
     public static class ReplayVersionExtensions

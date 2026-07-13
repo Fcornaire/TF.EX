@@ -1,4 +1,4 @@
-﻿using MonoMod.Utils;
+﻿using HarmonyLib;
 using TowerFall;
 
 namespace TF.EX.TowerFallExtensions.Scene
@@ -21,9 +21,7 @@ namespace TF.EX.TowerFallExtensions.Scene
         {
             return self.Layers.SelectMany(layer =>
             {
-                var dynLayer = DynamicData.For(layer.Value);
-
-                return dynLayer.Get<List<Monocle.Entity>>("toAdd");
+                return Traverse.Create(layer.Value).Field<List<Monocle.Entity>>("toAdd").Value;
             })
                 .Where(ent => ent is T).Select(ent => ent as T);
         }
@@ -32,10 +30,7 @@ namespace TF.EX.TowerFallExtensions.Scene
         {
             return self.Layers.SelectMany(layer =>
             {
-                var dynLayer = DynamicData.For(layer.Value);
-
-                return dynLayer.Get<List<Monocle.Entity>>("toAdd");
-
+                return Traverse.Create(layer.Value).Field<List<Monocle.Entity>>("toAdd").Value;
             })
                 .FirstOrDefault(ent => ent is T) as T;
         }

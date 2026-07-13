@@ -1,30 +1,16 @@
-﻿using Microsoft.Extensions.Logging;
-using On.Monocle;
+﻿using HarmonyLib;
 using System.Reflection;
 using TF.EX.Common.Extensions;
+using TF.EX.Domain;
 
 namespace TF.EX.Patchs
 {
-    internal class MonoclePatch : IHookable
+    [HarmonyPatch(typeof(Monocle.Audio))]
+    internal class MonoclePatch
     {
-        private ILogger _logger;
-
-        public MonoclePatch(ILogger logger)
-        {
-            _logger = logger;
-        }
-
-        public void Load()
-        {
-            On.Monocle.Audio.Stop += Audio_Stop;
-        }
-
-        public void Unload()
-        {
-            On.Monocle.Audio.Stop -= Audio_Stop;
-        }
-
-        private void Audio_Stop(Audio.orig_Stop orig)
+        [HarmonyPrefix]
+        [HarmonyPatch("Stop")]
+        public static bool Audio_Stop()
         {
             try
             {
@@ -38,8 +24,11 @@ namespace TF.EX.Patchs
             }
             catch (Exception e)
             {
-                _logger.LogError<MonoclePatch>("Error stopping audio", e);
+                var logger = ServiceCollections.ResolveLogger();
+                logger.LogError<MonoclePatch>("Error stopping audio", e);
             }
+
+            return false;
         }
     }
 }

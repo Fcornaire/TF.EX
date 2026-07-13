@@ -1,24 +1,23 @@
-﻿using Monocle;
+﻿using HarmonyLib;
 using TF.EX.Patchs.Calc;
+using TowerFall;
 
 namespace TF.EX.Patchs.Entity.LevelEntity
 {
-    public class LavaPatch : IHookable
+    [HarmonyPatch(typeof(Lava))]
+    public class LavaPatch
     {
-        public void Load()
-        {
-            On.TowerFall.Lava.BubbleComplete += Lava_BubbleComplete;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.Lava.BubbleComplete -= Lava_BubbleComplete;
-        }
-
-        private void Lava_BubbleComplete(On.TowerFall.Lava.orig_BubbleComplete orig, TowerFall.Lava self, Sprite<int> bubble)
+        [HarmonyPrefix]
+        [HarmonyPatch("BubbleComplete")]
+        public static void Lava_BubbleComplete_Prefix()
         {
             CalcPatch.IgnoreToRegisterRng();
-            orig(self, bubble);
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("BubbleComplete")]
+        public static void Lava_BubbleComplete_Postfix()
+        {
             CalcPatch.UnignoreToRegisterRng();
         }
     }

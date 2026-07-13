@@ -1,27 +1,17 @@
-﻿using MonoMod.Utils;
+﻿using HarmonyLib;
 using TF.EX.TowerFallExtensions;
 using TowerFall;
 
 namespace TF.EX.Patchs.Entity.HUD
 {
-    internal class VersusRoundResultsPatch : IHookable
+    [HarmonyPatch(typeof(VersusRoundResults))]
+    internal class VersusRoundResultsPatch
     {
-        public void Load()
+        [HarmonyPostfix]
+        [HarmonyPatch("Update")]
+        public static void VersusRoundResults_Update(VersusRoundResults __instance)
         {
-            On.TowerFall.VersusRoundResults.Update += VersusRoundResults_Update;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.VersusRoundResults.Update -= VersusRoundResults_Update;
-        }
-
-        private void VersusRoundResults_Update(On.TowerFall.VersusRoundResults.orig_Update orig, TowerFall.VersusRoundResults self)
-        {
-            orig(self);
-
-            var dynVersusRoundResults = DynamicData.For(self);
-            var finished = dynVersusRoundResults.Get<bool>("finished");
+            var finished = Traverse.Create(__instance).Field("finished").GetValue<bool>();
             if (finished)
             {
                 var miasma = (TFGame.Instance.Scene as Level).Get<Miasma>(); //Also manually removing the miasma

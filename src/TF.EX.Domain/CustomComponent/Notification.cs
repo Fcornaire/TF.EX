@@ -73,7 +73,7 @@ namespace TF.EX.Domain.CustomComponent
                     layer.Entities.Add(notification);
                     break;
                 default:
-                    FortRise.Logger.Error($"Notification not supported for scene {scene.GetType().Name}");
+                    //FortRise.Logger.Error($"Notification not supported for scene {scene.GetType().Name}");
                     break;
             }
 

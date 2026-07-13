@@ -12,6 +12,7 @@
         EditorTest,
         EditorPreview,
         LevelTest,
-        Netplay = 10
+        Custom = 10,
+        Netplay = 11
     }
 }

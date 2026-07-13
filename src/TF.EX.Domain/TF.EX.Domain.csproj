@@ -1,13 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>net472</TargetFramework>
-		<LangVersion>11</LangVersion>
+		<TargetFramework>net9.0</TargetFramework>
+		<!--<LangVersion>11</LangVersion>-->
 		<ImplicitUsings>enable</ImplicitUsings>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="FortRise.Configuration" Version="1.5.6" />
 	  <PackageReference Include="DeepEqual" Version="4.2.1" />
 	  <PackageReference Include="LazyCache" Version="2.4.0" />
 	  <PackageReference Include="LazyCache.AspNetCore" Version="2.4.0" />
@@ -17,7 +18,7 @@
 	    <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 	  </PackageReference>
 	  <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
-		<PackageReference Include="MonoMod" Version="22.5.1.1" />
+		<!--<PackageReference Include="MonoMod" Version="22.5.1.1" />-->
 	</ItemGroup>
 
 	<ItemGroup>
@@ -25,25 +26,25 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Reference Include="FNA">
+		<!--<Reference Include="FNA">
 			<HintPath>..\..\libs\FNA.dll</HintPath>
 			<Private>False</Private>
-		</Reference>
-		<Reference Include="System.Windows.Forms" />
-		<Reference Include="System.Net.Http" />
-		<Reference Include="TowerFall" Condition=" '$(Configuration)' == 'Release'">
+		</Reference>-->
+		<!--<Reference Include="System.Windows.Forms" />
+		<Reference Include="System.Net.Http" />-->
+		<!--<Reference Include="TowerFall" Condition=" '$(Configuration)' == 'Release'">
 			<HintPath>..\..\libs\TowerFall-publicized.exe</HintPath>
 			<Private>False</Private>
-		</Reference>
+		</Reference>-->
 
-		<Reference Include="TowerFall" Condition=" '$(Configuration)' == 'Debug'">
+		<!--<Reference Include="TowerFall" Condition=" '$(Configuration)' == 'Debug'">
 			<HintPath>..\..\libs\TowerFall.exe</HintPath>
 			<Private>False</Private>
-		</Reference>
+		</Reference>-->
 	</ItemGroup>
 
-	<Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Debug'">
+	<!--<Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Debug'">
 		<Exec Command="xcopy /y &quot;$(TargetPath)&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\TowerFall&quot;" />
-	</Target>
+	</Target>-->
 
 </Project>

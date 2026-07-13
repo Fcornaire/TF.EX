@@ -1,44 +1,25 @@
-﻿using MonoMod.Utils;
-using TF.EX.Domain.Ports;
-using TF.EX.Domain.Ports.TF;
+﻿using HarmonyLib;
+using MonoMod.Utils;
+using TF.EX.Domain;
 using TF.EX.TowerFallExtensions.Layer;
 using TowerFall;
 
 namespace TF.EX.Patchs.Layer
 {
-    internal class LayerPatch : IHookable
+    [HarmonyPatch(typeof(Monocle.Layer))]
+    internal class LayerPatch
     {
-        private readonly INetplayManager _netplayManager;
-        private readonly ISessionService _sessionService;
-        private readonly IHUDService _hudService;
-
-        public LayerPatch(INetplayManager netplayManager, IHUDService hudService, ISessionService sessionService)
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(Monocle.Layer.Remove), typeof(Monocle.Entity))]
+        public static void Layer_Remove_Entity(Monocle.Layer __instance, Monocle.Entity entity)
         {
-            _netplayManager = netplayManager;
-            _hudService = hudService;
-            _sessionService = sessionService;
-        }
-
-        public void Load()
-        {
-            On.Monocle.Layer.UpdateEntityList += Layer_UpdateEntityList;
-            On.Monocle.Layer.Remove_Entity += Layer_Remove_Entity;
-        }
-
-        public void Unload()
-        {
-            On.Monocle.Layer.UpdateEntityList -= Layer_UpdateEntityList;
-            On.Monocle.Layer.Remove_Entity -= Layer_Remove_Entity;
-        }
-
-        private void Layer_Remove_Entity(On.Monocle.Layer.orig_Remove_Entity orig, Monocle.Layer self, Monocle.Entity entity)
-        {
-            orig(self, entity);
+            var hudService = ServiceCollections.ResolveHUDService();
+            var sessionService = ServiceCollections.ResolveSessionService();
 
             if (entity is VersusStart)
             {
-                var hud = _hudService.Get();
-                _hudService.Update(new Domain.Models.State.Entity.HUD.HUD
+                var hud = hudService.Get();
+                hudService.Update(new Domain.Models.State.Entity.HUD.HUD
                 {
                     VersusStart = new Domain.Models.State.Entity.HUD.VersusStart(),
                     VersusRoundResults = new Domain.Models.State.Entity.HUD.VersusRoundResults
@@ -50,8 +31,8 @@ namespace TF.EX.Patchs.Layer
 
             if (entity is VersusRoundResults)
             {
-                var hud = _hudService.Get();
-                _hudService.Update(new Domain.Models.State.Entity.HUD.HUD
+                var hud = hudService.Get();
+                hudService.Update(new Domain.Models.State.Entity.HUD.HUD
                 {
                     VersusStart = new Domain.Models.State.Entity.HUD.VersusStart
                     {
@@ -65,18 +46,21 @@ namespace TF.EX.Patchs.Layer
 
             if (entity is Miasma)
             {
-                var session = _sessionService.GetSession();
+                var session = sessionService.GetSession();
                 session.Miasma = TF.EX.Domain.Models.State.Miasma.Default(); //FIX
             }
         }
 
-        private void Layer_UpdateEntityList(On.Monocle.Layer.orig_UpdateEntityList orig, Monocle.Layer self)
+        [HarmonyPrefix]
+        [HarmonyPatch("UpdateEntityList")]
+        public static void Layer_UpdateEntityList(Monocle.Layer __instance)
         {
-            if (self.IsGameplayLayer())
+            if (__instance.IsGameplayLayer())
             {
-                if (_netplayManager.IsRollbackFrame() && !(TFGame.Instance.Scene is TowerFall.LevelLoaderXML)) //Remove entities from the precedent frame (but on a level only)
+                var netplayManager = ServiceCollections.ResolveNetplayManager();
+                if (netplayManager.IsRollbackFrame() && !(TFGame.Instance.Scene is LevelLoaderXML)) //Remove entities from the precedent frame (but on a level only)
                 {
-                    var dynLayer = DynamicData.For(self);
+                    var dynLayer = DynamicData.For(__instance);
                     var toAdd = dynLayer.Get<List<Monocle.Entity>>("toAdd");
                     var toRemove = dynLayer.Get<HashSet<Monocle.Entity>>("toRemove");
                     var toRemoveCache = dynLayer.Get<HashSet<Monocle.Entity>>("toRemoveCache");
@@ -86,8 +70,6 @@ namespace TF.EX.Patchs.Layer
                     toRemoveCache.Clear();
                 }
             }
-
-            orig(self);
         }
     }
 }

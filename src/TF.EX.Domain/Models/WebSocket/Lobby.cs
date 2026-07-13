@@ -12,8 +12,16 @@ namespace TF.EX.Domain.Models.WebSocket
         public ICollection<Player> Players { get; set; } = new List<Player>();
         public ICollection<Player> Spectators { get; set; } = new List<Player>();
         public GameData GameData { get; set; } = new GameData();
+        public ICollection<CustomMod> Mods { get; set; } = new List<CustomMod>();
 
+        [IgnoreMember]
         public bool IsEmpty => Players.Count == 0;
+
+        [IgnoreMember]
+        public bool CanJoin { get; set; } = true;
+
+        [IgnoreMember]
+        public string CanNotJoinReason { get; set; } = "";
     }
 
     [MessagePackObject(keyAsPropertyName: true)]
@@ -38,5 +46,12 @@ namespace TF.EX.Domain.Models.WebSocket
         public string RoomChatPeerId { get; set; } = "";
         public bool IsHost { get; set; }
 
+    }
+
+    [MessagePackObject(keyAsPropertyName: true)]
+    public class CustomMod
+    {
+        public string Name { get; set; } = "";
+        public Dictionary<string, string> Data { get; set; } = new Dictionary<string, string>();
     }
 }

@@ -20,7 +20,7 @@ namespace TF.EX.API
         /// <param name="name"></param>
         /// <param name="OnGetState"></param>
         /// <param name="OnLoadState"></param>
-        public static void RegisterVariantStateEvents(FortModule module, string name, Func<string> OnGetState, Action<string> OnLoadState)
+        public static void RegisterVariantStateEvents(Mod module, string name, Func<string> OnGetState, Action<string> OnLoadState)
         {
             var events = new StateEvents(OnGetState, OnLoadState);
             TF.EX.Domain.ServiceCollections.ResolveAPIManager().RegisterVariantStateEvents(module, name, events);
@@ -34,7 +34,7 @@ namespace TF.EX.API
         /// <para> It does not mean the mod is compatible with EX and test should be done first. </para>
         /// </summary>
         /// <param name="module"></param>
-        public static void MarkModuleAsSafe(FortModule module)
+        public static void MarkModuleAsSafe(Mod module)
         {
             TF.EX.Domain.ServiceCollections.ResolveAPIManager().MarkModuleAsSafe(module);
         }

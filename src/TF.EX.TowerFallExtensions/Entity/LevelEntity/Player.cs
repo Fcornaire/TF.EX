@@ -400,7 +400,8 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                         break;
                     default:
                         throw new InvalidOperationException("Scheduled action not found");
-                };
+                }
+                ;
             }
 
             return list;

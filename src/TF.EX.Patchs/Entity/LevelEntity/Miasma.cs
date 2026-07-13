@@ -1,35 +1,21 @@
-﻿using TF.EX.Domain.Ports.TF;
+﻿using HarmonyLib;
+using TF.EX.Domain;
 
 namespace TF.EX.Patchs.Entity.LevelEntity
 {
-    internal class MiasmaPatch : IHookable
+    [HarmonyPatch(typeof(TowerFall.Miasma))]
+    internal class MiasmaPatch
     {
-        private readonly ISessionService _sessionService;
-
-        public MiasmaPatch(ISessionService sessionService)
+        [HarmonyPrefix]
+        [HarmonyPatch("Dissipate")]
+        public static void Miasma_Dissipate(TowerFall.Miasma __instance)
         {
-            _sessionService = sessionService;
-        }
-
-        public void Load()
-        {
-            On.TowerFall.Miasma.Dissipate += Miasma_Dissipate;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.Miasma.Dissipate -= Miasma_Dissipate;
-        }
-
-        private void Miasma_Dissipate(On.TowerFall.Miasma.orig_Dissipate orig, TowerFall.Miasma self)
-        {
-            var miasmaState = _sessionService.GetSession().Miasma;
+            var sessionService = ServiceCollections.ResolveSessionService();
+            var miasmaState = sessionService.GetSession().Miasma;
 
             miasmaState.IsDissipating = true;
-            miasmaState.Percent = self.Percent;
-            miasmaState.SideWeight = self.SideWeight;
-
-            orig(self);
+            miasmaState.Percent = __instance.Percent;
+            miasmaState.SideWeight = __instance.SideWeight;
         }
     }
 }

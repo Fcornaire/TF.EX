@@ -1,23 +1,23 @@
-﻿using TF.EX.Patchs.Calc;
+﻿using HarmonyLib;
+using TF.EX.Patchs.Calc;
+using TowerFall;
 
 namespace TF.EX.Patchs.Component
 {
-    public class ArrowCushionPatch : IHookable
+    [HarmonyPatch(typeof(ArrowCushion))]
+    public class ArrowCushionPatch
     {
-        public void Load()
-        {
-            On.TowerFall.ArrowCushion.AddArrow += AddArrow_Patch;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.ArrowCushion.AddArrow -= AddArrow_Patch;
-        }
-
-        private void AddArrow_Patch(On.TowerFall.ArrowCushion.orig_AddArrow orig, TowerFall.ArrowCushion self, TowerFall.Arrow arrow, float moveIn, bool drawHead)
+        [HarmonyPrefix]
+        [HarmonyPatch("AddArrow")]
+        public static void AddArrow_Patch_Prefix()
         {
             CalcPatch.RegisterRng();
-            orig(self, arrow, moveIn, drawHead);
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("AddArrow")]
+        public static void AddArrow_Patch_Postfix()
+        {
             CalcPatch.UnregisterRng();
         }
     }

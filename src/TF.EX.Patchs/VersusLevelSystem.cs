@@ -1,53 +1,40 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using HarmonyLib;
 using MonoMod.Utils;
 using TF.EX.Common.Extensions;
 using TF.EX.Domain;
-using TF.EX.Domain.Ports.TF;
+using TowerFall;
 
 namespace TF.EX.Patchs
 {
-    public class VersusLevelSystemPatch : IHookable
+    [HarmonyPatch(typeof(VersusLevelSystem))]
+    public class VersusLevelSystemPatch
     {
-        private readonly IRngService _rngService;
-        private readonly ILogger _logger;
-
-        public VersusLevelSystemPatch(IRngService rngService, ILogger logger)
-        {
-            _rngService = rngService;
-            _logger = logger;
-        }
-
-        public void Load()
-        {
-            On.TowerFall.VersusLevelSystem.ctor += VersusLevelSystem_ctor;
-            On.TowerFall.VersusLevelSystem.GenLevels += VersusLevelSystem_GenLevels;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.VersusLevelSystem.ctor -= VersusLevelSystem_ctor;
-            On.TowerFall.VersusLevelSystem.GenLevels -= VersusLevelSystem_GenLevels;
-        }
-
         /// <summary>Same as original but using custom one since the original is not using random from calc</summary>
-        private void VersusLevelSystem_GenLevels(On.TowerFall.VersusLevelSystem.orig_GenLevels orig, TowerFall.VersusLevelSystem self, TowerFall.MatchSettings matchSettings)
+        [HarmonyPrefix]
+        [HarmonyPatch("GenLevels")]
+        public static bool VersusLevelSystem_GenLevels(VersusLevelSystem __instance, MatchSettings matchSettings)
         {
-            var dynVersusLevelSystem = DynamicData.For(self);
-            var lastLevel = dynVersusLevelSystem.Get<string>("lastLevel");
-            var levels = self.OwnGenLevel(matchSettings, self.VersusTowerData, lastLevel, _rngService);
+            var logger = ServiceCollections.ResolveLogger();
+            var rngService = ServiceCollections.ResolveRngService();
 
-            _logger.LogDebug<VersusLevelSystemPatch>($"Generated levels: {string.Join("\n", levels)}");
+            var dynVersusLevelSystem = DynamicData.For(__instance);
+            var lastLevel = dynVersusLevelSystem.Get<string>("lastLevel");
+            var levels = __instance.OwnGenLevel(matchSettings, __instance.VersusTowerData, lastLevel, rngService);
+
+            logger.LogDebug<VersusLevelSystemPatch>($"Generated levels: {string.Join("\n", levels)}");
 
             dynVersusLevelSystem.Set("levels", levels);
+
+            return false;
         }
 
-        private void VersusLevelSystem_ctor(On.TowerFall.VersusLevelSystem.orig_ctor orig, TowerFall.VersusLevelSystem self, TowerFall.VersusTowerData tower)
+        [HarmonyPostfix]
+        [HarmonyPatch(MethodType.Constructor, [typeof(VersusTowerData)])]
+        public static void VersusLevelSystem_ctor(VersusLevelSystem __instance)
         {
-            orig(self, tower);
-
-            var dynVersusLevelSystem = DynamicData.For(self);
-            dynVersusLevelSystem.Set("ShowControls", false);
-            dynVersusLevelSystem.Set("ShowTriggerControls", false);
+            var dynVersusLevelSystem = Traverse.Create(__instance);
+            dynVersusLevelSystem.Property("ShowControls").SetValue(false);
+            dynVersusLevelSystem.Property("ShowTriggerControls").SetValue(false);
         }
     }
 }

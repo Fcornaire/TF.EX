@@ -1,23 +1,17 @@
-﻿using TF.EX.TowerFallExtensions;
+﻿using HarmonyLib;
+using TF.EX.TowerFallExtensions;
+using TowerFall;
 
 namespace TF.EX.Patchs
 {
-    internal class SaveDataPatch : IHookable
+    [HarmonyPatch(typeof(SaveData))]
+    internal class SaveDataPatch
     {
-        public void Load()
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(SaveData.Save))]
+        public static void Save_Patch(SaveData __instance)
         {
-            On.TowerFall.SaveData.Save += Save_Patch;
-        }
-
-        public void Unload()
-        {
-            On.TowerFall.SaveData.Save -= Save_Patch;
-        }
-
-        private string Save_Patch(On.TowerFall.SaveData.orig_Save orig, TowerFall.SaveData self)
-        {
-            self.WithNetplayOptions();
-            return orig(self);
+            __instance.WithNetplayOptions();
         }
     }
 }

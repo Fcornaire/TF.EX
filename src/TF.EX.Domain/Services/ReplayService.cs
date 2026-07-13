@@ -3,7 +3,9 @@ using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using TF.EX.Common.Extensions;
+using TF.EX.Common.Interop;
 using TF.EX.Domain.Context;
+using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Models.State;
@@ -82,9 +84,9 @@ namespace TF.EX.Domain.Services
             _gameContext.ResetReplay();
         }
 
-        public void Initialize(Domain.Models.WebSocket.GameData gameData = null)
+        public void Initialize(Domain.Models.WebSocket.GameData gameData = null, ICollection<Domain.Models.WebSocket.CustomMod> mods = null)
         {
-            _gameContext.InitializeReplay(MainMenu.VersusMatchSettings.LevelSystem.ID.X, gameData);
+            _gameContext.InitializeReplay(MainMenu.VersusMatchSettings.LevelSystem.ID.X, gameData, mods);
         }
 
         public void RemovePredictedRecords(int frame)
@@ -92,12 +94,13 @@ namespace TF.EX.Domain.Services
             _gameContext.RemovePredictedRecords(frame);
         }
 
-        public async Task LoadAndStart(string replayFilename)
+        public async Task LoadAndStart(string replayFilename, string currentSong = "")
         {
             try
             {
                 await Task.Run(async () =>
                {
+
                    var replaysFolder = $"{Directory.GetCurrentDirectory()}\\Replays";
 
                    var filePath = $"{replaysFolder}\\{replayFilename}";
@@ -112,6 +115,34 @@ namespace TF.EX.Domain.Services
                    if (replay.Record.Any())
                    {
                        _gameContext.LoadReplay(replay);
+
+                       if (replay.Informations.Mods.Any())
+                       {
+                           foreach (var mod in replay.Informations.Mods)
+                           {
+                               if (mod.Name == WiderSetModApiData.Name)
+                               {
+                                   var widerSetModApi = ServiceCollections.ResolveWiderSetModApi();
+
+                                   (bool canUse, string reason) = WiderSetModApiData.CanUseWiderSet(mod.Data, widerSetModApi, true);
+                                   if (canUse)
+                                   {
+                                       if (!widerSetModApi.IsWide)
+                                       {
+                                           widerSetModApi.IsWide = true;
+                                           await Task.Delay(1000);
+                                       }
+                                   }
+                                   else
+                                   {
+                                       Notification.Create(TFGame.Instance.Scene, $"Cannot start replay: {reason}");
+                                       Monocle.Music.Play(currentSong);
+
+                                       return;
+                                   }
+                               }
+                           }
+                       }
 
                        _netplayManager.SetPlayersIndex((int)replay.Informations.PlayerDraw);
                        _netplayManager.UpdatePlayer2Name(replay.Informations.Archers.ToArray()[1].NetplayName);
