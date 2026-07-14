@@ -1,4 +1,4 @@
-﻿using HarmonyLib;
+using HarmonyLib;
 using Monocle;
 using MonoMod.Utils;
 using System.Collections;
@@ -19,24 +19,15 @@ namespace TF.EX.Patchs.Component
 
         [HarmonyPrefix]
         [HarmonyPatch("Update")]
-        public static void Coroutine_Update(Coroutine __instance)
+        public static bool Coroutine_Update(Coroutine __instance)
         {
-            var sessionService = ServiceCollections.ResolveSessionService();
-            var hudService = ServiceCollections.ResolveHUDService();
-
             if (__instance.Entity is TowerFall.Miasma)
             {
-                var session = sessionService.GetSession();
-
-                if (session.Miasma.IsDissipating)
-                {
-                    session.Miasma.DissipateTimer += 1;
-                }
-                else
-                {
-                    session.Miasma.CoroutineTimer += 1;
-                }
+                // The miasma sequence is now driven by MiasmaPatch/MiasmaSequenceController
+                return false;
             }
+
+            var hudService = ServiceCollections.ResolveHUDService();
 
             if (__instance.Entity is TowerFall.VersusStart)
             {
@@ -60,6 +51,7 @@ namespace TF.EX.Patchs.Component
                 hudService.Update(hud);
             }
 
+            return true;
         }
     }
 }

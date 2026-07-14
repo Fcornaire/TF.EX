@@ -3,6 +3,7 @@ using HarmonyLib;
 using Monocle;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
@@ -11,6 +12,7 @@ using TF.EX.Domain;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Ports;
+using TF.EX.TowerFallExtensions;
 using TF.EX.TowerFallExtensions.Scene;
 using TowerFall;
 
@@ -55,6 +57,10 @@ namespace TF.EX.Core
             Commands.Add("vs", new CommandConfiguration
             {
                 Callback = LaunchVersus,
+            });
+            Commands.Add("dump", new CommandConfiguration
+            {
+                Callback = DumpEntities,
             });
         }
 
@@ -263,6 +269,23 @@ namespace TF.EX.Core
             StartGame(mode, null, map, startLevel);
 
             TFGame.Instance.Commands.Open = false;
+        }
+
+        public static void DumpEntities(string[] args)
+        {
+            if (TFGame.Instance.Scene is not Level level)
+            {
+                TFGame.Instance.Commands.Log("dump: not currently in a Level");
+                return;
+            }
+
+            var dump = EntityDumper.Dump(level);
+
+            var fileName = (args.Length > 0 ? args[0] : "entity_dump") + ".txt";
+            var path = Path.Combine(Directory.GetCurrentDirectory(), fileName);
+            File.WriteAllText(path, dump);
+
+            TFGame.Instance.Commands.Log($"dump: wrote entity dump to {path}");
         }
 
         private static TowerFall.Modes ParseMode(string arg)

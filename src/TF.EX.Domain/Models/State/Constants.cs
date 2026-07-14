@@ -8,7 +8,8 @@
             "TWILIGHT SPIRE",
             "BACKFIRE",
             "FLIGHT",
-            "MIRAGE"
+            "MIRAGE",
+            "THORNWOOD"
         };
 
         public static readonly int MAX_SFX_DELAY = 10;
