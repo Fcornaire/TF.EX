@@ -11,7 +11,7 @@ namespace TF.EX.Domain.Ports.TF
 
         Dictionary<int, double> GetGamePlayLayerActualDepthLookup();
         void SaveGamePlayLayerActualDepthLookup(Dictionary<int, double> toSave);
-        void AddBramblesState(float frameCounter, IEnumerable<MovingPlatform> movingPlatformsStates);
+        void AddBramblesState(float frameCounter, IEnumerable<MovingPlatform> movingPlatformsStates, Vector2f spreadOrigin);
         IEnumerable<BramblesStartingState> GetBramblesStartingState();
         void LoadBramblesStartingState(IEnumerable<BramblesStartingState> bramblesStartingState);
     }

@@ -20,7 +20,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             Vector2 counter = dynBrambles.Get<Vector2>("counter");
 
             TowerFall.Solid Riding = dynBrambles.Get<TowerFall.Solid>("riding");
-            double ridingActualDepth = 0;
+            double ridingActualDepth = -1;
             if (Riding != null)
             {
                 var dynRiding = DynamicData.For(Riding);

@@ -20,7 +20,7 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
 
             public bool CanDie { get; set; }
             public bool IsUsed { get; set; }
-            public int BrambleCoroutineTimer { get; set; } = 0;
+            public BrambleSpreadState BrambleSpread { get; set; }
 
 
             public IntermediateArrow()
@@ -219,9 +219,9 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
             arrow.IsUsed = isUsed;
         }
 
-        public void WithBrambleCoroutineTimer(int brambleCoroutineTimer)
+        public void WithBrambleSpread(BrambleSpreadState brambleSpread)
         {
-            arrow.BrambleCoroutineTimer = brambleCoroutineTimer;
+            arrow.BrambleSpread = brambleSpread;
         }
 
         public Arrow Build()
@@ -288,7 +288,7 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
             {
                 brambleArrow.CanDie = arrow.CanDie;
                 brambleArrow.IsUsed = arrow.IsUsed;
-                brambleArrow.CoroutineTimer = arrow.BrambleCoroutineTimer;
+                brambleArrow.BrambleSpread = arrow.BrambleSpread;
             }
 
             return built;

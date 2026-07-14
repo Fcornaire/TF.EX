@@ -333,7 +333,8 @@ namespace TF.EX.Patchs.Engine
 
         public static bool CanRunNetplayFrames(Monocle.Scene scene, INetplayManager netplayManager)
         {
-            return scene is Level && netplayManager.IsSynchronized();
+            return scene is Level
+                && (netplayManager.IsSynchronized() || netplayManager.GetNetplayMode().Equals(NetplayMode.Test));
         }
 
         private static bool NetplayLogic(Level level, INetplayManager netplayManager, IInputService inputService, IReplayService replayService, ISyncTestUtilsService syncTestUtilsService)

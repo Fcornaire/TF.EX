@@ -10,5 +10,7 @@ namespace TF.EX.Domain.Models.State
         public float FrameCounter { get; set; }
         [Key(1)]
         public ICollection<MovingPlatform> MovingPlatforms { get; set; } = new List<MovingPlatform>();
+        [Key(2)]
+        public Vector2f Position { get; set; }
     }
 }

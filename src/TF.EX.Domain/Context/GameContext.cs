@@ -59,7 +59,7 @@ namespace TF.EX.Domain.Context
         void RemoveArcher(int playerIndex);
         void ClearSfxs();
         string GetSoundEffectName(SoundEffect data);
-        void AddBramblesState(float frameCounter, IEnumerable<MovingPlatform> movingPlatformsStates);
+        void AddBramblesState(float frameCounter, IEnumerable<MovingPlatform> movingPlatformsStates, Vector2f spreadOrigin);
         void Reset();
         IEnumerable<BramblesStartingState> GetBramblesStartingState();
         void LoadBramblesStartingState(IEnumerable<BramblesStartingState> states);
@@ -183,7 +183,7 @@ namespace TF.EX.Domain.Context
                         Id = towerId,
                         PlayerDraw = PlayerDraw.Unkown,
                         Version = ServiceCollections.CurrentReplayVersion,
-                        Mods = mods.ToList() ?? new List<CustomMod>(),
+                        Mods = mods?.ToList() ?? new List<CustomMod>(),
                     },
                 };
 
@@ -450,7 +450,7 @@ namespace TF.EX.Domain.Context
             return _soundEffects.FirstOrDefault(kvp => kvp.Value == data).Key;
         }
 
-        public void AddBramblesState(float frameCounter, IEnumerable<MovingPlatform> movingPlatformsStates)
+        public void AddBramblesState(float frameCounter, IEnumerable<MovingPlatform> movingPlatformsStates, Vector2f spreadOrigin)
         {
             if (bramblesStates.Any(state => state.FrameCounter == frameCounter))
             {
@@ -460,7 +460,8 @@ namespace TF.EX.Domain.Context
             bramblesStates.Add(new BramblesStartingState
             {
                 FrameCounter = frameCounter,
-                MovingPlatforms = movingPlatformsStates.ToList()
+                MovingPlatforms = movingPlatformsStates.ToList(),
+                Position = spreadOrigin
             });
         }
 

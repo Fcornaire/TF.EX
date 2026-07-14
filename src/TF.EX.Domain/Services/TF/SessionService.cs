@@ -14,9 +14,9 @@ namespace TF.EX.Domain.Services.TF
             _context = context;
         }
 
-        public void AddBramblesState(float frameCounter, IEnumerable<MovingPlatform> movingPlatformsStates)
+        public void AddBramblesState(float frameCounter, IEnumerable<MovingPlatform> movingPlatformsStates, Vector2f spreadOrigin)
         {
-            _context.AddBramblesState(frameCounter, movingPlatformsStates);
+            _context.AddBramblesState(frameCounter, movingPlatformsStates, spreadOrigin);
         }
 
         public IEnumerable<BramblesStartingState> GetBramblesStartingState()

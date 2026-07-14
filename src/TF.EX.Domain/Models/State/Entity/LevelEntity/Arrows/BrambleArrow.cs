@@ -1,4 +1,5 @@
-﻿using MessagePack;
+using MessagePack;
+using TF.EX.Domain.Models.State;
 
 namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
 {
@@ -10,7 +11,6 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
         [Key(24)]
         public bool IsUsed { get; set; }
         [Key(25)]
-        public int CoroutineTimer { get; set; }
-
+        public BrambleSpreadState BrambleSpread { get; set; }
     }
 }

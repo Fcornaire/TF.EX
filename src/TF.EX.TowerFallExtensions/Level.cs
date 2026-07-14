@@ -1368,6 +1368,15 @@ namespace TF.EX.TowerFallExtensions
 
                 cachedBramble.LoadState(bramble);
                 level.GetGameplayLayer().Entities.Insert(0, cachedBramble);
+
+                foreach (var tag in cachedBramble.Tags)
+                {
+                    var tagList = level[tag];
+                    if (!tagList.Contains(cachedBramble))
+                    {
+                        tagList.Add(cachedBramble);
+                    }
+                }
             }
         }
     }

@@ -127,6 +127,12 @@ namespace TF.EX.Domain
 
         public override string ID => Guid.NewGuid().ToString();
 
+        public override Subtexture ArrowsIcon => throw new NotImplementedException();
+
+        public override bool MenuArrows => throw new NotImplementedException();
+
+        public override bool MenuArrowsCheck => throw new NotImplementedException();
+
         public override InputState GetState()
         {
             if (netplayManager.IsReplayMode())

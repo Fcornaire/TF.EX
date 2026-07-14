@@ -60,27 +60,6 @@ namespace TF.EX.Patchs.Component
                 hudService.Update(hud);
             }
 
-            if (__instance.Entity is TowerFall.BrambleArrow)
-            {
-                var dynCoroutine = DynamicData.For(__instance);
-
-                try
-                {
-                    if (dynCoroutine.TryGet("CoroutineTimer", out int coroutineTimer))
-                    {
-                        coroutineTimer += 1;
-                        dynCoroutine.Set("CoroutineTimer", coroutineTimer);
-                    }
-                    else
-                    {
-                        dynCoroutine.Add("CoroutineTimer", 1);
-                    }
-                }
-                catch
-                {
-                    dynCoroutine.Add("CoroutineTimer", 1);
-                }
-            }
         }
     }
 }
