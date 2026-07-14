@@ -604,7 +604,7 @@ namespace TF.EX.Domain.Services
                 _isRollbackFrame = false;
                 _framesAhead = 0;
                 _isUpdating = false;
-                _gameContext.ResetPlayersIndex();
+                _gameContext.Reset();
 
                 _cancellationTokenSource.Cancel();
                 GGRSFFI.IsInInit = false;

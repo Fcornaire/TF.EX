@@ -3,6 +3,7 @@ using TF.EX.Domain.Externals;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Models.State;
 using TF.EX.Domain.Models.State.Entity.HUD;
+using TF.EX.Domain.Models.State.Entity.LevelEntity.Platform;
 using TF.EX.Domain.Models.WebSocket;
 using TF.EX.Domain.Utils;
 
@@ -58,6 +59,10 @@ namespace TF.EX.Domain.Context
         void RemoveArcher(int playerIndex);
         void ClearSfxs();
         string GetSoundEffectName(SoundEffect data);
+        void AddBramblesState(float frameCounter, IEnumerable<MovingPlatform> movingPlatformsStates, Vector2f spreadOrigin);
+        void Reset();
+        IEnumerable<BramblesStartingState> GetBramblesStartingState();
+        void LoadBramblesStartingState(IEnumerable<BramblesStartingState> states);
     }
 
     internal class GameContext : IGameContext
@@ -75,6 +80,7 @@ namespace TF.EX.Domain.Context
         private ICollection<SoundEffectPlaying> _currentSfxs = new List<SoundEffectPlaying>();
         private Dictionary<string, SoundEffect> _soundEffects = new Dictionary<string, SoundEffect>(); //TODO: should be cached instead
         private Dictionary<int, Player> ArcherSelections = new Dictionary<int, Player>();
+        private ICollection<BramblesStartingState> bramblesStates = new List<BramblesStartingState>();
         private int _lastRollbackFrame = 0;
 
         private int _localPlayerIndex = -1;
@@ -177,7 +183,7 @@ namespace TF.EX.Domain.Context
                         Id = towerId,
                         PlayerDraw = PlayerDraw.Unkown,
                         Version = ServiceCollections.CurrentReplayVersion,
-                        Mods = mods.ToList() ?? new List<CustomMod>(),
+                        Mods = mods?.ToList() ?? new List<CustomMod>(),
                     },
                 };
 
@@ -442,6 +448,50 @@ namespace TF.EX.Domain.Context
         public string GetSoundEffectName(SoundEffect data)
         {
             return _soundEffects.FirstOrDefault(kvp => kvp.Value == data).Key;
+        }
+
+        public void AddBramblesState(float frameCounter, IEnumerable<MovingPlatform> movingPlatformsStates, Vector2f spreadOrigin)
+        {
+            if (bramblesStates.Any(state => state.FrameCounter == frameCounter))
+            {
+                return;
+            }
+
+            bramblesStates.Add(new BramblesStartingState
+            {
+                FrameCounter = frameCounter,
+                MovingPlatforms = movingPlatformsStates.ToList(),
+                Position = spreadOrigin
+            });
+        }
+
+        public void Reset()
+        {
+            bramblesStates.Clear();
+
+            ResetPlayersIndex();
+            ResetArcherSelections();
+            ResetGamePlayLayerActualDepthLookup();
+            ResetReplay();
+            ClearSfxs();
+
+            UpdateSession(new Session
+            {
+                RoundEndCounter = Constants.INITIAL_END_COUNTER,
+                IsEnding = false,
+                Miasma = Miasma.Default(),
+                RoundStarted = false
+            });
+        }
+
+        public IEnumerable<BramblesStartingState> GetBramblesStartingState()
+        {
+            return bramblesStates.ToList();
+        }
+
+        public void LoadBramblesStartingState(IEnumerable<BramblesStartingState> states)
+        {
+            bramblesStates = states.ToList();
         }
     }
 }

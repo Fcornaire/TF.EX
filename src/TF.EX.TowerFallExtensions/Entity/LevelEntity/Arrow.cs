@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Xna.Framework;
 using Monocle;
 using MonoMod.Utils;
 using TF.EX.Domain.Extensions;
@@ -84,12 +85,25 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                     builder.WithCanBounceIndefinitely(canBounceIndefinitely);
 
                     break;
+                case TowerFall.ArrowTypes.Bramble:
+                    var brambleArrow = (TowerFall.BrambleArrow)entity;
+                    var dynBrambleArrow = DynamicData.For(brambleArrow);
+                    bool canDie = dynBrambleArrow.Get<bool>("canDie");
+                    bool isUsed = dynBrambleArrow.Get<bool>("used");
+
+                    builder.WithCanDie(canDie);
+                    builder.WithIsUsed(isUsed);
+
+                    var liveSpread = dynBrambleArrow.Get<TF.EX.Domain.Models.State.BrambleSpreadState>("BrambleSpread");
+                    builder.WithBrambleSpread(liveSpread?.Clone());
+
+                    break;
             }
 
             return builder.Build();
         }
 
-        public static void LoadState(this TowerFall.Arrow entity, Arrow toLoad)
+        public static void LoadState(this TowerFall.Arrow entity, Arrow toLoad, IEnumerable<TF.EX.Domain.Models.State.BramblesStartingState> bramblesStartingStates, int currentFrame)
         {
             var dynArrow = DynamicData.For(entity);
             dynArrow.Set("Scene", TowerFall.TFGame.Instance.Scene);
@@ -132,6 +146,10 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             if (toLoad.StuckToActualDepth != 0)
             {
                 dynArrow.Set("StuckTo", entity.Level.GetEntityByDepth(toLoad.StuckToActualDepth));
+            }
+            else
+            {
+                dynArrow.Set("StuckTo", null);
             }
 
             if (!toLoad.HasUnhittableEntity)
@@ -176,6 +194,17 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 
                     dynLaserArrow.Set("infiniteBounces", toLoadLaserArrow.CanBounceIndefinitely);
                     dynLaserArrow.Set("Bounced", toLoadLaserArrow.Bounced);
+
+                    break;
+                case ArrowTypes.Bramble:
+                    var brambleArrow = (TowerFall.BrambleArrow)entity;
+                    var dynBrambleArrow = DynamicData.For(brambleArrow);
+                    var toLoadBrambleArrow = (BrambleArrow)toLoad;
+
+                    dynBrambleArrow.Set("canDie", toLoadBrambleArrow.CanDie);
+                    dynBrambleArrow.Set("used", toLoadBrambleArrow.IsUsed);
+
+                    dynBrambleArrow.Set("BrambleSpread", toLoadBrambleArrow.BrambleSpread?.Clone());
 
                     break;
             }

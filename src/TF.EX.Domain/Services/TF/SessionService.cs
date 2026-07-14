@@ -1,5 +1,6 @@
 ﻿using TF.EX.Domain.Context;
 using TF.EX.Domain.Models.State;
+using TF.EX.Domain.Models.State.Entity.LevelEntity.Platform;
 using TF.EX.Domain.Ports.TF;
 
 namespace TF.EX.Domain.Services.TF
@@ -13,6 +14,16 @@ namespace TF.EX.Domain.Services.TF
             _context = context;
         }
 
+        public void AddBramblesState(float frameCounter, IEnumerable<MovingPlatform> movingPlatformsStates, Vector2f spreadOrigin)
+        {
+            _context.AddBramblesState(frameCounter, movingPlatformsStates, spreadOrigin);
+        }
+
+        public IEnumerable<BramblesStartingState> GetBramblesStartingState()
+        {
+            return _context.GetBramblesStartingState();
+        }
+
         public Dictionary<int, double> GetGamePlayLayerActualDepthLookup()
         {
             return _context.GetGamePlayerLayerActualDepthLookup();
@@ -21,6 +32,11 @@ namespace TF.EX.Domain.Services.TF
         public Session GetSession()
         {
             return _context.GetSession();
+        }
+
+        public void LoadBramblesStartingState(IEnumerable<BramblesStartingState> bramblesStartingState)
+        {
+            _context.LoadBramblesStartingState(bramblesStartingState);
         }
 
         public void Reset()

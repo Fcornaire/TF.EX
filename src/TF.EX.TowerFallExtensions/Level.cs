@@ -110,6 +110,7 @@ namespace TF.EX.TowerFallExtensions
             var sfxService = ServiceCollections.ResolveSFXService();
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var inputService = ServiceCollections.ResolveInputService();
+            var sessionService = ServiceCollections.ResolveSessionService();
 
             gameState.Frame = GGRSFFI.netplay_current_frame();
 
@@ -142,6 +143,10 @@ namespace TF.EX.TowerFallExtensions
             gameState.AddOrbsState(self);
             gameState.AddLavaControlState(self);
             gameState.AddBGTorches(self);
+            gameState.AddMovingPlatformState(self);
+            gameState.AddBramblesState(self);
+
+            gameState.Session.BramblesStartingState = sessionService.GetBramblesStartingState();
             gameState.Rng = rngService.Get();
 
             if (netplayManager.IsTestMode())
@@ -180,6 +185,9 @@ namespace TF.EX.TowerFallExtensions
             var sfxService = ServiceCollections.ResolveSFXService();
             var currentMode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
             var inputService = ServiceCollections.ResolveInputService();
+
+            //To deal with coroutine brambles
+            sessionService.LoadBramblesStartingState(gameState.Session.BramblesStartingState);
 
             sfxService.UpdateLastRollbackFrame(gameState.Frame);
             sfxService.Load(gameState.SFXs.Select(sfx => new Domain.Models.State.SFX
@@ -226,13 +234,14 @@ namespace TF.EX.TowerFallExtensions
                 IsDone = gameState.Session.IsDone,
                 Miasma = new Domain.Models.State.Miasma
                 {
-                    CoroutineTimer = gameState.Session.Miasma.CoroutineTimer,
                     Counter = gameState.Session.Miasma.Counter,
-                    DissipateTimer = gameState.Session.Miasma.DissipateTimer,
+                    Mode = gameState.Session.Miasma.Mode,
+                    Ticks = gameState.Session.Miasma.Ticks,
+                    Dir = gameState.Session.Miasma.Dir,
                     IsDissipating = gameState.Session.Miasma.IsDissipating,
-                    Percent = gameState.Session.Miasma.Percent,
-                    SideWeight = gameState.Session.Miasma.SideWeight,
-                    Frame_TimeMult = gameState.Session.Miasma.Frame_TimeMult,
+                    DissipateTicks = gameState.Session.Miasma.DissipateTicks,
+                    DissipateStartPercent = gameState.Session.Miasma.DissipateStartPercent,
+                    DissipateStartSideWeight = gameState.Session.Miasma.DissipateStartSideWeight,
                 },
                 Scores = gameState.Session.Scores.ToArray(),
                 OldScores = gameState.Session.OldScores.ToArray(),
@@ -311,6 +320,7 @@ namespace TF.EX.TowerFallExtensions
             var dynamicMiasmaCounter = DynamicData.For(dynCounter);
             dynamicMiasmaCounter.Set("counter", gameState.Session.Miasma.Counter);
 
+            var existingMiasma = level.Get<TowerFall.Miasma>();
             level.Delete<TowerFall.Miasma>();
 
             var sess = sessionService.GetSession();
@@ -319,48 +329,42 @@ namespace TF.EX.TowerFallExtensions
             {
                 var miasma = level.AddMiasmaToGameplayLayer(gameState.Session.Miasma.ActualDepth);
 
-                miasma.Percent = gameState.Session.Miasma.Percent;
-                miasma.SideWeight = gameState.Session.Miasma.SideWeight;
-                sess.Miasma.DissipateTimer = 0;
+                sess.Miasma.Mode = gameState.Session.Miasma.Mode;
+                sess.Miasma.Ticks = gameState.Session.Miasma.Ticks;
+                sess.Miasma.Dir = gameState.Session.Miasma.Dir;
+                sess.Miasma.IsDissipating = true;
+                sess.Miasma.DissipateTicks = gameState.Session.Miasma.DissipateTicks;
+                sess.Miasma.DissipateStartPercent = gameState.Session.Miasma.DissipateStartPercent;
+                sess.Miasma.DissipateStartSideWeight = gameState.Session.Miasma.DissipateStartSideWeight;
 
-                miasma.Dissipate();
-
-                for (int i = 0; i < gameState.Session.Miasma.DissipateTimer; i++)
-                {
-                    miasma.Update();
-                }
+                MiasmaSequenceController.EvaluateDissipate(
+                    sess.Miasma.DissipateTicks, sess.Miasma.DissipateStartPercent, sess.Miasma.DissipateStartSideWeight,
+                    out float mp, out float msw, out _);
+                miasma.Percent = mp;
+                miasma.SideWeight = msw;
+                miasma.Collidable = false;
+                miasma.NervesOfSteelCheck = MiasmaSequenceController.Evaluate(sess.Miasma.Mode, sess.Miasma.Ticks, sess.Miasma.Dir).NervesOfSteelCheck;
+                miasma.Update();
+                miasma.RestoreMiasmaVisualPhase(sess.Miasma.Ticks + sess.Miasma.DissipateTicks);
+                TransplantMiasmaSpriteState(existingMiasma, miasma);
             }
-            else
+            else if (gameState.Session.Miasma.Ticks > 0f)
             {
-                if (gameState.Session.Miasma.CoroutineTimer > 0)
-                {
-                    sess.Miasma.CoroutineTimer = 0;
+                var miasma = level.AddMiasmaToGameplayLayer(gameState.Session.Miasma.ActualDepth);
 
-                    var miasma = level.AddMiasmaToGameplayLayer(gameState.Session.Miasma.ActualDepth);
-                    var currentTimeMult = TFGame.TimeMult;
+                sess.Miasma.Mode = gameState.Session.Miasma.Mode;
+                sess.Miasma.Ticks = gameState.Session.Miasma.Ticks;
+                sess.Miasma.Dir = gameState.Session.Miasma.Dir;
+                sess.Miasma.IsDissipating = false;
 
-                    var initialFrame = 0;
-                    var dynTFGame = DynamicData.For(TFGame.Instance);
-
-                    if (gameState.Session.Miasma.Frame_TimeMult.Count > 0)
-                    {
-                        var frame_timeMult = gameState.Session.Miasma.Frame_TimeMult.FirstOrDefault();
-                        initialFrame = frame_timeMult.Key;
-                    }
-
-                    for (int i = 0; i < gameState.Session.Miasma.CoroutineTimer; i++)
-                    {
-                        if (gameState.Session.Miasma.Frame_TimeMult.ContainsKey(i + initialFrame) && initialFrame > 0)
-                        {
-                            var timeMult = gameState.Session.Miasma.Frame_TimeMult[i + initialFrame];
-                            dynTFGame.Set("TimeMult", timeMult);
-                        }
-
-                        miasma.Update();
-                    }
-
-                    dynTFGame.Set("TimeMult", currentTimeMult);
-                }
+                var result = MiasmaSequenceController.Evaluate(sess.Miasma.Mode, sess.Miasma.Ticks, sess.Miasma.Dir);
+                miasma.Percent = result.Percent;
+                miasma.SideWeight = result.SideWeight;
+                miasma.Collidable = result.Collidable;
+                miasma.NervesOfSteelCheck = result.NervesOfSteelCheck;
+                miasma.Update();
+                miasma.RestoreMiasmaVisualPhase(sess.Miasma.Ticks);
+                TransplantMiasmaSpriteState(existingMiasma, miasma);
             }
 
             //Event logs
@@ -509,8 +513,7 @@ namespace TF.EX.TowerFallExtensions
                     }
 
                     var arrow = TowerFall.Arrow.Create(toLoad.ArrowType.ToTFModel(), entityHavingArrow, toLoad.Position.ToTFVector(), toLoad.Direction);
-                    var dynArrow = DynamicData.For(arrow);
-                    arrow.LoadState(toLoad);
+                    arrow.LoadState(toLoad, gameState.Session.BramblesStartingState, gameState.Frame);
 
                     level.GetGameplayLayer().Entities.Insert(0, arrow);
                 }
@@ -609,6 +612,12 @@ namespace TF.EX.TowerFallExtensions
             //Background and Foreground load
             //gameState.LoadBackgroundAndForegroundElements(level);
 
+            //MovingPlatform load
+            gameState.LoadMovingPlatforms(level);
+
+            //Brambles load
+            gameState.LoadBrambles(level);
+
             var sine = dynLightingLayer.Get<SineWave>("sine");
             sine.UpdateAttributes(gameState.Layer.LightingLayerSine);
 
@@ -682,7 +691,7 @@ namespace TF.EX.TowerFallExtensions
 
         private static Background.BGElement GetFGElementByIndex(this Level level, int index) { return level.Foreground.GetBGElements()[index]; }
 
-
+        //TODO: use generic method instead
         public static Monocle.Entity GetEntityByDepth(this Level self, double actualDepth)
         {
             Monocle.Entity entity = null;
@@ -839,18 +848,6 @@ namespace TF.EX.TowerFallExtensions
                 var counter = DynamicData.For(miasmaCounter).Get<float>("counter");
 
                 var stateSession = sessionService.GetSession();
-                var miasma = level.Get<TowerFall.Miasma>();
-
-                if (miasma != null)
-                {
-                    int lastKey = stateSession.Miasma.Frame_TimeMult.Keys.Count > 0 ? stateSession.Miasma.Frame_TimeMult.Keys.Max() : int.MinValue;
-                    float lastValue = stateSession.Miasma.Frame_TimeMult.Values.Count > 0 ? stateSession.Miasma.Frame_TimeMult.Values.Max() : float.MinValue;
-
-                    if (gameState.Frame > lastKey && TFGame.TimeMult != lastValue)
-                    {
-                        stateSession.Miasma.Frame_TimeMult.Add(gameState.Frame, TFGame.TimeMult);
-                    }
-                }
 
                 stateSession.RoundStarted = roundStarted;
                 stateSession.RoundEndCounter = endCounter;
@@ -868,12 +865,13 @@ namespace TF.EX.TowerFallExtensions
                     Miasma = new Domain.Models.State.Miasma
                     {
                         Counter = stateSession.Miasma.Counter,
-                        CoroutineTimer = stateSession.Miasma.CoroutineTimer,
-                        DissipateTimer = stateSession.Miasma.DissipateTimer,
+                        Mode = stateSession.Miasma.Mode,
+                        Ticks = stateSession.Miasma.Ticks,
+                        Dir = stateSession.Miasma.Dir,
                         IsDissipating = stateSession.Miasma.IsDissipating,
-                        Percent = stateSession.Miasma.Percent,
-                        SideWeight = stateSession.Miasma.SideWeight,
-                        Frame_TimeMult = stateSession.Miasma.Frame_TimeMult,
+                        DissipateTicks = stateSession.Miasma.DissipateTicks,
+                        DissipateStartPercent = stateSession.Miasma.DissipateStartPercent,
+                        DissipateStartSideWeight = stateSession.Miasma.DissipateStartSideWeight,
                     },
                     Scores = level.Session.Scores.ToArray(),
                     OldScores = level.Session.OldScores.ToArray(),
@@ -1062,6 +1060,65 @@ namespace TF.EX.TowerFallExtensions
             return miasma;
         }
 
+        private static void RestoreMiasmaVisualPhase(this TowerFall.Miasma miasma, float elapsedTicks)
+        {
+            var dynMiasma = DynamicData.For(miasma);
+            // sine = new SineWave(100); tentaclesSine = new SineWave(240) started down (Counter = 3*PI/2).
+            SetSinePhase(dynMiasma.Get<SineWave>("sine"), MathF.PI * 2f / 100f, 0f, elapsedTicks);
+            SetSinePhase(dynMiasma.Get<SineWave>("tentaclesSine"), MathF.PI * 2f / 240f, 4.712389f, elapsedTicks);
+        }
+
+        private static void SetSinePhase(SineWave sine, float rate, float initialCounter, float elapsedTicks)
+        {
+            if (sine == null)
+            {
+                return;
+            }
+
+            float counter = (initialCounter + rate * elapsedTicks) % (MathF.PI * 8f);
+            var dynSine = DynamicData.For(sine);
+            dynSine.Set("Counter", counter);
+            dynSine.Set("Value", (float)Math.Sin(counter));
+            dynSine.Set("ValueOverTwo", (float)Math.Sin(counter / 2f));
+            dynSine.Set("TwoValue", (float)Math.Sin(counter * 2f));
+        }
+
+        private static void TransplantMiasmaSpriteState(TowerFall.Miasma from, TowerFall.Miasma to)
+        {
+            if (from == null || to == null)
+            {
+                return;
+            }
+
+            var dynFrom = DynamicData.For(from);
+            var dynTo = DynamicData.For(to);
+            CopySpriteArrayState(dynFrom.Get<Monocle.Sprite<int>[]>("leftSprites"), dynTo.Get<Monocle.Sprite<int>[]>("leftSprites"));
+            CopySpriteArrayState(dynFrom.Get<Monocle.Sprite<int>[]>("rightSprites"), dynTo.Get<Monocle.Sprite<int>[]>("rightSprites"));
+        }
+
+        private static void CopySpriteArrayState(Monocle.Sprite<int>[] from, Monocle.Sprite<int>[] to)
+        {
+            if (from == null || to == null)
+            {
+                return;
+            }
+
+            int count = Math.Min(from.Length, to.Length);
+            for (int i = 0; i < count; i++)
+            {
+                if (from[i] == null || to[i] == null)
+                {
+                    continue;
+                }
+
+                var dynFrom = DynamicData.For(from[i]);
+                var dynTo = DynamicData.For(to[i]);
+                dynTo.Set("currentFrame", dynFrom.Get<int>("currentFrame"));
+                dynTo.Set("timer", dynFrom.Get<float>("timer"));
+                dynTo.Set("AnimationFrame", dynFrom.Get<int>("AnimationFrame"));
+            }
+        }
+
         private static void AddBGMushrooms(this GameState game, Level level)
         {
             var bgMushrooms = level.GetAll<TowerFall.BGMushroom>().ToArray();
@@ -1071,6 +1128,32 @@ namespace TF.EX.TowerFallExtensions
                 {
                     var mush = bgMushroom.GetState();
                     game.Entities.BGMushrooms.Add(mush);
+                }
+            }
+        }
+
+        private static void AddMovingPlatformState(this GameState gameState, Level level)
+        {
+
+            var movingPlatforms = level.GetAll<TowerFall.MovingPlatform>().ToArray();
+
+            foreach (TowerFall.MovingPlatform movingPlatform in movingPlatforms)
+            {
+                var state = movingPlatform.GetState();
+                gameState.Entities.MovingPlatforms.Add(state);
+            }
+        }
+
+        private static void AddBramblesState(this GameState gameState, Level level)
+        {
+            var brambles = level.GetAll<TowerFall.Brambles>().ToArray();
+            if (brambles != null && brambles.Length > 0)
+            {
+                foreach (TowerFall.Brambles bramble in brambles)
+                {
+                    var state = bramble.GetState();
+                    gameState.Entities.Brambles.Add(state);
+                    ServiceCollections.AddEntityToCache(state.ActualDepth, bramble);
                 }
             }
         }
@@ -1287,6 +1370,56 @@ namespace TF.EX.TowerFallExtensions
                 if (gameForeground != null)
                 {
                     gameForeground.LoadState(toLoad);
+                }
+            }
+        }
+
+        private static void LoadMovingPlatforms(this GameState gameState, Level level)
+        {
+            var gameMovingPlatforms = level.GetAll<TowerFall.MovingPlatform>().ToArray();
+            if (gameMovingPlatforms != null && gameMovingPlatforms.Length > 0)
+            {
+                foreach (TowerFall.MovingPlatform movingPlatform in gameMovingPlatforms)
+                {
+                    var dynMovingPlatform = DynamicData.For(movingPlatform);
+                    var actualDepth = dynMovingPlatform.Get<double>("actualDepth");
+
+                    var currentMovingPlatform = gameState.Entities.MovingPlatforms.FirstOrDefault(cp => cp.ActualDepth == actualDepth);
+                    if (currentMovingPlatform != null)
+                    {
+                        movingPlatform.LoadState(currentMovingPlatform);
+                    }
+                }
+            }
+        }
+
+        private static void LoadBrambles(this GameState gameState, Level level)
+        {
+            level.DeleteAll<TowerFall.Brambles>();
+
+            var dynData = new DynamicData(typeof(TowerFall.Brambles));
+            var nextId = Calc.Random.Next();
+            dynData.Set("nextID", nextId);
+            int nextBramblesId = nextId;
+            foreach (var bramble in gameState.Entities.Brambles)
+            {
+                var cachedBramble = ServiceCollections.GetCachedEntity<TowerFall.Brambles>(bramble.ActualDepth);
+
+                if (cachedBramble == null)
+                {
+                    cachedBramble = TowerFall.Brambles.Create(nextBramblesId, bramble.Position.ToTFVector(), bramble.OwnerIndex, 0, false);
+                }
+
+                cachedBramble.LoadState(bramble);
+                level.GetGameplayLayer().Entities.Insert(0, cachedBramble);
+
+                foreach (var tag in cachedBramble.Tags)
+                {
+                    var tagList = level[tag];
+                    if (!tagList.Contains(cachedBramble))
+                    {
+                        tagList.Add(cachedBramble);
+                    }
                 }
             }
         }

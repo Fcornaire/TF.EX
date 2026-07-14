@@ -2,6 +2,6 @@
 {
     public static class Config
     {
-        public static readonly string SERVER = "ws://192.168.1.17:3000";
+        public static readonly string SERVER = "ws://127.0.0.1:3000";
     }
 }

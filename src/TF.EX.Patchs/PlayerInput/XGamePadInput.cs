@@ -134,7 +134,9 @@ namespace TF.EX.Patchs.PlayerInput
 
             if (netplayManager.IsInit() || netplayManager.IsReplayMode())
             {
-                if (IsLocalPlayerGamePad(__instance, inputService))
+                var isLocalGamepad = IsLocalPlayerGamePad(__instance, inputService);
+
+                if (isLocalGamepad)
                 {
                     if (!netplayManager.IsReplayMode())
                     {
