@@ -149,6 +149,7 @@ namespace TF.EX.TowerFallExtensions
             gameState.AddSnowClumpsState(self);
             gameState.AddSwitchBlocksState(self);
             gameState.AddSwitchBlockControlState(self);
+            gameState.AddShiftBlocksState(self);
 
             gameState.Session.BramblesStartingState = sessionService.GetBramblesStartingState();
             gameState.Rng = rngService.Get();
@@ -632,13 +633,14 @@ namespace TF.EX.TowerFallExtensions
             gameState.LoadSwitchBlocks(level);
             gameState.LoadSwitchBlockControl(level);
 
+            //ShiftBlocks (Sunken City moving blocks) load
+            gameState.LoadShiftBlocks(level);
+
             var sine = dynLightingLayer.Get<SineWave>("sine");
             sine.UpdateAttributes(gameState.Layer.LightingLayerSine);
 
             //Rng
-            var rng = gameState.Rng;
-            rng.ResetRandom(ref Monocle.Calc.Random);
-            rngService.UpdateState(rng.Gen_type);
+            rngService.LoadState(gameState.Rng);
 
             var matchStats = gameState.MatchStats.ToArray();
 
@@ -1241,6 +1243,27 @@ namespace TF.EX.TowerFallExtensions
 
             var control = level.Get<TowerFall.SwitchBlockControl>();
             control?.LoadState(gameState.Entities.SwitchBlockControl);
+        }
+
+        private static void AddShiftBlocksState(this GameState state, Level level)
+        {
+            var shiftBlocks = level.GetAll<TowerFall.ShiftBlock>();
+            foreach (var shiftBlock in shiftBlocks)
+            {
+                state.Entities.ShiftBlocks.Add(shiftBlock.GetState());
+            }
+        }
+
+        private static void LoadShiftBlocks(this GameState gameState, Level level)
+        {
+            var inGameShiftBlocks = level.GetAll<TowerFall.ShiftBlock>();
+            foreach (var shiftBlock in gameState.Entities.ShiftBlocks)
+            {
+                var toLoad = inGameShiftBlocks.FirstOrDefault(sb =>
+                    DynamicData.For(sb).Get<double>("actualDepth") == shiftBlock.ActualDepth);
+
+                toLoad?.LoadState(shiftBlock);
+            }
         }
 
         private static void LoadLavaControl(this GameState gameState, Level level)

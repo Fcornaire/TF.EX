@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using Microsoft.Xna.Framework;
+using TF.EX.Domain;
 using TowerFall;
 
 namespace TF.EX.Patchs.Entity
@@ -11,9 +12,7 @@ namespace TF.EX.Patchs.Entity
         [HarmonyPatch(MethodType.Constructor, [typeof(Session), typeof(int[]), typeof(float), typeof(bool)])]
         public static void TreasureSpawner_ctor_Session_Int32Array_float_bool(TreasureSpawner __instance)
         {
-            Traverse.Create(__instance).Property("Random").SetValue(Monocle.Calc.Random);
-            //var dynSpawner = MonoMod.Utils.DynamicData.For(__instance);
-            //dynSpawner.Set("Random", Monocle.Calc.Random);
+            Traverse.Create(__instance).Property("Random").SetValue(ServiceCollections.ResolveRngService().Gameplay);
         }
 
         [HarmonyPrefix]
@@ -21,7 +20,6 @@ namespace TF.EX.Patchs.Entity
         public static void TreasureSpawner_GetChestSpawnsForLevel_Prefix(List<Vector2> chestPositions, ref List<Vector2> bigChestPositions)
         {
             Calc.CalcPatch.RegisterRng();
-            Calc.CalcPatch.RegisterShuffle(chestPositions);
             bigChestPositions = new List<Vector2>(); //TODO: re enable big chests
         }
 

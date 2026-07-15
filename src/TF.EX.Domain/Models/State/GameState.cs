@@ -22,7 +22,7 @@ namespace TF.EX.Domain.Models.State
         };
 
         [Key(3)]
-        public Rng Rng { get; set; } = new Rng { Seed = -1, Gen_type = new List<RngGenType>() };
+        public Rng Rng { get; set; } = new Rng { Seed = -1 };
 
         [Key(4)]
         public bool IsLevelFrozen { get; set; } = false;

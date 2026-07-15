@@ -22,14 +22,12 @@ namespace TF.EX.Patchs.RoundLogic
                 return true;
             }
 
-            var rngService = ServiceCollections.ResolveRngService();
-
             Vector2[] array = new Vector2[4];
             List<Vector2> xMLPositions = __instance.Session.CurrentLevel.GetXMLPositions("PlayerSpawn");
 
-            rngService.Get().ResetRandom(ref Monocle.Calc.Random);
-
+            Calc.CalcPatch.RegisterRng();
             xMLPositions = CalcExtensions.OwnVectorShuffle(xMLPositions).ToList();
+            Calc.CalcPatch.UnregisterRng();
             int num;
             if (!__instance.Session.IsInOvertime)
             {

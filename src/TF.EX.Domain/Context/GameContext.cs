@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework.Audio;
 using TF.EX.Domain.Externals;
+using TF.EX.Domain.Randomness;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Models.State;
 using TF.EX.Domain.Models.State.Entity.HUD;
@@ -23,6 +24,7 @@ namespace TF.EX.Domain.Context
         int GetSeed();
         Rng GetRng();
         void UpdateRng(Rng rng);
+        System.Random GetGameplayRandom();
         void InitializeReplay(int id, GameData gameData = null, ICollection<CustomMod> mods = null);
         void AddRecord(GameState gameState, bool shouldSwapPlayer);
         void RemovePredictedRecords(int frame);
@@ -72,7 +74,8 @@ namespace TF.EX.Domain.Context
         private readonly AttributeManager<Input> CurrentInputs;
         private Input PolledInput;
         private Session Session;
-        private Rng _rng = new Rng();
+        private int _seed = -1;
+        private readonly DeterministicRandom _gameplayRandom = new DeterministicRandom(0);
         private Replay _replay;
         private Dictionary<int, double> _gamePlayerLayerActualDepthLookup = new Dictionary<int, double>();
         private HUD _hudState;
@@ -149,27 +152,31 @@ namespace TF.EX.Domain.Context
 
         public void SetSeed(int seed)
         {
-            _rng = new Rng
-            {
-                Seed = seed,
-                Gen_type = new List<RngGenType>()
-            };
+            _seed = seed;
+            _gameplayRandom.Seed(unchecked((ulong)seed));
         }
 
         public int GetSeed()
         {
-            return _rng.Seed;
+            return _seed;
         }
 
         public Rng GetRng()
         {
-            var rng = new Rng { Seed = _rng.Seed, Gen_type = _rng.Gen_type.ToList() };
+            var rng = new Rng { Seed = _seed };
+            rng.SetState(_gameplayRandom.Snapshot());
             return rng;
         }
 
         public void UpdateRng(Rng rng)
         {
-            _rng = new Rng { Seed = rng.Seed, Gen_type = rng.Gen_type.ToList() };
+            _seed = rng.Seed;
+            _gameplayRandom.Restore(rng.ToState());
+        }
+
+        public System.Random GetGameplayRandom()
+        {
+            return _gameplayRandom;
         }
 
         public void InitializeReplay(int towerId, GameData gameData = null, ICollection<CustomMod> mods = null)
