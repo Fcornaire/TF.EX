@@ -11,7 +11,8 @@
             "MIRAGE",
             "THORNWOOD",
             "FROSTFANG KEEP",
-            "KING'S COURT"
+            "KING'S COURT",
+            "SUNKEN CITY"
         };
 
         public static readonly int MAX_SFX_DELAY = 10;

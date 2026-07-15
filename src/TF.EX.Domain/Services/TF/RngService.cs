@@ -1,4 +1,4 @@
-﻿using Monocle;
+using Monocle;
 using TF.EX.Domain.Context;
 using TF.EX.Domain.Models.State;
 using TF.EX.Domain.Ports.TF;
@@ -21,35 +21,26 @@ namespace TF.EX.Domain.Services.TF
 
         public int GetSeed()
         {
-            return Get().Seed;
+            return _gameContext.GetSeed();
         }
+
+        public System.Random Gameplay => _gameContext.GetGameplayRandom();
 
         public void SetSeed(int seed)
         {
             _gameContext.SetSeed(seed);
-            Calc.Random = new Random(seed);
+
+            Calc.Random = new System.Random(seed);
         }
 
-        public void UpdateState(ICollection<RngGenType> genTypes)
+        public void LoadState(Rng rng)
         {
-            var rng = Get();
-            rng.Gen_type = genTypes.ToList();
-            _gameContext.UpdateRng(rng);
-        }
-
-        public void AddGen(RngGenType genType)
-        {
-            var rng = Get();
-            rng.Gen_type.Add(genType);
             _gameContext.UpdateRng(rng);
         }
 
         public void Reset()
         {
-            var rng = Get();
-            rng.ResetGenType();
-            rng.ResetRandom(ref Monocle.Calc.Random);
-            _gameContext.UpdateRng(rng);
+            _gameContext.SetSeed(_gameContext.GetSeed());
         }
     }
 }

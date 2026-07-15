@@ -1,5 +1,5 @@
-﻿
 using MessagePack;
+using TF.EX.Domain.Randomness;
 
 namespace TF.EX.Domain.Models.State
 {
@@ -8,60 +8,26 @@ namespace TF.EX.Domain.Models.State
     {
         [Key(0)]
         public int Seed { get; set; } = -1;
+
         [Key(1)]
-        public ICollection<RngGenType> Gen_type { get; set; } = new List<RngGenType>();
+        public ulong S0 { get; set; }
+        [Key(2)]
+        public ulong S1 { get; set; }
+        [Key(3)]
+        public ulong S2 { get; set; }
+        [Key(4)]
+        public ulong S3 { get; set; }
 
-        public void ResetGenType()
+        public DeterministicRandom.State ToState() => new DeterministicRandom.State(S0, S1, S2, S3);
+
+        public void SetState(DeterministicRandom.State state)
         {
-            Gen_type = new List<RngGenType>();
+            S0 = state.S0;
+            S1 = state.S1;
+            S2 = state.S2;
+            S3 = state.S3;
         }
 
-        public void ResetRandom(ref Random random)
-        {
-            random = new Random(Seed);
-            Reset(random);
-        }
-
-        private void Reset(Random r)
-        {
-            foreach (var gen in Gen_type)
-            {
-                switch (gen)
-                {
-                    case RngGenType.Integer:
-                        r.Next();
-                        break;
-                    case RngGenType.Double:
-                        r.NextDouble();
-                        break;
-                }
-            }
-        }
-
-        public string Debug()
-        {
-            var counterInt = 0;
-            var counterDouble = 0;
-            foreach (var gen in Gen_type)
-            {
-                switch (gen)
-                {
-                    case RngGenType.Integer:
-                        counterInt++;
-                        break;
-                    case RngGenType.Double:
-                        counterDouble++;
-                        break;
-                }
-            }
-
-            return $"SEED: {Seed}, GEN TYPE: INT {counterInt} - DOUBLE {counterDouble}";
-        }
-    }
-
-    public enum RngGenType
-    {
-        Integer,
-        Double,
+        public string Debug() => $"SEED: {Seed}, STATE: {S0:x16}/{S1:x16}/{S2:x16}/{S3:x16}";
     }
 }

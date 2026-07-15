@@ -1,112 +1,73 @@
-﻿using HarmonyLib;
-using Microsoft.Xna.Framework;
 using TF.EX.Domain;
-using TF.EX.Domain.Models.State;
 
 namespace TF.EX.Patchs.Calc
 {
-    [HarmonyPatch(typeof(Monocle.Calc))]
-    public class CalcPatch
+    public static class CalcPatch
     {
-        private static bool _shouldRegisterRng = false;
-        private static bool _shouldIgnoreToRegisterRng = false;
-        private static int _rngRegisteringCount = 0;
+        private static int _gameplayDepth = 0;
+        private static int _ignoreDepth = 0;
+        private static bool _overriding = false;
+        private static System.Random _cosmeticBackup = null;
+
+        private static void Apply()
+        {
+            bool wantGameplay = _gameplayDepth > 0 && _ignoreDepth == 0;
+
+            if (wantGameplay && !_overriding)
+            {
+                _cosmeticBackup = Monocle.Calc.Random;
+                Monocle.Calc.Random = ServiceCollections.ResolveRngService().Gameplay;
+                _overriding = true;
+            }
+            else if (!wantGameplay && _overriding)
+            {
+                Monocle.Calc.Random = _cosmeticBackup;
+                _cosmeticBackup = null;
+                _overriding = false;
+            }
+        }
 
         public static void RegisterRng()
         {
-            _shouldRegisterRng = true;
-            _rngRegisteringCount++;
+            _gameplayDepth++;
+            Apply();
         }
 
         public static void UnregisterRng()
         {
-            _rngRegisteringCount--;
-
-            if (_rngRegisteringCount < 0)
+            if (_gameplayDepth > 0)
             {
-                _rngRegisteringCount = 0;
+                _gameplayDepth--;
             }
 
-            if (_rngRegisteringCount == 0)
-            {
-                _shouldRegisterRng = false;
-            }
+            Apply();
         }
-
-        public static void Reset()
-        {
-            _shouldIgnoreToRegisterRng = false;
-            _shouldRegisterRng = false;
-            _rngRegisteringCount = 0;
-        }
-
         public static void IgnoreToRegisterRng()
         {
-            _shouldIgnoreToRegisterRng = true;
+            _ignoreDepth++;
+            Apply();
         }
 
         public static void UnignoreToRegisterRng()
         {
-            _shouldIgnoreToRegisterRng = false;
-        }
-
-        [HarmonyPrefix]
-        [HarmonyPatch("Range", [typeof(Random), typeof(Vector2), typeof(Vector2)])]
-        public static void Range_Random_Vector2_Vector2(ref Random random)
-        {
-            var rngService = ServiceCollections.ResolveRngService();
-
-            if (_shouldRegisterRng && !_shouldIgnoreToRegisterRng)
+            if (_ignoreDepth > 0)
             {
-                rngService.Get().ResetRandom(ref Monocle.Calc.Random);
-                random = Monocle.Calc.Random;
-                rngService.AddGen(RngGenType.Double);
+                _ignoreDepth--;
             }
+
+            Apply();
         }
 
-        /// <summary>
-        /// Register the shuffle of the given list.
-        /// <para>Needed because Calc.Shuffle is not hookable (generics)</para>
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="toShuffle"></param>
-        public static void RegisterShuffle<T>(IEnumerable<T> toShuffle)
+        public static void Reset()
         {
-            var rngService = ServiceCollections.ResolveRngService();
+            _gameplayDepth = 0;
+            _ignoreDepth = 0;
 
-            rngService.Get().ResetRandom(ref Monocle.Calc.Random);
-            int length = toShuffle.Count();
-            while (--length > 0)
+            if (_overriding)
             {
-                rngService.AddGen(RngGenType.Integer);
-            }
-        }
-
-        [HarmonyPrefix]
-        [HarmonyPatch("NextFloat", [typeof(Random)])]
-        public static void NextFloat_Patch(ref Random random)
-        {
-            var rngService = ServiceCollections.ResolveRngService();
-
-            if (_shouldRegisterRng && !_shouldIgnoreToRegisterRng)
-            {
-                rngService.Get().ResetRandom(ref Monocle.Calc.Random);
-                random = Monocle.Calc.Random;
-                rngService.AddGen(RngGenType.Double);
-            }
-        }
-
-        [HarmonyPrefix]
-        [HarmonyPatch("Range", [typeof(Random), typeof(int), typeof(int)])]
-        public static void RangleIntInt_Patch(ref Random random)
-        {
-            var rngService = ServiceCollections.ResolveRngService();
-
-            if (_shouldRegisterRng && !_shouldIgnoreToRegisterRng)
-            {
-                rngService.Get().ResetRandom(ref Monocle.Calc.Random);
-                random = Monocle.Calc.Random;
-                rngService.AddGen(RngGenType.Integer);
+                Monocle.Calc.Random = _cosmeticBackup;
+                _cosmeticBackup = null;
+                _overriding = false;
             }
         }
     }

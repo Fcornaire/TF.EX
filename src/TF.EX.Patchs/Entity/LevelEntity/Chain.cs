@@ -1,7 +1,6 @@
-﻿using HarmonyLib;
+using HarmonyLib;
 using Microsoft.Xna.Framework;
-using TF.EX.Domain;
-using TF.EX.Domain.Models.State;
+using TF.EX.Patchs.Calc;
 using TowerFall;
 
 namespace TF.EX.Patchs.Entity.LevelEntity
@@ -13,16 +12,14 @@ namespace TF.EX.Patchs.Entity.LevelEntity
         [HarmonyPatch(MethodType.Constructor, [typeof(Vector2), typeof(int)])]
         public static void Chain_ctor_Vector2_int_Prefix()
         {
-            var rngService = ServiceCollections.ResolveRngService();
-            rngService.Get().ResetRandom(ref Monocle.Calc.Random);
+            CalcPatch.RegisterRng();
         }
 
         [HarmonyPostfix]
         [HarmonyPatch(MethodType.Constructor, [typeof(Vector2), typeof(int)])]
         public static void Chain_ctor_Vector2_int_Postfix()
         {
-            var rngService = ServiceCollections.ResolveRngService();
-            rngService.AddGen(RngGenType.Integer);
+            CalcPatch.UnregisterRng();
         }
     }
 }

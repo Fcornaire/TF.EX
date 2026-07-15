@@ -1,4 +1,4 @@
-﻿using TF.EX.Domain.Models.State;
+using TF.EX.Domain.Models.State;
 
 namespace TF.EX.Domain.Ports.TF
 {
@@ -8,9 +8,11 @@ namespace TF.EX.Domain.Ports.TF
         Rng Get();
 
         int GetSeed();
-        void UpdateState(ICollection<RngGenType> genTypes);
-        void AddGen(RngGenType genType);
-        void Reset();
 
+        System.Random Gameplay { get; }
+
+        void LoadState(Rng rng);
+
+        void Reset();
     }
 }

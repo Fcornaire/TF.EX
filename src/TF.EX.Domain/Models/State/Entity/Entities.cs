@@ -67,5 +67,8 @@ namespace TF.EX.Domain.Models.State.Entity
 
         [Key(23)]
         public SwitchBlockControl SwitchBlockControl { get; set; }
+
+        [Key(24)]
+        public ICollection<ShiftBlock> ShiftBlocks { get; set; } = new List<ShiftBlock>();
     }
 }

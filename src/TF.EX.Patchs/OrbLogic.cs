@@ -24,8 +24,7 @@ namespace TF.EX.Patchs
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             if (!__instance.Level.Ending && netplayManager.IsInit())
             {
-                var rngService = ServiceCollections.ResolveRngService();
-                rngService.Get().ResetRandom(ref Monocle.Calc.Random);
+                CalcPatch.RegisterRng();
 
                 Vector2 start = TFGame.Instance.Screen.Offset;
                 Vector2 end = start;
@@ -33,7 +32,7 @@ namespace TF.EX.Patchs
                 end.Y = Monocle.Calc.Snap(end.Y, 240f, __instance.Level.Session.MatchSettings.Variants.OffsetWorld ? 120 : 0);
                 end += Monocle.Calc.Random.Choose(new Vector2(-320f, 0f), new Vector2(320f, 0f), new Vector2(0f, -240f), new Vector2(0f, 240f));
 
-                rngService.AddGen(Domain.Models.State.RngGenType.Integer);
+                CalcPatch.UnregisterRng();
 
                 var dynOrbLogic = DynamicData.For(__instance);
                 var spaceTween = dynOrbLogic.Get<Tween>("spaceTween");
