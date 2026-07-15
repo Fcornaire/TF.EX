@@ -98,6 +98,11 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                     builder.WithBrambleSpread(liveSpread?.Clone());
 
                     break;
+                case TowerFall.ArrowTypes.Drill:
+                    builder.WithHasDrilled(entity.HasDrilled);
+                    builder.WithNaivePush(entity.NaivePush);
+
+                    break;
             }
 
             return builder.Build();
@@ -205,6 +210,13 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                     dynBrambleArrow.Set("used", toLoadBrambleArrow.IsUsed);
 
                     dynBrambleArrow.Set("BrambleSpread", toLoadBrambleArrow.BrambleSpread?.Clone());
+
+                    break;
+                case ArrowTypes.Drill:
+                    var toLoadDrillArrow = (DrillArrow)toLoad;
+
+                    dynArrow.Set("HasDrilled", toLoadDrillArrow.HasDrilled);
+                    entity.NaivePush = toLoadDrillArrow.NaivePush;
 
                     break;
             }

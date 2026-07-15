@@ -341,6 +341,18 @@ namespace TF.EX.Domain.Services
                         mismatch = $"\n\n {_syncTestUtilsService.Compare(frame)}";
                     }
 
+                    if (IsTestMode())
+                    {
+                        _logger.LogError<NetplayManager>($"Sync test desync detected : {info} {mismatch}");
+
+                        TowerFall.Sounds.ui_invalid.Play();
+                        Reset();
+                        ResetMode();
+                        TFGame.Instance.Scene = new MainMenu(MainMenu.MenuState.Main);
+
+                        return status;
+                    }
+
                     throw new InvalidOperationException($"AdvanceFrame error : {info} {mismatch}");
                 }
                 else if (!info.Equals("PredictionThreshold"))
@@ -727,6 +739,7 @@ namespace TF.EX.Domain.Services
         {
             _netplayMode = NetplayMode.Test;
             GGRSConfig = GGRSConfig.DefaultTest(checkDistance);
+            _syncTestUtilsService.Reset();
         }
 
         public void SetLocalMode(string addr, ushort localPort, PlayerDraw draw)

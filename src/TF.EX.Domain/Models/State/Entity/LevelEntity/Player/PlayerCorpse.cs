@@ -35,6 +35,9 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Player
 
         [Key(9)]
         public double ActualDepth { get; set; }
+
+        [Key(10)]
+        public bool AgainstWall { get; set; }
     }
 
     [MessagePackObject]

@@ -146,5 +146,8 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Player
 
         [Key(46)]
         public bool IsAimingRight { get; set; }
+
+        [Key(47)]
+        public float SlipperyControl { get; set; }
     }
 }
