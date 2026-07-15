@@ -147,6 +147,8 @@ namespace TF.EX.TowerFallExtensions
             gameState.AddBramblesState(self);
             gameState.AddIciclesState(self);
             gameState.AddSnowClumpsState(self);
+            gameState.AddSwitchBlocksState(self);
+            gameState.AddSwitchBlockControlState(self);
 
             gameState.Session.BramblesStartingState = sessionService.GetBramblesStartingState();
             gameState.Rng = rngService.Get();
@@ -625,6 +627,10 @@ namespace TF.EX.TowerFallExtensions
 
             //SnowClumps load
             gameState.LoadSnowClumps(level);
+
+            //SwitchBlocks (King's Court toggle blocks) load
+            gameState.LoadSwitchBlocks(level);
+            gameState.LoadSwitchBlockControl(level);
 
             var sine = dynLightingLayer.Get<SineWave>("sine");
             sine.UpdateAttributes(gameState.Layer.LightingLayerSine);
@@ -1194,6 +1200,47 @@ namespace TF.EX.TowerFallExtensions
                     ServiceCollections.AddEntityToCache(state.ActualDepth, snowClump);
                 }
             }
+        }
+
+        private static void AddSwitchBlocksState(this GameState state, Level level)
+        {
+            var switchBlocks = level.GetAll<TowerFall.SwitchBlock>();
+            foreach (var switchBlock in switchBlocks)
+            {
+                state.Entities.SwitchBlocks.Add(switchBlock.GetState());
+            }
+        }
+
+        private static void AddSwitchBlockControlState(this GameState state, Level level)
+        {
+            var control = level.Get<TowerFall.SwitchBlockControl>();
+            if (control != null)
+            {
+                state.Entities.SwitchBlockControl = control.GetState();
+            }
+        }
+
+        private static void LoadSwitchBlocks(this GameState gameState, Level level)
+        {
+            var inGameSwitchBlocks = level.GetAll<TowerFall.SwitchBlock>();
+            foreach (var switchBlock in gameState.Entities.SwitchBlocks)
+            {
+                var toLoad = inGameSwitchBlocks.FirstOrDefault(sb =>
+                    DynamicData.For(sb).Get<double>("actualDepth") == switchBlock.ActualDepth);
+
+                toLoad?.LoadState(switchBlock);
+            }
+        }
+
+        private static void LoadSwitchBlockControl(this GameState gameState, Level level)
+        {
+            if (gameState.Entities.SwitchBlockControl == null)
+            {
+                return;
+            }
+
+            var control = level.Get<TowerFall.SwitchBlockControl>();
+            control?.LoadState(gameState.Entities.SwitchBlockControl);
         }
 
         private static void LoadLavaControl(this GameState gameState, Level level)
