@@ -43,6 +43,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 Speed = entity.Speed.ToModel(),
                 FallSpriteCounter = fallSpriteCounter,
                 Pinned = entity.Pinned,
+                AgainstWall = dynPlayerCorpse.Get<bool>("againstWall"),
                 ArrowCushion = entity.ArrowCushion.GetState(),
             };
         }
@@ -64,6 +65,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             entity.Speed = toLoad.Speed.ToTFVector();
             dynPlayerCorpse.Set("fallSpriteCounter", toLoad.FallSpriteCounter);
             entity.Pinned = toLoad.Pinned;
+            dynPlayerCorpse.Set("againstWall", toLoad.AgainstWall);
 
             entity.ArrowCushion.LoadState(toLoad.ArrowCushion);
 

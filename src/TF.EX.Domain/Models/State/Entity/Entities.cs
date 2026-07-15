@@ -55,5 +55,11 @@ namespace TF.EX.Domain.Models.State.Entity
 
         [Key(19)]
         public ICollection<Brambles> Brambles { get; set; } = new List<Brambles>();
+
+        [Key(20)]
+        public ICollection<Icicle> Icicles { get; set; } = new List<Icicle>();
+
+        [Key(21)]
+        public ICollection<SnowClump> SnowClumps { get; set; } = new List<SnowClump>();
     }
 }

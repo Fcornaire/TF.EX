@@ -145,6 +145,8 @@ namespace TF.EX.TowerFallExtensions
             gameState.AddBGTorches(self);
             gameState.AddMovingPlatformState(self);
             gameState.AddBramblesState(self);
+            gameState.AddIciclesState(self);
+            gameState.AddSnowClumpsState(self);
 
             gameState.Session.BramblesStartingState = sessionService.GetBramblesStartingState();
             gameState.Rng = rngService.Get();
@@ -618,6 +620,12 @@ namespace TF.EX.TowerFallExtensions
             //Brambles load
             gameState.LoadBrambles(level);
 
+            //Icicles load
+            gameState.LoadIcicles(level);
+
+            //SnowClumps load
+            gameState.LoadSnowClumps(level);
+
             var sine = dynLightingLayer.Get<SineWave>("sine");
             sine.UpdateAttributes(gameState.Layer.LightingLayerSine);
 
@@ -988,6 +996,8 @@ namespace TF.EX.TowerFallExtensions
 
             actualDepthLookup.Remove(-600); //TODO: Miasma
 
+            actualDepthLookup.Remove(-490); //DEPTH_PARTICES_FG: cosmetic FG particles + Frostfang's PlayerBreath (cold breath) share this depth; PlayerBreath is an untracked, Alarm+Calc.Random-driven entity, so its actualDepth counter diverges on rollback re-sim. Exclude like the other cosmetic depths.
+
             sessionService.SaveGamePlayLayerActualDepthLookup(actualDepthLookup);
             gameState.Layer.GameplayLayerActualDepthLookup = actualDepthLookup;
         }
@@ -1154,6 +1164,34 @@ namespace TF.EX.TowerFallExtensions
                     var state = bramble.GetState();
                     gameState.Entities.Brambles.Add(state);
                     ServiceCollections.AddEntityToCache(state.ActualDepth, bramble);
+                }
+            }
+        }
+
+        private static void AddIciclesState(this GameState gameState, Level level)
+        {
+            var icicles = level.GetAll<TowerFall.Icicle>().ToArray();
+            if (icicles != null && icicles.Length > 0)
+            {
+                foreach (TowerFall.Icicle icicle in icicles)
+                {
+                    var state = icicle.GetState();
+                    gameState.Entities.Icicles.Add(state);
+                    ServiceCollections.AddEntityToCache(state.ActualDepth, icicle);
+                }
+            }
+        }
+
+        private static void AddSnowClumpsState(this GameState gameState, Level level)
+        {
+            var snowClumps = level.GetAll<TowerFall.SnowClump>().ToArray();
+            if (snowClumps != null && snowClumps.Length > 0)
+            {
+                foreach (TowerFall.SnowClump snowClump in snowClumps)
+                {
+                    var state = snowClump.GetState();
+                    gameState.Entities.SnowClumps.Add(state);
+                    ServiceCollections.AddEntityToCache(state.ActualDepth, snowClump);
                 }
             }
         }
@@ -1419,6 +1457,60 @@ namespace TF.EX.TowerFallExtensions
                     if (!tagList.Contains(cachedBramble))
                     {
                         tagList.Add(cachedBramble);
+                    }
+                }
+            }
+        }
+
+        private static void LoadIcicles(this GameState gameState, Level level)
+        {
+            level.DeleteAll<TowerFall.Icicle>();
+
+            foreach (var toLoad in gameState.Entities.Icicles)
+            {
+                var cachedIcicle = ServiceCollections.GetCachedEntity<TowerFall.Icicle>(toLoad.ActualDepth);
+
+                if (cachedIcicle == null)
+                {
+                    cachedIcicle = new TowerFall.Icicle(toLoad.Position.ToTFVector());
+                }
+
+                cachedIcicle.LoadState(toLoad);
+                level.GetGameplayLayer().Entities.Insert(0, cachedIcicle);
+
+                foreach (var tag in cachedIcicle.Tags)
+                {
+                    var tagList = level[tag];
+                    if (!tagList.Contains(cachedIcicle))
+                    {
+                        tagList.Add(cachedIcicle);
+                    }
+                }
+            }
+        }
+
+        private static void LoadSnowClumps(this GameState gameState, Level level)
+        {
+            level.DeleteAll<TowerFall.SnowClump>();
+
+            foreach (var toLoad in gameState.Entities.SnowClumps)
+            {
+                var cachedSnowClump = ServiceCollections.GetCachedEntity<TowerFall.SnowClump>(toLoad.ActualDepth);
+
+                if (cachedSnowClump == null)
+                {
+                    cachedSnowClump = new TowerFall.SnowClump(toLoad.Position.ToTFVector());
+                }
+
+                cachedSnowClump.LoadState(toLoad);
+                level.GetGameplayLayer().Entities.Insert(0, cachedSnowClump);
+
+                foreach (var tag in cachedSnowClump.Tags)
+                {
+                    var tagList = level[tag];
+                    if (!tagList.Contains(cachedSnowClump))
+                    {
+                        tagList.Add(cachedSnowClump);
                     }
                 }
             }

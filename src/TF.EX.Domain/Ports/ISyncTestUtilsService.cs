@@ -7,5 +7,6 @@ namespace TF.EX.Domain.Ports
         void AddFrame(int frame, GameState gs);
         void Remove(int fromFrame);
         string Compare(int frame);
+        void Reset();
     }
 }

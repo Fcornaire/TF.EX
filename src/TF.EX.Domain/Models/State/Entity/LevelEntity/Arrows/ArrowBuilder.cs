@@ -22,6 +22,8 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
             public bool IsUsed { get; set; }
             public BrambleSpreadState BrambleSpread { get; set; }
 
+            public bool HasDrilled { get; set; }
+            public bool NaivePush { get; set; }
 
             public IntermediateArrow()
             {
@@ -224,6 +226,16 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
             arrow.BrambleSpread = brambleSpread;
         }
 
+        public void WithHasDrilled(bool hasDrilled)
+        {
+            arrow.HasDrilled = hasDrilled;
+        }
+
+        public void WithNaivePush(bool naivePush)
+        {
+            arrow.NaivePush = naivePush;
+        }
+
         public Arrow Build()
         {
             Arrow built;
@@ -241,6 +253,9 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
                     break;
                 case ArrowTypes.Bramble:
                     built = new BrambleArrow();
+                    break;
+                case ArrowTypes.Drill:
+                    built = new DrillArrow();
                     break;
                 default:
                     throw new Exception("Unknown arrow type");
@@ -289,6 +304,12 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
                 brambleArrow.CanDie = arrow.CanDie;
                 brambleArrow.IsUsed = arrow.IsUsed;
                 brambleArrow.BrambleSpread = arrow.BrambleSpread;
+            }
+
+            if (built is DrillArrow drillArrow)
+            {
+                drillArrow.HasDrilled = arrow.HasDrilled;
+                drillArrow.NaivePush = arrow.NaivePush;
             }
 
             return built;
