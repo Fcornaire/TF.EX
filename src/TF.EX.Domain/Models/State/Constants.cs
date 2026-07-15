@@ -10,7 +10,8 @@
             "FLIGHT",
             "MIRAGE",
             "THORNWOOD",
-            "FROSTFANG KEEP"
+            "FROSTFANG KEEP",
+            "KING'S COURT"
         };
 
         public static readonly int MAX_SFX_DELAY = 10;

@@ -61,5 +61,11 @@ namespace TF.EX.Domain.Models.State.Entity
 
         [Key(21)]
         public ICollection<SnowClump> SnowClumps { get; set; } = new List<SnowClump>();
+
+        [Key(22)]
+        public ICollection<SwitchBlock> SwitchBlocks { get; set; } = new List<SwitchBlock>();
+
+        [Key(23)]
+        public SwitchBlockControl SwitchBlockControl { get; set; }
     }
 }
