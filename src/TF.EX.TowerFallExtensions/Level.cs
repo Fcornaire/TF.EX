@@ -150,6 +150,8 @@ namespace TF.EX.TowerFallExtensions
             gameState.AddSwitchBlocksState(self);
             gameState.AddSwitchBlockControlState(self);
             gameState.AddShiftBlocksState(self);
+            gameState.AddProximityBlocksState(self);
+            gameState.AddMoonGlassBlocksState(self);
 
             gameState.Session.BramblesStartingState = sessionService.GetBramblesStartingState();
             gameState.Rng = rngService.Get();
@@ -629,12 +631,18 @@ namespace TF.EX.TowerFallExtensions
             //SnowClumps load
             gameState.LoadSnowClumps(level);
 
-            //SwitchBlocks (King's Court toggle blocks) load
+            //SwitchBlocks (King's Court) load
             gameState.LoadSwitchBlocks(level);
             gameState.LoadSwitchBlockControl(level);
 
-            //ShiftBlocks (Sunken City moving blocks) load
+            //ShiftBlocks (Sunken City) load
             gameState.LoadShiftBlocks(level);
+
+            //ProximityBlocks (Moonstone) load
+            gameState.LoadProximityBlocks(level);
+
+            //MoonGlassBlocks (Moonstone) load
+            gameState.LoadMoonGlassBlocks(level);
 
             var sine = dynLightingLayer.Get<SineWave>("sine");
             sine.UpdateAttributes(gameState.Layer.LightingLayerSine);
@@ -1263,6 +1271,70 @@ namespace TF.EX.TowerFallExtensions
                     DynamicData.For(sb).Get<double>("actualDepth") == shiftBlock.ActualDepth);
 
                 toLoad?.LoadState(shiftBlock);
+            }
+        }
+
+        private static void AddProximityBlocksState(this GameState state, Level level)
+        {
+            var proximityBlocks = level.GetAll<TowerFall.ProximityBlock>();
+            foreach (var proximityBlock in proximityBlocks)
+            {
+                state.Entities.ProximityBlocks.Add(proximityBlock.GetState());
+            }
+        }
+
+        private static void LoadProximityBlocks(this GameState gameState, Level level)
+        {
+            var inGameProximityBlocks = level.GetAll<TowerFall.ProximityBlock>();
+            foreach (var proximityBlock in gameState.Entities.ProximityBlocks)
+            {
+                var toLoad = inGameProximityBlocks.FirstOrDefault(pb =>
+                    DynamicData.For(pb).Get<double>("actualDepth") == proximityBlock.ActualDepth);
+
+                toLoad?.LoadState(proximityBlock);
+            }
+        }
+
+        private static void AddMoonGlassBlocksState(this GameState state, Level level)
+        {
+            var moonGlassBlocks = level.GetAll<TowerFall.MoonGlassBlock>();
+            foreach (var moonGlassBlock in moonGlassBlocks)
+            {
+                var moonGlassBlockState = moonGlassBlock.GetState();
+                state.Entities.MoonGlassBlocks.Add(moonGlassBlockState);
+                ServiceCollections.AddEntityToCache(moonGlassBlockState.ActualDepth, moonGlassBlock);
+            }
+        }
+
+        private static void LoadMoonGlassBlocks(this GameState gameState, Level level)
+        {
+            level.DeleteAll<TowerFall.MoonGlassBlock>();
+
+            foreach (var toLoad in gameState.Entities.MoonGlassBlocks.ToArray())
+            {
+                var cachedMoonGlassBlock = ServiceCollections.GetCachedEntity<TowerFall.MoonGlassBlock>(toLoad.ActualDepth);
+
+                if (cachedMoonGlassBlock == null)
+                {
+                    cachedMoonGlassBlock = new TowerFall.MoonGlassBlock(
+                        toLoad.Position.ToTFVector(), toLoad.Width, toLoad.Height);
+                }
+
+                var dynCachedMoonGlassBlock = DynamicData.For(cachedMoonGlassBlock);
+                dynCachedMoonGlassBlock.Set("Level", level);
+                dynCachedMoonGlassBlock.Set("Scene", level);
+
+                cachedMoonGlassBlock.LoadState(toLoad);
+                level.GetGameplayLayer().Entities.Insert(0, cachedMoonGlassBlock);
+
+                foreach (var tag in cachedMoonGlassBlock.Tags)
+                {
+                    var tagList = level[tag];
+                    if (!tagList.Contains(cachedMoonGlassBlock))
+                    {
+                        tagList.Add(cachedMoonGlassBlock);
+                    }
+                }
             }
         }
 

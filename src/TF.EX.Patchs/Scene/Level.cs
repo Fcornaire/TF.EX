@@ -7,6 +7,7 @@ using System.Xml;
 using TF.EX.Domain;
 using TF.EX.Domain.Externals;
 using TF.EX.TowerFallExtensions;
+using TF.EX.TowerFallExtensions.Entity.LevelEntity;
 using TowerFall;
 
 namespace TF.EX.Patchs.Scene
@@ -74,6 +75,11 @@ namespace TF.EX.Patchs.Scene
             var sfxService = ServiceCollections.ResolveSFXService();
 
             netplayManager.SetIsRollbackFrame(false); //Mark the end of the First RBF
+
+            if (netplayManager.IsInit())
+            {
+                MoonGlassBlockExplodeController.StepAll(__instance); ///Drives the Moonstone moonglass shatter
+            }
 
             ///Always Update the layer entity list
             ///Normally it should happen naturally at the start of the next frame
