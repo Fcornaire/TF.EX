@@ -70,5 +70,11 @@ namespace TF.EX.Domain.Models.State.Entity
 
         [Key(24)]
         public ICollection<ShiftBlock> ShiftBlocks { get; set; } = new List<ShiftBlock>();
+
+        [Key(25)]
+        public ICollection<ProximityBlock> ProximityBlocks { get; set; } = new List<ProximityBlock>();
+
+        [Key(26)]
+        public ICollection<MoonGlassBlock> MoonGlassBlocks { get; set; } = new List<MoonGlassBlock>();
     }
 }

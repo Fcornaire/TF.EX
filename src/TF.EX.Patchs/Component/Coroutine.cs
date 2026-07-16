@@ -27,6 +27,12 @@ namespace TF.EX.Patchs.Component
                 return false;
             }
 
+            if (__instance.Entity is TowerFall.MoonGlassBlock)
+            {
+                // The shatter is driven by MoonGlassBlockExplodeController, offline stays vanilla.
+                return !ServiceCollections.ResolveNetplayManager().IsInit();
+            }
+
             var hudService = ServiceCollections.ResolveHUDService();
 
             if (__instance.Entity is TowerFall.VersusStart)

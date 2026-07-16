@@ -12,7 +12,8 @@
             "THORNWOOD",
             "FROSTFANG KEEP",
             "KING'S COURT",
-            "SUNKEN CITY"
+            "SUNKEN CITY",
+            "MOONSTONE"
         };
 
         public static readonly int MAX_SFX_DELAY = 10;
