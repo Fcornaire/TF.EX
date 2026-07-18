@@ -62,6 +62,7 @@ namespace TF.EX.Patchs.Scene
             {
                 var dynTFGame = DynamicData.For(TFGame.Instance);
                 dynTFGame.Set("TimeMult", TFGame.TimeRate); //In fixed timestep, TimeMult = TimeRate
+                dynTFGame.Set("DeltaTime", 1f / 60f * TFGame.TimeRate);
             }
 
             AddPlayersIndicators(__instance);

@@ -257,6 +257,9 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
                 case ArrowTypes.Drill:
                     built = new DrillArrow();
                     break;
+                case ArrowTypes.SuperBomb:
+                    built = new SuperBombArrow();
+                    break;
                 default:
                     throw new Exception("Unknown arrow type");
             }
@@ -310,6 +313,14 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
             {
                 drillArrow.HasDrilled = arrow.HasDrilled;
                 drillArrow.NaivePush = arrow.NaivePush;
+            }
+
+            if (built is SuperBombArrow superBombArrow)
+            {
+                superBombArrow.BuriedSprite = arrow.BuriedSprite;
+                superBombArrow.CanExplode = arrow.CanExplode;
+                superBombArrow.ExplodeAlarm = arrow.ExplodeAlarm;
+                superBombArrow.NormalSprite = arrow.NormalSprite;
             }
 
             return built;

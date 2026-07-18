@@ -13,7 +13,8 @@
             "FROSTFANG KEEP",
             "KING'S COURT",
             "SUNKEN CITY",
-            "MOONSTONE"
+            "MOONSTONE",
+            "TOWERFORGE"
         };
 
         public static readonly int MAX_SFX_DELAY = 10;

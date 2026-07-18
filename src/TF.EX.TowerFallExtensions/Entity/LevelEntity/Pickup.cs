@@ -127,10 +127,11 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 
             if (toLoad.CollidableTimer > 0)
             {
-                Alarm.Set(entity, (int)toLoad.CollidableTimer, () =>
+                var collidableAlarm = Alarm.Set(entity, (int)toLoad.CollidableTimer, () =>
                 {
                     entity.Collidable = true;
                 });
+                DynamicData.For(collidableAlarm).Set("FramesLeft", toLoad.CollidableTimer);
             }
         }
     }

@@ -79,7 +79,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 {
                     entity.LightVisible = true;
                     entity.Visible = true;
-                    Alarm.Set(entity, (int)toLoad.AppearTimer, delegate
+                    var appearAlarm = Alarm.Set(entity, (int)toLoad.AppearTimer, delegate
                     {
                         var dynTreasureChestAlarm = DynamicData.For(entity);
 
@@ -94,6 +94,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                             Sounds.sfx_chestAppearBig.Stop();
                         }
                     });
+                    DynamicData.For(appearAlarm).Set("FramesLeft", toLoad.AppearTimer);
                 }
 
                 if (entity.State <= States.Closed)
