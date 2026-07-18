@@ -75,6 +75,20 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                     builder.WithBuriedSprite(buriedSprite.GetState());
 
                     break;
+                case TowerFall.ArrowTypes.SuperBomb:
+                    var superBombArrow = (TowerFall.SuperBombArrow)entity;
+                    var dynSuperBombArrow = DynamicData.For(superBombArrow);
+                    bool superCanExplode = dynSuperBombArrow.Get<bool>("canExplode");
+                    Alarm superExplodeAlarm = dynSuperBombArrow.Get<Alarm>("explodeAlarm");
+                    Sprite<int> superNormalSprite = dynSuperBombArrow.Get<Sprite<int>>("normalSprite");
+                    Sprite<int> superBuriedSprite = dynSuperBombArrow.Get<Sprite<int>>("buriedSprite");
+
+                    builder.WithCanExplode(superCanExplode);
+                    builder.WithExplodeAlarm(superExplodeAlarm.GetState());
+                    builder.WithNormalSprite(superNormalSprite.GetState());
+                    builder.WithBuriedSprite(superBuriedSprite.GetState());
+
+                    break;
                 case TowerFall.ArrowTypes.Laser:
                     var laserArrow = (TowerFall.LaserArrow)entity;
                     var dynLaserArrow = DynamicData.For(laserArrow);
@@ -190,6 +204,23 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 
                     var buriedSprite = dynBombArrow.Get<Sprite<int>>("buriedSprite");
                     buriedSprite.LoadState(toLoadBombArrow.BuriedSprite);
+
+                    break;
+                case ArrowTypes.SuperBomb:
+                    var superBombArrow = (TowerFall.SuperBombArrow)entity;
+                    var dynSuperBombArrow = DynamicData.For(superBombArrow);
+                    var toLoadSuperBombArrow = (SuperBombArrow)toLoad;
+
+                    dynSuperBombArrow.Set("canExplode", toLoadSuperBombArrow.CanExplode);
+
+                    var superExplodeAlarm = dynSuperBombArrow.Get<Alarm>("explodeAlarm");
+                    superExplodeAlarm.LoadState(toLoadSuperBombArrow.ExplodeAlarm);
+
+                    var superNormalSprite = dynSuperBombArrow.Get<Sprite<int>>("normalSprite");
+                    superNormalSprite.LoadState(toLoadSuperBombArrow.NormalSprite);
+
+                    var superBuriedSprite = dynSuperBombArrow.Get<Sprite<int>>("buriedSprite");
+                    superBuriedSprite.LoadState(toLoadSuperBombArrow.BuriedSprite);
 
                     break;
                 case ArrowTypes.Laser:
