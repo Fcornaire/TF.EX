@@ -14,7 +14,8 @@
             "KING'S COURT",
             "SUNKEN CITY",
             "MOONSTONE",
-            "TOWERFORGE"
+            "TOWERFORGE",
+            "ASCENSION"
         };
 
         public static readonly int MAX_SFX_DELAY = 10;

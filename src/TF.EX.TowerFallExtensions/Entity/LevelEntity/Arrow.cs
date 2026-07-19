@@ -117,6 +117,16 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                     builder.WithNaivePush(entity.NaivePush);
 
                     break;
+                case TowerFall.ArrowTypes.Feather:
+                    var featherArrow = (TowerFall.FeatherArrow)entity;
+                    var dynFeatherArrow = DynamicData.For(featherArrow);
+                    SineWave moveSine = dynFeatherArrow.Get<SineWave>("moveSine");
+                    var perpendicular = dynFeatherArrow.Get<Vector2>("perpendicular");
+
+                    builder.WithMoveSine(moveSine.GetState());
+                    builder.WithPerpendicular(perpendicular.ToModel());
+
+                    break;
             }
 
             return builder.Build();
@@ -248,6 +258,17 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 
                     dynArrow.Set("HasDrilled", toLoadDrillArrow.HasDrilled);
                     entity.NaivePush = toLoadDrillArrow.NaivePush;
+
+                    break;
+                case ArrowTypes.Feather:
+                    var featherArrow = (TowerFall.FeatherArrow)entity;
+                    var dynFeatherArrow = DynamicData.For(featherArrow);
+                    var toLoadFeatherArrow = (FeatherArrow)toLoad;
+
+                    var moveSine = dynFeatherArrow.Get<SineWave>("moveSine");
+                    moveSine.LoadState(toLoadFeatherArrow.MoveSine);
+
+                    dynFeatherArrow.Set("perpendicular", toLoadFeatherArrow.Perpendicular.ToTFVector());
 
                     break;
             }
