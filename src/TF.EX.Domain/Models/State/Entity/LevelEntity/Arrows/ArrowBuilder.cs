@@ -25,6 +25,9 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
             public bool HasDrilled { get; set; }
             public bool NaivePush { get; set; }
 
+            public SineWave MoveSine { get; set; }
+            public Vector2f Perpendicular { get; set; }
+
             public IntermediateArrow()
             {
                 ArrowType = ArrowTypes.Normal;
@@ -236,6 +239,16 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
             arrow.NaivePush = naivePush;
         }
 
+        public void WithMoveSine(SineWave moveSine)
+        {
+            arrow.MoveSine = moveSine;
+        }
+
+        public void WithPerpendicular(Vector2f perpendicular)
+        {
+            arrow.Perpendicular = perpendicular;
+        }
+
         public Arrow Build()
         {
             Arrow built;
@@ -259,6 +272,9 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
                     break;
                 case ArrowTypes.SuperBomb:
                     built = new SuperBombArrow();
+                    break;
+                case ArrowTypes.Feather:
+                    built = new FeatherArrow();
                     break;
                 default:
                     throw new Exception("Unknown arrow type");
@@ -313,6 +329,12 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
             {
                 drillArrow.HasDrilled = arrow.HasDrilled;
                 drillArrow.NaivePush = arrow.NaivePush;
+            }
+
+            if (built is FeatherArrow featherArrow)
+            {
+                featherArrow.MoveSine = arrow.MoveSine;
+                featherArrow.Perpendicular = arrow.Perpendicular;
             }
 
             if (built is SuperBombArrow superBombArrow)
