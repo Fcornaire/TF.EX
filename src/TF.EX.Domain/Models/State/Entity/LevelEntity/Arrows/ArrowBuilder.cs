@@ -28,6 +28,9 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
             public SineWave MoveSine { get; set; }
             public Vector2f Perpendicular { get; set; }
 
+            public Counter CanTurnCounter { get; set; }
+            public int Turns { get; set; }
+
             public IntermediateArrow()
             {
                 ArrowType = ArrowTypes.Normal;
@@ -249,6 +252,16 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
             arrow.Perpendicular = perpendicular;
         }
 
+        public void WithCanTurnCounter(Counter canTurnCounter)
+        {
+            arrow.CanTurnCounter = canTurnCounter;
+        }
+
+        public void WithTurns(int turns)
+        {
+            arrow.Turns = turns;
+        }
+
         public Arrow Build()
         {
             Arrow built;
@@ -275,6 +288,9 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
                     break;
                 case ArrowTypes.Feather:
                     built = new FeatherArrow();
+                    break;
+                case ArrowTypes.Bolt:
+                    built = new BoltArrow();
                     break;
                 default:
                     throw new Exception("Unknown arrow type");
@@ -335,6 +351,12 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
             {
                 featherArrow.MoveSine = arrow.MoveSine;
                 featherArrow.Perpendicular = arrow.Perpendicular;
+            }
+
+            if (built is BoltArrow boltArrow)
+            {
+                boltArrow.CanTurnCounter = arrow.CanTurnCounter;
+                boltArrow.Turns = arrow.Turns;
             }
 
             if (built is SuperBombArrow superBombArrow)

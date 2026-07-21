@@ -127,6 +127,15 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                     builder.WithPerpendicular(perpendicular.ToModel());
 
                     break;
+                case TowerFall.ArrowTypes.Bolt:
+                    var boltArrow = (TowerFall.BoltArrow)entity;
+                    var dynBoltArrow = DynamicData.For(boltArrow);
+                    Counter canTurnCounter = dynBoltArrow.Get<Counter>("canTurnCounter");
+
+                    builder.WithCanTurnCounter(canTurnCounter.GetState());
+                    builder.WithTurns(boltArrow.Turns);
+
+                    break;
             }
 
             return builder.Build();
@@ -269,6 +278,17 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                     moveSine.LoadState(toLoadFeatherArrow.MoveSine);
 
                     dynFeatherArrow.Set("perpendicular", toLoadFeatherArrow.Perpendicular.ToTFVector());
+
+                    break;
+                case ArrowTypes.Bolt:
+                    var boltArrow = (TowerFall.BoltArrow)entity;
+                    var dynBoltArrow = DynamicData.For(boltArrow);
+                    var toLoadBoltArrow = (BoltArrow)toLoad;
+
+                    var canTurnCounter = dynBoltArrow.Get<Counter>("canTurnCounter");
+                    canTurnCounter.LoadState(toLoadBoltArrow.CanTurnCounter);
+
+                    dynBoltArrow.Set("Turns", toLoadBoltArrow.Turns);
 
                     break;
             }

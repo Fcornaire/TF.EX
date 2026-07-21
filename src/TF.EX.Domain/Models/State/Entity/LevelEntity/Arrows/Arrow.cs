@@ -11,6 +11,7 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
     [Union(4, typeof(DrillArrow))]
     [Union(5, typeof(SuperBombArrow))]
     [Union(6, typeof(FeatherArrow))]
+    [Union(7, typeof(BoltArrow))]
     public abstract class Arrow
     {
         [Key(0)]
