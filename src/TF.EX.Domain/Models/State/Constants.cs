@@ -15,7 +15,8 @@
             "SUNKEN CITY",
             "MOONSTONE",
             "TOWERFORGE",
-            "ASCENSION"
+            "ASCENSION",
+            "THE AMARANTH"
         };
 
         public static readonly int MAX_SFX_DELAY = 10;

@@ -152,6 +152,8 @@ namespace TF.EX.TowerFallExtensions
             gameState.AddShiftBlocksState(self);
             gameState.AddProximityBlocksState(self);
             gameState.AddMoonGlassBlocksState(self);
+            gameState.AddGhostPlatformsState(self);
+            gameState.AddLoopPlatformsState(self);
 
             gameState.Session.BramblesStartingState = sessionService.GetBramblesStartingState();
             gameState.Rng = rngService.Get();
@@ -643,6 +645,10 @@ namespace TF.EX.TowerFallExtensions
 
             //MoonGlassBlocks (Moonstone) load
             gameState.LoadMoonGlassBlocks(level);
+
+            //GhostPlatforms and LoopPlatforms (The Amaranth) load
+            gameState.LoadGhostPlatforms(level);
+            gameState.LoadLoopPlatforms(level);
 
             var sine = dynLightingLayer.Get<SineWave>("sine");
             sine.UpdateAttributes(gameState.Layer.LightingLayerSine);
@@ -1292,6 +1298,46 @@ namespace TF.EX.TowerFallExtensions
                     DynamicData.For(pb).Get<double>("actualDepth") == proximityBlock.ActualDepth);
 
                 toLoad?.LoadState(proximityBlock);
+            }
+        }
+
+        private static void AddGhostPlatformsState(this GameState state, Level level)
+        {
+            foreach (var ghostPlatform in level.GetAll<TowerFall.GhostPlatform>())
+            {
+                state.Entities.GhostPlatforms.Add(ghostPlatform.GetState());
+            }
+        }
+
+        private static void LoadGhostPlatforms(this GameState gameState, Level level)
+        {
+            var inGameGhostPlatforms = level.GetAll<TowerFall.GhostPlatform>();
+            foreach (var ghostPlatform in gameState.Entities.GhostPlatforms)
+            {
+                var toLoad = inGameGhostPlatforms.FirstOrDefault(gp =>
+                    DynamicData.For(gp).Get<double>("actualDepth") == ghostPlatform.ActualDepth);
+
+                toLoad?.LoadState(ghostPlatform);
+            }
+        }
+
+        private static void AddLoopPlatformsState(this GameState state, Level level)
+        {
+            foreach (var loopPlatform in level.GetAll<TowerFall.LoopPlatform>())
+            {
+                state.Entities.LoopPlatforms.Add(loopPlatform.GetState());
+            }
+        }
+
+        private static void LoadLoopPlatforms(this GameState gameState, Level level)
+        {
+            var inGameLoopPlatforms = level.GetAll<TowerFall.LoopPlatform>();
+            foreach (var loopPlatform in gameState.Entities.LoopPlatforms)
+            {
+                var toLoad = inGameLoopPlatforms.FirstOrDefault(lp =>
+                    DynamicData.For(lp).Get<double>("actualDepth") == loopPlatform.ActualDepth);
+
+                toLoad?.LoadState(loopPlatform);
             }
         }
 

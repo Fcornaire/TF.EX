@@ -76,5 +76,11 @@ namespace TF.EX.Domain.Models.State.Entity
 
         [Key(26)]
         public ICollection<MoonGlassBlock> MoonGlassBlocks { get; set; } = new List<MoonGlassBlock>();
+
+        [Key(27)]
+        public ICollection<GhostPlatform> GhostPlatforms { get; set; } = new List<GhostPlatform>();
+
+        [Key(28)]
+        public ICollection<LoopPlatform> LoopPlatforms { get; set; } = new List<LoopPlatform>();
     }
 }
