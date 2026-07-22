@@ -155,6 +155,7 @@ namespace TF.EX.TowerFallExtensions
             gameState.AddGhostPlatformsState(self);
             gameState.AddLoopPlatformsState(self);
             gameState.AddRotatePlatformsState(self);
+            gameState.AddSensorBlocksState(self);
 
             gameState.Session.BramblesStartingState = sessionService.GetBramblesStartingState();
             gameState.Rng = rngService.Get();
@@ -637,6 +638,9 @@ namespace TF.EX.TowerFallExtensions
             gameState.LoadGhostPlatforms(level);
             gameState.LoadLoopPlatforms(level);
             gameState.LoadRotatePlatforms(level);
+
+            //SensorBlocks (Dreadwood) load
+            gameState.LoadSensorBlocks(level);
 
             var sine = dynLightingLayer.Get<SineWave>("sine");
             sine.UpdateAttributes(gameState.Layer.LightingLayerSine);
@@ -1351,6 +1355,26 @@ namespace TF.EX.TowerFallExtensions
                     DynamicData.For(rp).Get<double>("actualDepth") == rotatePlatform.ActualDepth);
 
                 toLoad?.LoadState(rotatePlatform);
+            }
+        }
+
+        private static void AddSensorBlocksState(this GameState state, Level level)
+        {
+            foreach (var sensorBlock in level.GetAll<TowerFall.SensorBlock>())
+            {
+                state.Entities.SensorBlocks.Add(sensorBlock.GetState());
+            }
+        }
+
+        private static void LoadSensorBlocks(this GameState gameState, Level level)
+        {
+            var inGameSensorBlocks = level.GetAll<TowerFall.SensorBlock>();
+            foreach (var sensorBlock in gameState.Entities.SensorBlocks)
+            {
+                var toLoad = inGameSensorBlocks.FirstOrDefault(sb =>
+                    DynamicData.For(sb).Get<double>("actualDepth") == sensorBlock.ActualDepth);
+
+                toLoad?.LoadState(sensorBlock);
             }
         }
 

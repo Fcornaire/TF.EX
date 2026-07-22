@@ -85,5 +85,8 @@ namespace TF.EX.Domain.Models.State.Entity
 
         [Key(29)]
         public ICollection<RotatePlatform> RotatePlatforms { get; set; } = new List<RotatePlatform>();
+
+        [Key(30)]
+        public ICollection<SensorBlock> SensorBlocks { get; set; } = new List<SensorBlock>();
     }
 }
