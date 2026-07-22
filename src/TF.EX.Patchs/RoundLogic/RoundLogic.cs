@@ -25,6 +25,25 @@ namespace TF.EX.Patchs.RoundLogic
             Vector2[] array = new Vector2[4];
             List<Vector2> xMLPositions = __instance.Session.CurrentLevel.GetXMLPositions("PlayerSpawn");
 
+            if (xMLPositions.Count < TowerFall.TFGame.PlayerAmount) //Team-only levels
+            {
+                var teamSpawns = __instance.Session.CurrentLevel.GetXMLPositions("TeamSpawnA");
+                teamSpawns.AddRange(__instance.Session.CurrentLevel.GetXMLPositions("TeamSpawnB"));
+
+                foreach (var spawn in teamSpawns)
+                {
+                    if (xMLPositions.Count >= TowerFall.TFGame.PlayerAmount)
+                    {
+                        break;
+                    }
+
+                    if (!xMLPositions.Contains(spawn))
+                    {
+                        xMLPositions.Add(spawn);
+                    }
+                }
+            }
+
             Calc.CalcPatch.RegisterRng();
             xMLPositions = CalcExtensions.OwnVectorShuffle(xMLPositions).ToList();
             Calc.CalcPatch.UnregisterRng();

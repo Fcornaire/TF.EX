@@ -43,12 +43,25 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             dynExplosion.Set("actualDepth", toLoad.ActualDepth);
 
             var toLoadCounters = toLoad.Counters.ToList();
+            var sprites = dynExplosion.Get<List<Sprite<int>>>("sprites");
+
+            while (counters.Count > toLoadCounters.Count) //The pooled instance may have been reused 
+            {
+                counters.RemoveAt(counters.Count - 1);
+                if (sprites.Count > toLoadCounters.Count)
+                {
+                    sprites.RemoveAt(sprites.Count - 1);
+                }
+            }
+            while (counters.Count < toLoadCounters.Count)
+            {
+                counters.Add(new Counter());
+                sprites.Add(null);
+            }
+
             for (int i = 0; i < counters.Count; i++)
             {
-                if (i < toLoadCounters.Count)
-                {
-                    counters[i].LoadState(toLoadCounters[i]);
-                }
+                counters[i].LoadState(toLoadCounters[i]);
             }
 
             alarm.LoadState(toLoad.Alarm);
