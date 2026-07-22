@@ -154,6 +154,7 @@ namespace TF.EX.TowerFallExtensions
             gameState.AddMoonGlassBlocksState(self);
             gameState.AddGhostPlatformsState(self);
             gameState.AddLoopPlatformsState(self);
+            gameState.AddRotatePlatformsState(self);
 
             gameState.Session.BramblesStartingState = sessionService.GetBramblesStartingState();
             gameState.Rng = rngService.Get();
@@ -197,6 +198,8 @@ namespace TF.EX.TowerFallExtensions
 
             //To deal with coroutine brambles
             sessionService.LoadBramblesStartingState(gameState.Session.BramblesStartingState);
+
+            sessionService.LoadChestsState(gameState.Entities.Chests);
 
             sfxService.UpdateLastRollbackFrame(gameState.Frame);
             sfxService.Load(gameState.SFXs.Select(sfx => new Domain.Models.State.SFX
@@ -281,20 +284,6 @@ namespace TF.EX.TowerFallExtensions
 
                 dynEngine.Set("scene", dynEngine.Get<Monocle.Scene>("nextScene"));
                 level = loaderXML.Level;
-
-                if (level.Session.RoundIndex != 0)
-                {
-                    foreach (var chest in gameState.Entities.Chests)
-                    {
-                        var dummyChest = new TreasureChest(Vector2.Zero, TreasureChest.Types.AutoOpen, TreasureChest.AppearModes.Time, TowerFall.Pickups.Arrows);
-
-                        var dynChest = DynamicData.For(dummyChest);
-                        dynChest.Set("Scene", level);
-                        dummyChest.Added();
-
-                        level.GetGameplayLayer().Entities.Insert(0, dummyChest);
-                    }
-                }
             }
 
             var dynGameplayLayer = DynamicData.For(level.GetGameplayLayer());
@@ -530,15 +519,13 @@ namespace TF.EX.TowerFallExtensions
 
 
             //Chests load
-            if (level != null && level[GameTags.TreasureChest] != null && level[GameTags.TreasureChest].Count > 0)
+            level.DeleteAll<TowerFall.TreasureChest>();
+
+            if (gameState.Entities.Chests.TryGetValue(gameState.Session.RoundIndex, out var chestsToLoad))
             {
-                level.DeleteAll<TowerFall.TreasureChest>();
-
-                foreach (var chestToLoad in gameState.Entities.Chests.ToArray())
+                foreach (var chestToLoad in chestsToLoad)
                 {
-                    var cachedChest = ServiceCollections.GetCachedEntity<TreasureChest>(chestToLoad.ActualDepth);
-
-                    if (cachedChest == null)
+                    if (!ServiceCollections.GetCached<TreasureChest>($"chest_{gameState.Session.RoundIndex}_{chestToLoad.ActualDepth}", out var cachedChest))
                     {
                         cachedChest = new TreasureChest(Vector2.Zero, TreasureChest.Types.Normal, TreasureChest.AppearModes.Time, chestToLoad.Pickups.ToTFModel());
                     }
@@ -646,9 +633,10 @@ namespace TF.EX.TowerFallExtensions
             //MoonGlassBlocks (Moonstone) load
             gameState.LoadMoonGlassBlocks(level);
 
-            //GhostPlatforms and LoopPlatforms (The Amaranth) load
+            //GhostPlatforms, LoopPlatforms and RotatePlatforms (The Amaranth) load
             gameState.LoadGhostPlatforms(level);
             gameState.LoadLoopPlatforms(level);
+            gameState.LoadRotatePlatforms(level);
 
             var sine = dynLightingLayer.Get<SineWave>("sine");
             sine.UpdateAttributes(gameState.Layer.LightingLayerSine);
@@ -828,17 +816,22 @@ namespace TF.EX.TowerFallExtensions
 
         private static void AddChestsState(this GameState gameState, Level level)
         {
-            if (level[GameTags.TreasureChest] != null && level[GameTags.TreasureChest].Count > 0)
-            {
-                var chests = level[GameTags.TreasureChest].ToArray();
+            var sessionService = ServiceCollections.ResolveSessionService();
+            var roundIndex = level.Session.RoundIndex;
+            var chests = new List<Chest>();
 
-                foreach (TowerFall.TreasureChest chest in chests)
+            if (level[GameTags.TreasureChest] != null)
+            {
+                foreach (TowerFall.TreasureChest chest in level[GameTags.TreasureChest].ToArray())
                 {
                     var che = chest.GetState();
-                    gameState.Entities.Chests.Add(che);
-                    ServiceCollections.AddEntityToCache(che.ActualDepth, chest);
+                    chests.Add(che);
+                    ServiceCollections.AddToCache($"chest_{roundIndex}_{che.ActualDepth}", chest, TimeSpan.FromMinutes(5));
                 }
             }
+
+            sessionService.UpdateChestsState(roundIndex, chests);
+            gameState.Entities.Chests = sessionService.GetChestsState();
         }
 
         private static void AddPickupsState(this GameState gameState, Level level)
@@ -1338,6 +1331,26 @@ namespace TF.EX.TowerFallExtensions
                     DynamicData.For(lp).Get<double>("actualDepth") == loopPlatform.ActualDepth);
 
                 toLoad?.LoadState(loopPlatform);
+            }
+        }
+
+        private static void AddRotatePlatformsState(this GameState state, Level level)
+        {
+            foreach (var rotatePlatform in level.GetAll<TowerFall.RotatePlatform>())
+            {
+                state.Entities.RotatePlatforms.Add(rotatePlatform.GetState());
+            }
+        }
+
+        private static void LoadRotatePlatforms(this GameState gameState, Level level)
+        {
+            var inGameRotatePlatforms = level.GetAll<TowerFall.RotatePlatform>();
+            foreach (var rotatePlatform in gameState.Entities.RotatePlatforms)
+            {
+                var toLoad = inGameRotatePlatforms.FirstOrDefault(rp =>
+                    DynamicData.For(rp).Get<double>("actualDepth") == rotatePlatform.ActualDepth);
+
+                toLoad?.LoadState(rotatePlatform);
             }
         }
 

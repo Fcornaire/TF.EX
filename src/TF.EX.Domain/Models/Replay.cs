@@ -89,7 +89,7 @@ namespace TF.EX.Domain.Models
         V4, //Switched serialization to MessagePack
         V5, //Added StuckTo actualdepth to Arrow instead of saving the stuck entity
         V6, //Added CustomMods to ReplayInfo
-        V7, //Deterministic xoshiro256** RNG: Rng snapshot is now generator state words, not a draw log
+        V7, //Deterministic xoshiro256** RNG: Rng snapshot is now generator state words, not a draw log + chest rework
     }
 
     public static class ReplayVersionExtensions

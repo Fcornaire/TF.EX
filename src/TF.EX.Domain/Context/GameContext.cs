@@ -1,11 +1,12 @@
 ﻿using Microsoft.Xna.Framework.Audio;
 using TF.EX.Domain.Externals;
-using TF.EX.Domain.Randomness;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Models.State;
 using TF.EX.Domain.Models.State.Entity.HUD;
+using TF.EX.Domain.Models.State.Entity.LevelEntity.Chest;
 using TF.EX.Domain.Models.State.Entity.LevelEntity.Platform;
 using TF.EX.Domain.Models.WebSocket;
+using TF.EX.Domain.Randomness;
 using TF.EX.Domain.Utils;
 
 namespace TF.EX.Domain.Context
@@ -65,6 +66,9 @@ namespace TF.EX.Domain.Context
         void Reset();
         IEnumerable<BramblesStartingState> GetBramblesStartingState();
         void LoadBramblesStartingState(IEnumerable<BramblesStartingState> states);
+        void UpdateChestsState(int roundIndex, List<Chest> chests);
+        Dictionary<int, List<Chest>> GetChestsState();
+        void LoadChestsState(Dictionary<int, List<Chest>> chestsPerRound);
     }
 
     internal class GameContext : IGameContext
@@ -84,6 +88,7 @@ namespace TF.EX.Domain.Context
         private Dictionary<string, SoundEffect> _soundEffects = new Dictionary<string, SoundEffect>(); //TODO: should be cached instead
         private Dictionary<int, Player> ArcherSelections = new Dictionary<int, Player>();
         private ICollection<BramblesStartingState> bramblesStates = new List<BramblesStartingState>();
+        private Dictionary<int, List<Chest>> chestsPerRound = new Dictionary<int, List<Chest>>();
         private int _lastRollbackFrame = 0;
 
         private int _localPlayerIndex = -1;
@@ -475,6 +480,7 @@ namespace TF.EX.Domain.Context
         public void Reset()
         {
             bramblesStates.Clear();
+            chestsPerRound.Clear();
 
             ResetPlayersIndex();
             ResetArcherSelections();
@@ -499,6 +505,21 @@ namespace TF.EX.Domain.Context
         public void LoadBramblesStartingState(IEnumerable<BramblesStartingState> states)
         {
             bramblesStates = states.ToList();
+        }
+
+        public void UpdateChestsState(int roundIndex, List<Chest> chests)
+        {
+            chestsPerRound[roundIndex] = chests;
+        }
+
+        public Dictionary<int, List<Chest>> GetChestsState()
+        {
+            return new Dictionary<int, List<Chest>>(chestsPerRound);
+        }
+
+        public void LoadChestsState(Dictionary<int, List<Chest>> toLoad)
+        {
+            chestsPerRound = new Dictionary<int, List<Chest>>(toLoad);
         }
     }
 }

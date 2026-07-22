@@ -1,5 +1,6 @@
 ﻿using TF.EX.Domain.Context;
 using TF.EX.Domain.Models.State;
+using TF.EX.Domain.Models.State.Entity.LevelEntity.Chest;
 using TF.EX.Domain.Models.State.Entity.LevelEntity.Platform;
 using TF.EX.Domain.Ports.TF;
 
@@ -58,6 +59,21 @@ namespace TF.EX.Domain.Services.TF
         public void SaveSession(Session session)
         {
             _context.UpdateSession(session);
+        }
+
+        public void UpdateChestsState(int roundIndex, List<Chest> chests)
+        {
+            _context.UpdateChestsState(roundIndex, chests);
+        }
+
+        public Dictionary<int, List<Chest>> GetChestsState()
+        {
+            return _context.GetChestsState();
+        }
+
+        public void LoadChestsState(Dictionary<int, List<Chest>> chestsPerRound)
+        {
+            _context.LoadChestsState(chestsPerRound);
         }
     }
 }
