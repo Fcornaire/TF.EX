@@ -18,7 +18,7 @@ namespace TF.EX.Domain.Models.State.Entity
         [Key(2)]
         public ICollection<Arrow> Arrows { get; set; } = new List<Arrow>();
         [Key(3)]
-        public ICollection<Chest> Chests { get; set; } = new List<Chest>();
+        public Dictionary<int, List<Chest>> Chests { get; set; } = new Dictionary<int, List<Chest>>();
         [Key(4)]
         public ICollection<Pickup> Pickups { get; set; } = new List<Pickup>();
         [Key(5)]
@@ -82,5 +82,8 @@ namespace TF.EX.Domain.Models.State.Entity
 
         [Key(28)]
         public ICollection<LoopPlatform> LoopPlatforms { get; set; } = new List<LoopPlatform>();
+
+        [Key(29)]
+        public ICollection<RotatePlatform> RotatePlatforms { get; set; } = new List<RotatePlatform>();
     }
 }

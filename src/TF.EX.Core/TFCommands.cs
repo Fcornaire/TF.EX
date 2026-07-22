@@ -76,8 +76,8 @@ namespace TF.EX.Core
         public static void LaunchTestMode(string[] args)
         {
             var mode = args.Length > 0 ? ParseMode(args[0]) : TowerFall.Modes.LastManStanding;
-            var startLevel = args.Length > 1 ? Math.Min(int.Parse(args[1]), 9) : 0;
-            var map = args.Length > 2 ? Math.Min(int.Parse(args[2]), 14) : 0;
+            var map = ParseMap(args, 2);
+            var startLevel = ParseStartLevel(args, 1, map);
             var seed = args.Length > 3 ? int.Parse(args[3]) : 42;
             var checkDistance = args.Length > 4 ? Math.Min(int.Parse(args[4]), 7) : 2;
             var variant = args.Length > 5 ? args[5] : "";
@@ -85,7 +85,7 @@ namespace TF.EX.Core
             variant = variant.Replace("_", " ");
 
             var logger = ServiceCollections.ResolveLogger();
-            logger.LogDebug<Commands>($"Launching test mode with mode: {mode}, startLevel: {startLevel}, seed: {seed}, checkDistance: {checkDistance} with variant {variant}");
+            logger.LogDebug<Commands>($"Launching test mode with mode: {mode}, map: {map} ({GameData.VersusTowers[map].Theme.Name}), startLevel: {startLevel}, seed: {seed}, checkDistance: {checkDistance} with variant {variant}");
 
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var replayService = ServiceCollections.ResolveReplayService();
@@ -119,8 +119,8 @@ namespace TF.EX.Core
             var remoteAddr = args.Length > 1 ? args[1] : "";
             var remotePort = args.Length > 2 ? int.Parse(args[2]) : 7001;
             var localPort = args.Length > 3 ? ushort.Parse(args[3]) : (ushort)7000;
-            var map = args.Length > 4 ? Math.Min(int.Parse(args[4]), 14) : 0;
-            var startLevel = args.Length > 5 ? Math.Min(int.Parse(args[5]), 9) : 0;
+            var map = ParseMap(args, 4);
+            var startLevel = ParseStartLevel(args, 5, map);
             var draw = args.Length > 6 ? ParseDraw(args[6]) : PlayerDraw.Player1;
             var seed = args.Length > 7 ? int.Parse(args[7]) : 42;
 
@@ -248,12 +248,12 @@ namespace TF.EX.Core
         public static void LaunchVersus(string[] args)
         {
             var mode = args.Length > 0 ? ParseMode(args[0]) : TowerFall.Modes.LastManStanding;
-            var startLevel = args.Length > 1 ? Math.Min(int.Parse(args[1]), 9) : 0;
-            var map = args.Length > 2 ? Math.Min(int.Parse(args[2]), 14) : 0;
+            var map = ParseMap(args, 2);
+            var startLevel = ParseStartLevel(args, 1, map);
             var seed = args.Length > 3 ? int.Parse(args[3]) : 42;
 
             var logger = ServiceCollections.ResolveLogger();
-            logger.LogDebug<Commands>($"Launching versus mode with mode: {mode}, startLevel: {startLevel}, seed: {seed}");
+            logger.LogDebug<Commands>($"Launching versus mode with mode: {mode}, map: {map} ({GameData.VersusTowers[map].Theme.Name}), startLevel: {startLevel}, seed: {seed}");
 
             var replayService = ServiceCollections.ResolveReplayService();
             var rngService = ServiceCollections.ResolveRngService();
@@ -286,6 +286,20 @@ namespace TF.EX.Core
             File.WriteAllText(path, dump);
 
             TFGame.Instance.Commands.Log($"dump: wrote entity dump to {path}");
+        }
+
+        private static int ParseMap(string[] args, int index)
+        {
+            return args.Length > index
+                ? Math.Clamp(int.Parse(args[index]), 0, GameData.VersusTowers.Count - 1)
+                : 0;
+        }
+
+        private static int ParseStartLevel(string[] args, int index, int map)
+        {
+            return args.Length > index
+                ? Math.Clamp(int.Parse(args[index]), 0, GameData.VersusTowers[map].Levels.Count - 1)
+                : 0;
         }
 
         private static TowerFall.Modes ParseMode(string arg)
