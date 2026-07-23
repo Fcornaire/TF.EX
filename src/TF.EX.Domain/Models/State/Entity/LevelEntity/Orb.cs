@@ -25,5 +25,8 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity
 
         [Key(8)]
         public float StartY { get; set; }
+
+        [Key(9)]
+        public bool Explodes { get; set; }
     }
 }

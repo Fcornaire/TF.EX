@@ -292,6 +292,9 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
                 case ArrowTypes.Bolt:
                     built = new BoltArrow();
                     break;
+                case ArrowTypes.Trigger:
+                    built = new TriggerArrow();
+                    break;
                 default:
                     throw new Exception("Unknown arrow type");
             }

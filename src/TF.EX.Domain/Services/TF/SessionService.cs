@@ -1,5 +1,7 @@
 ﻿using TF.EX.Domain.Context;
 using TF.EX.Domain.Models.State;
+using TF.EX.Domain.Models.State.Entity;
+using TF.EX.Domain.Models.State.Entity.LevelEntity;
 using TF.EX.Domain.Models.State.Entity.LevelEntity.Chest;
 using TF.EX.Domain.Models.State.Entity.LevelEntity.Platform;
 using TF.EX.Domain.Ports.TF;
@@ -61,19 +63,29 @@ namespace TF.EX.Domain.Services.TF
             _context.UpdateSession(session);
         }
 
-        public void UpdateChestsState(int roundIndex, List<Chest> chests)
+        public void UpdateRoundChests(int roundIndex, List<Chest> chests)
         {
-            _context.UpdateChestsState(roundIndex, chests);
+            _context.UpdateRoundChests(roundIndex, chests);
         }
 
-        public Dictionary<int, List<Chest>> GetChestsState()
+        public void UpdateRoundOrbs(int roundIndex, List<Orb> orbs)
         {
-            return _context.GetChestsState();
+            _context.UpdateRoundOrbs(roundIndex, orbs);
         }
 
-        public void LoadChestsState(Dictionary<int, List<Chest>> chestsPerRound)
+        public void UpdateRoundLavaControl(int roundIndex, LavaControl lavaControl)
         {
-            _context.LoadChestsState(chestsPerRound);
+            _context.UpdateRoundLavaControl(roundIndex, lavaControl);
+        }
+
+        public Dictionary<int, RoundData> GetRoundData()
+        {
+            return _context.GetRoundData();
+        }
+
+        public void LoadRoundData(Dictionary<int, RoundData> roundData)
+        {
+            _context.LoadRoundData(roundData);
         }
     }
 }

@@ -40,7 +40,9 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 
             double lastPlaformDepth = -1;
             var lastPlatform = dynPlayer.Get<TowerFall.Platform>("lastPlatform");
-            if (lastPlatform != null)
+            
+            // Only capture the depth if the platform is still live in the level
+            if (lastPlatform != null && entity.Level.GetAll<TowerFall.Platform>().Contains(lastPlatform))
             {
                 var dynLastPlatform = DynamicData.For(lastPlatform);
 
@@ -64,6 +66,9 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 
             var lastAimDirection = dynPlayer.Get<float>("lastAimDirection");
             var wingsFireCounter = dynPlayer.Get<Counter>("wingsFireCounter");
+            var canDetonateCounter = dynPlayer.Get<Counter>("canDetonateCounter");
+            var triggerArrows = dynPlayer.Get<List<TowerFall.TriggerArrow>>("triggerArrows");
+            var triggerArrowDepths = triggerArrows.Select(ta => DynamicData.For(ta).Get<double>("actualDepth")).ToList();
 
             return new TF.EX.Domain.Models.State.Entity.LevelEntity.Player.Player
             {
@@ -127,7 +132,10 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 LastAimDir = lastAimDirection,
                 HasSpeedBoots = entity.HasSpeedBoots,
                 IsInvisible = entity.Invisible,
-                ShouldAutoBounce = dynPlayer.Get<bool>("autoBounce")
+                ShouldAutoBounce = dynPlayer.Get<bool>("autoBounce"),
+                CanDetonateCounter = canDetonateCounter.GetState(),
+                DidDetonate = dynPlayer.Get<bool>("didDetonate"),
+                TriggerArrowDepths = triggerArrowDepths
             };
         }
 
@@ -175,6 +183,10 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             flapBounceCounter.Set("counter", toLoad.FlapBounceCounter);
             var wingsFireCounter = dynPlayer.Get<Counter>("wingsFireCounter");
             wingsFireCounter.LoadState(toLoad.WingsFireCounter);
+
+            var canDetonateCounter = dynPlayer.Get<Counter>("canDetonateCounter");
+            canDetonateCounter.LoadState(toLoad.CanDetonateCounter);
+            dynPlayer.Set("didDetonate", toLoad.DidDetonate);
 
             entity.Fire.LoadState(toLoad.FireControl);
 

@@ -1,4 +1,6 @@
 ﻿using TF.EX.Domain.Models.State;
+using TF.EX.Domain.Models.State.Entity;
+using TF.EX.Domain.Models.State.Entity.LevelEntity;
 using TF.EX.Domain.Models.State.Entity.LevelEntity.Chest;
 using TF.EX.Domain.Models.State.Entity.LevelEntity.Platform;
 
@@ -15,8 +17,10 @@ namespace TF.EX.Domain.Ports.TF
         void AddBramblesState(float frameCounter, IEnumerable<MovingPlatform> movingPlatformsStates, Vector2f spreadOrigin);
         IEnumerable<BramblesStartingState> GetBramblesStartingState();
         void LoadBramblesStartingState(IEnumerable<BramblesStartingState> bramblesStartingState);
-        void UpdateChestsState(int roundIndex, List<Chest> chests);
-        Dictionary<int, List<Chest>> GetChestsState();
-        void LoadChestsState(Dictionary<int, List<Chest>> chestsPerRound);
+        void UpdateRoundChests(int roundIndex, List<Chest> chests);
+        void UpdateRoundOrbs(int roundIndex, List<Orb> orbs);
+        void UpdateRoundLavaControl(int roundIndex, LavaControl lavaControl);
+        Dictionary<int, RoundData> GetRoundData();
+        void LoadRoundData(Dictionary<int, RoundData> roundData);
     }
 }

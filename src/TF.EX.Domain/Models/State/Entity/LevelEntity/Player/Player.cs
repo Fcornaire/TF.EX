@@ -149,5 +149,14 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Player
 
         [Key(47)]
         public float SlipperyControl { get; set; }
+
+        [Key(48)]
+        public Counter CanDetonateCounter { get; set; }
+
+        [Key(49)]
+        public bool DidDetonate { get; set; }
+
+        [Key(50)]
+        public List<double> TriggerArrowDepths { get; set; }
     }
 }

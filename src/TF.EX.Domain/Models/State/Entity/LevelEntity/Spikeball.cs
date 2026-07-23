@@ -12,5 +12,9 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity
         public bool IsFirstHalf { get; set; }
         [Key(2)]
         public Counter ShakeCounter { get; set; }
+        [Key(3)]
+        public float SpinTimer { get; set; }
+        [Key(4)]
+        public double ActualDepth { get; set; }
     }
 }

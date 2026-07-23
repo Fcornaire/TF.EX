@@ -2,7 +2,9 @@
 using TF.EX.Domain.Externals;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Models.State;
+using TF.EX.Domain.Models.State.Entity;
 using TF.EX.Domain.Models.State.Entity.HUD;
+using TF.EX.Domain.Models.State.Entity.LevelEntity;
 using TF.EX.Domain.Models.State.Entity.LevelEntity.Chest;
 using TF.EX.Domain.Models.State.Entity.LevelEntity.Platform;
 using TF.EX.Domain.Models.WebSocket;
@@ -66,9 +68,11 @@ namespace TF.EX.Domain.Context
         void Reset();
         IEnumerable<BramblesStartingState> GetBramblesStartingState();
         void LoadBramblesStartingState(IEnumerable<BramblesStartingState> states);
-        void UpdateChestsState(int roundIndex, List<Chest> chests);
-        Dictionary<int, List<Chest>> GetChestsState();
-        void LoadChestsState(Dictionary<int, List<Chest>> chestsPerRound);
+        void UpdateRoundChests(int roundIndex, List<Chest> chests);
+        void UpdateRoundOrbs(int roundIndex, List<Orb> orbs);
+        void UpdateRoundLavaControl(int roundIndex, LavaControl lavaControl);
+        Dictionary<int, RoundData> GetRoundData();
+        void LoadRoundData(Dictionary<int, RoundData> roundData);
     }
 
     internal class GameContext : IGameContext
@@ -88,7 +92,7 @@ namespace TF.EX.Domain.Context
         private Dictionary<string, SoundEffect> _soundEffects = new Dictionary<string, SoundEffect>(); //TODO: should be cached instead
         private Dictionary<int, Player> ArcherSelections = new Dictionary<int, Player>();
         private ICollection<BramblesStartingState> bramblesStates = new List<BramblesStartingState>();
-        private Dictionary<int, List<Chest>> chestsPerRound = new Dictionary<int, List<Chest>>();
+        private Dictionary<int, RoundData> roundDataPerRound = new Dictionary<int, RoundData>();
         private int _lastRollbackFrame = 0;
 
         private int _localPlayerIndex = -1;
@@ -480,7 +484,7 @@ namespace TF.EX.Domain.Context
         public void Reset()
         {
             bramblesStates.Clear();
-            chestsPerRound.Clear();
+            roundDataPerRound.Clear();
 
             ResetPlayersIndex();
             ResetArcherSelections();
@@ -507,19 +511,58 @@ namespace TF.EX.Domain.Context
             bramblesStates = states.ToList();
         }
 
-        public void UpdateChestsState(int roundIndex, List<Chest> chests)
+        public void UpdateRoundChests(int roundIndex, List<Chest> chests)
         {
-            chestsPerRound[roundIndex] = chests;
+            GetOrCreateRound(roundIndex).Chests = chests;
         }
 
-        public Dictionary<int, List<Chest>> GetChestsState()
+        public void UpdateRoundOrbs(int roundIndex, List<Orb> orbs)
         {
-            return new Dictionary<int, List<Chest>>(chestsPerRound);
+            GetOrCreateRound(roundIndex).Orbs = orbs;
         }
 
-        public void LoadChestsState(Dictionary<int, List<Chest>> toLoad)
+        public void UpdateRoundLavaControl(int roundIndex, LavaControl lavaControl)
         {
-            chestsPerRound = new Dictionary<int, List<Chest>>(toLoad);
+            GetOrCreateRound(roundIndex).LavaControl = lavaControl;
+        }
+
+        public Dictionary<int, RoundData> GetRoundData()
+        {
+            var snapshot = new Dictionary<int, RoundData>();
+            foreach (var kvp in roundDataPerRound)
+            {
+                snapshot[kvp.Key] = new RoundData
+                {
+                    Chests = kvp.Value.Chests,
+                    Orbs = kvp.Value.Orbs,
+                    LavaControl = kvp.Value.LavaControl
+                };
+            }
+            return snapshot;
+        }
+
+        public void LoadRoundData(Dictionary<int, RoundData> toLoad)
+        {
+            roundDataPerRound = new Dictionary<int, RoundData>();
+            foreach (var kvp in toLoad)
+            {
+                roundDataPerRound[kvp.Key] = new RoundData
+                {
+                    Chests = kvp.Value.Chests,
+                    Orbs = kvp.Value.Orbs,
+                    LavaControl = kvp.Value.LavaControl
+                };
+            }
+        }
+
+        private RoundData GetOrCreateRound(int roundIndex)
+        {
+            if (!roundDataPerRound.TryGetValue(roundIndex, out var roundData))
+            {
+                roundData = new RoundData();
+                roundDataPerRound[roundIndex] = roundData;
+            }
+            return roundData;
         }
     }
 }
