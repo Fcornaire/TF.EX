@@ -17,7 +17,8 @@
             "TOWERFORGE",
             "ASCENSION",
             "THE AMARANTH",
-            "DREADWOOD"
+            "DREADWOOD",
+            "DARKFANG"
         };
 
         public static readonly int MAX_SFX_DELAY = 10;

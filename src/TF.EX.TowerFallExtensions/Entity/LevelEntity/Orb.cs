@@ -20,6 +20,7 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             var sine = dynOrb.Get<SineWave>("sine");
             var ownerIndex = dynOrb.Get<int>("ownerIndex");
             var startY = dynOrb.Get<float>("startY");
+            var explodes = dynOrb.Get<bool>("explodes");
 
             return new Orb
             {
@@ -31,7 +32,8 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 VSpeed = vSpeed,
                 SineCounter = sine.Counter,
                 OwnerIndex = ownerIndex,
-                StartY = startY
+                StartY = startY,
+                Explodes = explodes
             };
         }
 
