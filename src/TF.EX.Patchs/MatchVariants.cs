@@ -14,7 +14,6 @@ namespace TF.EX.Patchs
             "TeamRevive",
             "AlwaysBigTreasure",
             "BottomlessTreasure",
-            "StartWithPrismArrows",
             "StartWithRandomArrows",
             "StartWithToyArrows",
             "RegeneratingShields",

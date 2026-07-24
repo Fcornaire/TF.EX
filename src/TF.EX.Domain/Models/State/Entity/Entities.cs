@@ -87,5 +87,11 @@ namespace TF.EX.Domain.Models.State.Entity
 
         [Key(32)]
         public Dictionary<int, RoundData> RoundData { get; set; } = new Dictionary<int, RoundData>();
+
+        [Key(33)]
+        public ICollection<Prism> Prisms { get; set; } = new List<Prism>();
+
+        [Key(34)]
+        public ICollection<CrumbleWall> CrumbleWalls { get; set; } = new List<CrumbleWall>();
     }
 }

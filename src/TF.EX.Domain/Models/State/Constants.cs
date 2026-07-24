@@ -18,9 +18,12 @@
             "ASCENSION",
             "THE AMARANTH",
             "DREADWOOD",
-            "DARKFANG"
+            "DARKFANG",
+            "CATACLYSM"
         };
 
+        public static readonly int PLAYER_DEPTH = -100;
+        public static readonly int PLAYER_PRISM_DEPTH = -98;
         public static readonly int MAX_SFX_DELAY = 10;
         public static readonly int GAMEPLAY_LAYER = 0;
         public static readonly float INITIAL_END_COUNTER = 90.0f;
