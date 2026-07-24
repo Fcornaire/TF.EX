@@ -58,6 +58,20 @@ namespace TF.EX.TowerFallExtensions
             }
         }
 
+        public static void DropLiveFromEntityPool<T>(this Level level) where T : Monocle.Entity, new()
+        {
+            if (Monocle.Cache.cache == null || !Monocle.Cache.cache.TryGetValue(typeof(T), out var pool))
+            {
+                return;
+            }
+
+            var live = level.GetAll<T>().ToList();
+            var kept = pool.Where(entity => !live.Contains(entity)).Reverse().ToList();
+
+            pool.Clear();
+            kept.ForEach(pool.Push);
+        }
+
         //TODO: remove and use Scene extension instead
         public static T Get<T>(this Level level) where T : Monocle.Entity
         {
@@ -157,6 +171,8 @@ namespace TF.EX.TowerFallExtensions
             gameState.AddRotatePlatformsState(self);
             gameState.AddSensorBlocksState(self);
             gameState.AddCrumbleBlocksState(self);
+            gameState.AddCrumbleWallsState(self);
+            gameState.AddPrismsState(self);
 
             gameState.Session.BramblesStartingState = sessionService.GetBramblesStartingState();
             gameState.Rng = rngService.Get();
@@ -438,6 +454,7 @@ namespace TF.EX.TowerFallExtensions
 
             //CrumbleBlocks (Darkfang) load before Player
             gameState.LoadCrumbleBlocks(level);
+            gameState.LoadCrumbleWalls(level);
 
             //Players
             foreach (Domain.Models.State.Entity.LevelEntity.Player.Player toLoad in gameState.Entities.Players.ToArray())
@@ -526,6 +543,8 @@ namespace TF.EX.TowerFallExtensions
             //TriggerArrow detonation relations
             gameState.LoadTriggerArrows(level);
 
+            //Prism from Prism Arrow
+            gameState.LoadPrisms(level);
 
             //Chests load
             level.DeleteAll<TowerFall.TreasureChest>();
@@ -1231,6 +1250,26 @@ namespace TF.EX.TowerFallExtensions
             }
         }
 
+        private static void AddCrumbleWallsState(this GameState gameState, Level level)
+        {
+            foreach (TowerFall.CrumbleWall crumbleWall in level.GetAll<TowerFall.CrumbleWall>())
+            {
+                var state = crumbleWall.GetState();
+                gameState.Entities.CrumbleWalls.Add(state);
+                ServiceCollections.AddEntityToCache(state.ActualDepth, crumbleWall);
+            }
+        }
+
+        private static void AddPrismsState(this GameState gameState, Level level)
+        {
+            foreach (TowerFall.Prism prism in level.GetAll<TowerFall.Prism>())
+            {
+                var state = prism.GetState();
+                gameState.Entities.Prisms.Add(state);
+                ServiceCollections.AddEntityToCache(state.ActualDepth, prism);
+            }
+        }
+
         private static void AddCrumbleBlocksState(this GameState gameState, Level level)
         {
             var crumbleBlocks = level.GetAll<TowerFall.CrumbleBlock>().ToArray();
@@ -1561,6 +1600,81 @@ namespace TF.EX.TowerFallExtensions
                     }
                 }
             }
+        }
+
+        private static void LoadCrumbleWalls(this GameState gameState, Level level)
+        {
+            level.DeleteAll<TowerFall.CrumbleWall>();
+
+            foreach (var toLoad in gameState.Entities.CrumbleWalls)
+            {
+                var cachedCrumbleWall = ServiceCollections.GetCachedEntity<TowerFall.CrumbleWall>(toLoad.ActualDepth);
+
+                if (cachedCrumbleWall == null)
+                {
+                    cachedCrumbleWall = new TowerFall.CrumbleWall(toLoad.Position.ToTFVector());
+                }
+
+                cachedCrumbleWall.LoadState(toLoad);
+                level.GetGameplayLayer().Entities.Insert(0, cachedCrumbleWall);
+
+                foreach (var tag in cachedCrumbleWall.Tags)
+                {
+                    var tagList = level[tag];
+                    if (!tagList.Contains(cachedCrumbleWall))
+                    {
+                        tagList.Add(cachedCrumbleWall);
+                    }
+                }
+            }
+        }
+
+        private static void LoadPrisms(this GameState gameState, Level level)
+        {
+            level.DeleteAll<TowerFall.Prism>();
+
+            foreach (var player in level.GetAll<TowerFall.Player>())
+            {
+                var dynPlayer = DynamicData.For(player);
+                dynPlayer.Set("Prism", null);
+                dynPlayer.Set("depth", Constants.PLAYER_DEPTH);
+            }
+
+            foreach (var toLoad in gameState.Entities.Prisms)
+            {
+                var cachedPrism = ServiceCollections.GetCachedEntity<TowerFall.Prism>(toLoad.ActualDepth);
+
+                if (cachedPrism == null)
+                {
+                    cachedPrism = new TowerFall.Prism();
+                }
+
+                cachedPrism.LoadState(toLoad);
+
+                var encasedPlayer = toLoad.EncasedPlayerIndex >= 0 ? level.GetPlayer(toLoad.EncasedPlayerIndex) : null;
+
+                DynamicData.For(cachedPrism).Set("EncasedPlayer", encasedPlayer);
+
+                if (encasedPlayer != null)
+                {
+                    var dynEncased = DynamicData.For(encasedPlayer);
+                    dynEncased.Set("Prism", cachedPrism);
+                    dynEncased.Set("depth", Constants.PLAYER_PRISM_DEPTH);
+                }
+
+                level.GetGameplayLayer().Entities.Insert(0, cachedPrism);
+
+                foreach (var tag in cachedPrism.Tags)
+                {
+                    var tagList = level[tag];
+                    if (!tagList.Contains(cachedPrism))
+                    {
+                        tagList.Add(cachedPrism);
+                    }
+                }
+            }
+
+            level.DropLiveFromEntityPool<TowerFall.Prism>();
         }
 
         private static void LoadCrackedPlatform(this GameState gameState, TowerFall.Level level)

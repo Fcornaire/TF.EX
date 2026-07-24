@@ -136,6 +136,15 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                     builder.WithTurns(boltArrow.Turns);
 
                     break;
+                case TowerFall.ArrowTypes.Prism:
+                    var dynPrismArrow = DynamicData.For((TowerFall.PrismArrow)entity);
+                    Sprite<int> prismNormalSprite = dynPrismArrow.Get<Sprite<int>>("normalSprite");
+                    Sprite<int> prismBuriedSprite = dynPrismArrow.Get<Sprite<int>>("buriedSprite");
+
+                    builder.WithNormalSprite(prismNormalSprite.GetState());
+                    builder.WithBuriedSprite(prismBuriedSprite.GetState());
+
+                    break;
             }
 
             return builder.Build();
@@ -289,6 +298,17 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                     canTurnCounter.LoadState(toLoadBoltArrow.CanTurnCounter);
 
                     dynBoltArrow.Set("Turns", toLoadBoltArrow.Turns);
+
+                    break;
+                case ArrowTypes.Prism:
+                    var dynPrismArrow = DynamicData.For((TowerFall.PrismArrow)entity);
+                    var toLoadPrismArrow = (PrismArrow)toLoad;
+
+                    var prismNormalSprite = dynPrismArrow.Get<Sprite<int>>("normalSprite");
+                    prismNormalSprite.LoadState(toLoadPrismArrow.NormalSprite);
+
+                    var prismBuriedSprite = dynPrismArrow.Get<Sprite<int>>("buriedSprite");
+                    prismBuriedSprite.LoadState(toLoadPrismArrow.BuriedSprite);
 
                     break;
             }

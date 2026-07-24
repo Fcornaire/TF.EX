@@ -295,6 +295,9 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
                 case ArrowTypes.Trigger:
                     built = new TriggerArrow();
                     break;
+                case ArrowTypes.Prism:
+                    built = new PrismArrow();
+                    break;
                 default:
                     throw new Exception("Unknown arrow type");
             }
@@ -360,6 +363,12 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
             {
                 boltArrow.CanTurnCounter = arrow.CanTurnCounter;
                 boltArrow.Turns = arrow.Turns;
+            }
+
+            if (built is PrismArrow prismArrow)
+            {
+                prismArrow.NormalSprite = arrow.NormalSprite;
+                prismArrow.BuriedSprite = arrow.BuriedSprite;
             }
 
             if (built is SuperBombArrow superBombArrow)

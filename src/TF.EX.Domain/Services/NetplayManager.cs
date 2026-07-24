@@ -551,7 +551,7 @@ namespace TF.EX.Domain.Services
 
         public bool IsDisconnected()
         {
-            if (GGRSFFI.IsInInit)
+            if (GGRSFFI.IsInInit || IsTestMode())
             {
                 return false;
             }
