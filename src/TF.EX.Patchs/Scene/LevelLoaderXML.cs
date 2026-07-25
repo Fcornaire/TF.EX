@@ -56,6 +56,7 @@ namespace TF.EX.Patchs.Scene
                 var dynRoundLogicLM = DynamicData.For(session.RoundLogic);
                 var dynRoundEndCounter = DynamicData.For(dynRoundLogicLM.Get<RoundEndCounter>("roundEndCounter"));
                 dynRoundEndCounter.Set("endCounter", Constants.INITIAL_END_COUNTER);
+                dynRoundEndCounter.Set("ghostWaitCounter", Constants.INITIAL_END_COUNTER);
                 dynRoundLogicLM.Set("done", false);
 
                 session.CurrentLevel.Ending = false;

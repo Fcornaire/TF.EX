@@ -5,6 +5,7 @@ using Monocle;
 using MonoMod.Utils;
 using TF.EX.Common.Extensions;
 using TF.EX.Domain;
+using TF.EX.Domain.Externals;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models.State;
 using TF.EX.TowerFallExtensions;
@@ -90,6 +91,20 @@ namespace TF.EX.Patchs.Entity.LevelEntity
                     }
                 }
             }
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch("DropArrow")]
+        public static void Player_DropArrow_Prefix()
+        {
+            Calc.CalcPatch.RegisterRng();
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("DropArrow")]
+        public static void Player_DropArrow_Postfix()
+        {
+            Calc.CalcPatch.UnregisterRng();
         }
 
         [HarmonyPrefix]

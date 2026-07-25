@@ -35,7 +35,9 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
                 case TowerFall.ArrowTypes.Trigger: return ArrowTypes.Trigger;
                 case TowerFall.ArrowTypes.Prism: return ArrowTypes.Prism;
             }
-            throw new NotImplementedException($"Can't create a ArrowTypes for unkwon value {arrowTypes}");
+
+            // Modded arrow safeguard
+            return (ArrowTypes)(int)arrowTypes;
         }
 
         public static TowerFall.ArrowTypes ToTFModel(this ArrowTypes arrowTypes)
@@ -54,7 +56,9 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
                 case ArrowTypes.Trigger: return TowerFall.ArrowTypes.Trigger;
                 case ArrowTypes.Prism: return TowerFall.ArrowTypes.Prism;
             }
-            throw new NotImplementedException($"Can't create a Twoerfall ArrowTypes for unkwon value {arrowTypes}");
+
+            // Modded arrow safeguard
+            return (TowerFall.ArrowTypes)(int)arrowTypes;
         }
 
     }

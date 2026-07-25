@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using System.Globalization;
+using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models.State;
 using TowerFall;
 
@@ -10,34 +11,55 @@ namespace TF.EX.Patchs
     {
         private static List<string> UnauthorizedVariant =
         [
-            "SuddenDeath",
+            //TODO: need to finish
             "TeamRevive",
-            "AlwaysBigTreasure",
-            "BottomlessTreasure",
-            "StartWithRandomArrows",
-            "StartWithToyArrows",
-            "RegeneratingShields",
-            "RegeneratingArrows",
-            "StealthArchers",
-            "DoubleJumping",
-            "ExplodingCorpses",
-            "TriggerCorpses",
-            "ReturnAsGhosts",
-            "CorpsesDropArrows",
-            "Encumbrance",
-            "SmallQuivers",
-            "NoQuivers",
-            "NoSlipping",
-            "SlipperyFloors",
-            "OffsetWorld",
-            "DarkPortals",
-            "ArrowShuffle",
-            "ClumsyArchers",
-            "TreasureDraft",
-            "ShowTreasureSpawns"
+            //TODO: would need some work
+            "TreasureDraft"
         ];
 
         private static bool hasInit = false;
+
+        private static readonly Dictionary<Variant, bool> hiddenBeforeNetplay = new Dictionary<Variant, bool>();
+
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(MatchVariants.BuildMenu))]
+        public static void MatchVariants_BuildMenu_Prefix(MatchVariants __instance)
+        {
+            var isNetplay = TowerFall.MainMenu.VersusMatchSettings != null && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay();
+
+            foreach (var variant in __instance.Variants)
+            {
+                if (!UnauthorizedVariant.Contains(variant.Title))
+                {
+                    continue;
+                }
+
+                if (isNetplay)
+                {
+                    if (!hiddenBeforeNetplay.ContainsKey(variant))
+                    {
+                        hiddenBeforeNetplay[variant] = variant.Hidden;
+                    }
+
+                    variant.Hidden = true;
+                }
+                else if (hiddenBeforeNetplay.TryGetValue(variant, out var hidden))
+                {
+                    variant.Hidden = hidden;
+                }
+            }
+        }
+
+        public static void DisableUnauthorized(MatchVariants matchVariants)
+        {
+            foreach (var variant in matchVariants.Variants)
+            {
+                if (UnauthorizedVariant.Contains(variant.Title))
+                {
+                    variant.Value = false;
+                }
+            }
+        }
 
         [HarmonyPostfix]
         [HarmonyPatch(MethodType.Constructor, [typeof(bool)])]
@@ -49,7 +71,6 @@ namespace TF.EX.Patchs
                 hasInit = true;
             }
 
-            __instance.Variants = __instance.Variants.Where(v => !UnauthorizedVariant.Contains(v.Title)).ToArray();
             __instance.TournamentRules();
             __instance.Variants.First(variant => variant.Title == "FREE AIMING").Value = true;
             if (__instance.CustomVariants.ContainsKey(Constants.RIGHT_STICK_VARIANT_NAME))

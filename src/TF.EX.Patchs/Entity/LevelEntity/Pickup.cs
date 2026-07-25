@@ -25,6 +25,7 @@ namespace TF.EX.Patchs.Entity.LevelEntity
             var dynPickup = DynamicData.For(__instance);
             dynPickup.Add("TargetPosition", targetPosition);
             dynPickup.Add("FinishedUnpack", false);
+            dynPickup.Add("bottomlessChestDepth", -1.0);
 
             ProperlySetTween(__instance, targetPosition);
         }

@@ -135,7 +135,10 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 ShouldAutoBounce = dynPlayer.Get<bool>("autoBounce"),
                 CanDetonateCounter = canDetonateCounter.GetState(),
                 DidDetonate = dynPlayer.Get<bool>("didDetonate"),
-                TriggerArrowDepths = triggerArrowDepths
+                TriggerArrowDepths = triggerArrowDepths,
+                CanDoubleJump = dynPlayer.Get<bool>("canDoubleJump"),
+                ArrowRegenCounter = dynPlayer.Get<Counter>("arrowRegenCounter").Value,
+                ShieldRegenCounter = dynPlayer.Get<Counter>("shieldRegenCounter").Value
             };
         }
 
@@ -309,6 +312,12 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
             entity.HasSpeedBoots = toLoad.HasSpeedBoots;
             entity.Invisible = toLoad.IsInvisible;
             dynPlayer.Set("autoBounce", toLoad.ShouldAutoBounce);
+            dynPlayer.Set("canDoubleJump", toLoad.CanDoubleJump);
+
+            var arrowRegenCounter = DynamicData.For(dynPlayer.Get<Counter>("arrowRegenCounter"));
+            arrowRegenCounter.Set("counter", toLoad.ArrowRegenCounter);
+            var shieldRegenCounter = DynamicData.For(dynPlayer.Get<Counter>("shieldRegenCounter"));
+            shieldRegenCounter.Set("counter", toLoad.ShieldRegenCounter);
         }
 
         public static void LoadDeathArrow(this TowerFall.Player self, double deathArrowActualDepth)

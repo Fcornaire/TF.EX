@@ -158,5 +158,14 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Player
 
         [Key(50)]
         public List<double> TriggerArrowDepths { get; set; }
+
+        [Key(51)]
+        public bool CanDoubleJump { get; set; }
+
+        [Key(52)]
+        public float ArrowRegenCounter { get; set; }
+
+        [Key(53)]
+        public float ShieldRegenCounter { get; set; }
     }
 }

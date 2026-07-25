@@ -41,6 +41,15 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Chest
         [Key(11)]
         public bool FinishedUnpack { get; set; }
 
+        [Key(12)]
+        public double BottomlessChestDepth { get; set; }
+
+        [Key(13)]
+        public float TimeoutCounter { get; set; }
+
+        [Key(14)]
+        public Flash Flash { get; set; }
+
         public static Pickup Empty()
         {
             return new Pickup
@@ -53,6 +62,8 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Chest
                 CollidableTimer = -1,
                 IsCollidable = false,
                 SineCounter = -1,
+                BottomlessChestDepth = -1,
+                TimeoutCounter = -1,
             };
         }
     }

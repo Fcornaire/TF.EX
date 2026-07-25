@@ -47,6 +47,7 @@ namespace TF.EX.Domain.Services.TF
             _context.UpdateSession(new Session
             {
                 RoundEndCounter = Constants.INITIAL_END_COUNTER,
+                GhostWaitCounter = Constants.INITIAL_END_COUNTER,
                 IsEnding = false,
                 Miasma = Miasma.Default(),
                 RoundStarted = false

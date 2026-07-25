@@ -58,6 +58,22 @@ namespace TF.EX.TowerFallExtensions
             }
         }
 
+        public static void RemoveEntity(this Level level, Monocle.Entity entity)
+        {
+            foreach (var layer in level.Layers.Values)
+            {
+                layer.Entities.Remove(entity);
+                DynamicData.For(layer).Get<List<Monocle.Entity>>("toAdd")?.Remove(entity);
+            }
+
+            foreach (var tag in entity.Tags)
+            {
+                level[tag].Remove(entity);
+            }
+
+            entity.Removed();
+        }
+
         public static void DropLiveFromEntityPool<T>(this Level level) where T : Monocle.Entity, new()
         {
             if (Monocle.Cache.cache == null || !Monocle.Cache.cache.TryGetValue(typeof(T), out var pool))
@@ -173,6 +189,13 @@ namespace TF.EX.TowerFallExtensions
             gameState.AddCrumbleBlocksState(self);
             gameState.AddCrumbleWallsState(self);
             gameState.AddPrismsState(self);
+            gameState.AddTeamReviversState(self);
+            gameState.AddPlayerGhostsState(self);
+            gameState.AddQuestSpawnPortalsState(self);
+            gameState.AddSlimesState(self);
+            gameState.AddBatsState(self);
+            gameState.AddEnemyAttacksState(self);
+            gameState.AddDarkPortalsSequenceState(self);
 
             gameState.Session.BramblesStartingState = sessionService.GetBramblesStartingState();
             gameState.Rng = rngService.Get();
@@ -328,6 +351,7 @@ namespace TF.EX.TowerFallExtensions
             {
                 var endCounter = dynRoundLogic.Get<RoundEndCounter>("roundEndCounter");
                 DynamicData.For(endCounter).Set("endCounter", session.RoundEndCounter);
+                DynamicData.For(endCounter).Set("ghostWaitCounter", session.GhostWaitCounter);
             }
 
             level.Session.CurrentLevel.Ending = session.IsEnding;
@@ -466,12 +490,14 @@ namespace TF.EX.TowerFallExtensions
                 }
                 else
                 {
+                    var allegiance = level.Session.MatchSettings.GetPlayerAllegiance(toLoad.Index);
+
                     TowerFall.Player player =
                     new TowerFall.Player(
                         toLoad.Index,
                         toLoad.Position.ToTFVector(),
-                        Allegiance.Neutral,
-                        Allegiance.Neutral,
+                        allegiance,
+                        allegiance,
                         level.Session.GetPlayerInventory(toLoad.Index),
                         level.Session.GetSpawnHatState(toLoad.Index),
                         frozen: false,
@@ -480,6 +506,24 @@ namespace TF.EX.TowerFallExtensions
 
                     player.LoadState(toLoad);
                     level.GetGameplayLayer().Entities.Insert(0, player);
+
+                    foreach (var tag in player.Tags)
+                    {
+                        var tagList = level[tag];
+                        if (!tagList.Contains(player))
+                        {
+                            tagList.Add(player);
+                        }
+                    }
+                }
+            }
+
+            var loadedIndexes = gameState.Entities.Players.Select(toLoad => toLoad.Index).ToList();
+            foreach (var livePlayer in level.GetAll<TowerFall.Player>().ToArray())
+            {
+                if (!loadedIndexes.Contains(livePlayer.PlayerIndex))
+                {
+                    level.RemoveEntity(livePlayer);
                 }
             }
 
@@ -493,13 +537,27 @@ namespace TF.EX.TowerFallExtensions
 
                 if (cachedPlayerCorpse == null)
                 {
-                    cachedPlayerCorpse = new TowerFall.PlayerCorpse(level.Player, toLoad.KillerIndex);
+                    var archerData = TowerFall.ArcherData.Get(TFGame.Characters[toLoad.PlayerIndex], TFGame.AltSelect[toLoad.PlayerIndex]);
+
+                    cachedPlayerCorpse = new TowerFall.PlayerCorpse(
+                        toLoad.Position.ToTFVector(),
+                        archerData,
+                        level.Session.MatchSettings.GetPlayerAllegiance(toLoad.PlayerIndex),
+                        (TowerFall.Facing)toLoad.Facing,
+                        toLoad.PlayerIndex,
+                        toLoad.KillerIndex);
                 }
 
                 cachedPlayerCorpse.LoadState(toLoad);
 
                 level.GetGameplayLayer().Entities.Insert(0, cachedPlayerCorpse);
             }
+
+            gameState.LoadQuestSpawnPortals(level);
+            gameState.LoadSlimes(level);
+            gameState.LoadBats(level);
+            gameState.LoadEnemyAttacks(level);
+            gameState.LoadDarkPortalsSequence(level);
 
             //RoundLogic Spotlights
             dynRoundLogic.Set("wasFinalKill", gameState.RoundLogic.WasFinalKill);
@@ -530,6 +588,19 @@ namespace TF.EX.TowerFallExtensions
                     TowerFall.LevelEntity entityHavingArrow = level.GetPlayerOrCorpse(toLoad.PlayerIndex);
                     if (entityHavingArrow == null)
                     {
+                        var players = level[GameTags.Player];
+                        var corpses = level[GameTags.Corpse];
+                        if (players != null && players.Count > 0)
+                        {
+                            entityHavingArrow = players[0] as TowerFall.LevelEntity;
+                        }
+                        else if (corpses != null && corpses.Count > 0)
+                        {
+                            entityHavingArrow = corpses[0] as TowerFall.LevelEntity;
+                        }
+                    }
+                    if (entityHavingArrow == null)
+                    {
                         throw new InvalidOperationException("Can't find the original player that shoot the current arrow being loaded");
                     }
 
@@ -546,6 +617,10 @@ namespace TF.EX.TowerFallExtensions
             //Prism from Prism Arrow
             gameState.LoadPrisms(level);
 
+            //TeamRevivers
+            gameState.LoadTeamRevivers(level);
+            gameState.LoadPlayerGhosts(level);
+
             //Chests load
             level.DeleteAll<TowerFall.TreasureChest>();
 
@@ -555,7 +630,11 @@ namespace TF.EX.TowerFallExtensions
                 {
                     if (!ServiceCollections.GetCached<TreasureChest>($"chest_{gameState.Session.RoundIndex}_{chestToLoad.ActualDepth}", out var cachedChest))
                     {
-                        cachedChest = new TreasureChest(Vector2.Zero, TreasureChest.Types.Normal, TreasureChest.AppearModes.Time, chestToLoad.Pickups.ToTFModel());
+                        var chestPickups = chestToLoad.PickupList != null && chestToLoad.PickupList.Any()
+                            ? chestToLoad.PickupList.Select(pickup => pickup.ToTFModel()).ToArray()
+                            : [chestToLoad.Pickups.ToTFModel()];
+
+                        cachedChest = new TreasureChest(Vector2.Zero, (TreasureChest.Types)chestToLoad.Type, TreasureChest.AppearModes.Time, chestPickups);
                     }
 
                     cachedChest.LoadState(chestToLoad);
@@ -734,6 +813,12 @@ namespace TF.EX.TowerFallExtensions
                 var gamePlayerCorpse = self.GetEntityByDepth(playerCorpse.ActualDepth) as TowerFall.PlayerCorpse;
                 gamePlayerCorpse.LoadArrowCushionDatas(playerCorpse);
             }
+
+            foreach (var bat in gs.Entities.Enemies.Bats.ToArray())
+            {
+                var gameBat = self.GetEntityByDepth(bat.ActualDepth) as TowerFall.Bat;
+                gameBat?.LoadArrowCushionDatas(bat);
+            }
         }
 
         private static Background.BGElement GetBGElementByIndex(this Level level, int index) { return level.Background.GetBGElements()[index]; }
@@ -892,6 +977,7 @@ namespace TF.EX.TowerFallExtensions
             {
                 var roundEndCounter = dynRoundLogic.Get<RoundEndCounter>("roundEndCounter");
                 var endCounter = DynamicData.For(roundEndCounter).Get<float>("endCounter");
+                var ghostWaitCounter = DynamicData.For(roundEndCounter).Get<float>("ghostWaitCounter");
                 var roundStarted = level.Session.RoundLogic.RoundStarted;
                 var done = dynRoundLogic.Get<bool>("done");
                 var roundIndex = level.Session.RoundIndex;
@@ -905,6 +991,7 @@ namespace TF.EX.TowerFallExtensions
 
                 stateSession.RoundStarted = roundStarted;
                 stateSession.RoundEndCounter = endCounter;
+                stateSession.GhostWaitCounter = ghostWaitCounter;
                 stateSession.IsEnding = isEnding;
                 stateSession.Miasma.Counter = counter;
                 stateSession.IsDone = done;
@@ -1268,6 +1355,82 @@ namespace TF.EX.TowerFallExtensions
                 gameState.Entities.Prisms.Add(state);
                 ServiceCollections.AddEntityToCache(state.ActualDepth, prism);
             }
+        }
+
+        private static void AddTeamReviversState(this GameState gameState, Level level)
+        {
+            foreach (TowerFall.TeamReviver teamReviver in level.GetAll<TowerFall.TeamReviver>())
+            {
+                var state = teamReviver.GetState();
+                gameState.Entities.TeamRevivers.Add(state);
+                ServiceCollections.AddEntityToCache(state.ActualDepth, teamReviver);
+            }
+        }
+
+        private static void AddPlayerGhostsState(this GameState gameState, Level level)
+        {
+            foreach (TowerFall.PlayerGhost playerGhost in level.GetAll<TowerFall.PlayerGhost>())
+            {
+                var state = playerGhost.GetState();
+                gameState.Entities.PlayerGhosts.Add(state);
+                ServiceCollections.AddEntityToCache(state.ActualDepth, playerGhost);
+            }
+        }
+
+        private static void AddQuestSpawnPortalsState(this GameState gameState, Level level)
+        {
+            foreach (TowerFall.QuestSpawnPortal portal in level.GetAll<TowerFall.QuestSpawnPortal>())
+            {
+                var state = portal.GetState();
+                gameState.Entities.Enemies.QuestSpawnPortals.Add(state);
+                ServiceCollections.AddEntityToCache(state.ActualDepth, portal);
+            }
+        }
+
+        private static void AddSlimesState(this GameState gameState, Level level)
+        {
+            foreach (TowerFall.Slime slime in level.GetAll<TowerFall.Slime>())
+            {
+                var state = slime.GetState();
+                gameState.Entities.Enemies.Slimes.Add(state);
+                ServiceCollections.AddEntityToCache(state.ActualDepth, slime);
+            }
+        }
+
+        private static void AddBatsState(this GameState gameState, Level level)
+        {
+            foreach (TowerFall.Bat bat in level.GetAll<TowerFall.Bat>())
+            {
+                var state = bat.GetState();
+                gameState.Entities.Enemies.Bats.Add(state);
+                ServiceCollections.AddEntityToCache(state.ActualDepth, bat);
+            }
+        }
+
+        private static void AddEnemyAttacksState(this GameState gameState, Level level)
+        {
+            foreach (TowerFall.EnemyAttack enemyAttack in level.GetAll<TowerFall.EnemyAttack>())
+            {
+                var state = enemyAttack.GetState();
+                gameState.Entities.Enemies.EnemyAttacks.Add(state);
+                ServiceCollections.AddEntityToCache(state.ActualDepth, enemyAttack);
+            }
+        }
+
+        private static void AddDarkPortalsSequenceState(this GameState gameState, Level level)
+        {
+            var sequence = level.GetAll<TowerFall.DarkPortalsVariantSequence>().FirstOrDefault();
+            if (sequence == null)
+            {
+                return;
+            }
+
+            var dynSequence = DynamicData.For(sequence);
+            gameState.Entities.Enemies.DarkPortalsSequence = new Domain.Models.State.Entity.LevelEntity.DarkPortalsSequence
+            {
+                Phase = dynSequence.Get<int>("darkPortalsPhase"),
+                Counter = dynSequence.Get<float>("darkPortalsCounter"),
+            };
         }
 
         private static void AddCrumbleBlocksState(this GameState gameState, Level level)
@@ -1675,6 +1838,258 @@ namespace TF.EX.TowerFallExtensions
             }
 
             level.DropLiveFromEntityPool<TowerFall.Prism>();
+        }
+
+        private static void LoadPlayerGhosts(this GameState gameState, Level level)
+        {
+            level.DeleteAll<TowerFall.PlayerGhost>();
+
+            level[GameTags.PlayerGhost].RemoveAll(entity => entity is TowerFall.PlayerGhost);
+            level[GameTags.PlayerGhostCollider].RemoveAll(entity => entity is TowerFall.PlayerGhost);
+            level[GameTags.LightSource].RemoveAll(entity => entity is TowerFall.PlayerGhost);
+
+            foreach (var toLoad in gameState.Entities.PlayerGhosts)
+            {
+                var cachedPlayerGhost = ServiceCollections.GetCachedEntity<TowerFall.PlayerGhost>(toLoad.ActualDepth);
+
+                if (cachedPlayerGhost == null)
+                {
+                    var corpse = level.GetAll<TowerFall.PlayerCorpse>().FirstOrDefault(c => c.PlayerIndex == toLoad.PlayerIndex)
+                        ?? level.GetAll<TowerFall.PlayerCorpse>().FirstOrDefault();
+
+                    if (corpse == null)
+                    {
+                        continue;
+                    }
+
+                    cachedPlayerGhost = new TowerFall.PlayerGhost(corpse);
+                }
+
+                cachedPlayerGhost.LoadState(toLoad);
+                cachedPlayerGhost.LoadDespawnCorpse(toLoad, level);
+
+                level.GetGameplayLayer().Entities.Insert(0, cachedPlayerGhost);
+
+                foreach (var tag in cachedPlayerGhost.Tags)
+                {
+                    var tagList = level[tag];
+                    if (!tagList.Contains(cachedPlayerGhost))
+                    {
+                        tagList.Add(cachedPlayerGhost);
+                    }
+                }
+            }
+        }
+
+        private static void LoadQuestSpawnPortals(this GameState gameState, Level level)
+        {
+            level.DeleteAll<TowerFall.QuestSpawnPortal>();
+            level[GameTags.LightSource].RemoveAll(entity => entity is TowerFall.QuestSpawnPortal);
+
+            foreach (var toLoad in gameState.Entities.Enemies.QuestSpawnPortals)
+            {
+                var cachedPortal = ServiceCollections.GetCachedEntity<TowerFall.QuestSpawnPortal>(toLoad.ActualDepth)
+                    ?? new TowerFall.QuestSpawnPortal(toLoad.Position.ToTFVector(), null);
+
+                cachedPortal.LoadState(toLoad);
+
+                level.GetGameplayLayer().Entities.Insert(0, cachedPortal);
+                SyncTags(level, cachedPortal);
+            }
+        }
+
+        private static void LoadSlimes(this GameState gameState, Level level)
+        {
+            level.DeleteAll<TowerFall.Slime>();
+            RemoveEnemyTags(level, entity => entity is TowerFall.Slime);
+
+            foreach (var toLoad in gameState.Entities.Enemies.Slimes)
+            {
+                var cachedSlime = ServiceCollections.GetCachedEntity<TowerFall.Slime>(toLoad.ActualDepth)
+                    ?? new TowerFall.Slime(toLoad.Position.ToTFVector(), (TowerFall.Facing)toLoad.Facing, (TowerFall.Slime.SlimeColors)toLoad.SlimeColor);
+
+                cachedSlime.LoadState(toLoad);
+
+                level.GetGameplayLayer().Entities.Insert(0, cachedSlime);
+                SyncTags(level, cachedSlime);
+            }
+        }
+
+        private static void LoadBats(this GameState gameState, Level level)
+        {
+            level.DeleteAll<TowerFall.Bat>();
+            RemoveEnemyTags(level, entity => entity is TowerFall.Bat);
+
+            foreach (var toLoad in gameState.Entities.Enemies.Bats)
+            {
+                var cachedBat = ServiceCollections.GetCachedEntity<TowerFall.Bat>(toLoad.ActualDepth)
+                    ?? new TowerFall.Bat(toLoad.Position.ToTFVector(), (TowerFall.Facing)toLoad.Facing, (TowerFall.Bat.BatType)toLoad.BatType);
+
+                cachedBat.LoadState(toLoad);
+                cachedBat.LoadTarget(toLoad, level);
+
+                level.GetGameplayLayer().Entities.Insert(0, cachedBat);
+                SyncTags(level, cachedBat);
+            }
+        }
+
+        private static void LoadEnemyAttacks(this GameState gameState, Level level)
+        {
+            level.DeleteAll<TowerFall.EnemyAttack>();
+            level[GameTags.PlayerCollider].RemoveAll(entity => entity is TowerFall.EnemyAttack);
+            level[GameTags.Target].RemoveAll(entity => entity is TowerFall.EnemyAttack);
+
+            foreach (var toLoad in gameState.Entities.Enemies.EnemyAttacks)
+            {
+                var enemy = level.GetEntityByDepth(toLoad.EnemyActualDepth) as TowerFall.Enemy;
+                if (enemy == null)
+                {
+                    continue;
+                }
+
+                var cachedAttack = ServiceCollections.GetCachedEntity<TowerFall.EnemyAttack>(toLoad.ActualDepth)
+                    ?? Monocle.Cache.Create<TowerFall.EnemyAttack>();
+
+                cachedAttack.LoadState(toLoad, enemy);
+
+                level.GetGameplayLayer().Entities.Insert(0, cachedAttack);
+                SyncTags(level, cachedAttack);
+            }
+
+            level.DropLiveFromEntityPool<TowerFall.EnemyAttack>();
+        }
+
+        private static void LoadDarkPortalsSequence(this GameState gameState, Level level)
+        {
+            if (gameState.Entities.Enemies.DarkPortalsSequence == null)
+            {
+                return;
+            }
+
+            var sequence = level.GetAll<TowerFall.DarkPortalsVariantSequence>().FirstOrDefault();
+            if (sequence == null)
+            {
+                return;
+            }
+
+            var dynSequence = DynamicData.For(sequence);
+            dynSequence.Set("darkPortalsPhase", gameState.Entities.Enemies.DarkPortalsSequence.Phase);
+            dynSequence.Set("darkPortalsCounter", gameState.Entities.Enemies.DarkPortalsSequence.Counter);
+        }
+
+        private static void RemoveEnemyTags(Level level, Predicate<Monocle.Entity> match)
+        {
+            level[GameTags.Actor].RemoveAll(match);
+            level[GameTags.Enemy].RemoveAll(match);
+            level[GameTags.PlayerCollider].RemoveAll(match);
+            level[GameTags.ExplosionCollider].RemoveAll(match);
+            level[GameTags.Target].RemoveAll(match);
+            level[GameTags.LightSource].RemoveAll(match);
+        }
+
+        private static void SyncTags(Level level, Monocle.Entity entity)
+        {
+            foreach (GameTags tag in Enum.GetValues(typeof(GameTags)))
+            {
+                var tagList = level[tag];
+                if (tagList == null)
+                {
+                    continue;
+                }
+
+                var wanted = entity.Tags.Contains(tag);
+                var present = tagList.Contains(entity);
+
+                if (wanted && !present)
+                {
+                    tagList.Add(entity);
+                }
+                else if (!wanted && present)
+                {
+                    tagList.RemoveAll(tagged => tagged == entity);
+                }
+            }
+        }
+
+        private static readonly GameTags[] ENEMY_TAGS =
+        [
+            GameTags.Enemy, GameTags.PlayerCollider, GameTags.ExplosionCollider, GameTags.Target
+        ];
+
+        public static void RestoreEnemyTags(this Monocle.Entity entity, bool alive)
+        {
+            var scene = TowerFall.TFGame.Instance.Scene;
+            if (scene != null)
+            {
+                var dynScene = DynamicData.For(scene);
+                foreach (var pending in new[] { "tagsToAdd", "tagsToRemove" })
+                {
+                    var queues = dynScene.Get<HashSet<Monocle.Entity>[]>(pending);
+                    if (queues == null)
+                    {
+                        continue;
+                    }
+
+                    foreach (var queue in queues)
+                    {
+                        queue?.Remove(entity);
+                    }
+                }
+            }
+
+            foreach (var tag in ENEMY_TAGS)
+            {
+                if (alive)
+                {
+                    if (!entity.Tags.Contains(tag))
+                    {
+                        entity.Tags.Add(tag);
+                    }
+                }
+                else
+                {
+                    entity.Tags.Remove(tag);
+                }
+            }
+        }
+
+        private static void LoadTeamRevivers(this GameState gameState, Level level)
+        {
+            level.DeleteAll<TowerFall.TeamReviver>();
+
+            level[GameTags.TeamReviver].RemoveAll(entity => entity is TowerFall.TeamReviver);
+            level[GameTags.LightSource].RemoveAll(entity => entity is TowerFall.TeamReviver);
+
+            foreach (var toLoad in gameState.Entities.TeamRevivers)
+            {
+                var corpse = level.GetEntityByDepth(toLoad.CorpseActualDepth) as TowerFall.PlayerCorpse;
+                if (corpse == null)
+                {
+                    continue;
+                }
+
+                var cachedTeamReviver = ServiceCollections.GetCachedEntity<TowerFall.TeamReviver>(toLoad.ActualDepth);
+
+                if (cachedTeamReviver == null)
+                {
+                    cachedTeamReviver = new TowerFall.TeamReviver(corpse, (TowerFall.TeamReviver.Modes)toLoad.Mode);
+                    DynamicData.For(cachedTeamReviver).Set("reviveSequenceCounter", -1f);
+                }
+
+                cachedTeamReviver.LoadState(toLoad);
+                DynamicData.For(cachedTeamReviver).Set("Corpse", corpse);
+
+                level.GetGameplayLayer().Entities.Insert(0, cachedTeamReviver);
+
+                foreach (var tag in cachedTeamReviver.Tags)
+                {
+                    var tagList = level[tag];
+                    if (!tagList.Contains(cachedTeamReviver))
+                    {
+                        tagList.Add(cachedTeamReviver);
+                    }
+                }
+            }
         }
 
         private static void LoadCrackedPlatform(this GameState gameState, TowerFall.Level level)

@@ -298,8 +298,13 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows
                 case ArrowTypes.Prism:
                     built = new PrismArrow();
                     break;
+                case ArrowTypes.Toy:
+                    built = new ToyArrow();
+                    break;
                 default:
-                    throw new Exception("Unknown arrow type");
+                    // Pssibly a Modded arrow ? track the base fields only
+                    built = new DefaultArrow();
+                    break;
             }
 
             built.ActualDepth = arrow.ActualDepth;

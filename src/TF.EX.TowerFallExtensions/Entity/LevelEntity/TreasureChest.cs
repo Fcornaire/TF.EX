@@ -31,7 +31,10 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 CurrentAnimId = sprite.CurrentAnimID,
                 Position = entity.Position.ToModel(),
                 AppearCounter = appearCounter.Value,
-                Pickups = pickups[0].ToModel(), //TODO: Giant Chest ?
+                Pickups = pickups[0].ToModel(),
+                PickupList = pickups.Select(pickup => pickup.ToModel()).ToList(),
+                Type = (int)dynTreasureChest.Get<Types>("type"),
+                BottomlessCounter = dynTreasureChest.Get<float>("bottomlessCounter"),
                 State = entity.State.ToModel(),
                 VSpeed = vSpeed,
                 PositionCounter = positionCounter.ToModel(),
@@ -58,8 +61,25 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 entity.Position = toLoad.Position.ToTFVector();
 
                 var pickups = dynTreasureChest.Get<List<Pickups>>("pickups");
-                pickups[0] = toLoad.Pickups.ToTFModel();
+                pickups.Clear();
+
+                if (toLoad.PickupList != null && toLoad.PickupList.Any())
+                {
+                    foreach (var pickup in toLoad.PickupList)
+                    {
+                        pickups.Add(pickup.ToTFModel());
+                    }
+                }
+                else
+                {
+                    pickups.Add(toLoad.Pickups.ToTFModel());
+                }
+
                 dynTreasureChest.Set("pickups", pickups);
+                dynTreasureChest.Set("type", (Types)toLoad.Type);
+                dynTreasureChest.Set("bottomlessCounter", toLoad.BottomlessCounter);
+
+                entity.DeleteAllComponents<Monocle.Coroutine>();
 
                 dynTreasureChest.Set("counter", toLoad.PositionCounter.ToTFVector());
                 dynTreasureChest.Set("vSpeed", toLoad.VSpeed);

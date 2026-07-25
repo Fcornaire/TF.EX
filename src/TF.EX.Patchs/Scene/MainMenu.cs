@@ -268,6 +268,9 @@ namespace TF.EX.Patchs.Scene
 
         private static void CreateLobbyBrowser(MainMenu self)
         {
+            MainMenu.VersusMatchSettings.Mode = TF.EX.Domain.Models.Modes.Netplay.ToTF();
+            MatchVariantsPatchs.DisableUnauthorized(MainMenu.VersusMatchSettings.Variants);
+
             if (variants.Count == 0)
             {
                 variants = MainMenu.VersusMatchSettings.Variants.BuildMenu(self, out _, out self.MaxUICameraY);
@@ -276,7 +279,6 @@ namespace TF.EX.Patchs.Scene
             self.AddLoader("FINDING LOBBIES...");
 
             self.BackState = TowerFall.MainMenu.MenuState.Rollcall;
-            MainMenu.VersusMatchSettings.Mode = TF.EX.Domain.Models.Modes.Netplay.ToTF();
 
             Task.Run(async () =>
             {

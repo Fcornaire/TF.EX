@@ -208,11 +208,19 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 
             if (toLoad.BuriedIn != null)
             {
-                //TODO: Always a player corpse?
-                var arrowCushion = ((entity.Scene as TowerFall.Level).GetEntityByDepth(toLoad.BuriedIn.EntityActualDepth) as TowerFall.PlayerCorpse).ArrowCushion;
+                var cushionOwner = (entity.Scene as TowerFall.Level).GetEntityByDepth(toLoad.BuriedIn.EntityActualDepth);
+                var arrowCushion = cushionOwner switch
+                {
+                    TowerFall.PlayerCorpse corpse => corpse.ArrowCushion,
+                    TowerFall.Bat bat => DynamicData.For(bat).Get<TowerFall.ArrowCushion>("arrowCushion"),
+                    _ => null,
+                };
 
-                dynArrow.Set("BuriedIn", arrowCushion);
-                entity.BuriedIn.LoadState(toLoad.BuriedIn);
+                if (arrowCushion != null)
+                {
+                    dynArrow.Set("BuriedIn", arrowCushion);
+                    entity.BuriedIn.LoadState(toLoad.BuriedIn);
+                }
             }
 
             switch (toLoad.ArrowType)
