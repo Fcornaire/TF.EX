@@ -16,6 +16,11 @@ namespace TF.EX.TowerFallExtensions
             return OwnShuffle(elem);
         }
 
+        public static IEnumerable<int> OwnShuffledIndexes(int count)
+        {
+            return OwnShuffle(Enumerable.Range(0, count));
+        }
+
         private static IEnumerable<T> OwnShuffle<T>(IEnumerable<T> elem)
         {
             var toShuffle = elem.ToList();

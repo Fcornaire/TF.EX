@@ -105,6 +105,7 @@ namespace TF.EX.Domain.Context
             Session = new Session
             {
                 RoundEndCounter = Constants.INITIAL_END_COUNTER,
+                GhostWaitCounter = Constants.INITIAL_END_COUNTER,
                 IsEnding = false,
                 Miasma = Miasma.Default(),
                 RoundStarted = false
@@ -495,6 +496,7 @@ namespace TF.EX.Domain.Context
             UpdateSession(new Session
             {
                 RoundEndCounter = Constants.INITIAL_END_COUNTER,
+                GhostWaitCounter = Constants.INITIAL_END_COUNTER,
                 IsEnding = false,
                 Miasma = Miasma.Default(),
                 RoundStarted = false

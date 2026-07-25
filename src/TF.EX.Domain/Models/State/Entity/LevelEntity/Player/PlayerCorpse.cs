@@ -38,6 +38,39 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Player
 
         [Key(10)]
         public bool AgainstWall { get; set; }
+
+        [Key(11)]
+        public float ExplodingCounter { get; set; }
+
+        [Key(12)]
+        public PlayerArrowsInventory Arrows { get; set; }
+
+        [Key(13)]
+        public int DropDir { get; set; }
+
+        [Key(14)]
+        public float DropArrowAlarmFramesLeft { get; set; }
+
+        [Key(15)]
+        public bool Reviving { get; set; }
+
+        [Key(16)]
+        public bool Revived { get; set; }
+
+        [Key(17)]
+        public int Ledge { get; set; }
+
+        [Key(18)]
+        public bool IgnoreJumpThrus { get; set; }
+
+        [Key(19)]
+        public Vector2f Squished { get; set; }
+
+        [Key(20)]
+        public float SquishedCounter { get; set; }
+
+        [Key(21)]
+        public float GhostSpawnCounter { get; set; }
     }
 
     [MessagePackObject]

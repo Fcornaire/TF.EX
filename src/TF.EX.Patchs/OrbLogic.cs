@@ -61,6 +61,45 @@ namespace TF.EX.Patchs
         }
 
         [HarmonyPrefix]
+        [HarmonyPatch("DoOffsetWorldVariant")]
+        public static bool OrbLogic_DoOffsetWorldVariant(OrbLogic __instance)
+        {
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            if (!__instance.Level.Ending && netplayManager.IsInit())
+            {
+                CalcPatch.RegisterRng();
+
+                Vector2 start = TFGame.Instance.Screen.Offset;
+                Vector2 end = Monocle.Calc.Random.Choose(new Vector2(160f, 120f), new Vector2(-160f, 120f), new Vector2(160f, -120f), new Vector2(-160f, -120f));
+
+                CalcPatch.UnregisterRng();
+
+                var dynOrbLogic = DynamicData.For(__instance);
+
+                var spaceTween = Tween.Create(Tween.TweenMode.Persist, Ease.CubeInOut, 90, start: true);
+                spaceTween.OnUpdate = delegate (Tween t)
+                {
+                    TFGame.Instance.Screen.Offset = Vector2.Lerp(start, end, t.Eased);
+                };
+                spaceTween.OnComplete = delegate
+                {
+                    spaceTween = null;
+                };
+                spaceTween.Start();
+
+                var dynSpaceTween = DynamicData.For(spaceTween);
+                dynSpaceTween.Add("ScreenOffsetStart", start);
+                dynSpaceTween.Add("ScreenOffsetEnd", end);
+
+                dynOrbLogic.Set("spaceTween", spaceTween);
+
+                return false;
+            }
+
+            return true;
+        }
+
+        [HarmonyPrefix]
         [HarmonyPatch("DoDarkOrb")]
         public static void OrbLogic_DoDarkOrb_Prefix()
         {

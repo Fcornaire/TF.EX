@@ -1,4 +1,4 @@
-﻿using MessagePack;
+using MessagePack;
 using TF.EX.Domain.Models.State.Entity.LevelEntity;
 using TF.EX.Domain.Models.State.Entity.LevelEntity.Arrows;
 using TF.EX.Domain.Models.State.Entity.LevelEntity.Background;
@@ -93,5 +93,14 @@ namespace TF.EX.Domain.Models.State.Entity
 
         [Key(34)]
         public ICollection<CrumbleWall> CrumbleWalls { get; set; } = new List<CrumbleWall>();
+
+        [Key(35)]
+        public ICollection<TeamReviver> TeamRevivers { get; set; } = new List<TeamReviver>();
+
+        [Key(36)]
+        public ICollection<LevelEntity.Player.PlayerGhost> PlayerGhosts { get; set; } = new List<LevelEntity.Player.PlayerGhost>();
+
+        [Key(37)]
+        public EnemiesState Enemies { get; set; } = new EnemiesState();
     }
 }

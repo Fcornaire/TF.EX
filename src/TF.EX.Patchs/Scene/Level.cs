@@ -79,7 +79,8 @@ namespace TF.EX.Patchs.Scene
 
             if (netplayManager.IsInit())
             {
-                MoonGlassBlockExplodeController.StepAll(__instance); ///Drives the Moonstone moonglass shatter
+                MoonGlassBlockExplodeController.StepAll(__instance); //Moonstone moonglass shatter
+                DarkPortalsVariantSequencePatch.Step(__instance); // DarkPortals variant sequence
             }
 
             ///Always Update the layer entity list

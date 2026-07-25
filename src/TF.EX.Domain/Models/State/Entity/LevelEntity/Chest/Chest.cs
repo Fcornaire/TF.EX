@@ -41,6 +41,15 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Chest
         [Key(11)]
         public double ActualDepth { get; set; }
 
+        [Key(12)]
+        public IEnumerable<PickupState> PickupList { get; set; }
+
+        [Key(13)]
+        public int Type { get; set; }
+
+        [Key(14)]
+        public float BottomlessCounter { get; set; }
+
         public static Chest Empty()
         {
             return new Chest
@@ -53,6 +62,8 @@ namespace TF.EX.Domain.Models.State.Entity.LevelEntity.Chest
                 VSpeed = 0f,
                 AppearTimer = -1,
                 Pickups = PickupState.Arrows,
+                PickupList = new List<PickupState>(),
+                Type = 0,
                 IsCollidable = false,
                 IsLightVisible = false,
                 OpeningTimer = -1f,

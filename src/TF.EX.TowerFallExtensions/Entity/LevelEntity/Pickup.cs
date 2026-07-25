@@ -48,6 +48,14 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
                 MarkedForRemoval = markedForRemoval,
                 Sprite = sprite,
                 FinishedUnpack = finishUnpack,
+                BottomlessChestDepth = dynPickup.Get<double>("bottomlessChestDepth"),
+                TimeoutCounter = dynPickup.Get<Counter>("timeoutCounter")?.Value ?? -1f,
+                Flash = new TF.EX.Domain.Models.State.Entity.LevelEntity.Flash
+                {
+                    IsFlashing = entity.Flashing,
+                    FlashCounter = dynPickup.Get<float>("flashCounter"),
+                    FlashInterval = dynPickup.Get<float>("flashInterval"),
+                },
             };
         }
 
@@ -59,6 +67,31 @@ namespace TF.EX.TowerFallExtensions.Entity.LevelEntity
 
             dynPickup.Add("TargetPosition", toLoad.TargetPosition.ToTFVector());
             dynPickup.Add("FinishedUnpack", toLoad.FinishedUnpack);
+            dynPickup.Set("bottomlessChestDepth", toLoad.BottomlessChestDepth);
+
+            if (toLoad.Flash != null)
+            {
+                dynPickup.Set("Flashing", toLoad.Flash.IsFlashing);
+                dynPickup.Set("flashCounter", toLoad.Flash.FlashCounter);
+                dynPickup.Set("flashInterval", toLoad.Flash.FlashInterval);
+                dynPickup.Set("onFinish", () => { entity.RemoveSelf(); });
+            }
+
+            if (toLoad.TimeoutCounter < 0f)
+            {
+                dynPickup.Set("timeoutCounter", null);
+            }
+            else
+            {
+                var timeoutCounter = dynPickup.Get<Counter>("timeoutCounter");
+                if (timeoutCounter == null)
+                {
+                    timeoutCounter = new Counter(240);
+                    dynPickup.Set("timeoutCounter", timeoutCounter);
+                }
+
+                DynamicData.For(timeoutCounter).Set("counter", toLoad.TimeoutCounter);
+            }
 
             //dynPickup.Set("TargetPosition", toLoad.TargetPosition.ToTFVector());
             dynPickup.Set("PickupType", toLoad.Type.ToTFModel());

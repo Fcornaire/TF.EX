@@ -4,6 +4,7 @@ using Monocle;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
@@ -81,11 +82,12 @@ namespace TF.EX.Core
             var seed = args.Length > 3 ? int.Parse(args[3]) : 42;
             var checkDistance = args.Length > 4 ? Math.Min(int.Parse(args[4]), 7) : 2;
             var variant = args.Length > 5 ? args[5] : "";
+            var playerCount = args.Length > 6 ? Math.Clamp(int.Parse(args[6]), 2, 4) : 2;
 
             variant = variant.Replace("_", " ");
 
             var logger = ServiceCollections.ResolveLogger();
-            logger.LogDebug<Commands>($"Launching test mode with mode: {mode}, map: {map} ({GameData.VersusTowers[map].Theme.Name}), startLevel: {startLevel}, seed: {seed}, checkDistance: {checkDistance} with variant {variant}");
+            logger.LogDebug<Commands>($"Launching test mode with mode: {mode}, map: {map} ({GameData.VersusTowers[map].Theme.Name}), startLevel: {startLevel}, seed: {seed}, checkDistance: {checkDistance}, players: {playerCount} with variant {variant}");
 
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var replayService = ServiceCollections.ResolveReplayService();
@@ -102,12 +104,12 @@ namespace TF.EX.Core
             rngService.SetSeed(seed);
             replayService.Initialize();
 
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < playerCount; i++)
             {
-                TFGame.Players[i] = TFGame.PlayerInputs[i] != null;
+                TFGame.PlayerInputs[i] ??= new FakeController();
             }
 
-            StartGame(mode, netplayManager, map, startLevel, variant);
+            StartGame(mode, netplayManager, map, startLevel, variant, playerCount);
 
             TFGame.Instance.Commands.Open = false;
         }
@@ -323,19 +325,29 @@ namespace TF.EX.Core
             }
         }
 
-        private static void StartGame(TowerFall.Modes mode, INetplayManager netplayManager = null, int map = 0, int startLevel = 0, string variant = "")
+        private static void StartGame(TowerFall.Modes mode, INetplayManager netplayManager = null, int map = 0, int startLevel = 0, string variant = "", int playerCount = 0)
         {
             for (int i = 0; i < 4; i++)
             {
-                TFGame.Players[i] = TFGame.PlayerInputs[i] != null;
+                TFGame.Players[i] = playerCount > 0 ? i < playerCount : TFGame.PlayerInputs[i] != null;
             }
 
             MatchSettings matchSettings = MatchSettings.GetDefaultVersus();
             matchSettings.LevelSystem = GameData.VersusTowers[map].GetLevelSystem();
             matchSettings.Mode = mode;
+
+            if (matchSettings.TeamMode)
+            {
+                for (int i = 0; i < 4; i++)
+                {
+                    matchSettings.Teams[i] = i % 2 == 0 ? Allegiance.Blue : Allegiance.Red;
+                }
+            }
+
             if (!string.IsNullOrEmpty(variant))
             {
                 matchSettings.Variants.ApplyVariants(new List<string> { variant });
+                MainMenu.VersusMatchSettings?.Variants.ApplyVariants(new List<string> { variant });
             }
 
             var levels = (matchSettings.LevelSystem as VersusLevelSystem).OwnGenLevel(matchSettings, GameData.VersusTowers[map], null, ServiceCollections.ResolveRngService());

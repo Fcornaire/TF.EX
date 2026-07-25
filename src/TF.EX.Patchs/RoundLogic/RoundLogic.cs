@@ -113,6 +113,146 @@ namespace TF.EX.Patchs.RoundLogic
             return false;
         }
 
+        [HarmonyPrefix]
+        [HarmonyPatch("SpawnPlayersTeams")]
+        public static bool RoundLogic_SpawnPlayersTeams(TowerFall.RoundLogic __instance)
+        {
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            if (!netplayManager.IsInit() && !netplayManager.IsReplayMode())
+            {
+                return true;
+            }
+
+            var level = __instance.Session.CurrentLevel;
+            var teamSpawns = level.GetXMLPositions("TeamSpawn");
+            var teamSpawnsA = level.GetXMLPositions("TeamSpawnA");
+            var teamSpawnsB = level.GetXMLPositions("TeamSpawnB");
+
+            foreach (var spawn in teamSpawns)
+            {
+                if (spawn.X <= 160f)
+                {
+                    teamSpawnsA.Add(spawn);
+                }
+                else
+                {
+                    teamSpawnsB.Add(spawn);
+                }
+            }
+
+            var neededA = CountTeam(__instance, TowerFall.Allegiance.Blue);
+            var neededB = CountTeam(__instance, TowerFall.Allegiance.Red);
+
+            if (teamSpawnsA.Count < neededA || teamSpawnsB.Count < neededB)
+            {
+                var playerSpawns = level.GetXMLPositions("PlayerSpawn");
+                var used = new List<Vector2>(teamSpawnsA);
+                used.AddRange(teamSpawnsB);
+
+                TopUpSpawns(teamSpawnsA, neededA, playerSpawns.Where(spawn => spawn.X <= 160f), playerSpawns, used);
+                TopUpSpawns(teamSpawnsB, neededB, playerSpawns.Where(spawn => spawn.X > 160f), playerSpawns, used);
+            }
+
+            teamSpawnsA.Sort(SortTeamSpawnsLeft);
+            teamSpawnsB.Sort(SortTeamSpawnsRight);
+
+            Calc.CalcPatch.RegisterRng();
+            var order = CalcExtensions.OwnShuffledIndexes(Math.Max(teamSpawnsA.Count, teamSpawnsB.Count));
+            Calc.CalcPatch.UnregisterRng();
+
+            teamSpawnsA = ApplyOrder(teamSpawnsA, order);
+            teamSpawnsB = ApplyOrder(teamSpawnsB, order);
+
+            SpawnTeam(__instance, TowerFall.Allegiance.Blue, teamSpawnsA);
+            SpawnTeam(__instance, TowerFall.Allegiance.Red, teamSpawnsB);
+
+            Traverse.Create(__instance).Property("Players").SetValue(TowerFall.TFGame.PlayerAmount);
+            return false;
+        }
+
+        private static int CountTeam(TowerFall.RoundLogic self, TowerFall.Allegiance allegiance)
+        {
+            var count = 0;
+            for (int i = 0; i < 4; i++)
+            {
+                if (self.Session.ShouldSpawn(i) && self.Session.MatchSettings.Teams[i] == allegiance)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private static void TopUpSpawns(List<Vector2> spawns, int needed, IEnumerable<Vector2> preferred, IEnumerable<Vector2> fallback, List<Vector2> used)
+        {
+            foreach (var candidate in preferred.Concat(fallback))
+            {
+                if (spawns.Count >= needed)
+                {
+                    return;
+                }
+
+                if (!used.Contains(candidate))
+                {
+                    spawns.Add(candidate);
+                    used.Add(candidate);
+                }
+            }
+        }
+
+        private static List<Vector2> ApplyOrder(List<Vector2> spawns, IEnumerable<int> order)
+        {
+            return order.Where(index => index < spawns.Count).Select(index => spawns[index]).ToList();
+        }
+
+        private static int SortTeamSpawnsLeft(Vector2 a, Vector2 b)
+        {
+            if (a.Y != b.Y)
+            {
+                return (int)((a.Y - b.Y) * 10f);
+            }
+
+            return (int)((b.X - a.X) * 10f);
+        }
+
+        private static int SortTeamSpawnsRight(Vector2 a, Vector2 b)
+        {
+            if (a.Y != b.Y)
+            {
+                return (int)((a.Y - b.Y) * 10f);
+            }
+
+            return (int)((a.X - b.X) * 10f);
+        }
+
+        private static void SpawnTeam(TowerFall.RoundLogic self, TowerFall.Allegiance allegiance, List<Vector2> spawns)
+        {
+            var index = 0;
+            for (int i = 0; i < 4; i++)
+            {
+                if (!self.Session.ShouldSpawn(i) || self.Session.MatchSettings.Teams[i] != allegiance)
+                {
+                    continue;
+                }
+
+                if (index >= spawns.Count)
+                {
+                    break;
+                }
+
+                var entity = new TowerFall.Player(i, spawns[index] + Vector2.UnitY * 2f,
+                    self.Session.MatchSettings.GetPlayerAllegiance(i),
+                    self.Session.MatchSettings.GetPlayerAllegiance(i),
+                    self.Session.GetPlayerInventory(i),
+                    self.Session.GetSpawnHatState(i),
+                    frozen: true, flash: true, indicator: true);
+
+                self.Session.CurrentLevel.Add(entity);
+                index++;
+            }
+        }
+
         //[HarmonyPrefix]
         //[HarmonyPatch("InsertCrownEvent")]
         //public static bool RoundLogic_InsertCrownEvent(TowerFall.RoundLogic __instance)
