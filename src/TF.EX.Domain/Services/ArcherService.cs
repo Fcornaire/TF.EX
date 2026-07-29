@@ -1,6 +1,8 @@
 ﻿using TF.EX.Domain.Context;
 using TF.EX.Domain.Models.WebSocket;
 using TF.EX.Domain.Ports;
+using ArcherData = TowerFall.ArcherData;
+using TFGame = TowerFall.TFGame;
 
 namespace TF.EX.Domain.Services
 {
@@ -25,15 +27,41 @@ namespace TF.EX.Domain.Services
 
         public IEnumerable<(int, string)> GetFinalArchers()
         {
-            var archers = _gameContext.GetArchers();
+            return _gameContext.GetArchers().OrderBy(archer => archer.Item1);
+        }
 
-            var finalArchers = new List<(int, string)>
+        public void CompactSeatsToHandles()
+        {
+            var compacted = _gameContext.GetPlayers()
+                .OrderBy(entry => entry.Item1)
+                .Select((entry, handle) => (handle, entry.Item2))
+                .ToList();
+
+            _gameContext.ResetArcherSelections();
+
+            foreach ((var handle, var player) in compacted)
             {
-                (_gameContext.GetLocalPlayerIndex(),archers.First((archer) => archer.Item1 == 0).Item2),
-                (_gameContext.GetRemotePlayerIndex(),archers.First((archer) => archer.Item1 == 1).Item2)
-            };
+                _gameContext.AddArcher(handle, player);
+            }
+        }
 
-            return finalArchers;
+        public void ApplyToGame()
+        {
+            for (int seat = 0; seat < TFGame.Players.Length; seat++)
+            {
+                TFGame.Players[seat] = false;
+            }
+
+            foreach ((var handle, var archerAlt) in GetFinalArchers())
+            {
+                var splitted = archerAlt.Split('-');
+
+                Enum.TryParse(splitted[1], out ArcherData.ArcherTypes alt);
+
+                TFGame.Characters[handle] = int.Parse(splitted[0]);
+                TFGame.AltSelect[handle] = alt;
+                TFGame.Players[handle] = true;
+            }
         }
 
         public void RemoveArcher(int playerIndex)

@@ -31,23 +31,5 @@ namespace TF.EX.Domain.Extensions
             return new Vector2(vector2.X, vector2.Y);
         }
 
-        public static Vector2 GetPositionByPlayerDraw(this List<Vector2> positions, bool shouldSwapPlayer, int originalIndex)
-        {
-
-            if (!shouldSwapPlayer)
-            {
-                return positions[originalIndex];
-            }
-
-            switch (originalIndex)
-            {
-                case 0:
-                    return positions[1];
-                case 1:
-                    return positions[0];
-                default: return positions[originalIndex]; //TODO: whats about more than 2P ?
-            }
-
-        }
     }
 }

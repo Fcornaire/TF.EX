@@ -16,10 +16,19 @@ namespace TF.EX.Patchs.Scene
         {
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+            var archerService = ServiceCollections.ResolveArcherService();
 
             var lobby = matchmakingService.GetOwnLobby();
             netplayManager.UpdatePlayers(lobby.Players, lobby.Spectators);
-            matchmakingService.DisconnectFromLobby();
+
+            if (lobby.IsEmpty)
+            {
+                return;
+            }
+
+            archerService.CompactSeatsToHandles();
+            archerService.ApplyToGame();
+            matchmakingService.ApplyTeamsToMatchSettings();
         }
 
         [HarmonyPostfix]
@@ -30,7 +39,8 @@ namespace TF.EX.Patchs.Scene
             var inputService = ServiceCollections.ResolveInputService();
 
             rgnService.Reset();
-            inputService.EnsureRemoteController();
+            inputService.EnsureRemoteController(Math.Max(2, ServiceCollections.ResolveMatchmakingService().GetOwnLobby().Players.Count));
+            inputService.EnsureEveryControllerSlot();
             ServiceCollections.PurgeCache();
         }
 
@@ -99,9 +109,10 @@ namespace TF.EX.Patchs.Scene
             }
 
             rngService.Reset();
-            var shuffled = CalcExtensions.OwnMapButtonShuffle(list).ToArray();
-            __result = shuffled[0];
-            //return shuffled.SingleOrDefault(b => b.Data.ID.X == 1); //Usefull for debug
+
+            Monocle.Calc.Shuffle(list, new Random(rngService.GetSeed()));
+
+            __result = list[0];
         }
 
         private static bool IsNetplaySafe(string title)

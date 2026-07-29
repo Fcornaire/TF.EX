@@ -2,6 +2,8 @@
 
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
+		<ModEnablePublish>false</ModEnablePublish>
+		<ModEnableZip>false</ModEnableZip>
 		<!--<LangVersion>11</LangVersion>-->
 		<ImplicitUsings>enable</ImplicitUsings>
 	</PropertyGroup>

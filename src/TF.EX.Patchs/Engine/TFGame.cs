@@ -187,6 +187,12 @@ namespace TF.EX.Patchs.Engine
 
             if (netplayManager.HasFailedInitialConnection())
             {
+                if (netplayManager.ConsumeAbortToVersusOptions() && __instance.Scene is TowerFall.Level failedLevel)
+                {
+                    TowerFall.Sounds.ui_invalid.Play();
+                    Domain.Extensions.LevelExtensions.GoToVersusOptions(failedLevel);
+                }
+
                 TFGame_Update_orig(__instance, gameTime);
                 return false;
             }
@@ -374,7 +380,7 @@ namespace TF.EX.Patchs.Engine
 
                         if (!netplayManager.IsReplayMode())
                         {
-                            replayService.AddRecord(gameState, netplayManager.ShouldSwapPlayer());
+                            replayService.AddRecord(gameState);
                         }
 
                         if (netplayManager.IsTestMode())

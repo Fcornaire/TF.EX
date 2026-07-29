@@ -86,22 +86,11 @@ namespace TF.EX.Patchs.RoundLogic
                 int i = j;
                 array[j] = xMLPositions[num2] + Vector2.UnitY * 2f;
 
-                if (netplayManager.ShouldSwapPlayer())
-                {
-                    i = j == 0 ? 1 : 0;
-                    array[j] = xMLPositions.GetPositionByPlayerDraw(netplayManager.ShouldSwapPlayer(), num2) + Vector2.UnitY * 2f;
-                }
-
                 TowerFall.Player entity = new TowerFall.Player(i, array[j], TowerFall.Allegiance.Neutral, TowerFall.Allegiance.Neutral, __instance.Session.GetPlayerInventory(i), __instance.Session.GetSpawnHatState(i), frozen: true, flash: true, indicator: true);
 
                 players.Add(entity);
 
                 num2++;
-            }
-
-            if (netplayManager.ShouldSwapPlayer())
-            {
-                players.Reverse(); //TODO: Not true with more than 2 players
             }
 
             foreach (TowerFall.Player entity in players.ToArray())

@@ -49,12 +49,18 @@ namespace TF.EX.Patchs
 
         [HarmonyPrefix]
         [HarmonyPatch("StartGame")]
-        public static void Session_StartGame()
+        public static void Session_StartGame(Session __instance)
         {
             var rngService = ServiceCollections.ResolveRngService();
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
 
             CalcPatch.Reset();
             rngService.Reset();
+
+            if (TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay() || netplayManager.IsTestMode())
+            {
+                __instance.MatchSettings.RandomLevelSeed = rngService.GetSeed();
+            }
         }
 
         /// <summary>

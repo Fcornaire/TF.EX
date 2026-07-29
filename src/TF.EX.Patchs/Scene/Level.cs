@@ -15,6 +15,13 @@ namespace TF.EX.Patchs.Scene
     [HarmonyPatch(typeof(Level))]
     public class LevelPatch
     {
+        [HarmonyPrefix]
+        [HarmonyPatch("HandlePausing")]
+        public static void Level_HandlePausing()
+        {
+            ServiceCollections.ResolveInputService().EnsureEveryControllerSlot();
+        }
+
         private static Random random = new Random();
 
         [HarmonyPostfix]

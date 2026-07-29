@@ -29,7 +29,7 @@ namespace TF.EX.Domain.Context
         void UpdateRng(Rng rng);
         System.Random GetGameplayRandom();
         void InitializeReplay(int id, GameData gameData = null, ICollection<CustomMod> mods = null);
-        void AddRecord(GameState gameState, bool shouldSwapPlayer);
+        void AddRecord(GameState gameState);
         void RemovePredictedRecords(int frame);
         Replay GetReplay();
         void LoadReplay(Replay replay);
@@ -40,11 +40,11 @@ namespace TF.EX.Domain.Context
         void ResetGamePlayLayerActualDepthLookup();
         void ResetReplay();
         int GetLocalPlayerIndex();
-        int GetRemotePlayerIndex();
-
-        bool ShouldSwapPlayer();
-        PlayerDraw GetPlayerDraw();
-        void SetPlayersIndex(int playerDraw);
+        void SetLocalSeat(int seat);
+        TowerFall.PlayerInput GetLocalInput();
+        void SetLocalInput(TowerFall.PlayerInput input);
+        void SetInputLocked(bool locked);
+        bool IsInputLocked();
 
         void ResetPlayersIndex();
         HUD GetHUDState();
@@ -77,7 +77,7 @@ namespace TF.EX.Domain.Context
 
     internal class GameContext : IGameContext
     {
-        private const int NUM_PLAYER = 2; //TODO: variable
+        private const int MAX_PLAYERS = 4;
 
         private readonly AttributeManager<Input> CurrentInputs;
         private Input PolledInput;
@@ -95,13 +95,16 @@ namespace TF.EX.Domain.Context
         private Dictionary<int, RoundData> roundDataPerRound = new Dictionary<int, RoundData>();
         private int _lastRollbackFrame = 0;
 
+        private const int INPUT_LOCK_TIMEOUT_SECONDS = 5;
+
         private int _localPlayerIndex = -1;
-        private int _remotePlayerIndex = -1;
+        private TowerFall.PlayerInput _localInput;
+        private DateTime _inputLockedUntil = DateTime.MinValue;
 
         public GameContext()
         {
             PolledInput = new Input();
-            CurrentInputs = new AttributeManager<Input>(EmptyInput, NUM_PLAYER);
+            CurrentInputs = new AttributeManager<Input>(EmptyInput, MAX_PLAYERS);
             Session = new Session
             {
                 RoundEndCounter = Constants.INITIAL_END_COUNTER,
@@ -198,7 +201,7 @@ namespace TF.EX.Domain.Context
                     Informations = new ReplayInfo
                     {
                         Id = towerId,
-                        PlayerDraw = PlayerDraw.Unkown,
+                        LocalSeat = -1,
                         Version = ServiceCollections.CurrentReplayVersion,
                         Mods = mods?.ToList() ?? new List<CustomMod>(),
                     },
@@ -213,8 +216,13 @@ namespace TF.EX.Domain.Context
             }
         }
 
-        public void AddRecord(GameState gameState, bool shouldSwapPlayer) //TODO: 2nd parameter might be useless
+        public void AddRecord(GameState gameState)
         {
+            if (_replay == null)
+            {
+                return;
+            }
+
             var gs = gameState;
             var inputs = CurrentInputs.Get().ToList();
 
@@ -227,7 +235,7 @@ namespace TF.EX.Domain.Context
 
         public void RemovePredictedRecords(int frame)
         {
-            _replay.Record.RemoveAll(rec => rec.GameState.Frame > frame);
+            _replay?.Record.RemoveAll(rec => rec.GameState.Frame > frame);
         }
 
         public Replay GetReplay()
@@ -242,7 +250,7 @@ namespace TF.EX.Domain.Context
 
         public Record GetCurrentReplayFrame(int frame)
         {
-            return _replay.Record.Find(rec => rec.GameState.Frame == frame);
+            return _replay?.Record.Find(rec => rec.GameState.Frame == frame);
         }
 
         public List<Input> GetCurrentInputs()
@@ -284,56 +292,53 @@ namespace TF.EX.Domain.Context
 
         public int GetLocalPlayerIndex()
         {
-            if (_localPlayerIndex == -1)
+            if (_localPlayerIndex != -1 && ServiceCollections.ResolveNetplayManager().IsReplayMode())
             {
-                _localPlayerIndex = GGRSFFI.netplay_local_player_handle();
+                return _localPlayerIndex;
             }
 
-            return _localPlayerIndex;
-        }
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
 
-        public int GetRemotePlayerIndex()
-        {
-            if (_remotePlayerIndex == -1)
+            if (TowerFall.TFGame.Instance?.Scene is TowerFall.MainMenu
+                && !matchmakingService.GetOwnLobby().IsEmpty
+                && !matchmakingService.IsSpectator())
             {
-                _remotePlayerIndex = GGRSFFI.netplay_remote_player_handle();
+                return matchmakingService.GetLocalSeat();
             }
 
-            return _remotePlayerIndex;
+            var handle = GGRSFFI.netplay_local_player_handle();
+
+            return handle >= 0 ? handle : matchmakingService.GetLocalSeat();
         }
 
-        public bool ShouldSwapPlayer()
+        public TowerFall.PlayerInput GetLocalInput()
         {
-            return GetLocalPlayerIndex() != 0;
+            return _localInput;
         }
 
-        public PlayerDraw GetPlayerDraw()
+        public void SetLocalInput(TowerFall.PlayerInput input)
         {
-            return (PlayerDraw)GetLocalPlayerIndex();
+            _localInput = input;
         }
 
-        /// <summary>
-        /// Only to use in replay mode
-        /// </summary>
-        /// <param name="playerDraw"></param>
-        public void SetPlayersIndex(int playerDraw)
+        public void SetInputLocked(bool locked)
         {
-            _localPlayerIndex = playerDraw;
+            _inputLockedUntil = locked ? DateTime.UtcNow.AddSeconds(INPUT_LOCK_TIMEOUT_SECONDS) : DateTime.MinValue;
+        }
 
-            if (playerDraw == 0)
-            {
-                _remotePlayerIndex = 1;
-            }
-            else
-            {
-                _remotePlayerIndex = 0;
-            }
+        public bool IsInputLocked()
+        {
+            return DateTime.UtcNow < _inputLockedUntil;
+        }
+
+        public void SetLocalSeat(int seat)
+        {
+            _localPlayerIndex = seat;
         }
 
         public void ResetPlayersIndex()
         {
             _localPlayerIndex = -1;
-            _remotePlayerIndex = -1;
         }
 
         public HUD GetHUDState()
@@ -426,7 +431,9 @@ namespace TF.EX.Domain.Context
 
         public IEnumerable<(int, string)> GetArchers()
         {
-            return ArcherSelections.Select(kvp => (kvp.Key, $"{kvp.Value.ArcherIndex}-{kvp.Value.ArcherAltIndex}"));
+            return ArcherSelections
+                .Select(kvp => (kvp.Key, $"{kvp.Value.ArcherIndex}-{kvp.Value.ArcherAltIndex}"))
+                .ToList();
         }
 
         public void AddArcher(int index, Player player)
@@ -452,7 +459,7 @@ namespace TF.EX.Domain.Context
 
         public IEnumerable<(int, Player)> GetPlayers()
         {
-            return ArcherSelections.Select(kvp => (kvp.Key, kvp.Value));
+            return ArcherSelections.Select(kvp => (kvp.Key, kvp.Value)).ToList();
         }
 
         public void ClearSfxs()

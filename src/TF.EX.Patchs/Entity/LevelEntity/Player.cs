@@ -38,6 +38,13 @@ namespace TF.EX.Patchs.Entity.LevelEntity
 
             if (netplayManager.IsInit())
             {
+                // Kill a deconnected playe
+                if (inputService.GetCurrentInput(__instance.PlayerIndex).disconnected != 0 && !__instance.Dead)
+                {
+                    __instance.Die(DeathCause.Curse, -1);
+                    return;
+                }
+
                 var dynPlayer = DynamicData.For(__instance);
 
                 // Sprite update are done in the DoWrapRender method, so we manually call it here to have it in the game state
@@ -62,20 +69,7 @@ namespace TF.EX.Patchs.Entity.LevelEntity
 
                 if (!TowerFall.Player.ShootLock && hasRightStickVariant)
                 {
-                    var playerIndex = __instance.PlayerIndex;
-                    if (netplayManager.ShouldSwapPlayer())
-                    {
-                        if (playerIndex == 0)
-                        {
-                            playerIndex = inputService.GetLocalPlayerInputIndex();
-                        }
-                        else
-                        {
-                            playerIndex = inputService.GetRemotePlayerInputIndex();
-                        }
-                    }
-
-                    var input = inputService.GetCurrentInput(playerIndex);
+                    var input = inputService.GetCurrentInput(__instance.PlayerIndex);
 
                     if (input.aim_right_axis.IsAfterThreshold())
                     {
@@ -126,20 +120,7 @@ namespace TF.EX.Patchs.Entity.LevelEntity
             var dynPlayer = Traverse.Create(self);
             var spamShotCounter = dynPlayer.Field("spamShotCounter").GetValue<Counter>();
 
-            var playerIndex = self.PlayerIndex;
-            if (netplayManager.ShouldSwapPlayer())
-            {
-                if (playerIndex == 0)
-                {
-                    playerIndex = inputService.GetLocalPlayerInputIndex();
-                }
-                else
-                {
-                    playerIndex = inputService.GetRemotePlayerInputIndex();
-                }
-            }
-
-            var input = inputService.GetCurrentInput(playerIndex);
+            var input = inputService.GetCurrentInput(self.PlayerIndex);
             var rightAimDirection = TowerFall.PlayerInput.GetAimDirection(input.aim_right_axis.ToTFVector(), false);
 
             if (rightAimDirection.HasValue)

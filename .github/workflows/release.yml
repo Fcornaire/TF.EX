@@ -1,6 +1,3 @@
-# This workflow will build a .NET project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
-
 name: Release
 
 on:
@@ -8,67 +5,78 @@ on:
     tags:
       - "*"
 
+env:
+  MOD_NAME: DShad.TF.EX
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.0.x
+
       - name: Check if Config exists
         id: check-config
         run: |
           if [[ -f ./src/TF.EX.Domain/Config.cs ]]; then
-            echo "Config file exists!"
-            echo "::set-output name=config-existing::true"
+            echo "config-existing=true" >> "$GITHUB_OUTPUT"
           else
-            echo "File does not exist"
-            echo "::set-output name=config-existing::false"
+            echo "config-existing=false" >> "$GITHUB_OUTPUT"
           fi
+
       - name: Replace Config file
         if: steps.check-config.outputs.config-existing == 'true'
         run: |
-          echo 'namespace TF.EX.Domain
+          cat > ./src/TF.EX.Domain/Config.cs <<EOF
+          namespace TF.EX.Domain
           {
               public static class Config
               {
-                  public static readonly string SERVER = "'"${{ secrets.SERVER_URL }}"'";
+                  public static readonly string SERVER = "${{ secrets.SERVER_URL }}";
               }
-          }' > ./src/TF.EX.Domain/Config.cs
-          echo "Existing Config file replaced"
-      - name: Restore dependencies
-        run: dotnet restore
-      - name: Build
-        run: dotnet build --no-restore --configuration Release
-      - name: Publish
-        run: dotnet publish --no-restore --configuration Release --output ./TF.EX
+          }
+          EOF
       - name: Download ggrs-ffi lib
-        uses: robinraju/release-downloader@v1.8
+        uses: robinraju/release-downloader@v1.11
         with:
           repository: "Fcornaire/ggrs-ffi"
           latest: true
-          out-file-path: "TF.EX/Native"
+          out-file-path: "src/TF.EX.Core/Unmanaged/win-x64"
           fileName: "ggrs_ffi.dll"
-      - name: Download matchbox-client-ffi lib
-        uses: robinraju/release-downloader@v1.8
-        with:
-          repository: "Fcornaire/matchbox-client-ffi"
-          latest: true
-          out-file-path: "TF.EX/Native"
-          fileName: "matchbox_client_ffi.dll"
-      - name: Archive Release
-        uses: thedoctor0/zip-release@0.7.1
-        with:
-          type: "zip"
-          filename: "TF.EX.zip"
-          path: "./TF.EX"
-          exclusions: "**/*Mono* **/*.pdb **/xunit.** **/TF.EX.Utils.** **/DeepEqual.dll"
+
+      - name: Restore dependencies
+        run: dotnet restore src/TF.EX.Core/TF.EX.Core.csproj
+
+      - name: Build
+        run: |
+          dotnet build src/TF.EX.Core/TF.EX.Core.csproj \
+            --no-restore \
+            --configuration Release \
+            -p:ModLoaderPath="$GITHUB_WORKSPACE/libs" \
+            -p:ModEnablePublish=false \
+            -p:ModEnableZip=false
+
+      - name: Stage mod
+        run: |
+          OUT=src/TF.EX.Core/bin/Release/net10.0
+          mkdir -p "staging/$MOD_NAME"
+          cp -r "$OUT/." "staging/$MOD_NAME/"
+          # FortRise never reads deps.json, and its own packer strips it.
+          rm -f "staging/$MOD_NAME"/*.deps.json
+          echo "--- packaged tree ---"
+          (cd staging && find . | sort)
+
+      - name: Archive mod
+        run: cd staging && zip -r "$GITHUB_WORKSPACE/$MOD_NAME.zip" "$MOD_NAME"
+
       - name: Upload Release
-        uses: ncipollo/release-action@v1.12.0
+        uses: ncipollo/release-action@v1.14.0
         with:
-          artifacts: "TF.EX.zip"
+          artifacts: "${{ env.MOD_NAME }}.zip"
           generateReleaseNotes: true
           token: ${{ secrets.GITHUB_TOKEN }}

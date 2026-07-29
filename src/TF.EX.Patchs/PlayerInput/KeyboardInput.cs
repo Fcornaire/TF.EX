@@ -22,6 +22,23 @@ namespace TF.EX.Patchs.PlayerInput
         }
 
         [HarmonyPostfix]
+        [HarmonyPatch("get_Name")]
+        public static void Name_patch(ref string __result, KeyboardInput __instance)
+        {
+            if (PlayerInputPatch.TryGetNetplayName(__instance, out var name))
+            {
+                __result = name;
+            }
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuStart")]
+        public static void MenuStart_patch(ref bool __result, KeyboardInput __instance)
+        {
+            __result = InterceptStart(__instance, __result);
+        }
+
+        [HarmonyPostfix]
         [HarmonyPatch("get_MenuSkipReplay")]
         public static void MenuSkipReplay_patch(ref bool __result, KeyboardInput __instance)
         {
@@ -54,12 +71,9 @@ namespace TF.EX.Patchs.PlayerInput
         [HarmonyPatch("get_MenuLeft")]
         public static void MenuLeft_patch(ref bool __result, KeyboardInput __instance)
         {
-            var inputService = ServiceCollections.ResolveInputService();
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
 
-            if (TFGame.Instance.Scene is MainMenu
-               && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
-               && inputService.GetInputIndex(__instance) != 0)
+            if (IsForeignSeat(__instance))
             {
                 __result = false;
             }
@@ -74,12 +88,9 @@ namespace TF.EX.Patchs.PlayerInput
         [HarmonyPatch("get_MenuRight")]
         public static void MenuRight_patch(ref bool __result, KeyboardInput __instance)
         {
-            var inputService = ServiceCollections.ResolveInputService();
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
 
-            if (TFGame.Instance.Scene is MainMenu
-                && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
-                && inputService.GetInputIndex(__instance) != 0)
+            if (IsForeignSeat(__instance))
             {
                 __result = false;
             }
@@ -94,28 +105,86 @@ namespace TF.EX.Patchs.PlayerInput
         [HarmonyPatch("get_MenuUp")]
         public static void MenuUp_patch(ref bool __result, KeyboardInput __instance)
         {
-            var inputService = ServiceCollections.ResolveInputService();
-
-            if (TFGame.Instance.Scene is MainMenu
-                && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
-                && inputService.GetInputIndex(__instance) != 0)
-            {
-                __result = false;
-            }
+            if (IsForeignSeat(__instance)) __result = false;
         }
 
         [HarmonyPostfix]
         [HarmonyPatch("get_MenuDown")]
         public static void MenuDown_patch(ref bool __result, KeyboardInput __instance)
         {
+            if (IsForeignSeat(__instance)) __result = false;
+        }
+
+        private static bool IsForeignSeat(KeyboardInput self)
+        {
             var inputService = ServiceCollections.ResolveInputService();
 
-            if (TFGame.Instance.Scene is MainMenu
-                && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
-                && inputService.GetInputIndex(__instance) != 0)
+            if (TFGame.Instance.Scene is not MainMenu
+                || TowerFall.MainMenu.VersusMatchSettings == null
+                || !TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
+                || ServiceCollections.ResolveMatchmakingService().GetOwnLobby().IsEmpty)
             {
-                __result = false;
+                return false;
             }
+
+            return inputService.IsInputLocked()
+                || inputService.GetInputIndex(self) != inputService.GetLocalPlayerInputIndex();
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuAlt")]
+        public static void MenuAlt_patch(ref bool __result, KeyboardInput __instance)
+        {
+            if (IsForeignSeat(__instance)) __result = false;
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuAlt2")]
+        public static void MenuAlt2_patch(ref bool __result, KeyboardInput __instance)
+        {
+            if (IsForeignSeat(__instance)) __result = false;
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuAlt2Check")]
+        public static void MenuAlt2Check_patch(ref bool __result, KeyboardInput __instance)
+        {
+            if (IsForeignSeat(__instance)) __result = false;
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuBack")]
+        public static void MenuBack_patch(ref bool __result, KeyboardInput __instance)
+        {
+            if (IsForeignSeat(__instance)) __result = false;
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuConfirmCheck")]
+        public static void MenuConfirmCheck_patch(ref bool __result, KeyboardInput __instance)
+        {
+            if (IsForeignSeat(__instance)) __result = false;
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuStartCheck")]
+        public static void MenuStartCheck_patch(ref bool __result, KeyboardInput __instance)
+        {
+            if (IsForeignSeat(__instance)) __result = false;
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuBackCheck")]
+        public static void MenuBackCheck_patch(ref bool __result, KeyboardInput __instance)
+        {
+            if (IsForeignSeat(__instance)) __result = false;
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuAltCheck")]
+        public static void MenuAltCheck_patch(ref bool __result, KeyboardInput __instance)
+        {
+            if (IsForeignSeat(__instance)) __result = false;
         }
 
         [HarmonyPostfix]
@@ -148,17 +217,74 @@ namespace TF.EX.Patchs.PlayerInput
                 return;
             }
 
-            if (IsLocalPlayerKeyboard(__instance, inputService))
+            var seat = inputService.GetInputIndex(__instance);
+
+            if (seat == inputService.GetLocalPlayerInputIndex() && !netplayManager.IsReplayMode())
             {
-                if (!netplayManager.IsReplayMode())
-                {
-                    inputService.UpdatePolledInput(__result);
-                }
-                __result = inputService.GetCurrentInput(inputService.GetLocalPlayerInputIndex()).ToTFInput(); //TODO: get by player instead of index
-                return;
+                inputService.UpdatePolledInput(__result);
             }
 
-            __result = inputService.GetCurrentInput(inputService.GetRemotePlayerInputIndex()).ToTFInput();
+            __result = inputService.GetCurrentInput(seat).ToTFInput();
+        }
+
+        private static bool InterceptStart(KeyboardInput self, bool actualResult)
+        {
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+            var inputService = ServiceCollections.ResolveInputService();
+
+            if (TFGame.Instance.Scene is not MainMenu || TowerFall.MainMenu.VersusMatchSettings == null)
+            {
+                return actualResult;
+            }
+
+            var lobby = matchmakingService.GetOwnLobby();
+
+            if (!TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay() || lobby.IsEmpty)
+            {
+                return actualResult;
+            }
+
+            if (inputService.GetInputIndex(self) != inputService.GetLocalPlayerInputIndex())
+            {
+                return false;
+            }
+
+            var state = Traverse.Create(TFGame.Instance.Scene as MainMenu).Field<MainMenu.MenuState>("state").Value;
+
+            if (state != MainMenu.MenuState.Rollcall)
+            {
+                return actualResult;
+            }
+
+            if (matchmakingService.IsLobbyReady())
+            {
+                return true;
+            }
+
+            if (matchmakingService.IsSpectator())
+            {
+                return false;
+            }
+
+            var rollcallElement = (TFGame.Instance.Scene as MainMenu).GetAll<RollcallElement>().First(rc =>
+            {
+                return DynamicData.For(rc).Get<int>("playerIndex") == inputService.GetLocalPlayerInputIndex();
+            });
+
+            var rollcallState = DynamicData.For(rollcallElement).Get<StateMachine>("state");
+
+            if (rollcallState.State == 0)
+            {
+                return actualResult;
+            }
+
+
+            if (actualResult && matchmakingService.CanHostStart())
+            {
+                matchmakingService.RequestStart();
+            }
+
+            return false;
         }
 
         //TODO: refactor to have a unique intercept for all inputs
@@ -175,12 +301,7 @@ namespace TF.EX.Patchs.PlayerInput
 
             var lobby = matchmakingService.GetOwnLobby();
 
-            if (TFGame.Instance.Scene is MainMenu
-               && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
-               && inputService.GetInputIndex(self) != 0
-               && !lobby.IsEmpty
-               )
-
+            if (IsForeignSeat(self))
             {
                 return false; //Ignore input for other players in netplay
             }
@@ -233,7 +354,7 @@ namespace TF.EX.Patchs.PlayerInput
                         var dyn = DynamicData.For(rc);
                         var index = dyn.Get<int>("playerIndex");
 
-                        return index == 0;
+                        return index == inputService.GetLocalPlayerInputIndex();
                     });
 
                     var dynRollcallElement = DynamicData.For(rollcallElement);
@@ -241,6 +362,12 @@ namespace TF.EX.Patchs.PlayerInput
                     if (rollcallState.State == 0)
                     {
                         return actualInput;
+                    }
+
+
+                    if (actualInput && matchmakingService.CanHostStart())
+                    {
+                        matchmakingService.RequestStart();
                     }
 
                     return ServiceCollections.ResolveMatchmakingService().IsLobbyReady();

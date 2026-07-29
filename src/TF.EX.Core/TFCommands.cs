@@ -99,7 +99,7 @@ namespace TF.EX.Core
                 return;
             }
 
-            netplayManager.SetTestMode(checkDistance);
+            netplayManager.SetTestMode(checkDistance, playerCount);
 
             rngService.SetSeed(seed);
             replayService.Initialize();

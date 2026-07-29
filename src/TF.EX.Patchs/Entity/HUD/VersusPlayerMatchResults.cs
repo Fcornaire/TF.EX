@@ -21,21 +21,7 @@ namespace TF.EX.Patchs.Entity.HUD
             var dynVersusPlayerMatchResults = DynamicData.For(__instance);
             var gem = dynVersusPlayerMatchResults.Get<Sprite<string>>("gem");
 
-            var netplayIndex = playerIndex;
-
-            //if (netplayManager.ShouldSwapPlayer())
-            //{
-            //    if (netplayIndex == 0)
-            //    {
-            //        netplayIndex = inputService.GetLocalPlayerInputIndex();
-            //    }
-            //    else
-            //    {
-            //        netplayIndex = inputService.GetRemotePlayerInputIndex();
-            //    }
-            //}
-
-            var playerName = netplayIndex == 0 ? netplayManager.GetNetplayMeta().Name : netplayManager.GetPlayer2Name();
+            var playerName = netplayManager.GetNameForSeat(playerIndex);
 
             var playerNameText = new OutlineText(TFGame.Font, playerName, gem.Position + Vector2.UnitY * 15);
             playerNameText.Color = Color.White;

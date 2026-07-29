@@ -34,6 +34,7 @@ namespace TF.EX.Patchs.Scene
         private static LobbyVersusModeButton lobbyVersusModeButton = null;
         private static LobbyVersusCoinButton lobbyVersusCoinButton = null;
         private static LobbyVersusMapButton lobbyVersusMapButton = null;
+        private static LobbyVersusPlayerCountButton lobbyVersusPlayerCountButton = null;
         private static LobbyVarianText lobbyVarianText = null;
         private static List<VariantItem> variants = new List<VariantItem>();
 
@@ -112,6 +113,12 @@ namespace TF.EX.Patchs.Scene
                     lobbyVersusMapButton = null;
                 }
 
+                if (lobbyVersusPlayerCountButton != null)
+                {
+                    lobbyVersusPlayerCountButton.RemoveSelf();
+                    lobbyVersusPlayerCountButton = null;
+                }
+
                 if (lobbyVarianText != null)
                 {
                     lobbyVarianText.RemoveSelf();
@@ -150,26 +157,31 @@ namespace TF.EX.Patchs.Scene
             lobbyVersusMapButton = new LobbyVersusMapButton(new Vector2(160f, 130f), new Vector2(-100f, 210f));
             self.Add(lobbyVersusMapButton);
 
-            lobbyVersusCoinButton = new LobbyVersusCoinButton(new Vector2(160f, 190f), new Vector2(420f, 135f));
+            lobbyVersusPlayerCountButton = new LobbyVersusPlayerCountButton(new Vector2(160f, 190f), new Vector2(420f, 105f));
+            self.Add(lobbyVersusPlayerCountButton);
+
+            lobbyVersusCoinButton = new LobbyVersusCoinButton(new Vector2(160f, 220f), new Vector2(420f, 135f));
             self.Add(lobbyVersusCoinButton);
 
-            lobbyVarianText = new LobbyVarianText(new Vector2(160f, 220f), new Vector2(-120f, 135f));
+            lobbyVarianText = new LobbyVarianText(new Vector2(160f, 250f), new Vector2(-120f, 135f));
             self.Add(lobbyVarianText);
 
             foreach (var variant in variants)
             {
-                variant.Position.Y += 200;
+                variant.Position.Y += 230;
             }
 
-            self.MaxUICameraY += 230;
+            self.MaxUICameraY += 260;
 
             var dynMainMenu = DynamicData.For(self);
             dynMainMenu.Invoke("TweenBGCameraToY", 3);
             dynMainMenu.Set("ToStartSelected", lobbyVersusModeButton);
             lobbyVersusModeButton.DownItem = lobbyVersusMapButton;
             lobbyVersusMapButton.UpItem = lobbyVersusModeButton;
-            lobbyVersusMapButton.DownItem = lobbyVersusCoinButton;
-            lobbyVersusCoinButton.UpItem = lobbyVersusMapButton;
+            lobbyVersusMapButton.DownItem = lobbyVersusPlayerCountButton;
+            lobbyVersusPlayerCountButton.UpItem = lobbyVersusMapButton;
+            lobbyVersusPlayerCountButton.DownItem = lobbyVersusCoinButton;
+            lobbyVersusCoinButton.UpItem = lobbyVersusPlayerCountButton;
             lobbyVersusCoinButton.DownItem = variants[0];
             variants[0].UpItem = lobbyVersusCoinButton;
             variants[1].UpItem = lobbyVersusCoinButton;
@@ -501,63 +513,71 @@ namespace TF.EX.Patchs.Scene
             {
                 var matchmakingService = ServiceCollections.ResolveMatchmakingService();
 
-                var opponents = matchmakingService.IsSpectator()
-                    ? matchmakingService.GetOwnLobby().Players.Where(pl => pl.IsHost).ToArray()
-                    : matchmakingService.GetOwnLobby().Players.Where(p => p.RoomChatPeerId != matchmakingService.GetRoomChatPeerId()).ToArray();
-                int playerIndex = 1;
+                var localPeerId = matchmakingService.GetRoomPeerId();
+                var lobbyPlayers = matchmakingService.GetOwnLobby().Players.ToArray();
+                var localSeat = matchmakingService.GetLocalSeat();
 
-                foreach (var opponent in opponents)
+                foreach (var rollcallElement in __instance.GetAll<RollcallElement>())
                 {
-                    var latency = matchmakingService.GetPingToOpponent();
-                    if (latency > 0)
+                    var seat = DynamicData.For(rollcallElement).Get<int>("playerIndex");
+
+                    var seated = lobbyPlayers.FirstOrDefault(player => player.Seat == seat);
+
+                    if (seated == null)
                     {
-                        var color = Color.White;
-
-                        switch (latency)
-                        {
-                            case var n when (n >= 0 && n < 60):
-                                color = Color.LightGreen;
-                                break;
-                            case var n when (n >= 60 && n < 120):
-                                color = Color.GreenYellow;
-                                break;
-                            case var n when (n >= 120 && n < 150):
-                                color = Color.OrangeRed;
-                                break;
-                            case var n when (n >= 150):
-                                color = Color.Red;
-                                break;
-                            default:
-                                break;
-                        }
-
-                        var rollcallElement = __instance.GetAll<RollcallElement>().First(rc =>
-                        {
-                            var dyn = DynamicData.For(rc);
-                            var index = dyn.Get<int>("playerIndex");
-
-                            return index == playerIndex;
-                        });
-
-                        var posPing = rollcallElement.Position;
-                        var dynRollcall = DynamicData.For(rollcallElement);
-
-                        //var controlIconPos = dynRollcall.Get<Vector2>("ControlIconPos");
-                        //var posName = rollcallElement.Position + controlIconPos + Vector2.UnitY * 15f;
-                        posPing.Y -= 66f;
-
-                        Monocle.Draw.OutlineTextCentered(TFGame.Font, $"{latency} MS", posPing, color, 1.5f);
-
-                        //var state = dynRollcall.Get<Monocle.StateMachine>("state");
-                        //var nameColor = ((state.State == 1) ? ArcherData.Archers[playerIndex].ColorB : ArcherData.Archers[playerIndex].ColorA);
-                        //Monocle.Draw.OutlineTextCentered(TFGame.Font, opponent.Name, posName, nameColor, Color.Black);
+                        continue;
                     }
 
-                    playerIndex++;
+                    var isShown = matchmakingService.IsSpectator()
+                        ? seated.IsHost
+                        : seat != localSeat && seated.RoomPeerId != localPeerId;
+
+                    if (!isShown)
+                    {
+                        continue;
+                    }
+
+                    var latency = matchmakingService.GetPingTo(seated);
+                    var label = $"{latency} MS";
+
+                    var posPing = rollcallElement.Position;
+                    posPing.Y -= 66f;
+
+                    Monocle.Draw.OutlineTextCentered(TFGame.Font, label, posPing, GetPingColor(latency), Color.Black);
                 }
+
+                RenderWaitingForHost(matchmakingService);
             }
 
             Monocle.Draw.SpriteBatch.End();
+        }
+
+        private static void RenderWaitingForHost(Domain.Ports.IMatchmakingService matchmakingService)
+        {
+            if (!matchmakingService.IsWaitingForHostStart())
+            {
+                return;
+            }
+
+            var position = new Vector2(160f, 225f);
+
+            Monocle.Draw.OutlineTextureCentered(TFGame.MenuAtlas["portraits/readyBanner"], position, Color.White);
+            Monocle.Draw.OutlineTextCentered(TFGame.Font, "WAITING FOR HOST", position - Vector2.UnitY * 2f, Color.White, Color.Black);
+        }
+
+        private static Color GetPingColor(int latency)
+        {
+            switch (latency)
+            {
+                case var n when (n < 60):
+                    return Color.LightGreen;
+                case var n when (n < 120):
+                    return Color.GreenYellow;
+                case var n when (n < 150):
+                    return Color.OrangeRed;
+                default:
+                    return Color.Red;
+            }
         }
 
         [HarmonyPrefix]
@@ -629,12 +649,23 @@ namespace TF.EX.Patchs.Scene
         [HarmonyPatch("Update")]
         public static void MainMenu_Update_Postfix(MainMenu __instance)
         {
+            TowerFall.MainMenu.NoGamepadUpdates = !ServiceCollections.ResolveMatchmakingService().GetOwnLobby().IsEmpty;
+
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var rngService = ServiceCollections.ResolveRngService();
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
             var replayService = ServiceCollections.ResolveReplayService();
             var inputService = ServiceCollections.ResolveInputService();
             var logger = ServiceCollections.ResolveLogger();
+
+            if (matchmakingService.GetOwnLobby().IsEmpty)
+            {
+                inputService.ObserveLocalDevice();
+            }
+            else
+            {
+                matchmakingService.ReconcileRollcallIfPending();
+            }
 
             if (__instance.State == MainMenu.MenuState.Rollcall && matchmakingService.GetOwnLobby().IsEmpty)
             {
@@ -713,7 +744,7 @@ namespace TF.EX.Patchs.Scene
                         return;
                     }
 
-                    if (string.IsNullOrEmpty(lobbyToSpectate.RoomId) || string.IsNullOrEmpty(lobbyToSpectate.RoomChatId))
+                    if (string.IsNullOrEmpty(lobbyToSpectate.RoomId))
                     {
                         logger.LogError<MainMenuPatch>("Lobby to spectate is null?");
 
@@ -737,15 +768,12 @@ namespace TF.EX.Patchs.Scene
                         .ToList();
 
                     var roomId = Guid.NewGuid().ToString();
-                    var roomChatId = Guid.NewGuid().ToString();
 
                     var roomUrl = $"{Config.SERVER}/room/{roomId}";
-                    var roomChatUrl = $"{Config.SERVER}/room/{roomChatId}";
 
                     var lobby = matchmakingService.GetOwnLobby();
                     lobby.GameData.Variants = variantsToggle.ToArray();
                     lobby.Name = netplayManager.GetNetplayMeta().Name;
-                    lobby.RoomChatId = roomChatId;
                     lobby.RoomId = roomId;
                     lobby.Players.Add(new Domain.Models.WebSocket.Player
                     {
@@ -779,8 +807,7 @@ namespace TF.EX.Patchs.Scene
                         Sounds.ui_click.Play();
                         __instance.State = MainMenu.MenuState.Rollcall;
                         __instance.BackState = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
-                        netplayManager.SetRoomAndServerMode(roomUrl, true);
-                        matchmakingService.ConnectAndListenToLobby(roomChatUrl);
+                        netplayManager.SetRoomAndServerMode($"{roomUrl}?peer={matchmakingService.GetRoomPeerId()}", true);
 
                         rngService.SetSeed(matchmakingService.GetOwnLobby().GameData.Seed);
 
@@ -906,7 +933,7 @@ namespace TF.EX.Patchs.Scene
                             return;
                         }
 
-                        if (string.IsNullOrEmpty(newLobby.RoomId) || string.IsNullOrEmpty(newLobby.RoomChatId))
+                        if (string.IsNullOrEmpty(newLobby.RoomId))
                         {
                             logger.LogError<MainMenuPatch>("Lobby to join is null?");
                             return;
@@ -982,13 +1009,11 @@ namespace TF.EX.Patchs.Scene
             Sounds.ui_click.Play();
 
             var roomUrl = $"{Config.SERVER}/room/{newLobby.RoomId}";
-            var roomChatUrl = $"{Config.SERVER}/room/{newLobby.RoomChatId}";
 
             if (isPlayer)
             {
-                netplayManager.SetRoomAndServerMode(roomUrl, false);
+                netplayManager.SetRoomAndServerMode($"{roomUrl}?peer={matchmakingService.GetRoomPeerId()}", false);
                 netplayManager.UpdatePlayer2Name(newLobby.Players.First(pl => pl.IsHost).Name);
-                matchmakingService.ConnectAndListenToLobby(roomChatUrl);
             }
 
             matchmakingService.UpdateOwnLobby(newLobby);

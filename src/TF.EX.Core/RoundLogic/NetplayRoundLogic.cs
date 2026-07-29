@@ -15,7 +15,28 @@ namespace TF.EX.Core.RoundLogic
         public Color NameColor => Color.Yellow;
         public ISubtextureEntry Icon => TFEXModModule.InternetIcon;
 
-        public bool IsTeamMode => false;
+        public bool IsTeamMode => ResolveMode() == TowerFall.Modes.TeamDeathmatch;
+
+        public static TowerFall.Modes ResolveMode()
+        {
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+
+            if (netplayManager.IsReplayMode())
+            {
+                var replay = ServiceCollections.ResolveReplayService().GetReplay();
+
+                if (replay != null)
+                {
+                    return (TowerFall.Modes)(int)replay.Informations.Mode;
+                }
+            }
+
+            var lobby = ServiceCollections.ResolveMatchmakingService().GetOwnLobby();
+
+            return lobby.IsEmpty
+                ? TowerFall.Modes.LastManStanding
+                : (TowerFall.Modes)lobby.GameData.Mode;
+        }
 
         public TowerFall.RoundLogic OnCreateRoundLogic(Session session)
         {
@@ -32,7 +53,7 @@ namespace TF.EX.Core.RoundLogic
         }
     }
 
-    public class NetplayRoundLogic : TowerFall.RoundLogic
+    public class NetplayRoundLogic : TowerFall.RoundLogic, IRoundPlayerSpawner
     {
         private readonly INetplayManager netplayManager;
         private readonly IInputService inputInputService;
@@ -55,7 +76,7 @@ namespace TF.EX.Core.RoundLogic
             replayService = ServiceCollections.ResolveReplayService();
             matchmakingService = ServiceCollections.ResolveMatchmakingService();
             logger = ServiceCollections.ResolveLogger();
-            mode = TowerFall.Modes.LastManStanding;
+            mode = NetplayVersusMode.ResolveMode();
         }
 
         //public static RoundLogicInfo Create()
@@ -79,16 +100,32 @@ namespace TF.EX.Core.RoundLogic
 
                 var lobby = matchmakingService.GetOwnLobby();
                 replayService.Initialize(lobby.GameData, lobby.Mods);
-                mode = (TowerFall.Modes)lobby.GameData.Mode;
 
                 TowerFall.TFGame.ConsoleEnabled = false;
             }
             else
             {
-                base.Session.CurrentLevel.Add(new VersusStart(base.Session));
+                SpawnRoundPlayers();
+            }
+        }
+
+        public void SpawnRoundPlayers()
+        {
+            base.Session.CurrentLevel.Add(new VersusStart(base.Session));
+
+            if (IsTeamMode)
+            {
+                SpawnPlayersTeams();
+                base.Players = TFGame.PlayerAmount;
+            }
+            else
+            {
                 base.Players = SpawnPlayersFFA();
             }
         }
+
+        private bool IsTeamMode => mode == TowerFall.Modes.TeamDeathmatch;
+
 
         public override void OnRoundStart()
         {
@@ -100,14 +137,39 @@ namespace TF.EX.Core.RoundLogic
         {
             base.OnUpdate();
 
-            //switch (mode)
-            //{
-            //    case TowerFall.Modes.LastManStanding:
+            if (IsTeamMode)
+            {
+                HandleTeamDeathmatchUpdate();
+                return;
+            }
+
             HandleLastManStandingUpdate();
-            //        break;
-            //    default:
-            //        break;
-            //}
+        }
+
+        private void HandleTeamDeathmatchUpdate()
+        {
+            SessionStats.TimePlayed += Engine.DeltaTicks;
+
+            if (!base.RoundStarted || done || !base.Session.CurrentLevel.Ending || !base.Session.CurrentLevel.CanEnd)
+            {
+                return;
+            }
+
+            if (!roundEndCounter.Finished)
+            {
+                roundEndCounter.Update();
+                return;
+            }
+
+            done = true;
+
+            if (base.Session.CurrentLevel.Players.Count > 0)
+            {
+                AddScore((int)(base.Session.CurrentLevel.Players[0] as Player).Allegiance, 1);
+            }
+
+            InsertCrownEvent();
+            base.Session.EndRound();
         }
 
         private void HandleLastManStandingUpdate()
@@ -156,15 +218,36 @@ namespace TF.EX.Core.RoundLogic
         {
             base.OnPlayerDeath(player, corpse, playerIndex, deathType, position, killerIndex);
 
-            //switch (mode)
-            //{
-            //    case TowerFall.Modes.LastManStanding:
-            HandleLastManStandingPlayerDeath(player, corpse, playerIndex, deathType, position, killerIndex);
-            //        break;
-            //    default:
-            //        break;
-            //}
+            if (IsTeamMode)
+            {
+                HandleTeamDeathmatchPlayerDeath(corpse);
+                return;
+            }
 
+            HandleLastManStandingPlayerDeath(player, corpse, playerIndex, deathType, position, killerIndex);
+        }
+
+        private void HandleTeamDeathmatchPlayerDeath(PlayerCorpse corpse)
+        {
+            if (wasFinalKill && base.Session.CurrentLevel.LivingPlayers == 0)
+            {
+                wasFinalKill = false;
+                CancelFinalKill();
+                return;
+            }
+
+            if (!TeamCheckForRoundOver(out var surviving))
+            {
+                return;
+            }
+
+            base.Session.CurrentLevel.Ending = true;
+
+            if (surviving != Allegiance.Neutral && base.Session.Scores[(int)surviving] >= base.Session.MatchSettings.GoalScore - 1)
+            {
+                wasFinalKill = true;
+                FinalKillTeams(corpse, surviving);
+            }
         }
 
         public void HandleLastManStandingPlayerDeath(Player player, PlayerCorpse corpse, int playerIndex, DeathCause deathType, Vector2 position, int killerIndex)

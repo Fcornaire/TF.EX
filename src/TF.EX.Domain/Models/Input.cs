@@ -49,6 +49,9 @@ namespace TF.EX.Domain.Models
 
         [Key(12)]
         public Vector2f aim_right_axis { get; set; }
+
+        [Key(13)]
+        public int disconnected { get; set; }
     }
 
     [StructLayout(LayoutKind.Sequential)]

@@ -10,6 +10,8 @@ namespace TF.EX.Domain.Ports
 
         void Init(TowerFall.RoundLogic roundLogic);
 
+        bool ConsumeAbortToVersusOptions();
+
         bool IsInit();
 
         StatusImpl AdvanceFrame(Input input);
@@ -23,6 +25,7 @@ namespace TF.EX.Domain.Ports
         GameState LoadGameState();
 
         NetworkStats GetNetworkStats();
+        IReadOnlyDictionary<int, NetworkStats> GetNetworkStatsPerSeat();
 
         bool IsTestMode();
 
@@ -66,11 +69,11 @@ namespace TF.EX.Domain.Ports
         void UpdatePlayer2Name(string name);
         void SetRoomAndServerMode(string roomUrl, bool isHost);
 
-        bool ShouldSwapPlayer();
-        PlayerDraw GetPlayerDraw();
-        void SetPlayersIndex(int playerDraw);
+        int LocalSeat { get; }
+        string GetNameForSeat(int seat);
+        void SetLocalSeat(int seat);
         bool HasSetMode();
-        void SetTestMode(int checkDistance);
+        void SetTestMode(int checkDistance, int numPlayers);
         void SetLocalMode(string addr, ushort localPort, PlayerDraw draw);
 
         void SetServerMode(string roomUrl);

@@ -23,6 +23,16 @@ namespace TF.EX.Patchs.PlayerInput
         }
 
         [HarmonyPostfix]
+        [HarmonyPatch("get_Name")]
+        public static void Name_patch(ref string __result, XGamepadInput __instance)
+        {
+            if (PlayerInputPatch.TryGetNetplayName(__instance, out var name))
+            {
+                __result = name;
+            }
+        }
+
+        [HarmonyPostfix]
         [HarmonyPatch("get_MenuStart")]
         public static void MenuStart_patch(ref bool __result, XGamepadInput __instance)
         {
@@ -54,28 +64,14 @@ namespace TF.EX.Patchs.PlayerInput
         [HarmonyPatch("get_MenuUp")]
         public static void MenuUp_patch(ref bool __result, XGamepadInput __instance)
         {
-            var inputService = ServiceCollections.ResolveInputService();
-
-            if (TFGame.Instance.Scene is MainMenu
-               && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
-               && inputService.GetInputIndex(__instance) != 0)
-            {
-                __result = false;
-            }
+            if (IsForeignSeat(__instance)) __result = false;
         }
 
         [HarmonyPostfix]
         [HarmonyPatch("get_MenuDown")]
         public static void MenuDown_patch(ref bool __result, XGamepadInput __instance)
         {
-            var inputService = ServiceCollections.ResolveInputService();
-
-            if (TFGame.Instance.Scene is MainMenu
-                && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
-                && inputService.GetInputIndex(__instance) != 0)
-            {
-                __result = false;
-            }
+            if (IsForeignSeat(__instance)) __result = false;
         }
 
         [HarmonyPostfix]
@@ -100,6 +96,71 @@ namespace TF.EX.Patchs.PlayerInput
         public static bool MenuSaveReplayCheck_patch()
         {
             return false;
+        }
+
+        private static bool IsForeignSeat(XGamepadInput self)
+        {
+            var inputService = ServiceCollections.ResolveInputService();
+
+            if (TFGame.Instance.Scene is not MainMenu
+                || TowerFall.MainMenu.VersusMatchSettings == null
+                || !TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
+                || ServiceCollections.ResolveMatchmakingService().GetOwnLobby().IsEmpty)
+            {
+                return false;
+            }
+
+            return inputService.IsInputLocked()
+                || inputService.GetInputIndex(self) != inputService.GetLocalPlayerInputIndex();
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuAlt")]
+        public static void MenuAlt_patch(ref bool __result, XGamepadInput __instance)
+        {
+            if (IsForeignSeat(__instance)) __result = false;
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuAlt2")]
+        public static void MenuAlt2_patch(ref bool __result, XGamepadInput __instance)
+        {
+            if (IsForeignSeat(__instance)) __result = false;
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuAlt2Check")]
+        public static void MenuAlt2Check_patch(ref bool __result, XGamepadInput __instance)
+        {
+            if (IsForeignSeat(__instance)) __result = false;
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuConfirmCheck")]
+        public static void MenuConfirmCheck_patch(ref bool __result, XGamepadInput __instance)
+        {
+            if (IsForeignSeat(__instance)) __result = false;
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuStartCheck")]
+        public static void MenuStartCheck_patch(ref bool __result, XGamepadInput __instance)
+        {
+            if (IsForeignSeat(__instance)) __result = false;
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuBackCheck")]
+        public static void MenuBackCheck_patch(ref bool __result, XGamepadInput __instance)
+        {
+            if (IsForeignSeat(__instance)) __result = false;
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("get_MenuAltCheck")]
+        public static void MenuAltCheck_patch(ref bool __result, XGamepadInput __instance)
+        {
+            if (IsForeignSeat(__instance)) __result = false;
         }
 
         [HarmonyPostfix]
@@ -134,23 +195,14 @@ namespace TF.EX.Patchs.PlayerInput
 
             if (netplayManager.IsInit() || netplayManager.IsReplayMode())
             {
-                var isLocalGamepad = IsLocalPlayerGamePad(__instance, inputService);
+                var seat = inputService.GetInputIndex(__instance);
 
-                if (isLocalGamepad)
+                if (seat == inputService.GetLocalPlayerInputIndex() && !netplayManager.IsReplayMode())
                 {
-                    if (!netplayManager.IsReplayMode())
-                    {
-                        inputService.UpdatePolledInput(__result, __instance.GetRightStick());
-                    }
-                    else
-                    {
-                        //InterceptReplay(polledInput); TODO: implement replay interception
-                    }
-                    __result = inputService.GetCurrentInput(inputService.GetLocalPlayerInputIndex()).ToTFInput();
-                    return;
+                    inputService.UpdatePolledInput(__result, __instance.GetRightStick());
                 }
 
-                __result = inputService.GetCurrentInput(inputService.GetRemotePlayerInputIndex()).ToTFInput();
+                __result = inputService.GetCurrentInput(seat).ToTFInput();
             }
             //else
             //{
@@ -171,10 +223,7 @@ namespace TF.EX.Patchs.PlayerInput
 
             var lobby = matchmakingService.GetOwnLobby();
 
-            if (TFGame.Instance.Scene is MainMenu
-                && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
-                && inputService.GetInputIndex(self) != 0
-                && !lobby.IsEmpty)
+            if (IsForeignSeat(self))
             {
                 return false; //Ignore input for other players in netplay
             }
@@ -226,7 +275,7 @@ namespace TF.EX.Patchs.PlayerInput
                     {
                         var index = Traverse.Create(rc).Field("playerIndex").GetValue<int>();
 
-                        return index == 0;
+                        return index == inputService.GetLocalPlayerInputIndex();
                     });
 
                     var rollcallState = Traverse.Create(rollcallElement).Field("state").GetValue<StateMachine>();
@@ -235,7 +284,12 @@ namespace TF.EX.Patchs.PlayerInput
                         return actualInput;
                     }
 
-                    return actualInput;
+                    if (actualInput && matchmakingService.CanHostStart())
+                    {
+                        matchmakingService.RequestStart();
+                    }
+
+                    return false;
                 }
             }
 
@@ -255,17 +309,24 @@ namespace TF.EX.Patchs.PlayerInput
         private static bool InterceptStart(XGamepadInput self, bool actualResult)
         {
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+            var inputService = ServiceCollections.ResolveInputService();
+
+            var lobby = matchmakingService.GetOwnLobby();
+
+            if (IsForeignSeat(self))
+            {
+                return false; //Ignore input for other players in netplay
+            }
 
             if (TFGame.Instance.Scene is MainMenu)
             {
                 var state = Traverse.Create(TFGame.Instance.Scene as MainMenu).Field("state").GetValue<MainMenu.MenuState>();
 
                 var currentMode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
-                var lobby = matchmakingService.GetOwnLobby();
 
                 if (state == MainMenu.MenuState.Rollcall && currentMode.IsNetplay() && !lobby.IsEmpty)
                 {
-                    if (ServiceCollections.ResolveMatchmakingService().IsLobbyReady())
+                    if (matchmakingService.IsLobbyReady())
                     {
                         return true;
                     }
@@ -279,16 +340,23 @@ namespace TF.EX.Patchs.PlayerInput
                     {
                         var index = Traverse.Create(rc).Field("playerIndex").GetValue<int>();
 
-                        return index == 0;
+                        return index == inputService.GetLocalPlayerInputIndex();
                     });
 
                     var rollcallState = Traverse.Create(rollcallElement).Field("state").GetValue<StateMachine>();
+
                     if (rollcallState.State == 0)
                     {
                         return actualResult;
                     }
 
-                    return actualResult;
+
+                    if (actualResult && matchmakingService.CanHostStart())
+                    {
+                        matchmakingService.RequestStart();
+                    }
+
+                    return false;
                 }
             }
 
@@ -303,10 +371,7 @@ namespace TF.EX.Patchs.PlayerInput
             var isNetplayInit = netplayManager.IsInit();
             var isPaused = TFGame.Instance.Scene is TowerFall.Level && (TFGame.Instance.Scene as TowerFall.Level).Paused;
 
-            if (TFGame.Instance.Scene is MainMenu
-                && TowerFall.MainMenu.VersusMatchSettings != null
-                && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
-                && inputService.GetInputIndex(self) != 0)
+            if (IsForeignSeat(self))
             {
                 return false; //Ignore input for other players in netplay
             }
@@ -351,9 +416,7 @@ namespace TF.EX.Patchs.PlayerInput
             var isNetplayInit = netplayManager.IsInit();
             var isPaused = TFGame.Instance.Scene is TowerFall.Level && (TFGame.Instance.Scene as TowerFall.Level).Paused;
 
-            if (TFGame.Instance.Scene is MainMenu
-                && TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay()
-                && inputService.GetInputIndex(self) != 0)
+            if (IsForeignSeat(self))
             {
                 return false;
             }
@@ -386,7 +449,7 @@ namespace TF.EX.Patchs.PlayerInput
                     {
                         var index = Traverse.Create(rc).Field("playerIndex").GetValue<int>();
 
-                        return index == 0;
+                        return index == inputService.GetLocalPlayerInputIndex();
                     });
 
                     return actualInput;

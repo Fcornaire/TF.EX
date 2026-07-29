@@ -7,6 +7,7 @@
             self.Options.DevConsole = true;
             self.Options.CanSkipReplays = true;
             self.Options.ReplayMode = TowerFall.Options.ReplayModes.UseGPU;
+            self.Options.ShowTips = false;
         }
     }
 }
