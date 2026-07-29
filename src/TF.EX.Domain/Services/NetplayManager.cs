@@ -30,6 +30,9 @@ namespace TF.EX.Domain.Services
         private int _framesAhead;
         private bool _isUpdating = false;
         private bool _hasFailedInitialConnection = false;
+        private volatile bool _pendingAbortToVersusOptions = false;
+
+        private const int SYNCHRONIZATION_TIMEOUT_MS = 20000;
 
         private readonly IInputService _inputService;
         private readonly IGameContext _gameContext;
@@ -40,6 +43,8 @@ namespace TF.EX.Domain.Services
         private List<string> _events;
         private List<NetplayRequest> _netplayRequests;
         private NetworkStats _networkStats;
+        private IReadOnlyDictionary<int, NetworkStats> _networkStatsPerSeat = new Dictionary<int, NetworkStats>();
+        private bool _supportsPerSeatStats = true;
         private string _player2Name = "PLAYER";
         private CancellationTokenSource _cancellationTokenSource;
         private CancellationToken _cancellationToken;
@@ -75,131 +80,162 @@ namespace TF.EX.Domain.Services
 
         public void Init(TowerFall.RoundLogic roundLogic)
         {
-            if (!_isInit)
+            if (_isInit)
             {
-                _hasFailedInitialConnection = false;
-
-                GGRSConfig.Name = NetplayMeta.Name;
-                GGRSConfig.InputDelay = NetplayMeta.InputDelay;
-
-                _cancellationTokenSource = new CancellationTokenSource();
-                _cancellationToken = _cancellationTokenSource.Token;
-
-                if (_netplayMode != NetplayMode.Test && _netplayMode != NetplayMode.Replay)
-                {
-                    Task.Run(async () =>
-                        {
-                            try
-                            {
-                                using var handle = new SafeBytes<GGRSConfig>(GGRSConfig, true);
-                                GGRSFFI.IsInInit = true;
-                                var status = GGRSFFI.netplay_init(handle.ToBytesFFI()).ToModelGGrsFFI();
-                                GGRSFFI.IsInInit = false;
-
-                                if (!status.IsOk)
-                                {
-                                    var info = status.Info.AsString();
-                                    if (info.Contains("Initialization failed"))
-                                    {
-                                        _logger.LogError<NetplayManager>($"Failed to initialize netplay session : {info}");
-
-                                        _hasFailedInitialConnection = true;
-
-                                        TowerFall.Sounds.ui_invalid.Play();
-                                        (TFGame.Instance.Scene as Level).GoToVersusOptions();
-
-                                        return;
-                                    }
-                                    else
-                                    {
-                                        throw new InvalidOperationException($"Init error : {info}");
-                                    }
-                                }
-
-                                _logger.LogDebug<NetplayManager>($"Netplay initialization succeeded");
-                                _isInit = true;
-
-                                var timer = new Stopwatch();
-                                timer.Start();
-
-                                while (!IsSynchronized() && !_cancellationToken.IsCancellationRequested && timer.ElapsedMilliseconds < 20000)
-                                {
-                                    Poll();
-                                    await Task.Delay(TFGame.FrameTime);
-                                }
-
-                                timer.Stop();
-
-                                if (!IsSynchronized())
-                                {
-                                    _isInit = false;
-                                    _hasFailedInitialConnection = true;
-                                    _logger.LogError<NetplayManager>($"Failed to etablish a connection to the opponent, aborting session");
-                                    TowerFall.Sounds.ui_invalid.Play();
-
-                                    Reset();
-
-                                    (TFGame.Instance.Scene as Level).GoToVersusOptions();
-                                    return;
-                                }
-
-                                var matchMakingService = ServiceCollections.ResolveMatchmakingService();
-
-                                if (!matchMakingService.IsSpectator())
-                                {
-                                    _logger.LogDebug<NetplayManager>($"Netplay session etablished with {_player2Name}");
-                                }
-                                else
-                                {
-                                    _logger.LogDebug<NetplayManager>($"Netplay session etablished as spectator");
-                                }
-                                ServiceCollections.ResolveMatchmakingService().DisconnectFromLobby();
-
-                                _gameContext.ResetPlayersIndex();
-
-                                if (_netplayMode != NetplayMode.Local)
-                                {
-                                    var archers = matchMakingService.IsSpectator() ? _archerService.GetArchers() : _archerService.GetFinalArchers();
-
-                                    foreach ((var index, var archer_alt) in archers)
-                                    {
-                                        var splitted = archer_alt.Split('-');
-
-                                        Enum.TryParse(splitted[1], out ArcherData.ArcherTypes alt);
-
-                                        var archer = int.Parse(splitted[0]);
-
-                                        TFGame.Characters[index] = archer;
-                                        TFGame.AltSelect[index] = alt;
-                                        TFGame.Players[index] = true;
-
-                                        if (index == 1 && !matchMakingService.IsSpectator())
-                                        {
-                                            _player2Name = _gameContext.GetPlayers().First(p => p.Item1 == index).Item2.Name;
-                                        }
-                                    }
-
-                                    var dynRoundLogic = DynamicData.For(roundLogic);
-
-                                    roundLogic.Session.CurrentLevel.Add(new VersusStart(roundLogic.Session));
-                                    dynRoundLogic.Set("Players", dynRoundLogic.Invoke("SpawnPlayersFFA"));
-                                }
-                            }
-                            catch (Exception e)
-                            {
-                                _logger.LogError<NetplayManager>($"Error when initializing netplay session : {e.Message}");
-                                _hasFailedInitialConnection = true;
-                                TowerFall.Sounds.ui_invalid.Play();
-                            }
-                        }, _cancellationToken);
-                }
-                else
-                {
-                    using var handle = new SafeBytes<GGRSConfig>(GGRSConfig, true);
-                    GGRSFFI.netplay_init(handle.ToBytesFFI()).ToModelGGrsFFI();
-                    _isInit = true;
-                }
+                return;
             }
+
+            _hasFailedInitialConnection = false;
+            _pendingAbortToVersusOptions = false;
+
+            GGRSConfig.Name = NetplayMeta.Name;
+            GGRSConfig.InputDelay = NetplayMeta.InputDelay;
+
+            _cancellationTokenSource = new CancellationTokenSource();
+            _cancellationToken = _cancellationTokenSource.Token;
+
+            if (_netplayMode == NetplayMode.Test || _netplayMode == NetplayMode.Replay)
+            {
+                NativeInit();
+                _isInit = true;
+                return;
+            }
+
+            Task.Run(() => Connect(roundLogic), _cancellationToken);
+        }
+
+        private StatusImpl NativeInit()
+        {
+            using var handle = new SafeBytes<GGRSConfig>(GGRSConfig, true);
+
+            GGRSFFI.IsInInit = true;
+
+            try
+            {
+                return GGRSFFI.netplay_init(handle.ToBytesFFI()).ToModelGGrsFFI();
+            }
+            finally
+            {
+                GGRSFFI.IsInInit = false;
+            }
+        }
+
+        private async Task Connect(TowerFall.RoundLogic roundLogic)
+        {
+            try
+            {
+                var status = NativeInit();
+
+                if (!status.IsOk)
+                {
+                    var info = status.Info.AsString();
+
+                    if (!info.Contains("Initialization failed"))
+                    {
+                        throw new InvalidOperationException($"Init error : {info}");
+                    }
+
+                    _logger.LogError<NetplayManager>($"Failed to initialize netplay session : {info}");
+                    AbortToVersusOptions();
+
+                    return;
+                }
+
+                _logger.LogDebug<NetplayManager>("Netplay initialization succeeded");
+                _isInit = true;
+
+                if (!await WaitForSynchronization())
+                {
+                    _logger.LogError<NetplayManager>("Failed to etablish a connection to the opponent, aborting session");
+
+                    Reset();
+
+                    _isInit = false;
+                    AbortToVersusOptions();
+
+                    return;
+                }
+
+                OnSessionEstablished(roundLogic);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError<NetplayManager>($"Error when initializing netplay session : {e.Message}");
+                AbortToVersusOptions();
+            }
+        }
+
+        private async Task<bool> WaitForSynchronization()
+        {
+            var timer = Stopwatch.StartNew();
+
+            while (!IsSynchronized() && !_cancellationToken.IsCancellationRequested && timer.ElapsedMilliseconds < SYNCHRONIZATION_TIMEOUT_MS)
+            {
+                Poll();
+                await Task.Delay(TFGame.FrameTime);
+            }
+
+            timer.Stop();
+
+            return IsSynchronized();
+        }
+
+        private void AbortToVersusOptions()
+        {
+            _hasFailedInitialConnection = true;
+            _pendingAbortToVersusOptions = true;
+        }
+
+        public bool ConsumeAbortToVersusOptions()
+        {
+            if (!_pendingAbortToVersusOptions)
+            {
+                return false;
+            }
+
+            _pendingAbortToVersusOptions = false;
+
+            return true;
+        }
+
+        private void OnSessionEstablished(TowerFall.RoundLogic roundLogic)
+        {
+            var isSpectator = ServiceCollections.ResolveMatchmakingService().IsSpectator();
+
+            _logger.LogDebug<NetplayManager>(isSpectator
+                ? "Netplay session etablished as spectator"
+                : $"Netplay session etablished with {_player2Name}");
+
+            _gameContext.ResetPlayersIndex();
+
+            if (_netplayMode == NetplayMode.Local)
+            {
+                return;
+            }
+
+            _archerService.ApplyToGame();
+
+            if (!isSpectator)
+            {
+                _player2Name = _gameContext.GetPlayers()
+                    .FirstOrDefault(entry => entry.Item1 == 1).Item2?.Name ?? _player2Name;
+            }
+
+            SpawnFirstRound(roundLogic);
+        }
+
+        private static void SpawnFirstRound(TowerFall.RoundLogic roundLogic)
+        {
+            if (roundLogic is IRoundPlayerSpawner spawner)
+            {
+                spawner.SpawnRoundPlayers();
+                return;
+            }
+
+            var dynRoundLogic = DynamicData.For(roundLogic);
+
+            roundLogic.Session.CurrentLevel.Add(new VersusStart(roundLogic.Session));
+            dynRoundLogic.Set("Players", dynRoundLogic.Invoke("SpawnPlayersFFA"));
         }
 
         /// <summary>
@@ -274,12 +310,16 @@ namespace TF.EX.Domain.Services
                 if (_events.Any(s => s.Contains(Event.Disconnected.ToString())))
                 {
                     Notification.Clear(TFGame.Instance.Scene, 4);
-                    ServiceCollections.ResolveReplayService().Export();
 
-                    //Leave lobby if the game is not over and we are disconnected
-                    if ((TFGame.Instance.Scene as TowerFall.Level).Session.GetWinner() == -1)
+                    if (IsDisconnected())
                     {
-                        ServiceCollections.ResolveMatchmakingService().LeaveLobby(() => { }, () => { });
+                        ServiceCollections.ResolveReplayService().Export();
+
+                        //Leave lobby if the game is not over and we are disconnected
+                        if ((TFGame.Instance.Scene as TowerFall.Level).Session.GetWinner() == -1)
+                        {
+                            ServiceCollections.ResolveMatchmakingService().LeaveLobby(() => { }, () => { });
+                        }
                     }
                 }
 
@@ -307,12 +347,44 @@ namespace TF.EX.Domain.Services
         {
             using (SafeHandle<NetworkStats> handle = new SafeHandle<NetworkStats>(new NetworkStats()))
             {
-                var status_stats = GGRSFFI.netplay_network_stats(handle.Ptr).ToModelGGrsFFI();
+                var status_stats = GGRSFFI.netplay_network_stats(-1, handle.Ptr).ToModelGGrsFFI();
                 if (status_stats.IsOk)
                 {
                     _networkStats = handle.Value;
                 }
             }
+
+            if (!_supportsPerSeatStats)
+            {
+                return;
+            }
+
+            // one ping per remote seat,
+            var perSeat = new Dictionary<int, NetworkStats>();
+
+            try
+            {
+                var remoteCount = GGRSFFI.netplay_remote_player_handle_count();
+
+                for (int index = 0; index < remoteCount; index++)
+                {
+                    var seat = GGRSFFI.netplay_remote_player_handle_at(index);
+
+                    using SafeHandle<NetworkStats> seatHandle = new SafeHandle<NetworkStats>(new NetworkStats());
+
+                    if (GGRSFFI.netplay_network_stats(seat, seatHandle.Ptr).ToModelGGrsFFI().IsOk)
+                    {
+                        perSeat[seat] = seatHandle.Value;
+                    }
+                }
+            }
+            catch (EntryPointNotFoundException e)
+            {
+                _supportsPerSeatStats = false;
+                return;
+            }
+
+            _networkStatsPerSeat = perSeat;
         }
 
         public StatusImpl AdvanceFrame(Input input)
@@ -353,7 +425,19 @@ namespace TF.EX.Domain.Services
                         return status;
                     }
 
-                    throw new InvalidOperationException($"AdvanceFrame error : {info} {mismatch}");
+                    _logger.LogError<NetplayManager>($"Cross-peer desync detected : {info} {mismatch}");
+
+                    TowerFall.Sounds.ui_invalid.Play();
+                    Reset();
+
+                    if (TFGame.Instance.Scene is Level desyncedLevel)
+                    {
+                        desyncedLevel.GoToVersusOptions();
+                    }
+
+                    Notification.Create(TFGame.Instance.Scene, "DESYNC DETECTED - match ended", 15, 450);
+
+                    return status;
                 }
                 else if (!info.Equals("PredictionThreshold"))
                 {
@@ -441,14 +525,7 @@ namespace TF.EX.Domain.Services
                 {
                     var inputs = handle._inputs;
 
-                    var gameInputs = inputs.ToList();
-
-                    if (ShouldSwapPlayer())
-                    {
-                        gameInputs.Reverse(); //TODO: only true with 2Players
-                    }
-
-                    _inputService.UpdateCurrent(gameInputs);
+                    _inputService.UpdateCurrent(inputs.ToList());
                 }
             }
         }
@@ -481,6 +558,11 @@ namespace TF.EX.Domain.Services
         public NetworkStats GetNetworkStats()
         {
             return _networkStats;
+        }
+
+        public IReadOnlyDictionary<int, NetworkStats> GetNetworkStatsPerSeat()
+        {
+            return _networkStatsPerSeat;
         }
 
         public bool IsTestMode()
@@ -604,7 +686,6 @@ namespace TF.EX.Domain.Services
                     }
                 }
 
-                ServiceCollections.ResolveMatchmakingService().DisconnectFromLobby();
                 ServiceCollections.ResolveSessionService().Reset();
                 ServiceCollections.ResolveSFXService().Reset();
 
@@ -707,6 +788,7 @@ namespace TF.EX.Domain.Services
 
         public void SetRoomAndServerMode(string roomUrl, bool isHost)
         {
+            GGRSConfig.Netplay.SpectatorConf = null;
             GGRSConfig.Netplay.ServerConf = new NetplayServerConfig
             {
                 RoomUrl = roomUrl,
@@ -715,19 +797,23 @@ namespace TF.EX.Domain.Services
             _netplayMode = NetplayMode.Server;
         }
 
-        public bool ShouldSwapPlayer()
+        public int LocalSeat => _gameContext.GetLocalPlayerIndex();
+
+        public string GetNameForSeat(int seat)
         {
-            return _gameContext.ShouldSwapPlayer();
+            if (seat == _gameContext.GetLocalPlayerIndex())
+            {
+                return NetplayMeta.Name;
+            }
+
+            var player = _gameContext.GetPlayers().FirstOrDefault(entry => entry.Item1 == seat).Item2;
+
+            return player?.Name ?? _player2Name;
         }
 
-        public PlayerDraw GetPlayerDraw()
+        public void SetLocalSeat(int seat)
         {
-            return _gameContext.GetPlayerDraw();
-        }
-
-        public void SetPlayersIndex(int playerDraw)
-        {
-            _gameContext.SetPlayersIndex(playerDraw);
+            _gameContext.SetLocalSeat(seat);
         }
 
         public bool HasSetMode()
@@ -735,10 +821,10 @@ namespace TF.EX.Domain.Services
             return _netplayMode != NetplayMode.Uninitialized;
         }
 
-        public void SetTestMode(int checkDistance)
+        public void SetTestMode(int checkDistance, int numPlayers)
         {
             _netplayMode = NetplayMode.Test;
-            GGRSConfig = GGRSConfig.DefaultTest(checkDistance);
+            GGRSConfig = GGRSConfig.DefaultTest(checkDistance, numPlayers);
             _syncTestUtilsService.Reset();
         }
 
@@ -769,7 +855,6 @@ namespace TF.EX.Domain.Services
             return _hasFailedInitialConnection;
         }
 
-        //TODO: Refactor this to handle more than 2 players
         public ICollection<ArcherInfo> GetArchersInfo()
         {
             var archersInfo = new List<ArcherInfo>();
@@ -782,36 +867,34 @@ namespace TF.EX.Domain.Services
 
             var level = TFGame.Instance.Scene as Level;
 
-            var archers = _archerService.GetArchers();
-            var archer_alt_0 = archers.First((archer) => archer.Item1 == 0).Item2;
-            var archer_alt_1 = archers.First((archer) => archer.Item1 == 1).Item2;
-            var splitted_0 = archer_alt_0.Split('-');
-            var splitted_1 = archer_alt_1.Split('-');
-            Enum.TryParse(splitted_0[1], out ArcherData.ArcherTypes alt_0);
-            Enum.TryParse(splitted_1[1], out ArcherData.ArcherTypes alt_1);
-            var archer_0 = int.Parse(splitted_0[0]);
-            var archer_1 = int.Parse(splitted_1[0]);
+            var localSeat = _gameContext.GetLocalPlayerIndex();
+            var players = _gameContext.GetPlayers().ToDictionary(p => p.Item1, p => p.Item2);
 
-            archersInfo.Add(new ArcherInfo
+            foreach ((var seat, var archerAlt) in _archerService.GetArchers().OrderBy(archer => archer.Item1))
             {
-                NetplayName = NetplayMeta.Name,
-                Index = archer_0,
-                HasWon = level.Session.MatchStats[_gameContext.GetLocalPlayerIndex()].Won,
-                Score = level.Session.Scores[0],
-                Type = (ArcherTypes)alt_0,
-            });
+                var splitted = archerAlt.Split('-');
+                Enum.TryParse(splitted[1], out ArcherData.ArcherTypes alt);
 
-            archersInfo.Add(new ArcherInfo
-            {
-                NetplayName = _player2Name,
-                Index = archer_1,
-                HasWon = level.Session.MatchStats[_gameContext.GetRemotePlayerIndex()].Won,
-                Score = level.Session.Scores[1],
-                Type = (ArcherTypes)alt_1,
-            });
-
+                archersInfo.Add(new ArcherInfo
+                {
+                    NetplayName = seat == localSeat
+                        ? NetplayMeta.Name
+                        : players.TryGetValue(seat, out var player) ? player.Name : _player2Name,
+                    Index = int.Parse(splitted[0]),
+                    HasWon = seat < level.Session.MatchStats.Length && level.Session.MatchStats[seat].Won,
+                    Score = GetScore(level.Session, seat),
+                    Type = (ArcherTypes)alt,
+                });
+            }
 
             return archersInfo;
+        }
+
+        private static int GetScore(TowerFall.Session session, int seat)
+        {
+            var scoreIndex = session.GetScoreIndex(seat);
+
+            return scoreIndex >= 0 && scoreIndex < session.Scores.Length ? session.Scores[scoreIndex] : 0;
         }
 
         public Record GetLastRecord()
@@ -827,6 +910,7 @@ namespace TF.EX.Domain.Services
         public void SetSpectatorMode(string roomUrl, string toSpectate)
         {
             _netplayMode = NetplayMode.Spectator;
+            GGRSConfig.Netplay.ServerConf = null;
             GGRSConfig.Netplay.SpectatorConf = new NetplaySpectatorConfig
             {
                 ToSpectate = toSpectate,
@@ -852,8 +936,9 @@ namespace TF.EX.Domain.Services
         {
             GGRSConfig.Netplay.Players = new List<string>();
             GGRSConfig.Netplay.Spectators = new List<string>();
+            GGRSConfig.Netplay.LocalPeerId = ServiceCollections.ResolveMatchmakingService().GetRoomPeerId();
 
-            foreach (var player in players)
+            foreach (var player in players.OrderBy(player => player.Seat))
             {
                 var peerId = player.RoomPeerId;
                 GGRSConfig.Netplay.Players.Add(peerId);

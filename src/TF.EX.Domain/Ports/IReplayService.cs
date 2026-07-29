@@ -8,7 +8,7 @@ namespace TF.EX.Domain.Ports
     {
         void Initialize(GameData gameData = null, ICollection<CustomMod> mods = null);
 
-        void AddRecord(GameState gameState, bool shouldSwapPlayer);
+        void AddRecord(GameState gameState);
         void RemovePredictedRecords(int frame);
         void Export();
         Task LoadAndStart(string pathWithReplayToLoad, string currentSong = "");

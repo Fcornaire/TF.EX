@@ -137,8 +137,7 @@ namespace TF.EX.Domain
         {
             if (netplayManager.IsReplayMode())
             {
-                var player2Index = netplayManager.GetPlayerDraw() == PlayerDraw.Player1 ? 1 : 0; //TODO: Find a better way to do this when we have more than 2 players
-                return inputService.GetCurrentInput(player2Index).ToTFInput();
+                return inputService.GetCurrentInput(inputService.GetInputIndex(this)).ToTFInput();
             }
 
             return new InputState();

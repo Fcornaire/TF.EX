@@ -4,14 +4,11 @@ namespace TF.EX.Domain.Ports
 {
     public interface IMatchmakingService
     {
-        int GetPingToOpponent();
-        Guid GetOpponentPeerId();
+        int GetPingTo(Player player);
         bool IsConnectedToServer();
         bool ConnectToServerAndListen();
-        void ConnectAndListenToLobby(string roomUrl);
 
         void DisconnectFromServer();
-        void DisconnectFromLobby();
 
         Task GetLobbies(Action onSuccess, Action onFail);
 
@@ -26,13 +23,19 @@ namespace TF.EX.Domain.Ports
         Task JoinLobby(string roomId, bool isPlayer, Action onSucess, Action onFail);
 
         Task UpdatePlayer(Player player, Action onSucess, Action onFail);
-        string GetRoomChatPeerId();
         Task LeaveLobby(Action onSuccess, Action onFail);
         void ResetPeer();
         bool IsLobbyReady();
+        bool IsLobbyFull();
+        bool CanHostStart();
+        bool IsWaitingForHostStart();
+        void RequestStart();
         void ResetLobby();
         bool IsSpectator();
         string GetRoomPeerId();
+        int GetLocalSeat();
+        void ReconcileRollcallIfPending();
+        void ApplyTeamsToMatchSettings();
         Task RematchChoice();
         Task ArcherSelectChoice();
     }

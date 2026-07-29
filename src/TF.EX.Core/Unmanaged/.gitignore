@@ -1,0 +1,5 @@
+# Native libs are pulled from the ggrs-ffi releases, not committed.
+*.dll
+*.pdb
+*.so
+*.dylib

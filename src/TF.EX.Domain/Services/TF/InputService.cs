@@ -25,22 +25,110 @@ namespace TF.EX.Domain.Services.TF
             return idx ?? -1;
         }
 
+        public void ObserveLocalDevice()
+        {
+            foreach (var input in TFGame.PlayerInputs)
+            {
+                if (input == null || !input.Attached || !HasMenuActivity(input))
+                {
+                    continue;
+                }
+
+                _context.SetLocalInput(input);
+                return;
+            }
+        }
+
+        private static bool HasMenuActivity(PlayerInput input)
+        {
+            return input.MenuConfirmCheck || input.MenuBackCheck || input.MenuStartCheck
+                || input.MenuUpCheck || input.MenuDownCheck
+                || input.MenuLeftCheck || input.MenuRightCheck
+                || input.MenuAltCheck || input.MenuAlt2Check;
+        }
+
         /// <summary>
         /// Used to add controller for remote players
         /// </summary>
-        public void EnsureRemoteController() //TODO: Handle more than 2 players
+        public bool EnsureLocalControllerSeat()
         {
-            if (TFGame.PlayerInputs[1] is null)
+            var localSeat = _context.GetLocalPlayerIndex();
+            var localInput = _context.GetLocalInput();
+
+            if (localInput == null || localSeat < 0 || localSeat >= TFGame.PlayerInputs.Length)
             {
-                TFGame.PlayerInputs[1] = new KeyboardInput();
+                return false;
+            }
+
+            if (TFGame.PlayerInputs[localSeat] == localInput)
+            {
+                return false;
+            }
+
+            var displaced = TFGame.PlayerInputs[localSeat];
+
+            for (int i = 0; i < TFGame.PlayerInputs.Length; i++)
+            {
+                if (TFGame.PlayerInputs[i] == localInput)
+                {
+                    TFGame.PlayerInputs[i] = displaced;
+                }
+            }
+
+            TFGame.PlayerInputs[localSeat] = localInput;
+
+            for (int i = 0; i < MenuInput.MenuInputs.Length; i++)
+            {
+                if (MenuInput.MenuInputs[i] == localInput)
+                {
+                    MenuInput.MenuInputs[i] = null;
+                }
+            }
+
+            if (localSeat < MenuInput.MenuInputs.Length)
+            {
+                MenuInput.MenuInputs[localSeat] = localInput;
+            }
+
+            return true;
+        }
+
+        public void EnsureEveryControllerSlot()
+        {
+            for (int seat = 0; seat < TFGame.PlayerInputs.Length; seat++)
+            {
+                TFGame.PlayerInputs[seat] ??= new FakeController();
+            }
+        }
+
+        public void EnsureRemoteController(int playerCount)
+        {
+            EnsureRemoteControllers(Enumerable.Range(0, playerCount));
+        }
+
+        public void EnsureRemoteControllers(IEnumerable<int> seats)
+        {
+            var localSeat = _context.GetLocalPlayerIndex();
+
+            foreach (var seat in seats)
+            {
+                if (seat == localSeat || seat < 0 || seat >= TFGame.PlayerInputs.Length)
+                {
+                    continue;
+                }
+
+                TFGame.PlayerInputs[seat] ??= new KeyboardInput();
             }
         }
 
         public void EnsureFakeControllers()
         {
-            if (TFGame.PlayerInputs[1] is null)
+            for (int seat = 0; seat < TFGame.Players.Length && seat < TFGame.PlayerInputs.Length; seat++)
             {
-                TFGame.PlayerInputs[1] = new FakeController();
+                if (TFGame.Players[seat])
+                {
+                    TFGame.PlayerInputs[seat] ??= new FakeController();
+                }
             }
         }
 
@@ -64,20 +152,9 @@ namespace TF.EX.Domain.Services.TF
             return _context.GetPolledInput();
         }
 
-        public int GetRemotePlayerInputIndex()
-        {
-            return _context.GetRemotePlayerIndex();
-        }
-
         public void ResetCurrentInput()
         {
-            var defaultInputs = new List<Input>
-            {
-                new Input(),
-                new Input(),
-            };
-
-            _context.UpdateCurrentInputs(defaultInputs);
+            _context.UpdateCurrentInputs(Enumerable.Range(0, TFGame.Players.Length).Select(_ => new Input()));
         }
 
         public void ResetPolledInput()
@@ -117,30 +194,74 @@ namespace TF.EX.Domain.Services.TF
 
         public void DisableAllControllers()
         {
-            var playerCount = ServiceCollections.ResolveWiderSetModApi() != null ? 8 : 4;
+            _context.SetInputLocked(true);
 
-            TFGame.PlayerInputs = new PlayerInput[playerCount];
-            MenuInput.MenuInputs = new PlayerInput[5];
+            if (!IsInNetplayLobby())
+            {
+                var playerCount = ServiceCollections.ResolveWiderSetModApi() != null ? 8 : 4;
+
+                TFGame.PlayerInputs = new PlayerInput[playerCount];
+                MenuInput.MenuInputs = new PlayerInput[5];
+            }
         }
 
         public void EnableAllControllers()
         {
+            _context.SetInputLocked(false);
+
+            if (IsInNetplayLobby() && TFGame.PlayerInputs.Any(input => input != null))
+            {
+                return;
+            }
+
             PlayerInput.AssignInputs();
             MenuInput.UpdateInputs();
+        }
+
+        public bool IsInputLocked()
+        {
+            return _context.IsInputLocked();
+        }
+
+        private static bool IsInNetplayLobby()
+        {
+            return !ServiceCollections.ResolveMatchmakingService().GetOwnLobby().IsEmpty;
         }
 
         public void DisableAllControllerExceptLocal()
         {
             var playerCount = ServiceCollections.ResolveWiderSetModApi() != null ? 8 : 4;
+            var localSeat = _context.GetLocalPlayerIndex();
 
-            for (int i = 1; i < playerCount; i++)
+            var previous = _context.GetLocalInput();
+
+            var localInput = previous == null
+                ? null
+                : TFGame.PlayerInputs.FirstOrDefault(input => input != null && input.ID == previous.ID);
+
+            localInput ??= TFGame.PlayerInputs.FirstOrDefault(input => input != null);
+
+            _context.SetLocalInput(localInput);
+            var localMenuInput = MenuInput.MenuInputs.FirstOrDefault(input => input != null);
+
+            for (int i = 0; i < playerCount; i++)
             {
                 TFGame.PlayerInputs[i] = null;
 
-                if (i < 5)
+                if (i < MenuInput.MenuInputs.Length)
                 {
                     MenuInput.MenuInputs[i] = null;
                 }
+            }
+
+            if (localSeat >= 0 && localSeat < TFGame.PlayerInputs.Length)
+            {
+                TFGame.PlayerInputs[localSeat] = localInput;
+            }
+
+            if (localSeat >= 0 && localSeat < MenuInput.MenuInputs.Length)
+            {
+                MenuInput.MenuInputs[localSeat] = localMenuInput;
             }
         }
     }

@@ -98,28 +98,7 @@ namespace TF.EX.Patchs.Component
             var text = dynPlayerIndcator.Field("text").GetValue<string>();
             var playerIndex = dynPlayerIndcator.Field("playerIndex").GetValue<int>();
 
-            if (netplayManager.ShouldSwapPlayer())
-            {
-                if ((PlayerDraw)playerIndex == PlayerDraw.Player1)
-                {
-                    text = netplayManager.GetPlayer2Name();
-                }
-                else
-                {
-                    text = netplayManager.GetNetplayMeta().Name;
-                }
-            }
-            else
-            {
-                if ((PlayerDraw)playerIndex == PlayerDraw.Player1)
-                {
-                    text = netplayManager.GetNetplayMeta().Name;
-                }
-                else
-                {
-                    text = netplayManager.GetPlayer2Name();
-                }
-            }
+            text = netplayManager.GetNameForSeat(playerIndex);
 
             dynPlayerIndcator.Field("text").SetValue(text);
         }

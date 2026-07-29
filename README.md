@@ -82,10 +82,10 @@ Or even spectate! (Experimental)
 
 It fairly easy to install this mod:
 
-1. Install [FortRise](https://github.com/Terria-K/FortRise) with Debug ON , this can be changed by modifying the ```PatchVersion.txt``` file in the Towerfall root directory
-> [!WARNING]  
-> The last supported version is [4.7.2](https://github.com/FortRise/FortRise/releases/tag/4.7.2), This mean the mod won't load/work on version 5.X.X and beyond (PS : there is a [pre release](https://github.com/Fcornaire/TF.EX/releases/tag/1.0.0-rc) compatible with 5.0.0).
-> Effort will be made to upgrade at some point
+1. Install [FortRise](https://github.com/Terria-K/FortRise) with Debug ON , this can be changed by modifying the `PatchVersion.txt` file in the Towerfall root directory
+   > [!WARNING]  
+   > The last supported version is [5.3.0](https://github.com/FortRise/FortRise/releases/tag/5.3.0), This mean the mod won't load/work on version 4.X.X and older or even beyond.
+   > Effort will be made to upgrade at some point
 2. Download the latest TF EX [release](https://github.com/Fcornaire/TF.EX/releases)
 3. Create a `Mods` directory at the root of your Towerfall install directory if not done already
 4. Extract the `TF.EX` zip into the `Mods` folder.
@@ -120,7 +120,6 @@ This project uses:
 
 - [FortRise](https://github.com/Terria-K/FortRise) as the main loader (C#)
 - [ggrs-ffi](https://github.com/Fcornaire/ggrs-ffi) which is a library that allows the [GGRS](https://github.com/gschup/ggrs) API to be called by non-rust projects (Rust)
-- [matchbox-client-ffi](https://github.com/Fcornaire/matchbox-client-ffi) which is a library that allows the [matchbox](https://github.com/johanhelsing/matchbox) API to be called by non-Rust projects (Rust)
 - A matchmaking server which is closed source for now, it manages matchmaking and also runs a signaling endpoint for easier connection (Rust)
 
 ## Installation
@@ -152,12 +151,12 @@ As you can guess, this project is still WIP and missing a lot of features:
 - [ ] Automatically bump the version (meta + tag)
 - [ ] Refactor (There is a lot of things I want to refactor)
 - [x] Less restrictive controller
-- [ ] Fix bugs
+- [?] Fix bugs
 - [x] Fix desynchronization (At least netplay code wise should be fine)
-- [ ] Support for all versus maps
+- [x] Support for all versus maps
 - [ ] Check Twilight Spire CrackedWall with teams on level 7
-- [ ] Support all items
-- [ ] Support 4 players (FFA and 2V2 teams )
+- [x] Support all items
+- [x] Support 4 players (FFA and 2V2 teams )
 - [x] Integrate the replay viewer in the menu
 
 ## Contributing

@@ -3,14 +3,10 @@ using MessagePack;
 using Microsoft.Extensions.Logging;
 using Monocle;
 using MonoMod.Utils;
-using System.Diagnostics;
-using System.Net;
 using System.Net.WebSockets;
 using TF.EX.Common.Extensions;
-using TF.EX.Common.Handle;
 using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Extensions;
-using TF.EX.Domain.Externals;
 using TF.EX.Domain.Models.State.Entity.LevelEntity.Player;
 using TF.EX.Domain.Models.WebSocket;
 using TF.EX.Domain.Models.WebSocket.Client;
@@ -29,15 +25,12 @@ namespace TF.EX.Domain.Services
         private ClientWebSocket _webSocket;
         private byte[] _buffer = new byte[1056];
 
-        private int _ping = 0;
-        private Stopwatch _stopwatch = new Stopwatch();
-        private Guid _opponentPeerId = Guid.Empty;
-
         private ICollection<Lobby> _lobbies = null;
         private Lobby ownLobby = new Lobby();
         private string peerId = string.Empty;
-        private string roomChatPeerId = string.Empty;
         private int previousPlayersCount = 1;
+        private bool hostStartedMatch = false;
+        private Lobby pendingRollcallLobby = null;
 
         private Dictionary<string, Action> onResult = new Dictionary<string, Action>();
         private WSAction currentAction = WSAction.None;
@@ -50,8 +43,6 @@ namespace TF.EX.Domain.Services
 
         private CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         private CancellationToken cancellationToken;
-        private CancellationTokenSource cancellationTokenSourceLobby = new CancellationTokenSource();
-        private CancellationToken cancellationTokenLobby;
         public MatchmakingService(INetplayManager netplayManager,
             IArcherService archerService,
             IInputService inputService,
@@ -61,7 +52,6 @@ namespace TF.EX.Domain.Services
             _webSocket = new ClientWebSocket();
             _netplayManager = netplayManager;
             cancellationToken = cancellationTokenSource.Token;
-            cancellationTokenLobby = cancellationTokenSourceLobby.Token;
             _logger = logger;
             _archerService = archerService;
             _inputService = inputService;
@@ -76,29 +66,6 @@ namespace TF.EX.Domain.Services
                 {
                     if (_webSocket.State != WebSocketState.Open)
                     {
-                        if (!IPAddress.TryParse(SERVER_URL.Split('/', '/', ':')[3], out var _))
-                        {
-                            using var webClient = new WebClient();
-                            var ipv4 = webClient.DownloadString("https://ipv4.icanhazip.com");
-                            var ipv6 = string.Empty;
-                            try
-                            {
-                                ipv6 = webClient.DownloadString("https://ipv6.icanhazip.com");
-                            }
-                            catch (Exception)
-                            {
-                                _logger.LogDebug<MatchmakingService>("Network/computer does not support ipv6");
-                                ipv6 = string.Empty;
-                            }
-
-                            _webSocket.Options.SetRequestHeader("x-tfex-real-ipv4", ipv4);
-
-                            if (!string.IsNullOrEmpty(ipv6))
-                            {
-                                _webSocket.Options.SetRequestHeader("x-tfex-real-ipv6", ipv6);
-                            }
-                        }
-
                         await _webSocket.ConnectAsync(new Uri(MATCHMAKING_URL), cancellationToken);
                     }
                 }).GetAwaiter().GetResult();
@@ -188,10 +155,6 @@ namespace TF.EX.Domain.Services
                     }
 
                     Close();
-                    if (!IsSpectator())
-                    {
-                        DisconnectFromLobby();
-                    }
 
                     //if (TFGame.Instance.Scene is MainMenu)
                     //{
@@ -277,6 +240,15 @@ namespace TF.EX.Domain.Services
             await Send(message);
         }
 
+        private async Task SendStartLobbyChoice()
+        {
+            var startLobbyMessage = new StartLobbyChoiceMessage { };
+
+            var bytes = MessagePackSerializer.Serialize(startLobbyMessage);
+            var message = MessagePackSerializer.ConvertToJson(bytes);
+            await Send(message);
+        }
+
         private async Task SendArcherSelectChoice()
         {
             var sendArcherSelectChoice = new ArcherSelectChoiceMessage { };
@@ -320,7 +292,6 @@ namespace TF.EX.Domain.Services
                         _logger.LogDebug<MatchmakingService>("Lobby created!");
                         ownLobby = response.CreateLobbyResponse.Lobby;
                         peerId = ownLobby.Players.First(pl => pl.IsHost).RoomPeerId.ToString();
-                        roomChatPeerId = ownLobby.Players.First(pl => pl.IsHost).RoomChatPeerId.ToString();
                         onResult["CreateLobby-success"]?.Invoke();
                     }
                     else
@@ -343,7 +314,6 @@ namespace TF.EX.Domain.Services
                     _logger.LogDebug<MatchmakingService>("Lobby joined!");
 
                     peerId = response.JoinLobbyResponse.RoomPeerId.ToString();
-                    roomChatPeerId = response.JoinLobbyResponse.RoomChatPeerId.ToString();
 
                     if (currentAction == WSAction.JoinLobby)
                     {
@@ -371,6 +341,22 @@ namespace TF.EX.Domain.Services
                 currentAction = WSAction.None;
             }
             ;
+
+            if (message.Contains("PingUpdate"))
+            {
+                var bytes = MessagePackSerializer.ConvertFromJson(message);
+                var response = MessagePackSerializer.Deserialize<PingUpdateMessage>(bytes);
+
+                foreach (var entry in response.PingUpdate.Pings)
+                {
+                    foreach (var player in ownLobby.Players.Concat(ownLobby.Spectators).Where(pl => pl.Addr == entry.Addr))
+                    {
+                        player.Ping = entry.Ping;
+                    }
+                }
+
+                return;
+            }
 
             if (message.Contains("LobbyUpdate"))
             {
@@ -437,8 +423,15 @@ namespace TF.EX.Domain.Services
                 }
             }
 
+            if (message.Contains("StartLobby"))
+            {
+                hostStartedMatch = true;
+            }
+
             if (message.Contains("ArcherSelect"))
             {
+                hostStartedMatch = false;
+
                 if (TFGame.Instance.Scene is Level)
                 {
                     _inputService.EnableAllControllers();
@@ -450,8 +443,25 @@ namespace TF.EX.Domain.Services
             }
         }
 
+        private static void NormaliseSeats(Lobby lobby)
+        {
+            var players = lobby.Players.ToArray();
+
+            if (players.Select(player => player.Seat).Distinct().Count() == players.Length)
+            {
+                return;
+            }
+
+            for (int index = 0; index < players.Length; index++)
+            {
+                players[index].Seat = index;
+            }
+        }
+
         private void HandleLobbyUpdate(Lobby lobby)
         {
+            NormaliseSeats(lobby);
+
             Sounds.ui_clickSpecialAsc.Play();
 
             if (lobby.GameData.Seed != _rngService.GetSeed())
@@ -468,7 +478,8 @@ namespace TF.EX.Domain.Services
                 ownLobby = new Lobby();
 
                 _inputService.EnableAllControllers();
-                _inputService.EnsureRemoteController();
+                _inputService.EnsureRemoteController(Math.Max(2, ownLobby.Players.Count));
+                _inputService.EnsureEveryControllerSlot();
 
                 ResetPeer();
                 return;
@@ -494,103 +505,42 @@ namespace TF.EX.Domain.Services
                 return;
             }
 
+            ApplyTeamsToMatchSettings();
+
+            var seatChanged = _inputService.EnsureLocalControllerSeat();
+            var someoneLeft = lobby.Players.Count < previousPlayersCount;
+
             var scene = TFGame.Instance.Scene;
 
-            var rollCalls = scene.Layers.SelectMany(layer => layer.Value.Entities)
-                .Where(ent => ent is RollcallElement).Select(ent => ent as RollcallElement);
+            var rollCalls = GetRollcallElements(scene);
+
+            if (seatChanged)
+            {
+                foreach (var rollCall in rollCalls)
+                {
+                    rollCall.HandleControlChange();
+                }
+            }
 
             if (TFGame.Instance.Scene is MainMenu && (TFGame.Instance.Scene as MainMenu).State == MainMenu.MenuState.Rollcall && rollCalls.Any())
             {
-                int playerIndex = IsSpectator() ? 0 : 1;
-                foreach (var player in lobby.Players.Where(pl => pl.RoomChatPeerId != roomChatPeerId))
-                {
-                    var rollCall = rollCalls.First(rc =>
-                    {
-                        var dyn = DynamicData.For(rc);
-                        var index = dyn.Get<int>("playerIndex");
-
-                        return index == playerIndex;
-                    });
-
-                    var dynRollCall = DynamicData.For(rollCall);
-                    Monocle.StateMachine state = dynRollCall.Get<Monocle.StateMachine>("state");
-
-                    if (previousPlayersCount < lobby.Players.Count)
-                    {
-                        previousPlayersCount = lobby.Players.Count;
-                        Notification.Create(TFGame.Instance.Scene, $"{player.Name} joined", 10, 200);
-                    }
-
-                    if (player.Ready)
-                    {
-                        if (state.State == 0)
-                        {
-                            var usedArchers = lobby.Players.Select(pl => pl.ArcherIndex);
-
-                            (var archerIndex, var altIndex) = ArcherDataExtensions.EnsureArcherDataExist(player.ArcherIndex, player.ArcherAltIndex, usedArchers);
-
-                            var updatedPlayer = new Domain.Models.WebSocket.Player
-                            {
-                                ArcherIndex = archerIndex,
-                                ArcherAltIndex = altIndex,
-                                IsHost = player.IsHost,
-                                Name = player.Name,
-                                Ready = player.Ready,
-                                RoomChatPeerId = player.RoomChatPeerId,
-                                RoomPeerId = player.RoomPeerId
-                            };
-
-                            TFGame.Characters[playerIndex] = archerIndex;
-                            TFGame.AltSelect[playerIndex] = (ArcherData.ArcherTypes)altIndex;
-                            _archerService.AddArcher(playerIndex, updatedPlayer);
-
-                            _inputService.EnsureRemoteController(); //TODO: should be sooner
-
-                            var input = Traverse.Create(rollCall).Field("input").GetValue<PlayerInput>();
-                            if (input == null)
-                            {
-                                Traverse.Create(rollCall).Field("input").SetValue(TFGame.PlayerInputs[playerIndex]);
-                            }
-
-                            state.State = 1;
-                        }
-                    }
-                    else
-                    {
-                        if (state.State == 1)
-                        {
-                            _archerService.RemoveArcher(playerIndex);
-
-                            var portrait = dynRollCall.Get<ArcherPortrait>("portrait");
-                            portrait.Leave();
-                            TFGame.Players[playerIndex] = false;
-
-                            state.State = 0;
-                        }
-                    }
-
-                    playerIndex++;
-                }
-
-                if (previousPlayersCount > lobby.Players.Count)
-                {
-                    previousPlayersCount = lobby.Players.Count;
-                    Notification.Create(TFGame.Instance.Scene, $"Player left", 10, 200);
-                }
+                ReconcileRollcall(lobby, rollCalls);
+            }
+            else
+            {
+                pendingRollcallLobby = lobby;
             }
 
             if (IsSpectator() && !_netplayManager.IsSpectatorMode())
             {
-                var roomUrl = $"{SERVER_URL}/room/{lobby.RoomId}";
+                var roomUrl = $"{SERVER_URL}/room/{lobby.RoomId}?peer={peerId}";
                 var hostPeerId = lobby.Players.First(pl => pl.IsHost).RoomPeerId;
 
                 _netplayManager.SetSpectatorMode(roomUrl, hostPeerId);
             }
 
-            //True for 2 player...
-            if (lobby.Players.Count == 1)
+            if (someoneLeft)
             {
-                //This is to trigger portrait update on disconnected player
                 foreach (var rollCall in rollCalls)
                 {
                     rollCall.HandleControlChange();
@@ -600,102 +550,161 @@ namespace TF.EX.Domain.Services
             UpdateOwnLobby(lobby);
         }
 
+        public void ReconcileRollcallIfPending()
+        {
+            if (pendingRollcallLobby == null
+                || TFGame.Instance.Scene is not MainMenu mainMenu
+                || mainMenu.State != MainMenu.MenuState.Rollcall)
+            {
+                return;
+            }
+
+            var rollCalls = GetRollcallElements(mainMenu);
+
+            if (!rollCalls.Any())
+            {
+                return;
+            }
+
+            var lobby = pendingRollcallLobby;
+            pendingRollcallLobby = null;
+
+            _inputService.EnsureLocalControllerSeat();
+            ReconcileRollcall(lobby, rollCalls);
+        }
+
+        public void ApplyTeamsToMatchSettings()
+        {
+            var settings = MainMenu.VersusMatchSettings;
+
+            if (settings?.Teams == null || !ownLobby.IsTeamMode)
+            {
+                return;
+            }
+
+            for (int seat = 0; seat < 4; seat++)
+            {
+                var player = ownLobby.Players.FirstOrDefault(entry => entry.Seat == seat);
+
+                settings.Teams[seat] = player == null ? Allegiance.Neutral : (Allegiance)player.Team;
+            }
+        }
+
+        private static RollcallElement[] GetRollcallElements(Monocle.Scene scene)
+        {
+            return scene.Layers
+                .SelectMany(layer => layer.Value.Entities)
+                .OfType<RollcallElement>()
+                .ToArray();
+        }
+
+        private void ReconcileRollcall(Lobby lobby, RollcallElement[] rollCalls)
+        {
+            var seatedPlayers = lobby.Players
+                .Where(player => player.RoomPeerId != peerId)
+                .ToArray();
+
+            foreach (var player in seatedPlayers)
+            {
+                var playerIndex = player.Seat;
+
+                var rollCall = rollCalls.FirstOrDefault(rc =>
+                    DynamicData.For(rc).Get<int>("playerIndex") == playerIndex);
+
+                if (rollCall == null)
+                {
+                    continue;
+                }
+
+                var dynRollCall = DynamicData.For(rollCall);
+                Monocle.StateMachine state = dynRollCall.Get<Monocle.StateMachine>("state");
+
+                if (previousPlayersCount < lobby.Players.Count)
+                {
+                    previousPlayersCount = lobby.Players.Count;
+                    Notification.Create(TFGame.Instance.Scene, $"{player.Name} joined", 10, 200);
+                }
+
+                if (player.Ready)
+                {
+                    if (state.State == 0)
+                    {
+                        var usedArchers = lobby.Players.Select(pl => pl.ArcherIndex);
+
+                        (var archerIndex, var altIndex) = ArcherDataExtensions.EnsureArcherDataExist(player.ArcherIndex, player.ArcherAltIndex, usedArchers);
+
+                        var updatedPlayer = new Domain.Models.WebSocket.Player
+                        {
+                            ArcherIndex = archerIndex,
+                            ArcherAltIndex = altIndex,
+                            IsHost = player.IsHost,
+                            Name = player.Name,
+                            Ready = player.Ready,
+                            RoomPeerId = player.RoomPeerId,
+                            Seat = player.Seat
+                        };
+
+                        TFGame.Characters[playerIndex] = archerIndex;
+                        TFGame.AltSelect[playerIndex] = (ArcherData.ArcherTypes)altIndex;
+                        _archerService.AddArcher(playerIndex, updatedPlayer);
+
+                        _inputService.EnsureRemoteControllers(lobby.Players.Select(pl => pl.Seat));
+
+                        var input = Traverse.Create(rollCall).Field("input").GetValue<PlayerInput>();
+                        if (input == null)
+                        {
+                            Traverse.Create(rollCall).Field("input").SetValue(TFGame.PlayerInputs[playerIndex]);
+                        }
+
+                        state.State = 1;
+                    }
+                }
+                else
+                {
+                    if (state.State == 1)
+                    {
+                        _archerService.RemoveArcher(playerIndex);
+
+                        var portrait = dynRollCall.Get<ArcherPortrait>("portrait");
+                        portrait.Leave();
+                        TFGame.Players[playerIndex] = false;
+
+                        state.State = 0;
+                    }
+                }
+            }
+
+            foreach (var rollCall in rollCalls)
+            {
+                var dynVacant = DynamicData.For(rollCall);
+                var seat = dynVacant.Get<int>("playerIndex");
+
+                if (lobby.Players.Any(player => player.Seat == seat))
+                {
+                    continue;
+                }
+
+                var vacantState = dynVacant.Get<Monocle.StateMachine>("state");
+
+                if (vacantState.State != 0)
+                {
+                    _archerService.RemoveArcher(seat);
+                    dynVacant.Get<ArcherPortrait>("portrait").Leave();
+                    TFGame.Players[seat] = false;
+                    vacantState.State = 0;
+                }
+            }
+
+            if (previousPlayersCount > lobby.Players.Count)
+            {
+                previousPlayersCount = lobby.Players.Count;
+                Notification.Create(TFGame.Instance.Scene, $"Player left", 10, 200);
+            }
+        }
+
         public void ResetPeer()
         {
-            roomChatPeerId = "";
             peerId = "";
-        }
-
-        public void ConnectAndListenToLobby(string roomUrl)
-        {
-            MatchboxClientFFI.initialize(roomUrl);
-
-            Task.Run(async () =>
-            {
-                try
-                {
-                    while (!cancellationTokenLobby.IsCancellationRequested)
-                    {
-                        var message = MatchboxClientFFI.poll_message();
-                        using (var safeBytes = new SafeBytes<List<PeerMessage>>(message, () => { MatchboxClientFFI.free_messages(message); }))
-                        {
-                            var data = safeBytes.ToStruct(true);
-                            if (data != null && data.Count > 0)
-                            {
-                                HandleLobbyMessage(data);
-                            }
-                        }
-                        await Task.Delay(TFGame.FrameTime);
-                    }
-                }
-                catch (Exception e)
-                {
-                    _logger.LogError<MatchmakingService>($"Error when listenning to opponent message", e);
-                    DisconnectFromLobby();
-                }
-            }, cancellationTokenLobby);
-
-        }
-
-        private void HandleLobbyMessage(IEnumerable<PeerMessage> data)
-        {
-            try
-            {
-                foreach (PeerMessage peerMessage in data)
-                {
-                    PeerMessageType type;
-
-                    if (Enum.TryParse(peerMessage.Type, out type))
-                    {
-                        switch (type)
-                        {
-                            case PeerMessageType.Ping:
-                                if (_opponentPeerId == Guid.Empty)
-                                {
-                                    _opponentPeerId = peerMessage.PeerId;
-                                }
-                                MatchboxClientFFI.send_message(PeerMessageType.Pong.ToString(), peerMessage.PeerId.ToString());
-                                break;
-                            case PeerMessageType.Pong:
-                                if (_opponentPeerId == Guid.Empty)
-                                {
-                                    _opponentPeerId = peerMessage.PeerId;
-                                }
-                                _stopwatch.Stop();
-                                _ping = (int)_stopwatch.ElapsedMilliseconds;
-
-                                Task.Run(async () =>
-                                {
-                                    await Task.Delay(1000);
-
-                                    _stopwatch.Restart();
-                                    MatchboxClientFFI.send_message(PeerMessageType.Ping.ToString(), peerMessage.PeerId.ToString());
-                                });
-
-                                break;
-                            case PeerMessageType.Archer:
-                                break;
-                            case PeerMessageType.Greetings:
-                                _opponentPeerId = peerMessage.PeerId;
-                                _stopwatch.Restart();
-                                MatchboxClientFFI.send_message(PeerMessageType.Ping.ToString(), peerMessage.PeerId.ToString());
-                                break;
-                            default:
-                                _logger.LogError<MatchmakingService>($"Unknown message type received from opponent : {peerMessage.Type}");
-                                break;
-                        }
-                    }
-                    else
-                    {
-                        _logger.LogError<MatchmakingService>($"Unknown message type received from opponent : {peerMessage.Type}");
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                _logger.LogError<MatchmakingService>($"Error when handling opponent msg", e);
-                DisconnectFromLobby();
-            }
         }
 
         /// <summary>
@@ -708,12 +717,6 @@ namespace TF.EX.Domain.Services
             cancellationTokenSource = new CancellationTokenSource();
             cancellationToken = cancellationTokenSource.Token;
             _webSocket = new ClientWebSocket();
-
-            cancellationTokenSourceLobby.Cancel();
-            cancellationTokenSourceLobby = new CancellationTokenSource();
-            cancellationTokenLobby = cancellationTokenSourceLobby.Token;
-
-            Reset();
         }
 
         private bool EnsureConnection()
@@ -736,38 +739,17 @@ namespace TF.EX.Domain.Services
             Close();
         }
 
-        private void Reset()
-        {
-            _stopwatch.Reset();
-            _opponentPeerId = Guid.Empty;
-            _ping = 0;
-        }
-
         public bool IsConnectedToServer()
         {
             return _webSocket.State == WebSocketState.Open;
         }
 
-        //TODO: refactor to handle multiple opponent
-        public int GetPingToOpponent()
+        public int GetPingTo(Models.WebSocket.Player player)
         {
-            return _ping;
-        }
+            var self = ownLobby.Players.Concat(ownLobby.Spectators)
+                .FirstOrDefault(pl => pl.RoomPeerId == peerId);
 
-        public Guid GetOpponentPeerId()
-        {
-            return _opponentPeerId;
-        }
-
-        public void DisconnectFromLobby()
-        {
-            MatchboxClientFFI.disconnect();
-            cancellationTokenSourceLobby.Cancel();
-            cancellationTokenSourceLobby = new CancellationTokenSource();
-            cancellationTokenLobby = cancellationTokenSourceLobby.Token;
-            _ping = 0;
-            _stopwatch.Reset();
-            _opponentPeerId = Guid.Empty;
+            return (self?.Ping ?? 0) + player.Ping;
         }
 
         private async Task Update(WSAction action, Action onSuccess, Action onFail)
@@ -815,7 +797,7 @@ namespace TF.EX.Domain.Services
                     await SendLeaveLobby();
                     break;
                 case WSAction.UpdatePlayer:
-                    await SendUpdatePlayer(ownLobby.Players.First(pl => pl.RoomChatPeerId == roomChatPeerId));
+                    await SendUpdatePlayer(ownLobby.Players.First(pl => pl.RoomPeerId == peerId));
                     break;
                 case WSAction.None:
                     break;
@@ -839,11 +821,13 @@ namespace TF.EX.Domain.Services
 
         public void UpdateOwnLobby(Domain.Models.WebSocket.Lobby lobby)
         {
+            NormaliseSeats(lobby);
+
             ownLobby = new Lobby
             {
                 Name = lobby.Name,
                 RoomId = lobby.RoomId,
-                RoomChatId = lobby.RoomChatId,
+                MaxPlayers = lobby.MaxPlayers,
                 Players = lobby.Players,
                 GameData = lobby.GameData,
                 Spectators = lobby.Spectators,
@@ -864,9 +848,11 @@ namespace TF.EX.Domain.Services
             await Update(action, onSucess, onFail);
         }
 
-        public string GetRoomChatPeerId()
+        public int GetLocalSeat()
         {
-            return roomChatPeerId;
+            var self = ownLobby.Players.FirstOrDefault(player => player.RoomPeerId == peerId);
+
+            return self?.Seat ?? 0;
         }
 
         public string GetRoomPeerId()
@@ -886,7 +872,57 @@ namespace TF.EX.Domain.Services
 
         public bool IsLobbyReady()
         {
-            return ownLobby.Players.Count >= 2 && ownLobby.Players.All(pl => pl.Ready);
+            return AreAllPlayersReady() && hostStartedMatch;
+        }
+
+        public bool IsLobbyFull()
+        {
+            return ownLobby.Players.Count >= ownLobby.MaxPlayers;
+        }
+
+        public bool CanHostStart()
+        {
+            return IsAwaitingHostStart() && IsHost();
+        }
+
+        public bool IsWaitingForHostStart()
+        {
+            return IsAwaitingHostStart() && !IsHost();
+        }
+
+        private bool IsAwaitingHostStart()
+        {
+            return AreAllPlayersReady() && !hostStartedMatch;
+        }
+
+        private bool IsHost()
+        {
+            return ownLobby.Players.Any(pl => pl.IsHost && pl.RoomPeerId == peerId);
+        }
+
+        public void RequestStart()
+        {
+            Task.Run(SendStartLobbyChoice);
+        }
+
+        private bool AreAllPlayersReady()
+        {
+            return ownLobby.Players.Count >= 2
+                && ownLobby.Players.All(pl => pl.Ready)
+                && AreTeamsPlayable();
+        }
+        
+        private bool AreTeamsPlayable()
+        {
+            if (!ownLobby.IsTeamMode)
+            {
+                return true;
+            }
+
+            var blue = ownLobby.Players.Count(pl => pl.Team == (int)Allegiance.Blue);
+            var red = ownLobby.Players.Count(pl => pl.Team == (int)Allegiance.Red);
+
+            return blue + red == ownLobby.Players.Count && blue == red && blue > 0;
         }
 
         public void ResetLobbies()
@@ -896,8 +932,10 @@ namespace TF.EX.Domain.Services
 
         public void ResetLobby()
         {
+            hostStartedMatch = false;
             ownLobby = new Lobby();
             previousPlayersCount = 1;
+            pendingRollcallLobby = null;
         }
 
         public bool IsSpectator()

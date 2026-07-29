@@ -44,7 +44,7 @@ namespace TF.EX.Patchs.RoundLogic
                 {
                     Player player = new Player(
                         i,
-                        xMLPositions.GetPositionByPlayerDraw(netplayManager.ShouldSwapPlayer(), i) + Vector2.UnitY * 2f,
+                        xMLPositions[i] + Vector2.UnitY * 2f,
                         session.TestTeam,
                         session.TestTeam,
                         PlayerInventory.Default,

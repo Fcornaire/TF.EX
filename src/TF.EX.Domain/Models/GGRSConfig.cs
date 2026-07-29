@@ -9,7 +9,7 @@
 
         public TestConfig Test { get; set; }
 
-        public static GGRSConfig DefaultTest(int checkDistance)
+        public static GGRSConfig DefaultTest(int checkDistance, int numPlayers)
         {
             return new GGRSConfig
             {
@@ -17,7 +17,7 @@
                 Name = "TEST",
                 Netplay = new NetplayConfig
                 {
-
+                    NumPlayers = numPlayers
                 },
                 Test = new TestConfig
                 {
@@ -67,6 +67,7 @@
         public int NumPlayers { get; set; }
         public ICollection<string> Spectators { get; set; } = new List<string>();
         public ICollection<string> Players { get; set; } = new List<string>();
+        public string LocalPeerId { get; set; } = "";
         public NetplayLocalConfig LocalConf { get; set; }
         public NetplayServerConfig ServerConf { get; set; }
         public NetplaySpectatorConfig SpectatorConf { get; set; }

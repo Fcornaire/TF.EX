@@ -51,7 +51,7 @@ namespace TF.EX.Domain.Externals
         public static extern void netplay_inputs_free(Inputs inputs);
 
         [DllImport("ggrs_ffi")]
-        public static extern Status netplay_network_stats(IntPtr stats);
+        public static extern Status netplay_network_stats(int playerHandle, IntPtr stats);
 
         [DllImport("ggrs_ffi")]
         public static extern int netplay_frames_ahead();
@@ -70,5 +70,11 @@ namespace TF.EX.Domain.Externals
 
         [DllImport("ggrs_ffi")]
         public static extern int netplay_remote_player_handle();
+
+        [DllImport("ggrs_ffi")]
+        public static extern int netplay_remote_player_handle_count();
+
+        [DllImport("ggrs_ffi")]
+        public static extern int netplay_remote_player_handle_at(int index);
     }
 }

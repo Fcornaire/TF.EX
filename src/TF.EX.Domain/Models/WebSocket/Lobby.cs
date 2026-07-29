@@ -8,7 +8,7 @@ namespace TF.EX.Domain.Models.WebSocket
     {
         public string Name { get; set; } = "";
         public string RoomId { get; set; } = "";
-        public string RoomChatId { get; set; } = "";
+        public int MaxPlayers { get; set; } = 4;
         public ICollection<Player> Players { get; set; } = new List<Player>();
         public ICollection<Player> Spectators { get; set; } = new List<Player>();
         public GameData GameData { get; set; } = new GameData();
@@ -16,6 +16,9 @@ namespace TF.EX.Domain.Models.WebSocket
 
         [IgnoreMember]
         public bool IsEmpty => Players.Count == 0;
+
+        [IgnoreMember]
+        public bool IsTeamMode => !IsEmpty && (TowerFall.Modes)GameData.Mode == TowerFall.Modes.TeamDeathmatch;
 
         [IgnoreMember]
         public bool CanJoin { get; set; } = true;
@@ -43,9 +46,19 @@ namespace TF.EX.Domain.Models.WebSocket
         public int ArcherAltIndex { get; set; } = 0;
         public bool Ready { get; set; } = false;
         public string RoomPeerId { get; set; } = "";
-        public string RoomChatPeerId { get; set; } = "";
         public bool IsHost { get; set; }
+        public int Ping { get; set; } = 0;
 
+        public int Seat { get; set; } = 0;
+
+        public int Team { get; set; } = (int)TowerFall.Allegiance.Neutral;
+    }
+
+    [MessagePackObject(keyAsPropertyName: true)]
+    public class PlayerPing
+    {
+        public string Addr { get; set; } = "";
+        public int Ping { get; set; } = 0;
     }
 
     [MessagePackObject(keyAsPropertyName: true)]

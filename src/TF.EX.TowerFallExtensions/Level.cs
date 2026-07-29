@@ -200,21 +200,7 @@ namespace TF.EX.TowerFallExtensions
             gameState.Session.BramblesStartingState = sessionService.GetBramblesStartingState();
             gameState.Rng = rngService.Get();
 
-            if (netplayManager.IsTestMode())
-            {
-                gameState.MatchStats = new TF.EX.Domain.Models.State.MatchStats[]
-                {
-                   self.Session.MatchStats[0].ToDomain(), self.Session.MatchStats[1].ToDomain(),
-                };
-            }
-            else
-            {
-                gameState.MatchStats = new TF.EX.Domain.Models.State.MatchStats[]
-               {
-                   self.Session.MatchStats[inputService.GetLocalPlayerInputIndex()].ToDomain(),
-                   self.Session.MatchStats[inputService.GetRemotePlayerInputIndex()].ToDomain(),
-               };
-            }
+            gameState.MatchStats = self.Session.MatchStats.Select(stat => stat.ToDomain()).ToArray();
 
             gameState.AddCrackedPlatform(self);
             gameState.AddCrackedWalls(self);
@@ -756,15 +742,9 @@ namespace TF.EX.TowerFallExtensions
 
             var matchStats = gameState.MatchStats.ToArray();
 
-            if (netplayManager.IsTestMode())
+            for (int seat = 0; seat < matchStats.Length && seat < level.Session.MatchStats.Length; seat++)
             {
-                level.Session.MatchStats[0] = matchStats[0].ToTF();
-                level.Session.MatchStats[1] = matchStats[1].ToTF();
-            }
-            else
-            {
-                level.Session.MatchStats[0] = matchStats[inputService.GetLocalPlayerInputIndex()].ToTF();
-                level.Session.MatchStats[1] = matchStats[inputService.GetRemotePlayerInputIndex()].ToTF();
+                level.Session.MatchStats[seat] = matchStats[seat].ToTF();
             }
 
             level.PostLoad(gameState);

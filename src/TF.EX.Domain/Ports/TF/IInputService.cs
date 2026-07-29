@@ -14,16 +14,20 @@ namespace TF.EX.Domain.Ports.TF
         List<Input> GetCurrentInputs();
 
         int GetLocalPlayerInputIndex();
-        int GetRemotePlayerInputIndex();
         void ResetCurrentInput();
-        void EnsureRemoteController();
+        void EnsureRemoteController(int playerCount);
+        void EnsureRemoteControllers(IEnumerable<int> seats);
+        bool EnsureLocalControllerSeat();
+        void EnsureEveryControllerSlot();
 
         void EnsureFakeControllers();
 
         int GetInputIndex(PlayerInput input);
+        void ObserveLocalDevice();
         void DisableAllControllers();
         void EnableAllControllers();
 
         void DisableAllControllerExceptLocal();
+        bool IsInputLocked();
     }
 }

@@ -1,9 +1,11 @@
-﻿using HarmonyLib;
+﻿using System.Linq;
+using HarmonyLib;
 using Microsoft.Xna.Framework;
 using Monocle;
 using TF.EX.Domain;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models;
+using TF.EX.Domain.Ports;
 using TF.EX.Patchs.Engine;
 using TowerFall;
 
@@ -40,16 +42,13 @@ namespace TF.EX.Patchs.Layer
                 }
 
                 var inputRenderers = TFGamePatch.CustomInputRenderers;
-                var player1Index = netplayManager.GetPlayerDraw() == PlayerDraw.Player1 ? 0 : 1;
-                var player2Index = netplayManager.GetPlayerDraw() == PlayerDraw.Player1 ? 1 : 0;
+                var inputs = inputService.GetCurrentInputs();
 
-                for (int i = 0; i < inputRenderers.Length; i++)
+                for (int seat = 0; seat < inputRenderers.Length && seat < inputs.Count; seat++)
                 {
-                    if (inputRenderers[i] != null)
+                    if (inputRenderers[seat] != null)
                     {
-                        var index = i == 0 ? player1Index : player2Index;
-                        InputState state = inputService.GetCurrentInputs().ToArray()[index].ToTFInput();
-                        inputRenderers[i].Render(state);
+                        inputRenderers[seat].Render(inputs[seat].ToTFInput());
                     }
                 }
             }
@@ -62,8 +61,7 @@ namespace TF.EX.Patchs.Layer
                     Draw.OutlineTextCentered(TFGame.Font, $"SPECTATORS : {lobby.Spectators.Count}", new Vector2(30f, 20f), Color.White, Color.Black);
                 }
 
-                var latency = netplayManager.GetNetworkStats().ping;
-                Draw.OutlineTextCentered(TFGame.Font, $"{latency} MS", new Vector2(20f, 10f), GetColor(latency), 1f);
+                RenderPings(netplayManager);
 
                 if (netplayManager.GetNetplayMode() != TF.EX.Domain.Models.NetplayMode.Test)
                 {
@@ -75,28 +73,79 @@ namespace TF.EX.Patchs.Layer
             }
         }
 
-        private static Color GetColor(uint latency)
+        private static void RenderPings(INetplayManager netplayManager)
         {
-            var color = Color.White;
-            switch (latency)
+            var perSeat = netplayManager.GetNetworkStatsPerSeat();
+
+            if (perSeat.Count == 0)
             {
-                case var n when (n >= 0 && n < 60):
-                    color = Color.LightGreen;
-                    break;
-                case var n when (n >= 60 && n < 120):
-                    color = Color.GreenYellow;
-                    break;
-                case var n when (n >= 120 && n < 150):
-                    color = Color.OrangeRed;
-                    break;
-                case var n when (n >= 150):
-                    color = Color.Red;
-                    break;
-                default:
-                    break;
+                var latency = netplayManager.GetNetworkStats().ping;
+                DrawPingLine(0, $"{latency} MS", Color.White, GetColor(latency));
+                return;
             }
 
-            return color;
+            var line = 0;
+
+            foreach (var seat in perSeat.Keys.OrderBy(seat => seat))
+            {
+                var latency = perSeat[seat].ping;
+
+                DrawPingLine(line, $"{latency} MS", GetArcherColor(seat), GetColor(latency), $"P{seat + 1}");
+                line++;
+            }
+        }
+
+        private static void DrawPingLine(int line, string value, Color labelColor, Color valueColor, string label = null)
+        {
+            const float LeftEdge = 10f;
+
+            var y = 10f + line * 12f;
+            var x = LeftEdge;
+
+            if (!string.IsNullOrEmpty(label))
+            {
+                var labelText = $"{label} : ";
+                var labelWidth = TFGame.Font.MeasureString(labelText).X;
+
+                Draw.OutlineTextCentered(TFGame.Font, labelText, new Vector2(x + labelWidth / 2f, y), labelColor, 1f);
+                x += labelWidth;
+            }
+
+            var valueWidth = TFGame.Font.MeasureString(value).X;
+
+            Draw.OutlineTextCentered(TFGame.Font, value, new Vector2(x + valueWidth / 2f, y), valueColor, 1f);
+        }
+
+        private static Color GetColor(uint latency)
+        {
+            switch (latency)
+            {
+                case var n when (n < 60):
+                    return Color.LightGreen;
+                case var n when (n < 120):
+                    return Color.GreenYellow;
+                case var n when (n < 150):
+                    return Color.OrangeRed;
+                default:
+                    return Color.Red;
+            }
+        }
+
+        private static Color GetArcherColor(int seat)
+        {
+            if (seat < 0 || seat >= TFGame.Characters.Length)
+            {
+                return Color.White;
+            }
+
+            var characterIndex = TFGame.Characters[seat];
+
+            if (characterIndex < 0 || characterIndex >= ArcherData.Archers.Length)
+            {
+                return Color.White;
+            }
+
+            return ArcherData.Archers[characterIndex].ColorA;
         }
     }
 }

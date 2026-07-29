@@ -24,7 +24,7 @@ namespace TF.EX.Domain.Models
         [Key(0)]
         public int Id { get; set; }
         [Key(1)]
-        public PlayerDraw PlayerDraw { get; set; }
+        public int LocalSeat { get; set; }
 
         [DefaultValue(ReplayVersion.Unknown)]
         [Key(2)]
@@ -90,6 +90,7 @@ namespace TF.EX.Domain.Models
         V5, //Added StuckTo actualdepth to Arrow instead of saving the stuck entity
         V6, //Added CustomMods to ReplayInfo
         V7, //Deterministic xoshiro256** RNG: Rng snapshot is now generator state words, not a draw log + chest rework
+        V8, //PlayerDraw became LocalSeat, archers/inputs are seat-ordered and can be up to 3-4
     }
 
     public static class ReplayVersionExtensions

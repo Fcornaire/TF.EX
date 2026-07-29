@@ -41,9 +41,9 @@ namespace TF.EX.Domain.Services
             _logger = logger;
         }
 
-        public void AddRecord(GameState gameState, bool shouldSwapPlayer)
+        public void AddRecord(GameState gameState)
         {
-            _gameContext.AddRecord(gameState, shouldSwapPlayer);
+            _gameContext.AddRecord(gameState);
         }
 
         private static TimeSpan FrameToTimestamp(int frame)
@@ -66,22 +66,37 @@ namespace TF.EX.Domain.Services
                 record.GameState.SFXs = Enumerable.Empty<SFXState>();
             }
 
-            replay.Informations.PlayerDraw = _netplayManager.GetPlayerDraw();
+            replay.Informations.LocalSeat = _netplayManager.LocalSeat;
             replay.Informations.MatchLenght = FrameToTimestamp(replay.Record.Count);
             replay.Informations.Archers = _netplayManager.GetArchersInfo();
 
-            var filename = $"{DateTime.UtcNow.ToString("dd'-'MM'-'yyy'T'HH'-'mm'-'ss")}.tow";
-
-            replay.Informations.Name = filename;
-
             Directory.CreateDirectory(REPLAYS_FOLDER);
 
-            var filePath = $"{REPLAYS_FOLDER}\\{filename}";
+            var filePath = NextFreeReplayPath(out var filename);
+
+            replay.Informations.Name = filename;
 
             using var fileStream = new FileStream(filePath, FileMode.Create);
             WriteToFile(replay, fileStream);
 
             _gameContext.ResetReplay();
+        }
+
+        private string NextFreeReplayPath(out string filename)
+        {
+            var stamp = DateTime.UtcNow.ToString("dd'-'MM'-'yyy'T'HH'-'mm'-'ss");
+
+            for (int attempt = 0; ; attempt++)
+            {
+                filename = attempt == 0 ? $"{stamp}.tow" : $"{stamp}-{attempt}.tow";
+
+                var candidate = $"{REPLAYS_FOLDER}\\{filename}";
+
+                if (!File.Exists(candidate))
+                {
+                    return candidate;
+                }
+            }
         }
 
         public void Initialize(Domain.Models.WebSocket.GameData gameData = null, ICollection<Domain.Models.WebSocket.CustomMod> mods = null)
@@ -144,22 +159,24 @@ namespace TF.EX.Domain.Services
                            }
                        }
 
-                       _netplayManager.SetPlayersIndex((int)replay.Informations.PlayerDraw);
-                       _netplayManager.UpdatePlayer2Name(replay.Informations.Archers.ToArray()[1].NetplayName);
-
-                       var player1Index = replay.Informations.PlayerDraw == PlayerDraw.Player1 ? 0 : 1;
-                       var player2Index = replay.Informations.PlayerDraw == PlayerDraw.Player1 ? 1 : 0;
+                       _netplayManager.SetLocalSeat(replay.Informations.LocalSeat);
 
                        var archers = replay.Informations.Archers.ToArray();
                        var usedArchers = archers.Select(archer => archer.Index);
 
-                       (var archerIndexP1, var altIndexP1) = ArcherDataExtensions.EnsureArcherDataExist(archers[player1Index].Index, (int)archers[player1Index].Type, usedArchers);
-                       (var archerIndexP2, var altIndexP2) = ArcherDataExtensions.EnsureArcherDataExist(archers[player2Index].Index, (int)archers[player2Index].Type, usedArchers);
+                       for (int seat = 0; seat < archers.Length; seat++)
+                       {
+                           (var archerIndex, var altIndex) = ArcherDataExtensions.EnsureArcherDataExist(archers[seat].Index, (int)archers[seat].Type, usedArchers);
 
-                       TFGame.Characters[0] = archerIndexP1; //TODO: number of players dependent
-                       TFGame.Characters[1] = archerIndexP2;
-                       TFGame.AltSelect[0] = (ArcherData.ArcherTypes)altIndexP1;
-                       TFGame.AltSelect[1] = (ArcherData.ArcherTypes)altIndexP2;
+                           TFGame.Characters[seat] = archerIndex;
+                           TFGame.AltSelect[seat] = (ArcherData.ArcherTypes)altIndex;
+                       }
+
+                       var firstRemote = archers.Where((_, seat) => seat != replay.Informations.LocalSeat).FirstOrDefault();
+                       if (firstRemote != null)
+                       {
+                           _netplayManager.UpdatePlayer2Name(firstRemote.NetplayName);
+                       }
 
                        currentReplayFrame = 0;
                        var firstRecord = replay.Record.First(rec => rec.GameState.Entities.Players.Count > 0);

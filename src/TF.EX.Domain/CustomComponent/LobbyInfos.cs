@@ -52,7 +52,7 @@ namespace TF.EX.Domain.CustomComponent
             {
                 Name = lobby.Name,
                 RoomId = lobby.RoomId,
-                RoomChatId = lobby.RoomChatId,
+                MaxPlayers = lobby.MaxPlayers,
                 Players = lobby.Players,
                 GameData = lobby.GameData
             };
