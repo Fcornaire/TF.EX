@@ -1,0 +1,21 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/network/">
+    <Project Path="src/network/TF.EX.API/TF.EX.API.csproj" />
+    <Project Path="src/network/TF.EX.Common/TF.EX.Common.csproj" />
+    <Project Path="src/network/TF.EX.Core/TF.EX.Core.csproj" />
+    <Project Path="src/network/TF.EX.Domain/TF.EX.Domain.csproj" />
+    <Project Path="src/network/TF.EX.Patchs/TF.EX.Patchs.csproj" />
+  </Folder>
+  <Folder Name="/src/state/">
+    <Project Path="src/state/TF.State.Domain/TF.State.Domain.csproj" />
+    <Project Path="src/state/TF.State.TowerFallExtensions/TF.State.TowerFallExtensions.csproj" />
+    <Project Path="src/state/TF.State.Patchs/TF.State.Patchs.csproj" />
+    <Project Path="src/state/TF.State.Core/TF.State.Core.csproj" />
+  </Folder>
+  <Folder Name="/src/replay/">
+    <Project Path="src/replay/TF.Replay.Domain/TF.Replay.Domain.csproj" />
+    <Project Path="src/replay/TF.Replay.Patchs/TF.Replay.Patchs.csproj" />
+    <Project Path="src/replay/TF.Replay.Core/TF.Replay.Core.csproj" />
+  </Folder>
+</Solution>

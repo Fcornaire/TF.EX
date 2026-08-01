@@ -1,0 +1,54 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+	  <TargetFramework>net10.0</TargetFramework>
+	  <!--<LangVersion>11</LangVersion>-->
+	  <ImplicitUsings>enable</ImplicitUsings>
+	  <ModEnablePublish>false</ModEnablePublish>
+	  <ModEnableZip>false</ModEnableZip>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FortRise.Configuration" Version="1.5.6" />
+    <PackageReference Include="DeepEqual" Version="5.1.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+	<PackageReference Include="xunit.runner.visualstudio" Version="3.1.4">
+	  <PrivateAssets>all</PrivateAssets>
+	  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+	</PackageReference>
+  </ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\network\TF.EX.Domain\TF.EX.Domain.csproj" />
+		<ProjectReference Include="..\..\state\TF.State.Domain\TF.State.Domain.csproj" />
+		<ProjectReference Include="..\..\replay\TF.Replay.Domain\TF.Replay.Domain.csproj" />
+		<ProjectReference Include="..\..\state\TF.State.Core\TF.State.Core.csproj" />
+		<ProjectReference Include="..\..\replay\TF.Replay.Core\TF.Replay.Core.csproj" />
+	</ItemGroup>
+
+	<!--<ItemGroup>
+		<Reference Include="FNA">
+			<HintPath>..\..\..\libs\FNA.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+
+		<Reference Include="TowerFall" Condition=" '$(Configuration)' == 'Release'">
+			<HintPath>..\..\..\libs\TowerFall-publicized.exe</HintPath>
+			<Private>False</Private>
+		</Reference>
+
+		<Reference Include="TowerFall" Condition=" '$(Configuration)' == 'Debug'">
+			<HintPath>..\..\..\libs\TowerFall.exe</HintPath>
+			<Private>False</Private>
+		</Reference>
+	</ItemGroup>-->
+	
+	<Target Name="CopyTowerFallForReflection" AfterTargets="Build">
+		<Copy SourceFiles="@(ReferencePath)" DestinationFiles="$(OutDir)TowerFall.dll" SkipUnchangedFiles="true"
+		      Condition="'%(Filename)' == 'TowerFall.Patch'" />
+		<Copy SourceFiles="@(ReferencePath)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true"
+		      Condition="'%(Filename)' == 'FNA'" />
+	</Target>
+
+</Project>

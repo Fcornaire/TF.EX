@@ -1,41 +1,113 @@
-# This workflow will build a .NET project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
+name: Pre Release - TF.EX
 
-name: Pre Release
-
-on:  
+on:
   push:
-   branches:
+    branches:
       - "main"
+  workflow_dispatch:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: 6.0.x
-    - name: Restore dependencies
-      run: dotnet restore
-    - name: Build
-      run: dotnet build --no-restore --configuration Release
-    - name: Publish
-      run: dotnet publish --no-restore --configuration Release --output ./TF.EX
-    - name: Archive Release
-      uses: thedoctor0/zip-release@0.7.1
-      with:
-        type: 'zip'
-        filename: 'TF.EX-pre-release.zip'
-        path: './TF.EX'
-        exclusions: '**/*Mono* **/*.pdb'
-    - name: Upload Release
-      uses: ncipollo/release-action@v1.12.0
-      with:
-        artifacts: "TF.EX-pre-release.zip"
-        generateReleaseNotes: true
-        prerelease: true
-        token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Check if Config exists
+        id: check-config
+        run: |
+          if [[ -f ./src/network/TF.EX.Domain/Config.cs ]]; then
+            echo "config-existing=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "config-existing=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Replace Config file
+        if: steps.check-config.outputs.config-existing == 'true'
+        run: |
+          cat > ./src/network/TF.EX.Domain/Config.cs <<EOF
+          namespace TF.EX.Domain
+          {
+              public static class Config
+              {
+                  public static readonly string SERVER = "${{ secrets.SERVER_URL }}";
+              }
+          }
+          EOF
+
+      - name: Download ggrs-ffi lib
+        uses: robinraju/release-downloader@v1.11
+        with:
+          repository: "Fcornaire/ggrs-ffi"
+          latest: true
+          out-file-path: "src/network/TF.EX.Core/Unmanaged/win-x64"
+          fileName: "ggrs_ffi.dll"
+
+      - name: Build the three mods
+        run: |
+          set -euo pipefail
+          for proj in \
+            src/state/TF.State.Core/TF.State.Core.csproj \
+            src/replay/TF.Replay.Core/TF.Replay.Core.csproj \
+            src/network/TF.EX.Core/TF.EX.Core.csproj
+          do
+            echo "::group::build $proj"
+            dotnet build "$proj" \
+              --configuration Release \
+              -p:ModLoaderPath="$GITHUB_WORKSPACE/libs" \
+              -p:ModEnablePublish=false \
+              -p:ModEnableZip=false
+            echo "::endgroup::"
+          done
+
+      - name: Stage mod folders
+        run: |
+          set -euo pipefail
+          stage() {
+            local out="$1" name="$2"
+            mkdir -p "staging/$name"
+            cp -r "$out/." "staging/$name/"
+            rm -f "staging/$name"/*.deps.json
+            test -f "staging/$name/meta.json" || { echo "::error::$name is missing meta.json"; exit 1; }
+          }
+          stage src/state/TF.State.Core/bin/Release/net10.0      DShad.TF.State
+          stage src/replay/TF.Replay.Core/bin/Release/net10.0    DShad.TF.Replay
+          stage src/network/TF.EX.Core/bin/Release/net10.0       DShad.TF.EX
+
+          check_clean() {
+            local folder="$1" foreign="$2"
+            if ls "staging/$folder" | grep -qE "^($foreign)"; then
+              echo "::error::$folder contains foreign assemblies"
+              ls "staging/$folder"
+              exit 1
+            fi
+          }
+          check_clean DShad.TF.EX     'TF\.State\.|TF\.Replay\.'
+          check_clean DShad.TF.Replay 'TF\.State\.|TF\.EX\.'
+          check_clean DShad.TF.State  'TF\.Replay\.|TF\.EX\.'
+
+          echo "--- staged tree ---"
+          (cd staging && find . -maxdepth 2 | sort)
+
+      - name: Archive
+        run: |
+          set -euo pipefail
+          cd staging
+          zip -r "$GITHUB_WORKSPACE/DShad.TF.EX-pre-release.zip" DShad.TF.EX DShad.TF.Replay DShad.TF.State
+
+      - name: Upload Pre Release
+        uses: ncipollo/release-action@v1.14.0
+        with:
+          artifacts: "DShad.TF.EX-pre-release.zip"
+          tag: pre-release
+          name: "TF.EX pre-release"
+          prerelease: true
+          allowUpdates: true
+          removeArtifacts: true
+          generateReleaseNotes: true
+          token: ${{ secrets.GITHUB_TOKEN }}

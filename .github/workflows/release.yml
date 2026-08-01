@@ -5,9 +5,6 @@ on:
     tags:
       - "*"
 
-env:
-  MOD_NAME: DShad.TF.EX
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -20,10 +17,27 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - name: Check meta.json matches the tag
+        run: |
+          set -euo pipefail
+          tag="$GITHUB_REF_NAME"
+
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::notice::$tag is not a vX.Y.Z release tag, skipping the meta.json check"
+            exit 0
+          fi
+
+          meta=$(jq -r .version src/network/TF.EX.Core/meta.json)
+
+          if [[ "$meta" != "${tag#v}" ]]; then
+            echo "::error::src/network/TF.EX.Core/meta.json says $meta but the tag is $tag. Bump the meta, then re try"
+            exit 1
+          fi
+
       - name: Check if Config exists
         id: check-config
         run: |
-          if [[ -f ./src/TF.EX.Domain/Config.cs ]]; then
+          if [[ -f ./src/network/TF.EX.Domain/Config.cs ]]; then
             echo "config-existing=true" >> "$GITHUB_OUTPUT"
           else
             echo "config-existing=false" >> "$GITHUB_OUTPUT"
@@ -32,7 +46,7 @@ jobs:
       - name: Replace Config file
         if: steps.check-config.outputs.config-existing == 'true'
         run: |
-          cat > ./src/TF.EX.Domain/Config.cs <<EOF
+          cat > ./src/network/TF.EX.Domain/Config.cs <<EOF
           namespace TF.EX.Domain
           {
               public static class Config
@@ -46,37 +60,71 @@ jobs:
         with:
           repository: "Fcornaire/ggrs-ffi"
           latest: true
-          out-file-path: "src/TF.EX.Core/Unmanaged/win-x64"
+          out-file-path: "src/network/TF.EX.Core/Unmanaged/win-x64"
           fileName: "ggrs_ffi.dll"
 
-      - name: Restore dependencies
-        run: dotnet restore src/TF.EX.Core/TF.EX.Core.csproj
-
-      - name: Build
+      - name: Build the three mods
         run: |
-          dotnet build src/TF.EX.Core/TF.EX.Core.csproj \
-            --no-restore \
-            --configuration Release \
-            -p:ModLoaderPath="$GITHUB_WORKSPACE/libs" \
-            -p:ModEnablePublish=false \
-            -p:ModEnableZip=false
+          set -euo pipefail
+          for proj in \
+            src/state/TF.State.Core/TF.State.Core.csproj \
+            src/replay/TF.Replay.Core/TF.Replay.Core.csproj \
+            src/network/TF.EX.Core/TF.EX.Core.csproj
+          do
+            echo "::group::build $proj"
+            dotnet build "$proj" \
+              --configuration Release \
+              -p:ModLoaderPath="$GITHUB_WORKSPACE/libs" \
+              -p:ModEnablePublish=false \
+              -p:ModEnableZip=false
+            echo "::endgroup::"
+          done
 
-      - name: Stage mod
+      - name: Stage mod folders
         run: |
-          OUT=src/TF.EX.Core/bin/Release/net10.0
-          mkdir -p "staging/$MOD_NAME"
-          cp -r "$OUT/." "staging/$MOD_NAME/"
-          # FortRise never reads deps.json, and its own packer strips it.
-          rm -f "staging/$MOD_NAME"/*.deps.json
-          echo "--- packaged tree ---"
-          (cd staging && find . | sort)
+          set -euo pipefail
+          stage() {
+            local out="$1" name="$2"
+            mkdir -p "staging/$name"
+            cp -r "$out/." "staging/$name/"
+            # FortRise never reads deps.json, and its own packer strips it.
+            rm -f "staging/$name"/*.deps.json
+            test -f "staging/$name/meta.json" || { echo "::error::$name is missing meta.json"; exit 1; }
+          }
+          stage src/state/TF.State.Core/bin/Release/net10.0      DShad.TF.State
+          stage src/replay/TF.Replay.Core/bin/Release/net10.0    DShad.TF.Replay
+          stage src/network/TF.EX.Core/bin/Release/net10.0       DShad.TF.EX
 
-      - name: Archive mod
-        run: cd staging && zip -r "$GITHUB_WORKSPACE/$MOD_NAME.zip" "$MOD_NAME"
+          check_clean() {
+            local folder="$1" foreign="$2"
+            if ls "staging/$folder" | grep -qE "^($foreign)"; then
+              echo "::error::$folder contains foreign assemblies"
+              ls "staging/$folder"
+              exit 1
+            fi
+          }
+          check_clean DShad.TF.EX     'TF\.State\.|TF\.Replay\.'
+          check_clean DShad.TF.Replay 'TF\.State\.|TF\.EX\.'
+          check_clean DShad.TF.State  'TF\.Replay\.|TF\.EX\.'
+
+          echo "--- staged tree ---"
+          (cd staging && find . -maxdepth 2 | sort)
+
+      - name: Archive the three bundles
+        run: |
+          set -euo pipefail
+          tag="$GITHUB_REF_NAME"
+          cd staging
+          # State alone.
+          zip -r "$GITHUB_WORKSPACE/DShad.TF.State-$tag.zip"  DShad.TF.State
+          # Replay needs State.
+          zip -r "$GITHUB_WORKSPACE/DShad.TF.Replay-$tag.zip" DShad.TF.Replay DShad.TF.State
+          # EX needs both. The auto-updater rebuilds this exact name from the tag it found.
+          zip -r "$GITHUB_WORKSPACE/DShad.TF.EX-$tag.zip"     DShad.TF.EX DShad.TF.Replay DShad.TF.State
 
       - name: Upload Release
         uses: ncipollo/release-action@v1.14.0
         with:
-          artifacts: "${{ env.MOD_NAME }}.zip"
+          artifacts: "DShad.TF.EX-${{ github.ref_name }}.zip,DShad.TF.Replay-${{ github.ref_name }}.zip,DShad.TF.State-${{ github.ref_name }}.zip"
           generateReleaseNotes: true
           token: ${{ secrets.GITHUB_TOKEN }}

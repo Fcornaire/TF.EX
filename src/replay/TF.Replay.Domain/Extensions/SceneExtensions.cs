@@ -1,0 +1,47 @@
+﻿using HarmonyLib;
+using TowerFall;
+
+namespace TF.Replay.Domain.Extensions
+{
+    public static class SceneExtensions
+    {
+        public static T Get<T>(this Monocle.Scene self) where T : Monocle.Entity
+        {
+            return self.Layers.SelectMany(layer => layer.Value.Entities)
+                .FirstOrDefault(ent => ent is T) as T;
+        }
+
+        public static IEnumerable<T> GetAllToBeSpawned<T>(this Monocle.Scene self) where T : Monocle.Entity
+        {
+            return self.Layers.SelectMany(layer =>
+            {
+                return Traverse.Create(layer.Value).Field<List<Monocle.Entity>>("toAdd").Value;
+            })
+                .Where(ent => ent is T).Select(ent => ent as T);
+        }
+
+        public static T GetToBeSpawned<T>(this Monocle.Scene self) where T : Monocle.Entity
+        {
+            return self.Layers.SelectMany(layer =>
+            {
+                return Traverse.Create(layer.Value).Field<List<Monocle.Entity>>("toAdd").Value;
+            })
+                .FirstOrDefault(ent => ent is T) as T;
+        }
+
+        public static void DeleteAll<T>(this Monocle.Scene scene) where T : Monocle.Entity
+        {
+            var entities = scene.Layers.SelectMany(layer => layer.Value.Entities)
+                .Where(ent => ent is T).Select(ent => ent as T).ToList();
+
+            if (entities.Count > 0)
+            {
+                entities.ForEach(entity =>
+                {
+                    scene.Layers.FirstOrDefault(layer => layer.Value.Index == entity.LayerIndex).Value.Entities.Remove(entity);
+                    entity.Removed();
+                });
+            }
+        }
+    }
+}
