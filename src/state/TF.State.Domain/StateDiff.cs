@@ -21,7 +21,14 @@ namespace TF.State.Domain
 
             try
             {
-                return MessagePackSerializer.Deserialize<GameState>(state, Options)?.Session?.RoundStarted ?? false;
+                var gameState = MessagePackSerializer.Deserialize<GameState>(state, Options);
+
+                if (gameState == null)
+                {
+                    return false;
+                }
+
+                return (gameState.Session?.RoundStarted ?? false) || (gameState.Entities?.Hud?.VersusStart?.CoroutineState ?? 0) == 0;
             }
             catch
             {

@@ -136,6 +136,8 @@ namespace TF.EX.Domain.Services
 
         private void OnPlaybackStarting(int localSeat)
         {
+            StateApi.Current.SetFrameDriver(DriverName);
+
             _netplayManager.SetLocalSeat(localSeat);
             _netplayManager.SetReplayMode();
 
@@ -143,7 +145,6 @@ namespace TF.EX.Domain.Services
             ExFlags.IsReplayMode = true;
             ExFlags.CurrentFrame = 0;
             ExFlags.Push();
-            StateApi.Current.SetFrameDriver(DriverName);
 
             ApplyNetplayGameMode();
 
