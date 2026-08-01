@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ModVersion>1.0.0</ModVersion>
+		<ModName>DShad.TF.State</ModName>
+		<ModEnablePublish>true</ModEnablePublish>
+		<ModEnableZip>false</ModEnableZip>
+		<ImplicitUsings>enable</ImplicitUsings>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="FortRise.Configuration" Version="1.5.6" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Content Include="meta.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\TF.State.Domain\TF.State.Domain.csproj" />
+		<ProjectReference Include="..\TF.State.TowerFallExtensions\TF.State.TowerFallExtensions.csproj" />
+		<ProjectReference Include="..\TF.State.Patchs\TF.State.Patchs.csproj" />
+	</ItemGroup>
+
+</Project>

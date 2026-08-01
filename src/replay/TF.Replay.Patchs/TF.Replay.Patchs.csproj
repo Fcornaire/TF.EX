@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ModEnablePublish>false</ModEnablePublish>
+		<ModEnableZip>false</ModEnableZip>
+		<ImplicitUsings>enable</ImplicitUsings>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="FortRise.Configuration" Version="1.5.6" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\TF.Replay.Domain\TF.Replay.Domain.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Reference Include="FNA">
+			<HintPath>..\..\..\libs\FNA.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+	</ItemGroup>
+
+</Project>

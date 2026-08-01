@@ -25,6 +25,17 @@ TF EX is a mod that attempts to bring netplay to TowerFall (EX as in a Fighting 
 Due to the nature of the project, the mod is also able to record + view previous matches.
 Also, this project is still WIP!
 
+The project ships as three mods, so the parts that are not about netplay can be used on their own:
+
+| Mod                                   | What it does                                                       |
+| ------------------------------------- | ------------------------------------------------------------------ |
+| **TF.EX** ([API](EX-API.md))          | Online netplay with rollback                                       |
+| **[TF.State](src/state/README.md)**   | Saves and restores the level. The library both others are built on |
+| **[TF.Replay](src/replay/README.md)** | Records matches, replay browser, seeking and GIF export            |
+
+If you are a mod author making your own mod rollback/replay safe, [TF.State](src/state/README.md) is the
+one to read.
+
 # Features
 
 - Online Netplay
@@ -59,7 +70,7 @@ Or even spectate! (Experimental)
 
 - Modded variants
 
-  Ability to run online play with custom variants as long as they are EX compatible. Read [EX API](EX-API.md) for mor details.
+  Ability to run online play with custom variants as long as they are compatible. Read [TF.State](src/state/README.md) for more details.
 
   <p align="center">
     <img src="images/moddedVariant.gif" alt="animated" />
@@ -68,7 +79,8 @@ Or even spectate! (Experimental)
 - Replays
 
   Replay is "normally" automatically exported at the end of a game.
-  Use the `replays` menu to watch precedent games
+  Use the `replays` menu to watch precedent games. Seeking, frame stepping and GIF export are documented
+  in [TF.Replay](src/replay/README.md).
 
   <p align="center">
     <img src="images/replays.gif" alt="animated" />
@@ -132,7 +144,7 @@ To be able to add features or fix things, you will need to:
    git clone https://github.com/Fcornaire/TF.EX.git
    ```
 
-2. Launch the .sln with your favorite IDE
+2. Launch the .slnx with your favorite IDE
 3. Do some modifications and build. If you didn't change Towerfall original installation folder, the mod dll will be copied automatically each build to your game Towerfall directory. Be aware that with the exception of Core.dll, the others are copied to the root of Towerfall installation directory which lets us debug.
 4. Launch Towerfall and on the main screen, open the Dev console wih the key ² (If not opening, ensure you enabled dev console in the game settings) and enter the following command
 

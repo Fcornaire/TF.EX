@@ -1,0 +1,61 @@
+name: Pre Release - TF.State
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build TF.State
+        run: |
+          set -euo pipefail
+          dotnet build src/state/TF.State.Core/TF.State.Core.csproj \
+            --configuration Release \
+            -p:ModLoaderPath="$GITHUB_WORKSPACE/libs" \
+            -p:ModEnablePublish=false \
+            -p:ModEnableZip=false
+
+      - name: Stage mod folder
+        run: |
+          set -euo pipefail
+          mkdir -p staging/DShad.TF.State
+          cp -r src/state/TF.State.Core/bin/Release/net10.0/. staging/DShad.TF.State/
+          rm -f staging/DShad.TF.State/*.deps.json
+          test -f staging/DShad.TF.State/meta.json \
+            || { echo "::error::DShad.TF.State is missing meta.json"; exit 1; }
+
+          if ls staging/DShad.TF.State | grep -qE '^(TF\.Replay\.|TF\.EX\.)'; then
+            echo "::error::DShad.TF.State contains foreign assemblies"
+            ls staging/DShad.TF.State
+            exit 1
+          fi
+
+          echo "--- staged tree ---"
+          (cd staging && find . -maxdepth 2 | sort)
+
+      - name: Archive
+        run: |
+          set -euo pipefail
+          cd staging
+          zip -r "$GITHUB_WORKSPACE/DShad.TF.State-pre-release.zip" DShad.TF.State
+
+      - name: Upload Pre Release
+        uses: ncipollo/release-action@v1.14.0
+        with:
+          artifacts: "DShad.TF.State-pre-release.zip"
+          tag: state-pre-release
+          name: "TF.State pre-release"
+          prerelease: true
+          allowUpdates: true
+          removeArtifacts: true
+          generateReleaseNotes: true
+          token: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ModVersion>1.0.0</ModVersion>
+		<ModName>DShad.TF.Replay</ModName>
+		<ModEnablePublish>true</ModEnablePublish>
+		<ModEnableZip>false</ModEnableZip>
+		<ImplicitUsings>enable</ImplicitUsings>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="FortRise.Configuration" Version="1.5.6" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Content Include="meta.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\TF.Replay.Domain\TF.Replay.Domain.csproj" />
+		<ProjectReference Include="..\TF.Replay.Patchs\TF.Replay.Patchs.csproj" />
+	</ItemGroup>
+
+</Project>

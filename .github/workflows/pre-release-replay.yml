@@ -1,0 +1,77 @@
+name: Pre Release - TF.Replay
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build TF.State and TF.Replay
+        run: |
+          set -euo pipefail
+          for proj in \
+            src/state/TF.State.Core/TF.State.Core.csproj \
+            src/replay/TF.Replay.Core/TF.Replay.Core.csproj
+          do
+            echo "::group::build $proj"
+            dotnet build "$proj" \
+              --configuration Release \
+              -p:ModLoaderPath="$GITHUB_WORKSPACE/libs" \
+              -p:ModEnablePublish=false \
+              -p:ModEnableZip=false
+            echo "::endgroup::"
+          done
+
+      - name: Stage mod folders
+        run: |
+          set -euo pipefail
+          stage() {
+            local out="$1" name="$2"
+            mkdir -p "staging/$name"
+            cp -r "$out/." "staging/$name/"
+            rm -f "staging/$name"/*.deps.json
+            test -f "staging/$name/meta.json" || { echo "::error::$name is missing meta.json"; exit 1; }
+          }
+          stage src/state/TF.State.Core/bin/Release/net10.0     DShad.TF.State
+          stage src/replay/TF.Replay.Core/bin/Release/net10.0   DShad.TF.Replay
+
+          check_clean() {
+            local folder="$1" foreign="$2"
+            if ls "staging/$folder" | grep -qE "^($foreign)"; then
+              echo "::error::$folder contains foreign assemblies"
+              ls "staging/$folder"
+              exit 1
+            fi
+          }
+          check_clean DShad.TF.Replay 'TF\.State\.|TF\.EX\.'
+          check_clean DShad.TF.State  'TF\.Replay\.|TF\.EX\.'
+
+          echo "--- staged tree ---"
+          (cd staging && find . -maxdepth 2 | sort)
+
+      - name: Archive
+        run: |
+          set -euo pipefail
+          cd staging
+          zip -r "$GITHUB_WORKSPACE/DShad.TF.Replay-pre-release.zip" DShad.TF.Replay DShad.TF.State
+
+      - name: Upload Pre Release
+        uses: ncipollo/release-action@v1.14.0
+        with:
+          artifacts: "DShad.TF.Replay-pre-release.zip"
+          tag: replay-pre-release
+          name: "TF.Replay pre-release"
+          prerelease: true
+          allowUpdates: true
+          removeArtifacts: true
+          generateReleaseNotes: true
+          token: ${{ secrets.GITHUB_TOKEN }}
