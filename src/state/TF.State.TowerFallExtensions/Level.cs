@@ -31,6 +31,23 @@ namespace TF.State.TowerFallExtensions
             toSpawn.Added();
         }
 
+        public static void EnsurePlayerIndicators(this Level level)
+        {
+            foreach (var player in level.GetAll<TowerFall.Player>())
+            {
+                if (player.Indicator != null)
+                {
+                    continue;
+                }
+
+                var indicator = new PlayerIndicator(Vector2.Zero, player.PlayerIndex, player.HatState == TowerFall.Player.HatStates.Crown);
+
+                DynamicData.For(player).Set("Indicator", indicator);
+                player.Add(indicator);
+                indicator.OnIntroStart(true);
+            }
+        }
+
         public static void Delete<T>(this Level level) where T : Monocle.Entity
         {
             var entity = level.Layers.SelectMany(layer => layer.Value.Entities)
@@ -477,7 +494,9 @@ namespace TF.State.TowerFallExtensions
             //This is to remove variant sequence entity
             level.DeleteAllByDepth(-10001);
 
-            if (!isTrialsState && gameState.Entities.Hud.VersusStart.CoroutineState > 0)
+            var isIntroRunning = !isTrialsState && gameState.Entities.Hud.VersusStart.CoroutineState > 0;
+
+            if (isIntroRunning)
             {
                 var versusStart = new TowerFall.VersusStart(level.Session);
                 var dynVersusStart = DynamicData.For(versusStart);
@@ -486,6 +505,8 @@ namespace TF.State.TowerFallExtensions
 
                 level.Layers.FirstOrDefault(l => l.Value.Index == versusStart.LayerIndex).Value.Entities.Add(versusStart);
                 versusStart.Added();
+
+                level.EnsurePlayerIndicators();
 
                 try
                 {
@@ -554,6 +575,11 @@ namespace TF.State.TowerFallExtensions
                 {
                     level.RemoveEntity(livePlayer);
                 }
+            }
+
+            if (isIntroRunning)
+            {
+                level.EnsurePlayerIndicators();
             }
 
             //PlayerCorpses

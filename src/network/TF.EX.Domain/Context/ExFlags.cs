@@ -22,6 +22,13 @@ namespace TF.EX.Domain.Context
 
         public static void Push()
         {
+            var owner = StateApi.Current.GetFrameDriver();
+
+            if (!string.IsNullOrEmpty(owner) && owner != Models.Constants.DRIVER_NAME)
+            {
+                return;
+            }
+
             StateApi.Current.SetDriverFlags(CurrentFrame, IsCaptureActive, IsTestMode, IsReplayMode, IsRollbackFrame, FramesToReSimulate);
         }
 

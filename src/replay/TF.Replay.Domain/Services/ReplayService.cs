@@ -678,7 +678,7 @@ namespace TF.Replay.Domain.Services
 
                 if (candidate >= _lastFrame)
                 {
-                    break;
+                    return target;
                 }
 
                 previous = candidate;
