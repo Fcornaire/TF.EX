@@ -19,5 +19,8 @@ namespace TF.State.Domain.Models.Entity.LevelEntity.Platform
 
         [Key(4)]
         public Vector2f MoveAdd { get; set; }
+
+        [Key(5)]
+        public bool IsWaiting { get; set; }
     }
 }

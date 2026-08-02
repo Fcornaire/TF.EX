@@ -32,13 +32,15 @@ namespace TF.State.Patchs.RoundLogic
             {
                 var dump = EntityDumper.Dump(__instance.Session.CurrentLevel);
 
-                if (!Directory.Exists($"{Directory.GetCurrentDirectory()}\\EntitiesDump"))
+                var folder = Path.Combine(Directory.GetCurrentDirectory(), "EntitiesDump");
+
+                if (!Directory.Exists(folder))
                 {
-                    Directory.CreateDirectory($"{Directory.GetCurrentDirectory()}\\EntitiesDump");
+                    Directory.CreateDirectory(folder);
                 }
 
-                var map = (__instance.Session?.MatchSettings?.LevelSystem as VersusLevelSystem).LastLevel.Split("\\").Last().Split(".").FirstOrDefault();
-                var path = Path.Combine($"{Directory.GetCurrentDirectory()}\\EntitiesDump", $"{__instance.Session?.MatchSettings?.LevelSystem?.Theme?.Name}-{map}");
+                var map = Path.GetFileNameWithoutExtension((__instance.Session?.MatchSettings?.LevelSystem as VersusLevelSystem).LastLevel.Replace('\\', '/'));
+                var path = Path.Combine(folder, $"{__instance.Session?.MatchSettings?.LevelSystem?.Theme?.Name}-{map}");
                 File.WriteAllText(path, dump);
             }
         }

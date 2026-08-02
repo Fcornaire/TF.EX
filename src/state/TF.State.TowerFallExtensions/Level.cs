@@ -725,15 +725,15 @@ namespace TF.State.TowerFallExtensions
 
                 if (cachedPickup == null)
                 {
-                    cachedPickup = TowerFall.Pickup.CreatePickup(pickupToLoad.Position.ToTFVector(), pickupToLoad.TargetPosition.ToTFVector(), pickupToLoad.Type.ToTFModel(), pickupToLoad.PlayerIndex);
+                    cachedPickup = pickupToLoad.Type == PickupState.Gem
+                        ? new TowerFall.GemPickup(pickupToLoad.Position.ToTFVector(), pickupToLoad.TargetPosition.ToTFVector())
+                        : TowerFall.Pickup.CreatePickup(pickupToLoad.Position.ToTFVector(), pickupToLoad.TargetPosition.ToTFVector(), pickupToLoad.Type.ToTFModel(), pickupToLoad.PlayerIndex);
                 }
 
                 cachedPickup.LoadState(pickupToLoad);
 
                 level.GetGameplayLayer().Entities.Insert(0, cachedPickup);
 
-                //A pickup built here was never added through the scene: without its PlayerCollider
-                //entry nothing can collect it, so it sits there for the rest of the round.
                 SyncTags(level, cachedPickup);
             }
 

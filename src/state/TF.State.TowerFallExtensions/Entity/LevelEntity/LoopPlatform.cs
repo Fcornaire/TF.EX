@@ -19,6 +19,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                 PositionCounter = dynJumpThru.Get<Vector2>("counter").ToModel(),
                 SinkAmount = dyn.Get<float>("sinkAmount"),
                 MoveAdd = dyn.Get<Vector2>("moveAdd").ToModel(),
+                IsWaiting = dyn.Get<bool>("waiting"),
             };
         }
 
@@ -31,6 +32,8 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             dynJumpThru.Set("counter", toLoad.PositionCounter.ToTFVector());
             dyn.Set("sinkAmount", toLoad.SinkAmount);
             dyn.Set("moveAdd", toLoad.MoveAdd.ToTFVector());
+
+            dyn.Set("waiting", toLoad.IsWaiting);
         }
     }
 }

@@ -14,6 +14,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             return new SwitchBlockControl
             {
                 Timer = timer.Value,
+                IsActive = entity.Active,
             };
         }
 
@@ -23,6 +24,8 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             var timer = dyn.Get<Counter>("timer");
 
             DynamicData.For(timer).Set("counter", toLoad.Timer);
+
+            entity.Active = toLoad.IsActive;
         }
     }
 }

@@ -785,7 +785,7 @@ namespace TF.EX.Domain.Services
             var bytes = MessagePackSerializer.Serialize(NetplayMeta, SerializationOptions.GetContractlessOptions());
 
             var jsonToSave = MessagePackSerializer.ConvertToJson(bytes, SerializationOptions.GetContractlessOptions());
-            File.WriteAllText($"{Directory.GetCurrentDirectory()}\\netplay_meta.json", jsonToSave);
+            File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), "netplay_meta.json"), jsonToSave);
         }
 
         private void LoadConfig()

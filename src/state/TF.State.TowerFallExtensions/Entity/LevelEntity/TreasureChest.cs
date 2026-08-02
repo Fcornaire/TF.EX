@@ -25,14 +25,16 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             var vSpeed = dynTreasureChest.Get<float>("vSpeed");
             var positionCounter = dynTreasureChest.Get<Vector2>("counter");
 
+            var pickupList = pickups.Select(pickup => pickup.ToModel()).ToList();
+
             return new Chest
             {
                 ActualDepth = actualDepth,
                 CurrentAnimId = sprite.CurrentAnimID,
                 Position = entity.Position.ToModel(),
                 AppearCounter = appearCounter?.Value ?? 0,
-                Pickups = pickups[0].ToModel(),
-                PickupList = pickups.Select(pickup => pickup.ToModel()).ToList(),
+                Pickups = pickupList.FirstOrDefault(),
+                PickupList = pickupList,
                 Type = (int)dynTreasureChest.Get<Types>("type"),
                 BottomlessCounter = dynTreasureChest.Get<float>("bottomlessCounter"),
                 State = entity.State.ToModel(),
@@ -67,7 +69,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                 var pickups = dynTreasureChest.Get<List<Pickups>>("pickups");
                 pickups.Clear();
 
-                if (toLoad.PickupList != null && toLoad.PickupList.Any())
+                if (toLoad.PickupList != null)
                 {
                     foreach (var pickup in toLoad.PickupList)
                     {
