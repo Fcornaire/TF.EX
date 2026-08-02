@@ -105,7 +105,7 @@ Right-click the seek bar twice to mark the range, then `G`. The GIF is written n
 <replay folder>/<replay name>_<inFrame>-<outFrame>.gif
 ```
 
-320×240 at 2× scale, capped at 200 captured frames — a longer selection lowers the frame rate rather
+320×240 at 2× scale, capped at 200 captured frames ; a longer selection lowers the frame rate rather
 than being truncated
 
 # API
