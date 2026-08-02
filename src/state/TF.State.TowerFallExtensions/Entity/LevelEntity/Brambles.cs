@@ -39,6 +39,10 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                 OwnerIndex = brambles.OwnerIndex,
                 Position = brambles.Position.ToModel(),
                 PositionCounter = counter.ToModel(),
+                Id = brambles.ID,
+                IsCollidable = brambles.Collidable,
+                IsVisible = brambles.Visible,
+                ActiveTween = brambles.GetFirst<Tween>()?.GetState(),
             };
         }
 
@@ -50,19 +54,11 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             {
                 dynBrambles.Set("Scene", TowerFall.TFGame.Instance.Scene);
                 dynBrambles.Set("Level", TowerFall.TFGame.Instance.Scene as TowerFall.Level);
-
-                //var tags = brambles.Tags.ToList();
-                //brambles.Tags.Clear();
-                //foreach (var tag in tags)
-                //{
-                //    brambles.Tags.Add(tag);
-                //}
             }
 
             dynBrambles.Set("actualDepth", state.ActualDepth);
             dynBrambles.Set("soundPlayed", state.HasSoundPlayed);
-            dynBrambles.Set("tweenedOut", state.HasTweenedOut);
-            dynBrambles.Set("counter", state.PositionCounter.ToTFVector());
+            dynBrambles.Set("ID", state.Id);
 
             Alarm deathAlarm = dynBrambles.Get<Alarm>("deathAlarm");
             deathAlarm.LoadState(state.DeathAlarm);
@@ -74,6 +70,8 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             dynBrambles.Set("counter", state.PositionCounter.ToTFVector());
 
             brambles.Position = state.Position.ToTFVector();
+
+            LoadTween(brambles, dynBrambles, state);
 
             if (state.RidingActualDepth == -1)
             {
@@ -98,6 +96,34 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                     }
                 }
             }
+        }
+
+        private static void LoadTween(TowerFall.Brambles brambles, DynamicData dynBrambles, Brambles state)
+        {
+            brambles.Remove<Tween>();
+
+            if (state.ActiveTween != null)
+            {
+                if (state.HasTweenedOut)
+                {
+                    dynBrambles.Set("tweenedOut", false);
+                    brambles.TweenOutNoSound();
+                }
+                else
+                {
+                    dynBrambles.Invoke("TweenIn");
+                }
+
+                brambles.GetFirst<Tween>()?.LoadState(state.ActiveTween);
+            }
+            else
+            {
+                dynBrambles.Get<Image>("image").Scale = state.IsVisible ? Vector2.One : Vector2.Zero;
+            }
+
+            dynBrambles.Set("tweenedOut", state.HasTweenedOut);
+            brambles.Collidable = state.IsCollidable;
+            brambles.Visible = state.IsVisible;
         }
     }
 }

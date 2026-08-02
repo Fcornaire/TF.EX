@@ -2464,31 +2464,37 @@ namespace TF.State.TowerFallExtensions
         {
             level.DeleteAll<TowerFall.Brambles>();
 
-            var dynData = new DynamicData(typeof(TowerFall.Brambles));
-            var nextId = Calc.Random.Next();
-            dynData.Set("nextID", nextId);
-            int nextBramblesId = nextId;
             foreach (var bramble in gameState.Entities.Brambles)
             {
                 var cachedBramble = ServiceCollections.GetCachedEntity<TowerFall.Brambles>(bramble.ActualDepth);
+                var isFresh = cachedBramble == null;
 
-                if (cachedBramble == null)
+                if (isFresh)
                 {
-                    cachedBramble = TowerFall.Brambles.Create(nextBramblesId, bramble.Position.ToTFVector(), bramble.OwnerIndex, 0, false);
+                    cachedBramble = TowerFall.Brambles.Create(bramble.Id, bramble.Position.ToTFVector(), bramble.OwnerIndex, 0, false);
                 }
 
                 cachedBramble.LoadState(bramble);
                 level.GetGameplayLayer().Entities.Insert(0, cachedBramble);
+                SyncTags(level, cachedBramble);
 
-                foreach (var tag in cachedBramble.Tags)
+                if (isFresh)
                 {
-                    var tagList = level[tag];
-                    if (!tagList.Contains(cachedBramble))
-                    {
-                        tagList.Add(cachedBramble);
-                    }
+                    RestoreBrambleColors(level, cachedBramble);
                 }
             }
+        }
+
+        private static void RestoreBrambleColors(Level level, TowerFall.Brambles brambles)
+        {
+            if (brambles.OwnerIndex < 0)
+            {
+                return;
+            }
+
+            var matchSettings = level.Session.MatchSettings;
+            TowerFall.Brambles.GetBrambleColors(brambles.OwnerIndex, matchSettings.TeamMode, matchSettings.Teams[brambles.OwnerIndex], out var colorA, out var colorB);
+            DynamicData.For(brambles).Get<FlashingImage>("image").StartFlashing(4, colorA, colorB);
         }
 
         private static void LoadIcicles(this GameState gameState, Level level)

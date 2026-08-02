@@ -22,5 +22,6 @@
         ReplaysBrowser = 58,
         LobbyBrowser = 59,
         LobbyBuilder = 60,
+        VersusSelect = 61,
     }
 }

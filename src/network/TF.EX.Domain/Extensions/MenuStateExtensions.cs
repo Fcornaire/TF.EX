@@ -19,6 +19,8 @@ namespace TF.EX.Domain.Extensions
                     return (TowerFall.MainMenu.MenuState)59;
                 case MenuState.LobbyBuilder:
                     return (TowerFall.MainMenu.MenuState)60;
+                case MenuState.VersusSelect:
+                    return (TowerFall.MainMenu.MenuState)61;
                 default:
                     throw new System.NotImplementedException("MenuState not found");
             }
@@ -39,6 +41,8 @@ namespace TF.EX.Domain.Extensions
                     return MenuState.LobbyBrowser;
                 case (TowerFall.MainMenu.MenuState)60:
                     return MenuState.LobbyBuilder;
+                case (TowerFall.MainMenu.MenuState)61:
+                    return MenuState.VersusSelect;
                 default:
                     return MenuState.Unknown;
             }
