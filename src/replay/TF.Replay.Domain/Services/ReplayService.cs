@@ -32,13 +32,13 @@ namespace TF.Replay.Domain.Services
         private bool? _widerSetBeforePlayback;
         private int? _customGoalBeforePlayback;
 
-        private static string ReplaysRoot => $"{Directory.GetCurrentDirectory()}\\Replays";
+        private static string ReplaysRoot => Path.Combine(Directory.GetCurrentDirectory(), "Replays");
 
         private string _month;
 
         public string CurrentMonth => _month ?? "";
 
-        private string ReplaysFolder => string.IsNullOrEmpty(_month) ? ReplaysRoot : $"{ReplaysRoot}\\{_month}";
+        private string ReplaysFolder => string.IsNullOrEmpty(_month) ? ReplaysRoot : Path.Combine(ReplaysRoot, _month);
 
         public string CurrentFolder => ReplaysFolder;
 
@@ -173,7 +173,7 @@ namespace TF.Replay.Domain.Services
 
             _replay.Informations.MatchLength = TimeSpan.FromSeconds(_replay.Record.Count / 60);
 
-            var folder = $"{ReplaysRoot}\\{MonthOf(DateTime.UtcNow)}";
+            var folder = Path.Combine(ReplaysRoot, MonthOf(DateTime.UtcNow));
 
             Directory.CreateDirectory(folder);
 
@@ -215,7 +215,7 @@ namespace TF.Replay.Domain.Services
             {
                 filename = attempt == 0 ? $"{stamp}.tow" : $"{stamp}-{attempt}.tow";
 
-                var candidate = $"{folder}\\{filename}";
+                var candidate = Path.Combine(folder, filename);
 
                 if (!File.Exists(candidate))
                 {
@@ -283,7 +283,7 @@ namespace TF.Replay.Domain.Services
         {
             try
             {
-                var filePath = $"{ReplaysFolder}\\{replayFilename}";
+                var filePath = Path.Combine(ReplaysFolder, replayFilename);
 
                 Models.Replay replay;
 

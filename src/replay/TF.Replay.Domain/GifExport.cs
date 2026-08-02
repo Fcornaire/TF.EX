@@ -244,14 +244,14 @@ namespace TF.Replay.Domain
         {
             if (string.IsNullOrEmpty(folder))
             {
-                folder = $"{Directory.GetCurrentDirectory()}\\Replays";
+                folder = Path.Combine(Directory.GetCurrentDirectory(), "Replays");
             }
 
             var stem = string.IsNullOrEmpty(replayName)
                 ? "replay"
                 : Path.GetFileNameWithoutExtension(replayName);
 
-            return $"{folder}\\{stem}_{inFrame}-{outFrame}.gif";
+            return Path.Combine(folder, $"{stem}_{inFrame}-{outFrame}.gif");
         }
     }
 }
