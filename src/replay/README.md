@@ -1,6 +1,6 @@
 # TF.Replay
 
-Records TowerFall matches and plays them back — frame by frame, seekable, exportable as a GIF.
+Records TowerFall matches and plays them back; frame by frame, seekable, exportable as a GIF.
 
 A replay is not a video: it stores the **inputs** of every frame plus periodic state snapshots, and the
 game re-simulates from them
