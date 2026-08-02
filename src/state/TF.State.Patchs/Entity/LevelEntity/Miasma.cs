@@ -1,10 +1,8 @@
-﻿using HarmonyLib;
-using Monocle; 
+using HarmonyLib;
+using Monocle;
 using TF.State.Domain;
 using TF.State.Domain.Context;
 using TF.State.TowerFallExtensions.Entity.LevelEntity;
-
-using TF.State.Domain.Context;
 namespace TF.State.Patchs.Entity.LevelEntity
 {
     [HarmonyPatch(typeof(TowerFall.Miasma))]
@@ -50,6 +48,14 @@ namespace TF.State.Patchs.Entity.LevelEntity
             __instance.Collidable = result.Collidable;
             __instance.NervesOfSteelCheck = result.NervesOfSteelCheck;
         }
+
+        [HarmonyPrefix]
+        [HarmonyPatch("Update")]
+        public static void Miasma_Update_FreezeCosmetics(TowerFall.Miasma __instance) => CosmeticFreeze.Freeze(__instance);
+
+        [HarmonyPostfix]
+        [HarmonyPatch("Update")]
+        public static void Miasma_Update_UnfreezeCosmetics() => CosmeticFreeze.Unfreeze();
 
         [HarmonyPrefix]
         [HarmonyPatch("Dissipate")]

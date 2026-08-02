@@ -1,4 +1,4 @@
-﻿using HarmonyLib;
+using HarmonyLib;
 using TF.EX.Domain.Interop;
 using MessagePack;
 using Microsoft.Extensions.Logging;
@@ -83,7 +83,7 @@ namespace TF.EX.Domain.Services
 
                 if (TFGame.Instance.Scene is MainMenu)
                 {
-                    (TFGame.Instance.Scene as MainMenu).State = MainMenu.MenuState.VersusOptions;
+                    (TFGame.Instance.Scene as MainMenu).State = Context.MenuReturn.NetplayEntry ?? MainMenu.MenuState.VersusOptions;
                 }
 
                 return false;
@@ -400,7 +400,7 @@ namespace TF.EX.Domain.Services
 
             if (message.Contains("LeaveLobbyForce"))
             {
-                var mainMenu = new MainMenu(MainMenu.MenuState.VersusOptions);
+                var mainMenu = new MainMenu(Context.MenuReturn.NetplayEntry ?? MainMenu.MenuState.VersusOptions);
                 Engine.Instance.Scene = mainMenu;
                 (TFGame.Instance.Scene as Level).Session.MatchSettings.LevelSystem.Dispose();
 

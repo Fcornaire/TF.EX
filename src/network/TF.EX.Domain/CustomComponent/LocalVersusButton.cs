@@ -1,5 +1,6 @@
 using Microsoft.Xna.Framework;
 using Monocle;
+using TF.EX.Domain.Extensions;
 using TowerFall;
 
 namespace TF.EX.Domain.CustomComponent
@@ -43,6 +44,8 @@ namespace TF.EX.Domain.CustomComponent
 
         protected override void MenuAction()
         {
+            MainMenu.VersusMatchSettings.ClearNetplayMode();
+
             MainMenu.CurrentMatchSettings = MainMenu.VersusMatchSettings;
             MainMenu.RollcallMode = MainMenu.RollcallModes.Versus;
             base.MainMenu.State = MainMenu.MenuState.Rollcall;

@@ -59,6 +59,7 @@ namespace TF.EX.Patchs.Scene
         {
             if (!OnlinePlayToggle.IsOn)
             {
+                MainMenu.VersusMatchSettings.ClearNetplayMode();
                 return;
             }
 

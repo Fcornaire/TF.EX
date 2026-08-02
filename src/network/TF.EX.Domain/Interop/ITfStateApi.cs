@@ -1,4 +1,4 @@
-﻿namespace TF.EX.Domain.Interop
+namespace TF.EX.Domain.Interop
 {
     public interface ITfStateApi
     {
@@ -22,6 +22,8 @@
 
         void SetFrameDriver(string ownerModName);
         string GetFrameDriver();
+
+        bool IsSmoothRendering();
 
         void SetDriverFlags(int currentFrame, bool isCaptureActive, bool isTestMode,
                             bool isReplayMode, bool isRollbackFrame, double framesToReSimulate);

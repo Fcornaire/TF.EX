@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Interop;
 using TF.EX.Domain.Ports;
@@ -173,16 +173,10 @@ namespace TF.EX.Domain.Services
                 return;
             }
 
-            if (!FortRise.GameModeRegistry.ModesToVersusGameMode.TryGetValue(VersusModeExtensions.NetplayMode,out var entry))
+            if (!matchSettings.ApplyNetplayMode())
             {
                 _logger.LogWarning("[Replay] Netplay game mode is not registered - playback would run vanilla round logic and diverge");
-                return;
             }
-
-            matchSettings.Mode = entry.Modes;
-            matchSettings.IsCustom = true;
-
-            MonoMod.Utils.DynamicData.For(matchSettings).Set("CustomVersusModeName", entry.Name);
         }
 
         public void RunFrame()

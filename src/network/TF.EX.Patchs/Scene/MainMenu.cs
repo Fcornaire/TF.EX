@@ -1,4 +1,4 @@
-﻿using HarmonyLib;
+using HarmonyLib;
 using TF.EX.Domain.Interop;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -172,16 +172,17 @@ namespace TF.EX.Patchs.Scene
             }
         }
 
-        private static MainMenu.MenuState ResolveLobbyBrowserBackState(MainMenu self)
+        private static MainMenu.MenuState? ResolveNetplayEntryState(MainMenu self)
         {
-            if (WiderSetMenu.IsSelectionState(self.OldState)
-                || self.OldState.ToDomainModel() == Domain.Models.MenuState.VersusSelect)
+            if (WiderSetMenu.IsSelectionState(self.OldState) || self.OldState.ToDomainModel() == Domain.Models.MenuState.VersusSelect)
             {
                 return self.OldState;
             }
 
-            return MainMenu.MenuState.Rollcall;
+            return null;
         }
+
+        private static MainMenu.MenuState ResolveLobbyBrowserBackState(MainMenu self) => ResolveNetplayEntryState(self) ?? MainMenu.MenuState.Rollcall;
 
         private static VersusSelectBanner BuildVersusSelectBanner()
         {
@@ -349,7 +350,11 @@ namespace TF.EX.Patchs.Scene
 
         private static void CreateLobbyBrowser(MainMenu self)
         {
-            MainMenu.VersusMatchSettings.Mode = VersusModeExtensions.NetplayMode;
+            if (!MainMenu.VersusMatchSettings.ApplyNetplayMode())
+            {
+                ServiceCollections.ResolveLogger().LogError<MainMenuPatch>("Netplay game mode is not registered", null);
+            }
+
             MatchVariantsPatchs.DisableUnauthorized(MainMenu.VersusMatchSettings.Variants);
 
             if (variants.Count == 0)
@@ -359,6 +364,7 @@ namespace TF.EX.Patchs.Scene
 
             self.AddLoader("FINDING LOBBIES...");
 
+            Domain.Context.MenuReturn.NetplayEntry = ResolveNetplayEntryState(self);
             self.BackState = ResolveLobbyBrowserBackState(self);
 
             Task.Run(async () =>
