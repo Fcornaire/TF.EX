@@ -83,6 +83,8 @@ namespace TF.EX
                 content.Root.GetRelativePath("imgs/icons8-internet-48.png")
             );
 
+            TF.EX.Domain.CustomComponent.MenuIcons.ConfigureOnline(() => InternetIcon.Subtexture);
+
             context.Registry.GameModes.RegisterVersusGameMode(new NetplayVersusMode());
 
             var commands = new TF.EX.Core.TFCommands();
@@ -100,6 +102,8 @@ namespace TF.EX
             OnInitialize = _ => InitializeApis();
 
             context.Harmony.PatchAll(typeof(Patchs.Engine.TFGamePatch).Assembly);
+
+            Patchs.Scene.WiderSetMenu.PatchSelectionButtons(context.Harmony);
         }
     }
 }

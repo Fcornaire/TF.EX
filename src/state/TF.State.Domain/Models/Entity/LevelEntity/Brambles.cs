@@ -11,8 +11,6 @@ namespace TF.State.Domain.Models.Entity.LevelEntity
         [Key(1)]
         public Vector2f PositionCounter { get; set; }
 
-        //TODO: Hitbox 
-
         [Key(2)]
         public FireControl Fire { get; set; }
         [Key(3)]
@@ -29,5 +27,13 @@ namespace TF.State.Domain.Models.Entity.LevelEntity
         public bool HasTweenedOut { get; set; }
         [Key(9)]
         public int OwnerIndex { get; set; }
+        [Key(10)]
+        public int Id { get; set; }
+        [Key(11)]
+        public bool IsCollidable { get; set; }
+        [Key(12)]
+        public bool IsVisible { get; set; }
+        [Key(13)]
+        public Tween ActiveTween { get; set; }
     }
 }
