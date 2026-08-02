@@ -1,4 +1,4 @@
-﻿using MessagePack;
+using MessagePack;
 using Microsoft.Extensions.Logging;
 using Monocle;
 using MonoMod.Utils;
@@ -487,7 +487,7 @@ namespace TF.EX.Domain.Services
 
                     if (TFGame.Instance.Scene is Level desyncedLevel)
                     {
-                        desyncedLevel.GoToVersusOptions();
+                        desyncedLevel.GoToNetplayEntryMenu();
                     }
 
                     Notification.Create(TFGame.Instance.Scene, "DESYNC DETECTED - match ended", 15, 450);
@@ -503,7 +503,7 @@ namespace TF.EX.Domain.Services
                             await ServiceCollections.ResolveMatchmakingService().LeaveLobby(() => { }, () => { });
                         }).GetAwaiter().GetResult();
 
-                        var mainMenu = new MainMenu(MainMenu.MenuState.VersusOptions);
+                        var mainMenu = new MainMenu(Context.MenuReturn.NetplayEntry ?? MainMenu.MenuState.VersusOptions);
                         Engine.Instance.Scene = mainMenu;
                         (TFGame.Instance.Scene as Level).Session.MatchSettings.LevelSystem.Dispose();
 

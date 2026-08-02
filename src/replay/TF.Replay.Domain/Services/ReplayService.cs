@@ -106,7 +106,7 @@ namespace TF.Replay.Domain.Services
             _lastFrame = 0;
             _fromFile = false;
 
-            if (TowerFall.TFGame.Instance != null)
+            if (TowerFall.TFGame.Instance != null && StateApi()?.IsSmoothRendering() != true)
             {
                 _fixedTimeStepBeforeRecording = TowerFall.TFGame.Instance.IsFixedTimeStep;
                 TowerFall.TFGame.Instance.IsFixedTimeStep = true;

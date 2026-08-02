@@ -20,6 +20,10 @@ namespace TF.State.Domain.Context
 
         public static string FrameDriverOwner;
 
+        public static bool SmoothRendering;
+
+        public static float InterpolationAlpha = 1f;
+
         public static void Reset()
         {
             CurrentFrame = 0;

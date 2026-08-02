@@ -197,7 +197,7 @@ namespace TF.EX.Patchs.Engine
                 if (netplayManager.ConsumeAbortToVersusOptions() && __instance.Scene is TowerFall.Level failedLevel)
                 {
                     TowerFall.Sounds.ui_invalid.Play();
-                    Domain.Extensions.LevelExtensions.GoToVersusOptions(failedLevel);
+                    Domain.Extensions.LevelExtensions.GoToNetplayEntryMenu(failedLevel);
                 }
 
                 TFGame_Update_orig(__instance, gameTime);
@@ -473,6 +473,11 @@ namespace TF.EX.Patchs.Engine
 
         private static void ManageTimeStep(TowerFall.TFGame self)
         {
+            if (StateApi.Current?.IsSmoothRendering() == true)
+            {
+                return;
+            }
+
             switch (self.Scene)
             {
                 case Level _:

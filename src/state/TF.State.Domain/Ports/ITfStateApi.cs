@@ -25,6 +25,8 @@ namespace TF.State.Domain.Ports
         void SetFrameDriver(string ownerModName);
         string GetFrameDriver();
 
+        bool IsSmoothRendering();
+
         void SetDriverFlags(int currentFrame, bool isCaptureActive, bool isTestMode,bool isReplayMode, bool isRollbackFrame, double framesToReSimulate);
 
         void SetRestoring(bool value);
