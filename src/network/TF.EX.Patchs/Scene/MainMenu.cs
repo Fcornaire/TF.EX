@@ -10,6 +10,7 @@ using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Models.WebSocket;
+using TF.EX.Patchs.Entity.MenuItem;
 using TowerFall;
 
 namespace TF.EX.Patchs.Scene
@@ -25,7 +26,7 @@ namespace TF.EX.Patchs.Scene
         private const float BANNER_Y = 185f;
 
         private static readonly string[] LOCAL_BANNER_LINES = { "EVERYONE ON THIS MACHINE.", "GRAB A SECOND CONTROLLER." };
-        private static readonly string[] ONLINE_BANNER_LINES = { "ONE ARCHER ON THIS MACHINE,", "THE REST ARE ONLINE!", "ROLLBACK NETPLAY VIA TF.EX." };
+        private static readonly string[] ONLINE_BANNER_LINES = { "ROLLBACK NETCODE SOLO PLAY,"};
 
         private static bool hasShowedWarning = false;
 
@@ -182,7 +183,7 @@ namespace TF.EX.Patchs.Scene
             return null;
         }
 
-        private static MainMenu.MenuState ResolveLobbyBrowserBackState(MainMenu self) => ResolveNetplayEntryState(self) ?? MainMenu.MenuState.Rollcall;
+        private static MainMenu.MenuState ResolveLobbyBrowserBackState() => Domain.Context.MenuReturn.NetplayEntry ?? MainMenu.MenuState.Rollcall;
 
         private static VersusSelectBanner BuildVersusSelectBanner()
         {
@@ -364,8 +365,8 @@ namespace TF.EX.Patchs.Scene
 
             self.AddLoader("FINDING LOBBIES...");
 
-            Domain.Context.MenuReturn.NetplayEntry = ResolveNetplayEntryState(self);
-            self.BackState = ResolveLobbyBrowserBackState(self);
+            Domain.Context.MenuReturn.NetplayEntry = ResolveNetplayEntryState(self) ?? Domain.Context.MenuReturn.NetplayEntry;
+            self.BackState = ResolveLobbyBrowserBackState();
 
             Task.Run(async () =>
             {
@@ -419,7 +420,7 @@ namespace TF.EX.Patchs.Scene
         [HarmonyPatch("Render")]
         public static void MainMenu_Render(MainMenu __instance)
         {
-            Monocle.Draw.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, DepthStencilState.None, RasterizerState.CullNone);
+            Monocle.Draw.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, DepthStencilState.None, RasterizerState.CullNone, null, __instance.UILayer.Camera.Matrix);
 
             if (__instance.State == MainMenu.MenuState.Rollcall
                 && TowerFall.MainMenu.VersusMatchSettings.Mode.IsNetplay())
@@ -453,10 +454,7 @@ namespace TF.EX.Patchs.Scene
                     var latency = matchmakingService.GetPingTo(seated);
                     var label = $"{latency} MS";
 
-                    var posPing = rollcallElement.Position;
-                    posPing.Y -= 66f;
-
-                    Monocle.Draw.OutlineTextCentered(TFGame.Font, label, posPing, GetPingColor(latency), Color.Black);
+                    Monocle.Draw.OutlineTextCentered(TFGame.Font, label, RollcallLayout.PingAt(rollcallElement), GetPingColor(latency), Color.Black);
                 }
 
                 RenderWaitingForHost(matchmakingService);

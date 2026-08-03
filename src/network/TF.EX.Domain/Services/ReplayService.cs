@@ -15,7 +15,7 @@ namespace TF.EX.Domain.Services
     {
         private const string DriverName = "TF.EX";
         private const int DivergenceLogInterval = 300;
-        private const int PrimingWindowLastFrame = 0;
+        private const int PrimeScanLimit = 30;
 
         private readonly IInputService _inputService;
         private readonly INetplayManager _netplayManager;
@@ -28,6 +28,7 @@ namespace TF.EX.Domain.Services
         private bool _encodingDiffReported;
         private bool _primingDiffReported;
         private bool _playbackPrimed;
+        private int _primingFrame;
         private Level _drivenLevel;
         private Level _outgoingLevel;
 
@@ -118,6 +119,7 @@ namespace TF.EX.Domain.Services
             _primingDiffReported = false;
             _lastDivergenceLogFrame = 0;
             _playbackPrimed = false;
+            _primingFrame = 0;
             ReplayApi.Current.ResetRecording();
         }
 
@@ -155,6 +157,7 @@ namespace TF.EX.Domain.Services
             _primingDiffReported = false;
             _lastDivergenceLogFrame = 0;
             _playbackPrimed = false;
+            _primingFrame = 0;
             _outgoingLevel = _drivenLevel;
         }
 
@@ -204,14 +207,22 @@ namespace TF.EX.Domain.Services
                 return;
             }
 
+            var priming = !_playbackPrimed;
+
+            if (priming)
+            {
+                _playbackPrimed = true;
+                frame = SkipToSpawnedRound(frame);
+                _primingFrame = frame;
+            }
+
             var recordedState = ReplayApi.Current.GetStateAtFrame(frame);
 
             ExFlags.CurrentFrame = frame;
             StateApi.Current.SetCurrentFrame(frame);
 
-            if (!_playbackPrimed)
+            if (priming)
             {
-                _playbackPrimed = true;
                 PrimePlayback(frame, recordedState);
             }
 
@@ -225,8 +236,56 @@ namespace TF.EX.Domain.Services
             }
         }
 
+        private int SkipToSpawnedRound(int frame)
+        {
+            var start = frame;
+
+            for (int scanned = 0; scanned < PrimeScanLimit; scanned++)
+            {
+                if (HasPlayers(ReplayApi.Current.GetStateAtFrame(frame)))
+                {
+                    break;
+                }
+
+                var next = ReplayApi.Current.ConsumeNextRecordFrame();
+
+                if (next < 0)
+                {
+                    break;
+                }
+
+                frame = next;
+            }
+
+            if (frame != start)
+            {
+                _logger.LogDebug("[Replay] Primed at frame {frame}", frame, start, frame - 1);
+            }
+
+            return frame;
+        }
+
+        private bool HasPlayers(byte[] state)
+        {
+            if (state == null)
+            {
+                return false;
+            }
+
+            try
+            {
+                return StateApi.Current.DescribePlayers(state).Length > 0;
+            }
+            catch (Exception e)
+            {
+                _logger.LogWarning(e, "[Replay] Could not read the players of the record being primed");
+
+                return true;
+            }
+        }
+
         /// <summary>
-        /// A live match idles the level while GGRS synchronizes,playback pawns the round exactly where the session-established callback did
+        /// A live match idles the level while GGRS synchronizes,playback make the round exactly where the session-established callback did
         /// </summary>
         private void PrimePlayback(int frame, byte[] recordedState)
         {
@@ -280,14 +339,12 @@ namespace TF.EX.Domain.Services
                 return;
             }
 
-            if (frame <= PrimingWindowLastFrame)
+            if (frame <= _primingFrame)
             {
                 if (!_primingDiffReported)
                 {
                     _primingDiffReported = true;
-                    _logger.LogWarning(
-                        "[Replay] Primed state differs from its own record at frame {frame}",
-                        frame);
+                    _logger.LogWarning("[Replay] Primed state differs from its own record at frame {frame}",frame);
                 }
 
                 return;

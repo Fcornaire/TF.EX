@@ -42,11 +42,15 @@ namespace TF.EX.Patchs.Entity.MenuItem
                 return;
             }
 
-            var anchor = __instance.Position + dynRollcall.Get<Vector2>("ControlIconPos");
+            var input = dynRollcall.Get<TowerFall.PlayerInput>("input");
+            var name = !string.IsNullOrEmpty(seated.Name) ? seated.Name : input?.Name;
 
-            if (dynRollcall.Get<TowerFall.PlayerInput>("input") == null && !string.IsNullOrEmpty(seated.Name))
+            if ((input == null || RollcallLayout.IsWide) && !string.IsNullOrEmpty(name))
             {
-                Draw.OutlineTextCentered(TFGame.Font, seated.Name, anchor + Vector2.UnitY * 15f, Color.White, Color.Black);
+                var archer = ArcherData.Archers[__instance.CharacterIndex];
+                var nameColor = dynRollcall.Get<StateMachine>("state").State == 1 ? archer.ColorB : archer.ColorA;
+
+                Draw.OutlineTextCentered(TFGame.Font, name, RollcallLayout.NameAt(__instance), nameColor, Color.Black);
             }
 
             if (!lobby.IsTeamMode)
@@ -60,7 +64,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
                 : team == Allegiance.Red ? Color.IndianRed
                 : Color.Gray;
 
-            Draw.OutlineTextCentered(TFGame.Font, label, anchor + Vector2.UnitY * 24f, color, Color.Black);
+            Draw.OutlineTextCentered(TFGame.Font, label, RollcallLayout.TeamAt(__instance), color, Color.Black);
         }
 
         [HarmonyPostfix]
