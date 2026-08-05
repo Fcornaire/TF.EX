@@ -33,13 +33,11 @@ namespace TF.State.Patchs.SFX
 
             var dynSFX = DynamicData.For(__instance);
 
-            if (__instance.Data != null && Monocle.Audio.MasterVolume > 0f)
+            if (__instance.Data != null)
             {
                 var sfxService = TF.State.Domain.ServiceCollections.ResolveSFXService();
                 dynSFX.Invoke("AddToPlayedList", panX, volume);
 
-                volume *= Monocle.Audio.MasterVolume;
-                var pitch = __instance.ObeysMasterPitch ? Monocle.Audio.MasterPitch : 0f;
                 var pan = Monocle.SFX.CalculatePan(panX);
 
                 var sfxToPlay = new TF.State.Domain.Models.SFX
@@ -47,8 +45,8 @@ namespace TF.State.Patchs.SFX
                     Frame = (int)Monocle.Engine.Instance.Scene.FrameCounter,
                     Name = sfxService.GetSoundEffectName(__instance.Data),
                     Volume = volume,
-                    Pitch = pitch,
                     Pan = pan,
+                    ObeysMasterPitch = __instance.ObeysMasterPitch,
                     Data = __instance.Data
                 };
 

@@ -11,8 +11,9 @@ namespace TF.State.Domain.Models.Layer
         [Key(1)]
         public IEnumerable<BGElement> ForegroundElements { get; set; } = Enumerable.Empty<BGElement>();
 
-        [Key(2)]
-        public float LightingLayerSine { get; set; }
+        // [Key(2)]
+        // public float LightingLayerSine { get; set; }
+
         [Key(3)]
         public Dictionary<int, double> GameplayLayerActualDepthLookup { get; set; } = new Dictionary<int, double>();
 

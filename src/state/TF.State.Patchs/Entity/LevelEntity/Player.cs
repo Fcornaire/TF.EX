@@ -31,5 +31,19 @@ namespace TF.State.Patchs.Entity.LevelEntity
         {
             Calc.CalcPatch.UnregisterRng();
         }
+
+        [HarmonyPrefix]
+        [HarmonyPatch("LoseHat")]
+        public static void Player_LoseHat_Prefix()
+        {
+            Calc.CalcPatch.RegisterRng();
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("LoseHat")]
+        public static void Player_LoseHat_Postfix()
+        {
+            Calc.CalcPatch.UnregisterRng();
+        }
     }
 }

@@ -53,7 +53,6 @@ namespace TF.EX.Utils
                     var a = Decode(record1[i]);
                     var b = Decode(record2[i]);
 
-                    b.MatchStats = a.MatchStats;
                     b.Session.Scores = a.Session.Scores;
                     b.Session.OldScores = a.Session.OldScores;
 

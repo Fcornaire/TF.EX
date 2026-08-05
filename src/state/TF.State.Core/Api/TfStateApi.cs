@@ -34,10 +34,7 @@ namespace TF.State.Core.Api
                 return null;
             }
 
-            var gameState = level.GetState();
-            gameState.SFXs = Enumerable.Empty<SFXState>();
-
-            return MessagePackSerializer.Serialize(gameState, StateSerialization.Options);
+            return MessagePackSerializer.Serialize(level.GetState(), StateSerialization.Options);
         }
 
         public bool LoadGameStateBytes(byte[] state)
@@ -161,20 +158,14 @@ namespace TF.State.Core.Api
             return gameState.Frame;
         }
 
-        public byte[][] CaptureGameStateAndRecording()
+        public byte[] CaptureGameState()
         {
             if (TFGame.Instance?.Scene is not Level level)
             {
                 return null;
             }
 
-            var gameState = level.GetState();
-            var full = MessagePackSerializer.Serialize(gameState, StateSerialization.Options);
-
-            gameState.SFXs = Enumerable.Empty<SFXState>();
-            var forRecording = MessagePackSerializer.Serialize(gameState, StateSerialization.Options);
-
-            return new[] { full, forRecording };
+            return MessagePackSerializer.Serialize(level.GetState(), StateSerialization.Options);
         }
 
         public int GetFrameOf(byte[] state)

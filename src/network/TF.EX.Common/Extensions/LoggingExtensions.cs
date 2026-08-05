@@ -14,6 +14,11 @@ namespace TF.EX.Common.Extensions
             Log<T>(logger, LogLevel.Debug, $"{message}", null);
         }
 
+        public static void LogWarning<T>(this ILogger logger, string message)
+        {
+            Log<T>(logger, LogLevel.Warning, $"{message}", null);
+        }
+
         public static void LogError<T>(this ILogger logger, string message, Exception exception = null)
         {
             Log<T>(logger, LogLevel.Error, $"{message}", exception);

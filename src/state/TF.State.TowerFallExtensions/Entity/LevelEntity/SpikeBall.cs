@@ -70,7 +70,8 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                 IsFirstHalf = isFirstHalf,
                 ShakeCounter = counter.GetState(),
                 SpinTimer = SpikeballOwnedState.GetSpinTimer(entity),
-                ActualDepth = dynSpikeBall.Get<double>("actualDepth")
+                ActualDepth = dynSpikeBall.Get<double>("actualDepth"),
+                SpinRate = dynSpikeBall.Get<float>("spinRate")
             };
         }
 
@@ -91,7 +92,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             counter.LoadState(toLoad.ShakeCounter);
 
             SpikeballOwnedState.SetSpinTimer(entity, toLoad.SpinTimer);
-            SpikeballOwnedState.ApplySpinRate(entity, toLoad.SpinTimer);
+            dynSpikeBall.Set("spinRate", toLoad.SpinRate);
 
             dynSpikeBall.Invoke("UpdatePosition");
         }

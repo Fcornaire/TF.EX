@@ -18,7 +18,7 @@ namespace TF.State.Domain.Ports
 
         int RestoreGameStateBytes(byte[] state);
 
-        byte[][] CaptureGameStateAndRecording();
+        byte[] CaptureGameState();
 
         int GetFrameOf(byte[] state);
 
