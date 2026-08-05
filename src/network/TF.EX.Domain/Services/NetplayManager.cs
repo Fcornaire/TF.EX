@@ -378,23 +378,15 @@ namespace TF.EX.Domain.Services
                     }
                 }
 
-                //TODO: find a way to properly detect desynch
-                //if (_events.Any(s => s.Contains(Event.DesyncDetected.ToString())) && !HaveFramesToReSimulate())
-                //{
-                //    if (_netplayMode == NetplayMode.Server)
-                //    {
-                //        Sounds.ui_invalid.Play();
-                //        Notification.Create(TFGame.Instance.Scene, "Game desynchronized!", 10, 100, true);
-                //    }
+                var desynchStrings = _events.Where(s => s.Contains(Event.DesyncDetected.ToString())).ToList();
 
-                //    var desynchStrings = _events.Where(s => s.Contains(Event.DesyncDetected.ToString())).ToList();
-
-                //    foreach (var desynchString in desynchStrings)
-                //    {
-                //        var frame = Int32.Parse(desynchString.Split(new[] { "frame" }, StringSplitOptions.None)[1].Split(',')[0].Trim());
-                //        _logger.LogDebug<NetplayManager>("Desynched at " + frame);
-                //    }
-                //}
+                if (desynchStrings.Count > 0)
+                {
+                    foreach (var desynchString in desynchStrings)
+                    {
+                        _logger.LogWarning<NetplayManager>(desynchString);
+                    }
+                }
             }
         }
 

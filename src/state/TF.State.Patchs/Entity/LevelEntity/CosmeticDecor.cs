@@ -114,35 +114,4 @@ namespace TF.State.Patchs.Entity.LevelEntity
         public static bool PlayerHair_Update() => !CosmeticFreeze.ShouldFreeze;
     }
 
-    [HarmonyPatch(typeof(TowerFall.DefaultHat))]
-    internal class DefaultHatPatch
-    {
-        [HarmonyPrefix]
-        [HarmonyPatch("Update")]
-        public static bool DefaultHat_Update() => !CosmeticFreeze.ShouldFreeze;
-    }
-
-    [HarmonyPatch(typeof(TowerFall.SteelHat))]
-    internal class SteelHatPatch
-    {
-        [HarmonyPrefix]
-        [HarmonyPatch("Update")]
-        public static bool SteelHat_Update() => !CosmeticFreeze.ShouldFreeze;
-    }
-
-    [HarmonyPatch(typeof(TowerFall.WoodenHat))]
-    internal class WoodenHatPatch
-    {
-        [HarmonyPrefix]
-        [HarmonyPatch("Update")]
-        public static bool WoodenHat_Update() => !CosmeticFreeze.ShouldFreeze;
-    }
-
-    [HarmonyPatch(typeof(TowerFall.Crown))]
-    internal class CrownPatch
-    {
-        [HarmonyPrefix]
-        [HarmonyPatch("Update")]
-        public static bool Crown_Update() => !CosmeticFreeze.ShouldFreeze;
-    }
 }

@@ -170,5 +170,8 @@ namespace TF.State.Domain.Models.Entity.LevelEntity.Player
 
         [Key(54)]
         public float SpamShotCounter { get; set; }
+
+        [Key(55)]
+        public int HatState { get; set; }
     }
 }

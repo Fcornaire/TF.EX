@@ -12,6 +12,9 @@ namespace TF.State.Domain.Ports
 
         void Clear();
         IEnumerable<SFX> Get();
+        void SaveSnapshot(int frame);
+        void RestoreSnapshot(int frame);
+        void ClearSnapshots();
         void Load(IEnumerable<SFX> sFXes);
         void Reset();
         void Synchronize(int currentFrame, bool isTestMode);

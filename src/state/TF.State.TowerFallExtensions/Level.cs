@@ -158,22 +158,13 @@ namespace TF.State.TowerFallExtensions
             var rngService = ServiceCollections.ResolveRngService();
             var sfxService = ServiceCollections.ResolveSFXService();
             var sessionService = ServiceCollections.ResolveSessionService();
+            var matchStatsService = ServiceCollections.ResolveMatchStatsService();
 
             gameState.Frame = StateFlags.CurrentFrame;
 
             gameState.AddJumpPadsState(self);
 
-            if (!StateFlags.IsTestMode)
-            {
-                gameState.SFXs = sfxService.Get().Select(sfx => new SFXState
-                {
-                    Frame = sfx.Frame,
-                    Name = sfx.Name,
-                    Pan = sfx.Pan,
-                    Pitch = sfx.Pitch,
-                    Volume = sfx.Volume,
-                });
-            }
+            sfxService.SaveSnapshot(gameState.Frame);
             gameState.AddRoundLogicState(self);
             gameState.Entities.Hud = hudService.Get();
             gameState.AddPlayersState(self);
@@ -220,11 +211,12 @@ namespace TF.State.TowerFallExtensions
             gameState.Session.BramblesStartingState = sessionService.GetBramblesStartingState();
             gameState.Rng = rngService.Get();
 
-            gameState.MatchStats = self.Session.MatchStats.Select(stat => stat.ToDomain()).ToArray();
+            matchStatsService.SaveSnapshot(gameState.Frame, self.Session.MatchStats);
 
             gameState.AddCrackedPlatform(self);
             gameState.AddCrackedWalls(self);
             gameState.AddSpikeball(self);
+            gameState.AddHats(self);
             gameState.AddExplosions(self);
             gameState.AddBGMushrooms(self);
 
@@ -247,15 +239,7 @@ namespace TF.State.TowerFallExtensions
             sessionService.LoadRoundData(gameState.Entities.RoundData);
 
             sfxService.UpdateLastRollbackFrame(gameState.Frame);
-            sfxService.Load(gameState.SFXs.Select(sfx => new TF.State.Domain.Models.SFX
-            {
-                Frame = sfx.Frame,
-                Name = sfx.Name,
-                Pan = sfx.Pan,
-                Pitch = sfx.Pitch,
-                Volume = sfx.Volume,
-                Data = null,
-            }));
+            sfxService.RestoreSnapshot(gameState.Frame);
 
             //JumpPads load
             var inGamejumpPads = level.GetAll<TowerFall.JumpPad>();
@@ -777,6 +761,9 @@ namespace TF.State.TowerFallExtensions
             //SpikeBall load
             gameState.LoadSpikeBall(level);
 
+            //Hat load
+            gameState.LoadHats(level);
+
             //Explosion load
             gameState.LoadExplosions(level);
 
@@ -830,18 +817,10 @@ namespace TF.State.TowerFallExtensions
             gameState.LoadDummyHeads(level);
             gameState.LoadTrialsControl(level);
 
-            var sine = dynLightingLayer.Get<SineWave>("sine");
-            sine.UpdateAttributes(gameState.Layer.LightingLayerSine);
-
             //Rng
             rngService.LoadState(gameState.Rng);
 
-            var matchStats = gameState.MatchStats.ToArray();
-
-            for (int seat = 0; seat < matchStats.Length && seat < level.Session.MatchStats.Length; seat++)
-            {
-                level.Session.MatchStats[seat] = matchStats[seat].ToTF();
-            }
+            ServiceCollections.ResolveMatchStatsService().RestoreSnapshot(gameState.Frame, level.Session.MatchStats);
 
             level.PostLoad(gameState);
 
@@ -1199,16 +1178,8 @@ namespace TF.State.TowerFallExtensions
             //    gameState.Layer.ForegroundElements = fgs;
             //}
 
-            var dynLightingLayer = DynamicData.For(level.LightingLayer);
-
-            var sineWave = dynLightingLayer.Get<SineWave>("sine");
-            gameState.Layer.LightingLayerSine = sineWave.Counter;
-
-            level.DeleteAll<TowerFall.Hat>(); //TODO: Remove and save hats
-
             var dynGameplayLayer = DynamicData.For(level.GetGameplayLayer());
             var actualDepthLookup = dynGameplayLayer.Get<Dictionary<int, double>>("actualDepthLookup");
-            actualDepthLookup.Remove(-52);
 
             actualDepthLookup.Remove(-600); //TODO: Miasma
 
@@ -1244,6 +1215,90 @@ namespace TF.State.TowerFallExtensions
                 var state = spikeball.GetState();
                 gameState.Entities.Spikeball = state;
                 ServiceCollections.AddEntityToCache(state.ActualDepth, spikeball);
+            }
+        }
+
+        private static void AddHats(this GameState game, Level level)
+        {
+            var live = level.GetAll<TowerFall.Hat>().ToArray();
+            var pending = level.GetAllToBeSpawned<TowerFall.Hat>().ToArray();
+
+            foreach (TowerFall.Hat hat in live)
+            {
+                var state = hat.GetState();
+                game.Entities.Hats.Add(state);
+                ServiceCollections.AddEntityToCache(state.ActualDepth, hat);
+            }
+
+            foreach (TowerFall.Hat hat in pending)
+            {
+                var state = hat.GetState();
+                state.Pending = true;
+                game.Entities.Hats.Add(state);
+            }
+        }
+
+        private static readonly System.Random _hatRebuildRandom = new System.Random(0);
+
+        private static void LoadHats(this GameState gameState, TowerFall.Level level)
+        {
+            level.DeleteAll<TowerFall.Hat>();
+
+            level[GameTags.Hat].RemoveAll(entity => entity is TowerFall.Hat);
+
+            var ambientRandom = Monocle.Calc.Random;
+            Monocle.Calc.Random = _hatRebuildRandom;
+
+            try
+            {
+                gameState.RebuildHats(level);
+            }
+            finally
+            {
+                Monocle.Calc.Random = ambientRandom;
+            }
+        }
+
+        private static void RebuildHats(this GameState gameState, TowerFall.Level level)
+        {
+            foreach (var toLoad in gameState.Entities.Hats.ToArray())
+            {
+                var hat = toLoad.Pending ? null : ServiceCollections.GetCachedEntity<TowerFall.Hat>(toLoad.ActualDepth);
+
+                if (hat == null)
+                {
+                    var hatState = (TowerFall.Player.HatStates)toLoad.HatState;
+                    var hasOwner = toLoad.PlayerIndex >= 0 && toLoad.PlayerIndex < TFGame.Characters.Length;
+
+                    if (!hasOwner && hatState != TowerFall.Player.HatStates.Crown)
+                    {
+                        continue;
+                    }
+
+                    hat = TowerFall.Hat.CreateHat(
+                        hasOwner ? TowerFall.ArcherData.Get(TFGame.Characters[toLoad.PlayerIndex], TFGame.AltSelect[toLoad.PlayerIndex]) : null,
+                        hasOwner ? level.Session.MatchSettings.GetPlayerAllegiance(toLoad.PlayerIndex) : TowerFall.Allegiance.Neutral,
+                        hatState,
+                        toLoad.Position.ToTFVector(),
+                        null,
+                        toLoad.Flipped,
+                        toLoad.PlayerIndex);
+                }
+
+                if (hat == null)
+                {
+                    continue;
+                }
+
+                hat.LoadState(toLoad);
+
+                if (toLoad.Pending)
+                {
+                    DynamicData.For(level.GetGameplayLayer()).Get<List<Monocle.Entity>>("toAdd")?.Add(hat);
+                    continue;
+                }
+
+                level.GetGameplayLayer().Entities.Insert(0, hat);
             }
         }
 

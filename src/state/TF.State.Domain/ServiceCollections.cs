@@ -17,6 +17,7 @@ namespace TF.State.Domain
         private static ISessionService _sessionService;
         private static IHUDService _hudService;
         private static ISFXService _sfxService;
+        private static IMatchStatsService _matchStatsService;
         private static IAPIManager _apiManager;
         private static IAppCache _cache;
         private static ILogger _logger;
@@ -33,6 +34,7 @@ namespace TF.State.Domain
         public static ISessionService ResolveSessionService() => _sessionService ??= new SessionService(ResolveStateContext());
         public static IHUDService ResolveHUDService() => _hudService ??= new HUDService(ResolveStateContext());
         public static ISFXService ResolveSFXService() => _sfxService ??= new SFXService(ResolveStateContext());
+        public static IMatchStatsService ResolveMatchStatsService() => _matchStatsService ??= new MatchStatsService();
         public static IAPIManager ResolveAPIManager() => _apiManager ??= new APIManager();
 
         private static IAppCache Cache
@@ -103,6 +105,8 @@ namespace TF.State.Domain
         {
             PurgeCachedPickup();
             ResolveHUDService().Update(new Models.Entity.HUD.HUD());
+            ResolveSFXService().ClearSnapshots();
+            ResolveMatchStatsService().Reset();
         }
 
         private static void PurgeCachedPickup()

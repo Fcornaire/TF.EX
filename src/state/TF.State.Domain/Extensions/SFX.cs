@@ -14,8 +14,8 @@ namespace TF.State.Domain.Extensions
                 (BindingFlags.NonPublic | BindingFlags.Instance, null, CallingConventions.Any, new[] { typeof(SoundEffect) }, null);
             SoundEffectInstance soundEffectInstance = (SoundEffectInstance)soundEffectInstanceConstructor.Invoke(new object[] { self.Data });
 
-            soundEffectInstance.Volume = self.Volume;
-            soundEffectInstance.Pitch = self.Pitch;
+            soundEffectInstance.Volume = Math.Clamp(self.Volume * Monocle.Audio.MasterVolume, 0f, 1f);
+            soundEffectInstance.Pitch = Math.Clamp(self.Pitch + (self.ObeysMasterPitch ? Monocle.Audio.MasterPitch : 0f), -1f, 1f);
             soundEffectInstance.Pan = self.Pan;
 
             return soundEffectInstance;

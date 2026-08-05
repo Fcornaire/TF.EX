@@ -22,17 +22,15 @@ namespace TF.State.Patchs.SFX
 
             if (StateFlags.IsRestoring)
             {
-                return true; //Ignore SFXs on the first frame of a rollback (Coroutines update might play a sound)
+                return false; //Ignore SFXs on the first frame of a rollback (Coroutines update might play a sound)
             }
 
             var dynSFX = DynamicData.For(__instance);
 
-            if (__instance.Data != null && !(Audio.MasterVolume <= 0f))
+            if (__instance.Data != null)
             {
                 var sfxService = ServiceCollections.ResolveSFXService();
                 dynSFX.Invoke("AddToPlayedList", panX, volume);
-
-                volume *= Audio.MasterVolume;
 
                 var sfxToPlay = new TF.State.Domain.Models.SFX
                 {

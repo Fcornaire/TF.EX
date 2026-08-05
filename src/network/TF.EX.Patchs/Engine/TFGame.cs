@@ -1,4 +1,4 @@
-using HarmonyLib;
+﻿using HarmonyLib;
 using TF.EX.Domain.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -186,12 +186,6 @@ namespace TF.EX.Patchs.Engine
                 return false;
             }
 
-            if (!CanRunNetplayFrames(__instance.Scene, netplayManager))
-            {
-                TFGame_Update_orig(__instance, gameTime);
-                return false;
-            }
-
             if (netplayManager.HasFailedInitialConnection())
             {
                 if (netplayManager.ConsumeAbortToVersusOptions() && __instance.Scene is TowerFall.Level failedLevel)
@@ -200,6 +194,12 @@ namespace TF.EX.Patchs.Engine
                     Domain.Extensions.LevelExtensions.GoToNetplayEntryMenu(failedLevel);
                 }
 
+                TFGame_Update_orig(__instance, gameTime);
+                return false;
+            }
+
+            if (!CanRunNetplayFrames(__instance.Scene, netplayManager))
+            {
                 TFGame_Update_orig(__instance, gameTime);
                 return false;
             }
@@ -395,18 +395,18 @@ namespace TF.EX.Patchs.Engine
                         ExFlags.CurrentFrame = GGRSFFI.netplay_current_frame();
                         StateApi.Current.SetCurrentFrame(ExFlags.CurrentFrame);
 
-                        var captured = StateApi.Current.CaptureGameStateAndRecording();
+                        var captured = StateApi.Current.CaptureGameState();
 
-                        netplayManager.SaveGameState(captured[0]);
+                        netplayManager.SaveGameState(captured);
 
                         if (!netplayManager.IsReplayMode())
                         {
-                            replayService.AddRecord(captured[1], ExFlags.CurrentFrame);
+                            replayService.AddRecord(captured, ExFlags.CurrentFrame);
                         }
 
                         if (netplayManager.IsTestMode())
                         {
-                            syncTestUtilsService.AddFrame(ExFlags.CurrentFrame, captured[0]);
+                            syncTestUtilsService.AddFrame(ExFlags.CurrentFrame, captured);
                         }
 
                         break;
@@ -427,6 +427,8 @@ namespace TF.EX.Patchs.Engine
                         break;
                     case NetplayRequest.AdvanceFrame:
                         netplayManager.AdvanceGameState();
+
+                        DynamicData.For(TFGame.Instance.Scene).Set("FrameCounter", (float)GGRSFFI.netplay_current_frame());
 
                         _mInputUpdate.Invoke(null, null);
                         level.Update();

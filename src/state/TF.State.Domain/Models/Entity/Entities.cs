@@ -108,5 +108,8 @@ namespace TF.State.Domain.Models.Entity
 
         [Key(39)]
         public ICollection<DummyHead> DummyHeads { get; set; } = new List<DummyHead>();
+
+        [Key(40)]
+        public ICollection<Hat> Hats { get; set; } = new List<Hat>();
     }
 }

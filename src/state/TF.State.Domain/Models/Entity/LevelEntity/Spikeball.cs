@@ -16,5 +16,7 @@ namespace TF.State.Domain.Models.Entity.LevelEntity
         public float SpinTimer { get; set; }
         [Key(4)]
         public double ActualDepth { get; set; }
+        [Key(5)]
+        public float SpinRate { get; set; }
     }
 }

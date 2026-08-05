@@ -16,6 +16,8 @@ namespace TF.State.Domain.Models
         public float Pitch { get; set; }
         [Key(4)]
         public float Pan { get; set; }
+        [Key(5)]
+        public bool ObeysMasterPitch { get; set; }
 
         [IgnoreMember]
         public SoundEffect Data { get; set; }

@@ -18,7 +18,7 @@ namespace TF.EX.Domain.Interop
         void StepOwnedControllers();
 
         int RestoreGameStateBytes(byte[] state);
-        byte[][] CaptureGameStateAndRecording();
+        byte[] CaptureGameState();
 
         void SetFrameDriver(string ownerModName);
         string GetFrameDriver();

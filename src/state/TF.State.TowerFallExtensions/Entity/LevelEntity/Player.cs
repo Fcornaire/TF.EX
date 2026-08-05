@@ -139,7 +139,8 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                 TriggerArrowDepths = triggerArrowDepths,
                 CanDoubleJump = dynPlayer.Get<bool>("canDoubleJump"),
                 ArrowRegenCounter = dynPlayer.Get<Counter>("arrowRegenCounter").Value,
-                ShieldRegenCounter = dynPlayer.Get<Counter>("shieldRegenCounter").Value
+                ShieldRegenCounter = dynPlayer.Get<Counter>("shieldRegenCounter").Value,
+                HatState = (int)entity.HatState
             };
         }
 
@@ -180,8 +181,6 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             dyingCounter.Set("counter", toLoad.DyingCounter);
             var flapBounceCounter = DynamicData.For(dynPlayer.Get<Counter>("flapBounceCounter"));
             flapBounceCounter.Set("counter", toLoad.FlapBounceCounter);
-            //Gates MatchStats.SpamShots, which is in the checksum: a rollback that does not rewind it
-            //re-evaluates the shot against a stale counter and mis-counts.
             var spamShotCounter = DynamicData.For(dynPlayer.Get<Counter>("spamShotCounter"));
             spamShotCounter.Set("counter", toLoad.SpamShotCounter);
             var wingsFireCounter = dynPlayer.Get<Counter>("wingsFireCounter");
@@ -283,6 +282,17 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             else
             {
                 entity.TargetCollider = null;
+            }
+
+            if ((int)entity.HatState != toLoad.HatState)
+            {
+                dynPlayer.Set("HatState", (TowerFall.Player.HatStates)toLoad.HatState);
+                dynPlayer.Invoke("InitHead");
+
+                if (entity.Hair != null)
+                {
+                    entity.Hair.Visible = toLoad.HatState != (int)TowerFall.Player.HatStates.Normal;
+                }
             }
 
             var body = dynPlayer.Get<Monocle.Sprite<string>>("bodySprite");

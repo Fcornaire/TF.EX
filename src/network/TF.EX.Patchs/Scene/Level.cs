@@ -1,4 +1,4 @@
-using HarmonyLib;
+﻿using HarmonyLib;
 using TF.EX.Domain.Interop;
 using TF.EX.Domain.Extensions;
 using Microsoft.Xna.Framework;
@@ -52,8 +52,15 @@ namespace TF.EX.Patchs.Scene
 
         [HarmonyPrefix]
         [HarmonyPatch("Update")]
-        public static void Level_Update__Prefix(Level __instance)
+        public static bool Level_Update__Prefix(Level __instance, out bool __state)
         {
+            __state = IsAwaitingSynchronization();
+
+            if (__state)
+            {
+                return false;
+            }
+
             if (ExFlags.IsCaptureActive || ExFlags.HasFramesToReSimulate)
             {
                 SetEngineTimeMult?.Invoke(TFGame.TimeRate); //In fixed timestep, TimeMult = TimeRate
@@ -61,12 +68,37 @@ namespace TF.EX.Patchs.Scene
             }
 
             AddPlayersIndicators(__instance);
+
+            return true;
+        }
+
+        private static bool IsAwaitingSynchronization()
+        {
+            var mode = TowerFall.MainMenu.VersusMatchSettings?.Mode;
+
+            if (mode == null || !mode.Value.IsNetplay())
+            {
+                return false;
+            }
+
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+
+            return !netplayManager.IsSynchronized()
+                && !netplayManager.IsReplayMode()
+                && !netplayManager.IsTestMode()
+                && !netplayManager.HasFailedInitialConnection()
+                && !netplayManager.IsDisconnected();
         }
 
         [HarmonyPostfix]
         [HarmonyPatch("Update")]
-        public static void Level_Update__Postfix(Level __instance)
+        public static void Level_Update__Postfix(Level __instance, bool __state)
         {
+            if (__state)
+            {
+                return;
+            }
+
             var netplayManager = ServiceCollections.ResolveNetplayManager();
 
             netplayManager.SetIsRollbackFrame(false); //Mark the end of the First RBF
