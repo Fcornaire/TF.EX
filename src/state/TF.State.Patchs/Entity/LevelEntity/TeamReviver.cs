@@ -9,7 +9,6 @@ using TowerFall;
 using TF.State.Domain.Context;
 namespace TF.State.Patchs.Entity.LevelEntity
 {
-    //TODO: need to finish
     [HarmonyPatch(typeof(TeamReviver))]
     public class TeamReviverPatch
     {
@@ -49,6 +48,7 @@ namespace TF.State.Patchs.Entity.LevelEntity
             if (counter < 0f)
             {
                 dyn.Set(SEQUENCE_COUNTER, 0f);
+                DespawnGhost(__instance);
                 return;
             }
 
@@ -80,6 +80,18 @@ namespace TF.State.Patchs.Entity.LevelEntity
             {
                 __instance.Level.GetPlayer(__instance.Corpse.PlayerIndex)?.Unfreeze();
                 __instance.RemoveSelf();
+            }
+        }
+
+        private static void DespawnGhost(TeamReviver self)
+        {
+            foreach (PlayerGhost ghost in self.Level[Monocle.GameTags.PlayerGhost])
+            {
+                if (ghost.PlayerIndex == self.Corpse.PlayerIndex)
+                {
+                    ghost.Despawn(self.Corpse);
+                    break;
+                }
             }
         }
 

@@ -919,7 +919,7 @@ namespace TF.EX.Domain.Services
             var blue = ownLobby.Players.Count(pl => pl.Team == (int)Allegiance.Blue);
             var red = ownLobby.Players.Count(pl => pl.Team == (int)Allegiance.Red);
 
-            return blue + red == ownLobby.Players.Count && blue == red && blue > 0;
+            return blue + red == ownLobby.Players.Count && blue > 0 && red > 0;
         }
 
         public void ResetLobbies()

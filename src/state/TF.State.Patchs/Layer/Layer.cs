@@ -1,11 +1,7 @@
 ﻿using HarmonyLib;
-using MonoMod.Utils;
 using TF.State.Domain;
-using TF.State.Domain.Context;
-using TF.State.TowerFallExtensions.Layer;
 using TowerFall;
 
-using TF.State.Domain.Context;
 namespace TF.State.Patchs.Layer
 {
     [HarmonyPatch(typeof(Monocle.Layer))]
@@ -50,26 +46,6 @@ namespace TF.State.Patchs.Layer
             {
                 var session = sessionService.GetSession();
                 session.Miasma = TF.State.Domain.Models.Miasma.Default(); //FIX
-            }
-        }
-
-        [HarmonyPrefix]
-        [HarmonyPatch("UpdateEntityList")]
-        public static void Layer_UpdateEntityList(Monocle.Layer __instance)
-        {
-            if (__instance.IsGameplayLayer())
-            {
-                if (StateFlags.IsRollbackFrame && !(TFGame.Instance.Scene is LevelLoaderXML)) //Remove entities from the precedent frame (but on a level only)
-                {
-                    var dynLayer = DynamicData.For(__instance);
-                    var toAdd = dynLayer.Get<List<Monocle.Entity>>("toAdd");
-                    var toRemove = dynLayer.Get<HashSet<Monocle.Entity>>("toRemove");
-                    var toRemoveCache = dynLayer.Get<HashSet<Monocle.Entity>>("toRemoveCache");
-
-                    toAdd.Clear();
-                    toRemove.Clear();
-                    toRemoveCache.Clear();
-                }
             }
         }
     }

@@ -11,8 +11,6 @@ namespace TF.EX.Patchs
     {
         private static List<string> UnauthorizedVariant =
         [
-            //TODO: need to finish
-            "TeamRevive",
             //TODO: would need some work
             "TreasureDraft"
         ];

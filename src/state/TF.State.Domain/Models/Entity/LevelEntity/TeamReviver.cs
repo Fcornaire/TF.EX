@@ -55,5 +55,8 @@ namespace TF.State.Domain.Models.Entity.LevelEntity
 
         [Key(16)]
         public float ReviveSequenceCounter { get; set; }
+
+        [Key(17)]
+        public Component.SineWave ArrowSine { get; set; }
     }
 }

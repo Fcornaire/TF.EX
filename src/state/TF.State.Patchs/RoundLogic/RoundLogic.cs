@@ -256,28 +256,6 @@ namespace TF.State.Patchs.RoundLogic
             }
         }
 
-        [HarmonyPostfix]
-        [HarmonyPatch("OnUpdate")]
-        public static void RoundLogic_OnUpdate(TowerFall.RoundLogic __instance)
-        {
-
-            var miasma = Traverse.Create(__instance).Field("miasma").GetValue<TowerFall.Miasma>();
-
-            if (StateFlags.HasFramesToReSimulate && __instance.Session.CurrentLevel.Get<TowerFall.Miasma>() == null && miasma != null)
-            {
-                if (StateFlags.IsRollbackFrame) //We might be in the first RBF
-                {
-                    var dynMiasma = DynamicData.For(miasma);
-                    dynMiasma.Set("Scene", __instance.Session.CurrentLevel);
-
-                    __instance.Session.CurrentLevel.GetGameplayLayer().Entities.Add(miasma); //We manually add/tag the miasma
-                    miasma.Added();
-                    dynMiasma.Set("actualDepth", Constants.MIASMA_CUSTOM_DEPTH); //Setting the custom depth for sorting layer later
-                }
-            }
-        }
-
-
         //TODO: Move to level LoadState method
         private static void LoadState(TowerFall.RoundLogic self, TF.State.Domain.Models.Session toLoad)
         {

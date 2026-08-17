@@ -6,7 +6,7 @@ namespace TF.EX.Domain.CustomComponent
 {
     public class LobbyVersusModeButton : LobbyBorderButton
     {
-        public const int TEAM_MODE_PLAYERS = 4;
+        public const int TEAM_MODE_MIN_PLAYERS = 3;
 
         private static readonly TowerFall.Modes[] Modes =
         {
@@ -51,9 +51,9 @@ namespace TF.EX.Domain.CustomComponent
             Sounds.ui_move2.Play();
             ownLobby.GameData.Mode = (int)mode;
 
-            if (mode == TowerFall.Modes.TeamDeathmatch)
+            if (mode == TowerFall.Modes.TeamDeathmatch && ownLobby.MaxPlayers < TEAM_MODE_MIN_PLAYERS)
             {
-                ownLobby.MaxPlayers = TEAM_MODE_PLAYERS;
+                ownLobby.MaxPlayers = TEAM_MODE_MIN_PLAYERS;
             }
 
             base.OnConfirm();
