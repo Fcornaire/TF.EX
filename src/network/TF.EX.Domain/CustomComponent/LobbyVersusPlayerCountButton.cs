@@ -8,7 +8,7 @@ namespace TF.EX.Domain.CustomComponent
     {
         private const int MAX_PLAYERS = 4;
 
-        private int MinPlayers => IsTeamMode ? LobbyVersusModeButton.TEAM_MODE_PLAYERS : 2;
+        private int MinPlayers => IsTeamMode ? LobbyVersusModeButton.TEAM_MODE_MIN_PLAYERS : 2;
 
         private bool IsTeamMode => (TowerFall.Modes)ownLobby.GameData.Mode == TowerFall.Modes.TeamDeathmatch;
 

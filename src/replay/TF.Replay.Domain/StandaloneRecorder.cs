@@ -26,6 +26,7 @@ namespace TF.Replay.Domain
         private static int[] _characters;
         private static int[] _alts;
         private static int[] _teams;
+        private static bool _teamMode;
         private static int[] _scores;
         private static int _winner = -1;
 
@@ -257,6 +258,7 @@ namespace TF.Replay.Domain
             _characters = null;
             _alts = null;
             _teams = null;
+            _teamMode = false;
             _scores = null;
             _winner = -1;
         }
@@ -343,12 +345,14 @@ namespace TF.Replay.Domain
                 _characters = _seats.Select(seat => TFGame.Characters[seat]).ToArray();
                 _alts = _seats.Select(seat => (int)TFGame.AltSelect[seat]).ToArray();
                 _teams = Teams(session?.MatchSettings ?? TowerFall.MainMenu.VersusMatchSettings);
+                _teamMode = session?.MatchSettings?.TeamMode == true && _teams.Length > 0;
                 _scores = new int[_seats.Length];
             }
 
             for (int i = 0; i < _seats.Length; i++)
             {
-                _scores[i] = session?.Scores[_seats[i]] ?? 0;
+                var scoreIndex = _teamMode ? _teams[_seats[i]] : _seats[i];
+                _scores[i] = session?.Scores[scoreIndex] ?? 0;
             }
 
             var winner = session?.GetWinner() ?? -1;
@@ -375,7 +379,7 @@ namespace TF.Replay.Domain
             api.SetArchersFlat(
                 _characters,
                 _alts,
-                _seats.Select(seat => won || _winner == seat).ToArray(),
+                _seats.Select(seat => won || (_winner != -1 && (_teamMode ? _teams[seat] == _winner : _winner == seat))).ToArray(),
                 _scores,
                 _seats.Select(seat => $"P{seat + 1}").ToArray());
 

@@ -33,6 +33,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                 TargetPosition = dyn.Get<Microsoft.Xna.Framework.Vector2>("targetPosition").ToModel(),
                 Sine = dyn.Get<SineWave>("sine").GetState(),
                 ReviveSequenceCounter = dyn.Get<float>("reviveSequenceCounter"),
+                ArrowSine = dyn.Get<SineWave>("arrowSine").GetState(),
             };
         }
 
@@ -62,6 +63,11 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             if (toLoad.Sine != null)
             {
                 dyn.Get<SineWave>("sine").LoadState(toLoad.Sine);
+            }
+
+            if (toLoad.ArrowSine != null)
+            {
+                dyn.Get<SineWave>("arrowSine").LoadState(toLoad.ArrowSine);
             }
 
             entity.Collider = toLoad.IsRevivingHitbox

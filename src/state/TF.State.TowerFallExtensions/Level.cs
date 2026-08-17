@@ -826,6 +826,12 @@ namespace TF.State.TowerFallExtensions
 
             TF.State.Domain.ServiceCollections.ResolveAPIManager().LoadStates(gameState.AdditionnalData);
 
+            //Drop pending adds/removes queued by Added()
+            dynGameplayLayer = DynamicData.For(level.GetGameplayLayer());
+            dynGameplayLayer.Get<List<Monocle.Entity>>("toAdd").Clear();
+            dynGameplayLayer.Get<HashSet<Monocle.Entity>>("toRemove").Clear();
+            dynGameplayLayer.Get<HashSet<Monocle.Entity>>("toRemoveCache").Clear();
+
             level.SortGamePlayLayer(CompareDepth);
             level.SortHUDLayer(CompareDepth);
         }
@@ -2294,21 +2300,25 @@ namespace TF.State.TowerFallExtensions
             foreach (var toLoad in gameState.Entities.TeamRevivers)
             {
                 var corpse = level.GetEntityByDepth(toLoad.CorpseActualDepth) as TowerFall.PlayerCorpse;
-                if (corpse == null)
-                {
-                    continue;
-                }
-
                 var cachedTeamReviver = ServiceCollections.GetCachedEntity<TowerFall.TeamReviver>(toLoad.ActualDepth);
 
                 if (cachedTeamReviver == null)
                 {
+                    if (corpse == null)
+                    {
+                        continue;
+                    }
+
                     cachedTeamReviver = new TowerFall.TeamReviver(corpse, (TowerFall.TeamReviver.Modes)toLoad.Mode);
                     DynamicData.For(cachedTeamReviver).Set("reviveSequenceCounter", -1f);
                 }
 
                 cachedTeamReviver.LoadState(toLoad);
-                DynamicData.For(cachedTeamReviver).Set("Corpse", corpse);
+
+                if (corpse != null)
+                {
+                    DynamicData.For(cachedTeamReviver).Set("Corpse", corpse);
+                }
 
                 level.GetGameplayLayer().Entities.Insert(0, cachedTeamReviver);
 
