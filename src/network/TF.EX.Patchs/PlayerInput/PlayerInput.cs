@@ -13,7 +13,7 @@ namespace TF.EX.Patchs.PlayerInput
         [HarmonyPatch("AssignInputs")]
         public static bool PlayerInput_AssignInputs()
         {
-            if (ServiceCollections.ResolveMatchmakingService().GetOwnLobby().IsEmpty)
+            if (TowerFall.MainMenu.VersusMatchSettings?.Mode.IsNetplay() != true || ServiceCollections.ResolveMatchmakingService().GetOwnLobby().IsEmpty)
             {
                 return true;
             }

@@ -9,6 +9,7 @@ namespace TF.EX.Domain.Services.TF
     public class InputService : IInputService
     {
         private readonly IGameContext _context;
+        private static bool _supportsTestInputs = true;
 
         public InputService(IGameContext context)
         {
@@ -148,7 +149,33 @@ namespace TF.EX.Domain.Services.TF
 
         public Input GetPolledInput()
         {
+            if (InputScripter.Enabled)
+            {
+                var seatInputs = InputScripter.GetAllInputs(Externals.GGRSFFI.netplay_current_frame());
+
+                PushTestInputs(seatInputs);
+
+                return seatInputs[0];
+            }
+
             return _context.GetPolledInput();
+        }
+
+        private void PushTestInputs(Input[] seatInputs)
+        {
+            if (!_supportsTestInputs)
+            {
+                return;
+            }
+
+            try
+            {
+                Externals.GGRSFFI.netplay_set_test_inputs(seatInputs, seatInputs.Length);
+            }
+            catch (EntryPointNotFoundException)
+            {
+                _supportsTestInputs = false;
+            }
         }
 
         public void ResetCurrentInput()

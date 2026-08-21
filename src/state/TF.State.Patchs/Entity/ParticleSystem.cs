@@ -41,6 +41,11 @@ namespace TF.State.Patchs.Entity
                 return false;
             }
 
+            if (!StateFlags.IsCaptureActive)
+            {
+                return true;
+            }
+
             CalcPatch.IgnoreToRegisterRng();
             for (int i = 0; i < amount; i++)
             {
@@ -63,6 +68,11 @@ namespace TF.State.Patchs.Entity
             if (StateFlags.IsRollbackFrame || StateFlags.HasFramesToReSimulate)
             {
                 return false;
+            }
+
+            if (!StateFlags.IsCaptureActive)
+            {
+                return true;
             }
 
             CalcPatch.IgnoreToRegisterRng();

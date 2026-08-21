@@ -111,6 +111,20 @@ namespace TF.EX.Core.RoundLogic
 
         public void SpawnRoundPlayers()
         {
+            if (ScenarioSweeper.IsRunning)
+            {
+                SpawnRoundPlayersOnly();
+
+                if (base.Session.MatchSettings.Variants.OffsetWorld)
+                {
+                    base.Session.CurrentLevel.OrbLogic.DoOffsetWorldVariant();
+                }
+
+                base.Session.StartRound();
+
+                return;
+            }
+
             base.Session.CurrentLevel.Add(new VersusStart(base.Session));
             SpawnRoundPlayersOnly();
         }

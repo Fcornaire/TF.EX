@@ -23,8 +23,12 @@ namespace TF.State.Domain.Models.OrbLogic
         [Key(5)]
         public float SpaceTweenTimer { get; set; }
 
+        [Key(6)]
+        public Vector2f ScreenOffset { get; set; }
+
         public static Space Default => new Space
         {
+            ScreenOffset = new Vector2f { X = 0, Y = 0 },
             SpaceCounter = new Counter
             {
                 CounterValue = -1

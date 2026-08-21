@@ -75,10 +75,10 @@ namespace TF.EX.Patchs.Entity.MenuItem
             var archerService = ServiceCollections.ResolveArcherService();
             var inputService = ServiceCollections.ResolveInputService();
 
-            var currentMode = MainMenu.VersusMatchSettings.Mode;
+            var currentMode = MainMenu.VersusMatchSettings?.Mode;
             var lobby = matchmakingService.GetOwnLobby();
 
-            if (currentMode.IsNetplay() && !lobby.IsEmpty)
+            if (currentMode?.IsNetplay() == true && !lobby.IsEmpty)
             {
                 var dynRollcallElement = Traverse.Create(__instance);
                 var playerIndex = dynRollcallElement.Field<int>("playerIndex").Value;
@@ -123,8 +123,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
         {
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
 
-            if (matchmakingService.GetOwnLobby().IsEmpty
-                || !MainMenu.VersusMatchSettings.Mode.IsNetplay())
+            if (matchmakingService.GetOwnLobby().IsEmpty || MainMenu.VersusMatchSettings?.Mode.IsNetplay() != true)
             {
                 return true;
             }
@@ -144,6 +143,11 @@ namespace TF.EX.Patchs.Entity.MenuItem
         [HarmonyPatch("JoinedUpdate")]
         public static bool RollcallElement_JoinedUpdate_Prefix(RollcallElement __instance, ref int __result)
         {
+            if (MainMenu.VersusMatchSettings?.Mode.IsNetplay() != true || ServiceCollections.ResolveMatchmakingService().GetOwnLobby().IsEmpty)
+            {
+                return true;
+            }
+
             if (DynamicData.For(__instance).Get<TowerFall.PlayerInput>("input") != null)
             {
                 return true;
@@ -158,7 +162,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
         [HarmonyPatch("JoinedUpdate")]
         public static void RollcallElement_JoinedUpdate(RollcallElement __instance, ref int __result)
         {
-            var currentMode = MainMenu.VersusMatchSettings.Mode;
+            var currentMode = MainMenu.VersusMatchSettings?.Mode;
             var lobby = ServiceCollections.ResolveMatchmakingService().GetOwnLobby();
 
             if (lobby.IsEmpty)
@@ -166,7 +170,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
                 return;
             }
 
-            if (currentMode.IsNetplay())
+            if (currentMode?.IsNetplay() == true)
             {
                 var playerIndex = Traverse.Create(__instance).Field<int>("playerIndex").Value;
 
@@ -188,9 +192,9 @@ namespace TF.EX.Patchs.Entity.MenuItem
             var archerService = ServiceCollections.ResolveArcherService();
             var inputService = ServiceCollections.ResolveInputService();
 
-            var currentMode = MainMenu.VersusMatchSettings.Mode;
+            var currentMode = MainMenu.VersusMatchSettings?.Mode;
             var lobby = matchmakingService.GetOwnLobby();
-            if (currentMode.IsNetplay() && !lobby.IsEmpty)
+            if (currentMode?.IsNetplay() == true && !lobby.IsEmpty)
             {
                 var dynRollcallElement = DynamicData.For(__instance);
                 var playerIndex = dynRollcallElement.Get<int>("playerIndex");
@@ -239,12 +243,12 @@ namespace TF.EX.Patchs.Entity.MenuItem
             {
                 var input = dynRollcallElement.Get<TowerFall.PlayerInput>("input");
 
-                var currentMode = MainMenu.VersusMatchSettings.Mode;
+                var currentMode = MainMenu.VersusMatchSettings?.Mode;
                 var lobby = matchmakingService.GetOwnLobby();
 
                 var isJoined = dynRollcallElement.Get<Monocle.StateMachine>("state").State != 0;
 
-                if (currentMode.IsNetplay() && !lobby.IsEmpty && !isJoined && input != null && input.MenuBack)
+                if (currentMode?.IsNetplay() == true && !lobby.IsEmpty && !isJoined && input != null && input.MenuBack)
                 {
                     Task.Run(async () =>
                     {
@@ -394,9 +398,9 @@ namespace TF.EX.Patchs.Entity.MenuItem
                 return;
             }
 
-            var currentMode = MainMenu.VersusMatchSettings.Mode;
+            var currentMode = MainMenu.VersusMatchSettings?.Mode;
             var lobby = matchmakingService.GetOwnLobby();
-            if (currentMode.IsNetplay() && lobby.Spectators.Any())
+            if (currentMode?.IsNetplay() == true && lobby.Spectators.Any())
             {
                 netplayManager.AddSpectators(lobby.Spectators);
             }

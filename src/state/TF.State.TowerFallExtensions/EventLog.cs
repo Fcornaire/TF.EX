@@ -6,6 +6,7 @@
         {
             var result = new TF.State.Domain.Models.EventLog.EventLog();
 
+            var order = 0;
             foreach (var evt in events)
             {
                 switch (evt)
@@ -14,23 +15,28 @@
                         result.GainPoints.Add(new TF.State.Domain.Models.EventLog.GainPoint
                         {
                             ScoreIndex = gain.ScoreIndex,
+                            Order = order,
                         });
                         break;
                     case TowerFall.LosePointEvent lose:
                         result.LosePoints.Add(new TF.State.Domain.Models.EventLog.LosePoint
                         {
                             ScoreIndex = lose.ScoreIndex,
+                            Order = order,
                         });
                         break;
                     case TowerFall.CrownChangeEvent crown:
                         result.CrownChanges.Add(new TF.State.Domain.Models.EventLog.CrownChange
                         {
                             PlayerWithCrown = crown.HasCrown.ToArray(),
+                            Order = order,
                         });
                         break;
                     default:
                         throw new NotImplementedException();
                 }
+
+                order++;
             }
 
             return result;
@@ -38,24 +44,24 @@
 
         public static List<TowerFall.EventLog> ToTFModel(this TF.State.Domain.Models.EventLog.EventLog eventLog)
         {
-            var result = new List<TowerFall.EventLog>();
+            var ordered = new List<(int Order, TowerFall.EventLog Event)>();
 
             foreach (var evt in eventLog.GainPoints)
             {
-                result.Add(new TowerFall.GainPointEvent(evt.ScoreIndex));
+                ordered.Add((evt.Order, new TowerFall.GainPointEvent(evt.ScoreIndex)));
             }
 
             foreach (var evt in eventLog.LosePoints)
             {
-                result.Add(new TowerFall.LosePointEvent(evt.ScoreIndex));
+                ordered.Add((evt.Order, new TowerFall.LosePointEvent(evt.ScoreIndex)));
             }
 
             foreach (var evt in eventLog.CrownChanges)
             {
-                result.Add(new TowerFall.CrownChangeEvent(evt.PlayerWithCrown.ToArray()));
+                ordered.Add((evt.Order, new TowerFall.CrownChangeEvent(evt.PlayerWithCrown.ToArray())));
             }
 
-            return result;
+            return ordered.OrderBy(entry => entry.Order).Select(entry => entry.Event).ToList();
         }
     }
 }

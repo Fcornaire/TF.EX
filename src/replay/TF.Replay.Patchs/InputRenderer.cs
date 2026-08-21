@@ -13,6 +13,11 @@ namespace TF.Replay.Patchs
         [HarmonyPatch(MethodType.Constructor, [typeof(int), typeof(float)])]
         public static bool InputRenderer_ctor_Prefix()
         {
+            if (!TF.Replay.Domain.StandalonePlayback.IsActive)
+            {
+                return true;
+            }
+
             if (TFGame.Instance.Scene is LevelLoaderXML)
             {
                 return false;
@@ -39,6 +44,11 @@ namespace TF.Replay.Patchs
         [HarmonyPatch(MethodType.Constructor, [typeof(int), typeof(float)])]
         public static void InputRenderer_ctor_Postfix(InputRenderer __instance, float widthSoFar)
         {
+            if (!TF.Replay.Domain.StandalonePlayback.IsActive)
+            {
+                return;
+            }
+
             EnsureSubtexture(__instance);
             var dynInputRender = DynamicData.For(__instance);
             var jump = dynInputRender.Get<Subtexture>("jump");
@@ -81,8 +91,17 @@ namespace TF.Replay.Patchs
         [HarmonyPatch("Render")]
         public static void InputRenderer_Render(InputRenderer __instance, InputState state)
         {
+            if (!TF.Replay.Domain.StandalonePlayback.IsActive)
+            {
+                return;
+            }
+
             var dynInputRender = DynamicData.For(__instance);
             var move = dynInputRender.Get<Subtexture>("move");
+            if (move == null)
+            {
+                return;
+            }
             var moveAt = dynInputRender.Get<Vector2>("moveAt");
             var moveAtReference = dynInputRender.Get<Vector2>("moveAtReference");
 

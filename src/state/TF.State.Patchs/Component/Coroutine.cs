@@ -25,12 +25,17 @@ namespace TF.State.Patchs.Component
         {
             if (__instance.Entity is TowerFall.Miasma)
             {
-                return false; // The miasma sequence is now driven by the MiasmaSequenceController
+                return !StateFlags.IsCaptureActive; // The miasma sequence is now driven by the MiasmaSequenceController
             }
 
             if (__instance.Entity is TowerFall.MoonGlassBlock)
             {
                 return !StateFlags.IsCaptureActive; // The shatter is driven by MoonGlassBlockExplodeController
+            }
+
+            if (!StateFlags.IsCaptureActive)
+            {
+                return true;
             }
 
             var hudService = ServiceCollections.ResolveHUDService();

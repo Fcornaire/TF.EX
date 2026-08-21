@@ -16,6 +16,11 @@ namespace TF.State.Patchs.Entity.LevelEntity
         [HarmonyPatch("HitWall")]
         public static void HitWall_Prefix(BrambleArrow __instance)
         {
+            if (!StateFlags.IsCaptureActive)
+            {
+                return;
+            }
+
             var dyn = DynamicData.For(__instance);
 
             if (dyn.Get<bool>("used"))
@@ -35,6 +40,11 @@ namespace TF.State.Patchs.Entity.LevelEntity
         [HarmonyPatch("Update")]
         public static void Update_Postfix(BrambleArrow __instance)
         {
+            if (!StateFlags.IsCaptureActive)
+            {
+                return;
+            }
+
             if (StateFlags.IsRestoring)
             {
                 return;

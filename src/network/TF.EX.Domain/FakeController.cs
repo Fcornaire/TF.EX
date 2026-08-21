@@ -135,7 +135,7 @@ namespace TF.EX.Domain
 
         public override InputState GetState()
         {
-            if (netplayManager.IsReplayMode())
+            if (netplayManager.IsReplayMode() || (InputScripter.Enabled && netplayManager.IsTestMode()))
             {
                 return inputService.GetCurrentInput(inputService.GetInputIndex(this)).ToTFInput();
             }

@@ -168,6 +168,11 @@ namespace TF.Replay.Domain.Services
         {
             if (_replay == null || _fromFile || !_replay.Record.Any())
             {
+                if (_replay != null && !_fromFile)
+                {
+                    Reset();
+                }
+
                 return null;
             }
 

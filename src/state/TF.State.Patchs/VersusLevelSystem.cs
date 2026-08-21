@@ -14,6 +14,18 @@ namespace TF.State.Patchs
         [HarmonyPatch("GenLevels")]
         public static bool VersusLevelSystem_GenLevels(VersusLevelSystem __instance, MatchSettings matchSettings)
         {
+            if (!TF.State.Domain.Context.StateFlags.IsCaptureActive)
+            {
+                return true;
+            }
+
+            if (TF.State.Domain.Context.ScenarioLevels.IsActive)
+            {
+                DynamicData.For(__instance).Set("levels", TF.State.Domain.Context.ScenarioLevels.Levels.ToList());
+
+                return false;
+            }
+
             var logger = ServiceCollections.ResolveLogger();
             var rngService = ServiceCollections.ResolveRngService();
 
@@ -26,15 +38,6 @@ namespace TF.State.Patchs
             dynVersusLevelSystem.Set("levels", levels);
 
             return false;
-        }
-
-        [HarmonyPostfix]
-        [HarmonyPatch(MethodType.Constructor, [typeof(VersusTowerData)])]
-        public static void VersusLevelSystem_ctor(VersusLevelSystem __instance)
-        {
-            var dynVersusLevelSystem = Traverse.Create(__instance);
-            dynVersusLevelSystem.Property("ShowControls").SetValue(false);
-            dynVersusLevelSystem.Property("ShowTriggerControls").SetValue(false);
         }
     }
 }

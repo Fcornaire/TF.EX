@@ -37,6 +37,11 @@ namespace TF.State.Patchs.Entity.LevelEntity
         [HarmonyPatch(typeof(Enemy), "SetState")]
         public static void Enemy_SetState_Postfix(Enemy __instance)
         {
+            if (!StateFlags.IsCaptureActive)
+            {
+                return;
+            }
+
             if (__instance is PlayerGhost)
             {
                 DynamicData.For(__instance).Set("ghostStateCounter", 0f);
@@ -50,11 +55,6 @@ namespace TF.State.Patchs.Entity.LevelEntity
                 if (__instance is Bat)
                 {
                     dyn.Set("enemySwoopIndex", 0);
-                }
-
-                if (!StateFlags.IsCaptureActive)
-                {
-                    return;
                 }
 
                 dyn.Get<Coroutine>("coroutine")?.Cancel();

@@ -19,8 +19,10 @@ namespace TF.Replay.Patchs.Engine
                 }
             }
 
-            if (__instance.PreviousScene is Level && __instance.Scene is TowerFall.MainMenu)
+            if (__instance.Scene is TowerFall.MainMenu)
             {
+                StandaloneRecorder.Finish();
+
                 InputOverlay.Reset();
                 PlaybackControls.Reset();
 

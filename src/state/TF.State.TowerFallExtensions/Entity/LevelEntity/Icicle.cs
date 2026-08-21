@@ -41,6 +41,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             var cannotHitArrow = dyn.Get<TowerFall.Arrow>("cannotHitArrow");
 
             bool hasCannotHit = false;
+            bool cannotHitIsGhost = false;
             int cannotHitPlayerIndex = -1;
             if (cannotHit is TowerFall.Player player)
             {
@@ -50,6 +51,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             else if (cannotHit is TowerFall.PlayerGhost ghost)
             {
                 hasCannotHit = true;
+                cannotHitIsGhost = true;
                 cannotHitPlayerIndex = ghost.PlayerIndex;
             }
 
@@ -72,6 +74,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                 CannotHitCounter = cannotHitCounter.Value,
                 FallCounter = IcicleOwnedState.GetFallCounter(entity),
                 HasCannotHit = hasCannotHit,
+                CannotHitIsGhost = cannotHitIsGhost,
                 CannotHitPlayerIndex = cannotHitPlayerIndex,
                 HasCannotHitArrow = hasCannotHitArrow,
                 CannotHitArrowActualDepth = cannotHitArrowActualDepth,
@@ -105,7 +108,13 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
 
             if (toLoad.HasCannotHit)
             {
-                dyn.Set("cannotHit", entity.Level.GetPlayerOrCorpse(toLoad.CannotHitPlayerIndex));
+                Monocle.Entity cannotHit = toLoad.CannotHitIsGhost
+                    ? entity.Level[Monocle.GameTags.PlayerGhost]
+                        .OfType<TowerFall.PlayerGhost>()
+                        .FirstOrDefault(ghost => ghost.PlayerIndex == toLoad.CannotHitPlayerIndex)
+                    : entity.Level.GetPlayerOrCorpse(toLoad.CannotHitPlayerIndex);
+
+                dyn.Set("cannotHit", cannotHit);
             }
             else
             {

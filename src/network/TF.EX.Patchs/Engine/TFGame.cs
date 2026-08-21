@@ -1,5 +1,4 @@
 ﻿using HarmonyLib;
-using TF.EX.Domain.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Xna.Framework;
@@ -12,9 +11,10 @@ using TF.EX.Common;
 using TF.EX.Common.Extensions;
 using TF.EX.Domain;
 using TF.EX.Domain.Context;
-using TF.EX.Domain.Interop;
 using TF.EX.Domain.CustomComponent;
+using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Externals;
+using TF.EX.Domain.Interop;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
@@ -79,22 +79,31 @@ namespace TF.EX.Patchs.Engine
 
             if (__instance.PreviousScene is Level && __instance.Scene is TowerFall.MainMenu)
             {
+                var mode = TowerFall.MainMenu.VersusMatchSettings?.Mode;
+                var wasExDriven = (mode != null && mode.Value.IsNetplay())
+                    || netplayManager.IsReplayMode()
+                    || netplayManager.IsTestMode()
+                    || netplayManager.IsInit();
+
                 StateApi.Current.ResetRngOverride();
+
+                if (!ScenarioSweeper.IsRunning)
+                {
+                    StateApi.Current.SetVersusLevels(null, null);
+                }
 
                 if (!netplayManager.IsReplayMode())
                 {
                     StateApi.Current.PurgeCache();
                 }
 
-                if (!netplayManager.IsTestMode())
-                {
-                    netplayManager.Reset();
-                    //TowerFall.PlayerInput.AssignInputs(); //Reset inputs
-                }
-
+                netplayManager.Reset();
                 netplayManager.ResetMode();
 
-                TF.EX.Domain.Extensions.TFGameExtensions.ResetVersusChoices();
+                if (wasExDriven)
+                {
+                    TF.EX.Domain.Extensions.TFGameExtensions.ResetVersusChoices();
+                }
             }
         }
 
@@ -136,6 +145,11 @@ namespace TF.EX.Patchs.Engine
             var logger = ServiceCollections.ResolveLogger();
 
             netplayManager.PublishCaptureFlag();
+
+            if (ScenarioSweeper.IsRunning)
+            {
+                ScenarioSweeper.Update();
+            }
 
             if (__instance.Scene is TowerFall.MainMenu)
             {
@@ -245,6 +259,16 @@ namespace TF.EX.Patchs.Engine
 
                     if (netplayManager.IsSynchronized() || netplayManager.GetNetplayMode().Equals(NetplayMode.Test))
                     {
+                        if (ScenarioSweeper.IsRunning && netplayManager.IsTestMode())
+                        {
+                            ScenarioSweeper.Tick(__instance.Scene as Level);
+
+                            if (!netplayManager.IsTestMode())
+                            {
+                                break;
+                            }
+                        }
+
                         var canAdvance = NetplayLogic(__instance.Scene as Level, netplayManager, inputService, replayService, syncTestUtilsService);
 
                         if (canAdvance)
@@ -415,8 +439,15 @@ namespace TF.EX.Patchs.Engine
                         var stateToLoad = netplayManager.LoadGameState();
 
                         netplayManager.SetIsUpdating(true);
-                        var loadedFrame = StateApi.Current.RestoreGameStateBytes(stateToLoad);
-                        netplayManager.SetIsUpdating(false);
+                        int loadedFrame;
+                        try
+                        {
+                            loadedFrame = StateApi.Current.RestoreGameStateBytes(stateToLoad);
+                        }
+                        finally
+                        {
+                            netplayManager.SetIsUpdating(false);
+                        }
                         replayService.RemovePredictedRecords(loadedFrame);
 
                         if (netplayManager.IsTestMode())
@@ -454,6 +485,11 @@ namespace TF.EX.Patchs.Engine
 
         private static void UpdateClipped(Monocle.Commands commands)
         {
+            if (!commands.Open)
+            {
+                return;
+            }
+
             try
             {
                 var dynCommands = DynamicData.For(commands);
@@ -476,6 +512,12 @@ namespace TF.EX.Patchs.Engine
         private static void ManageTimeStep(TowerFall.TFGame self)
         {
             if (StateApi.Current?.IsSmoothRendering() == true)
+            {
+                return;
+            }
+
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            if (!netplayManager.IsInit() && !netplayManager.IsReplayMode() && !netplayManager.IsTestMode())
             {
                 return;
             }

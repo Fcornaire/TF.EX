@@ -20,6 +20,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                 PlayerIndex = entity.PlayerIndex,
                 Position = entity.Position.ToModel(),
                 PositionCounter = dynPlayerGhost.Get<Microsoft.Xna.Framework.Vector2>("counter").ToModel(),
+                PreviousPosition = dynPlayerGhost.Get<Microsoft.Xna.Framework.Vector2>("previousPosition").ToModel(),
                 Speed = entity.Speed.ToModel(),
                 Facing = (int)entity.Facing,
                 State = dynPlayerGhost.Get<int>("currentState"),
@@ -54,6 +55,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             dynPlayerGhost.Set("actualDepth", toLoad.ActualDepth);
             entity.Position = toLoad.Position.ToTFVector();
             dynPlayerGhost.Set("counter", toLoad.PositionCounter.ToTFVector());
+            dynPlayerGhost.Set("previousPosition", toLoad.PreviousPosition.ToTFVector());
             entity.Speed = toLoad.Speed.ToTFVector();
             entity.Facing = (TowerFall.Facing)toLoad.Facing;
 

@@ -67,8 +67,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             dynChain.Set("bottoms", bottoms);
             dynChain.Set("speeds", speeds);
             dynChain.Set("actualDepth", actualDepth);
-            dynChain.Set("position", position);
-            dynChain.Set("links", links);
+            chain.Position = position;
         }
     }
 }

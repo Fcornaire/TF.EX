@@ -453,10 +453,11 @@ namespace TF.EX.Domain.Services
                     string mismatch = "";
                     string patternToFindNumbers = @"\b(\d+)\b";
                     MatchCollection matches = Regex.Matches(info, patternToFindNumbers);
+                    int frame = -1;
                     if (matches.Count > 0)
                     {
                         string lastNumber = matches[matches.Count - 1].Value;
-                        int frame = int.Parse(lastNumber);
+                        frame = int.Parse(lastNumber);
                         mismatch = $"\n\n {_syncTestUtilsService.Compare(frame)}";
                     }
 
@@ -467,6 +468,14 @@ namespace TF.EX.Domain.Services
                         TowerFall.Sounds.ui_invalid.Play();
                         Reset();
                         ResetMode();
+
+                        if (ScenarioSweeper.IsRunning)
+                        {
+                            ScenarioSweeper.OnDesync(frame);
+
+                            return status;
+                        }
+
                         TFGame.Instance.Scene = new MainMenu(MainMenu.MenuState.Main);
 
                         return status;

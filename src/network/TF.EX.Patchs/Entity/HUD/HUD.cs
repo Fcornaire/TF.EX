@@ -14,7 +14,9 @@ namespace TF.EX.Patchs.Entity.HUD
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var replayService = ServiceCollections.ResolveReplayService();
 
-            if (__instance is VersusMatchResults && !netplayManager.IsReplayMode())
+            if (__instance is VersusMatchResults
+                && !netplayManager.IsReplayMode()
+                && (netplayManager.IsInit() || netplayManager.IsTestMode()))
             {
                 var dynVersusMatchResults = Traverse.Create(__instance);
                 var finished = dynVersusMatchResults.Field("finished").GetValue<bool>();

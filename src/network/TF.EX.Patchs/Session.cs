@@ -21,9 +21,9 @@ namespace TF.EX.Patchs
         public static bool Session_GotoNextRound(Session __instance)
         {
             var logger = ServiceCollections.ResolveLogger();
-            var mode = TowerFall.MainMenu.VersusMatchSettings.Mode;
+            var mode = TowerFall.MainMenu.VersusMatchSettings?.Mode;
 
-            if (mode.IsNetplay() && __instance.GetWinner() != -1)
+            if (mode?.IsNetplay() == true && __instance.GetWinner() != -1)
             {
                 logger.LogDebug<Session>("Skipping GotoNextRound since game ended");
 

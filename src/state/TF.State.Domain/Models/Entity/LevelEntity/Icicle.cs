@@ -50,5 +50,8 @@ namespace TF.State.Domain.Models.Entity.LevelEntity
 
         [Key(14)]
         public bool IsVisible { get; set; }
+
+        [Key(15)]
+        public bool CannotHitIsGhost { get; set; }
     }
 }

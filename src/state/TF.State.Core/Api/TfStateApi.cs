@@ -126,6 +126,27 @@ namespace TF.State.Core.Api
             levelSystem.StartOnLevel(startLevel);
         }
 
+        public void SetVersusLevels(TowerFall.MatchSettings matchSettings, IEnumerable<string> levelPaths)
+        {
+            var levels = levelPaths?.ToList();
+
+            if (levels == null || levels.Count == 0)
+            {
+                TF.State.Domain.Context.ScenarioLevels.Clear();
+
+                return;
+            }
+
+            TF.State.Domain.Context.ScenarioLevels.Set(levels);
+
+            if (matchSettings?.LevelSystem is not VersusLevelSystem levelSystem)
+            {
+                return;
+            }
+
+            HarmonyLib.Traverse.Create(levelSystem).Field("levels").SetValue(levels.ToList());
+        }
+
         public string CompareStates(byte[] stateA, byte[] stateB) => TF.State.Domain.StateDiff.Compare(stateA, stateB);
 
         public string[] DescribePlayers(byte[] state) => TF.State.Domain.StateDiff.DescribePlayers(state);

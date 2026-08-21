@@ -1,4 +1,4 @@
-using Microsoft.Xna.Framework.Audio;
+﻿using Microsoft.Xna.Framework.Audio;
 using TF.State.Domain.Models;
 using TF.State.Domain.Models.Entity;
 using TF.State.Domain.Models.Entity.HUD;
@@ -38,10 +38,6 @@ namespace TF.State.Domain.Context
         int GetLastRollbackFrame();
         void UpdateLastRollbackFrame(int frame);
 
-        void AddBramblesState(float frameCounter, IEnumerable<MovingPlatform> movingPlatformsStates, Vector2f spreadOrigin);
-        IEnumerable<BramblesStartingState> GetBramblesStartingState();
-        void LoadBramblesStartingState(IEnumerable<BramblesStartingState> states);
-
         void UpdateRoundChests(int roundIndex, List<Chest> chests);
         void UpdateRoundOrbs(int roundIndex, List<Orb> orbs);
         void UpdateRoundLavaControl(int roundIndex, LavaControl lavaControl);
@@ -61,7 +57,6 @@ namespace TF.State.Domain.Context
         private ICollection<SFX> _desiredSfxs = new List<SFX>();
         private ICollection<SoundEffectPlaying> _currentSfxs = new List<SoundEffectPlaying>();
         private Dictionary<string, SoundEffect> _soundEffects = new Dictionary<string, SoundEffect>();
-        private ICollection<BramblesStartingState> bramblesStates = new List<BramblesStartingState>();
         private Dictionary<int, RoundData> roundDataPerRound = new Dictionary<int, RoundData>();
         private int _lastRollbackFrame = 0;
 
@@ -246,31 +241,6 @@ namespace TF.State.Domain.Context
             return _soundEffects.FirstOrDefault(kvp => kvp.Value == data).Key;
         }
 
-        public void AddBramblesState(float frameCounter, IEnumerable<MovingPlatform> movingPlatformsStates, Vector2f spreadOrigin)
-        {
-            if (bramblesStates.Any(state => state.FrameCounter == frameCounter))
-            {
-                return;
-            }
-
-            bramblesStates.Add(new BramblesStartingState
-            {
-                FrameCounter = frameCounter,
-                MovingPlatforms = movingPlatformsStates.ToList(),
-                Position = spreadOrigin
-            });
-        }
-
-        public IEnumerable<BramblesStartingState> GetBramblesStartingState()
-        {
-            return bramblesStates.ToList();
-        }
-
-        public void LoadBramblesStartingState(IEnumerable<BramblesStartingState> states)
-        {
-            bramblesStates = states.ToList();
-        }
-
         public void UpdateRoundChests(int roundIndex, List<Chest> chests)
         {
             GetOrCreateRound(roundIndex).Chests = chests;
@@ -328,7 +298,6 @@ namespace TF.State.Domain.Context
 
         public void Reset()
         {
-            bramblesStates.Clear();
             roundDataPerRound.Clear();
 
             ResetGamePlayLayerActualDepthLookup();

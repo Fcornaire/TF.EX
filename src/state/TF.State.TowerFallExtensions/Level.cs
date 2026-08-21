@@ -208,7 +208,6 @@ namespace TF.State.TowerFallExtensions
             gameState.AddDummyHeadsState(self);
             gameState.AddTrialsControlState(self);
 
-            gameState.Session.BramblesStartingState = sessionService.GetBramblesStartingState();
             gameState.Rng = rngService.Get();
 
             matchStatsService.SaveSnapshot(gameState.Frame, self.Session.MatchStats);
@@ -232,9 +231,6 @@ namespace TF.State.TowerFallExtensions
             var rngService = ServiceCollections.ResolveRngService();
             var sfxService = ServiceCollections.ResolveSFXService();
             var currentMode = TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel();
-
-            //To deal with coroutine brambles
-            sessionService.LoadBramblesStartingState(gameState.Session.BramblesStartingState);
 
             sessionService.LoadRoundData(gameState.Entities.RoundData);
 
@@ -277,6 +273,7 @@ namespace TF.State.TowerFallExtensions
                 IsEnding = gameState.Session.IsEnding,
                 RoundStarted = gameState.Session.RoundStarted,
                 RoundEndCounter = gameState.Session.RoundEndCounter,
+                GhostWaitCounter = gameState.Session.GhostWaitCounter,
                 RoundIndex = gameState.Session.RoundIndex,
                 IsDone = gameState.Session.IsDone,
                 Miasma = new TF.State.Domain.Models.Miasma
@@ -510,9 +507,10 @@ namespace TF.State.TowerFallExtensions
 
             hudService.Update(gameState.Entities.Hud);
 
-            //CrumbleBlocks (Darkfang) load before Player
+            //CrumbleBlocks (Darkfang) and MoonGlassBlocks (Moonstone) load before Player
             gameState.LoadCrumbleBlocks(level);
             gameState.LoadCrumbleWalls(level);
+            gameState.LoadMoonGlassBlocks(level);
 
             //Players
             foreach (TF.State.Domain.Models.Entity.LevelEntity.Player.Player toLoad in gameState.Entities.Players.ToArray())
@@ -604,24 +602,7 @@ namespace TF.State.TowerFallExtensions
             gameState.LoadEnemyAttacks(level);
             gameState.LoadDarkPortalsSequence(level);
 
-            //RoundLogic Spotlights
             dynRoundLogic.Set("wasFinalKill", gameState.RoundLogic.WasFinalKill);
-            var dynLightingLayer = DynamicData.For(level.LightingLayer);
-            dynLightingLayer.Set("spotlight", null);
-            List<LevelEntity> spotlight = new List<LevelEntity>();
-            foreach (var spotlightDepth in gameState.RoundLogic.SpotlightDephts)
-            {
-                var entity = level.GetEntityByDepth(spotlightDepth);
-                if (entity != null)
-                {
-                    spotlight.Add(entity as LevelEntity);
-                }
-            }
-
-            if (spotlight.Count > 0)
-            {
-                dynLightingLayer.Set("spotlight", spotlight.ToArray());
-            }
 
             //Arrows
             if (level[GameTags.Arrow] != null)
@@ -650,7 +631,7 @@ namespace TF.State.TowerFallExtensions
                     }
 
                     var arrow = TowerFall.Arrow.Create(toLoad.ArrowType.ToTFModel(), entityHavingArrow, toLoad.Position.ToTFVector(), toLoad.Direction);
-                    arrow.LoadState(toLoad, gameState.Session.BramblesStartingState, gameState.Frame);
+                    arrow.LoadState(toLoad);
 
                     level.GetGameplayLayer().Entities.Insert(0, arrow);
                 }
@@ -741,16 +722,6 @@ namespace TF.State.TowerFallExtensions
             //Orbload
             gameState.LoadOrb(level);
 
-            //Chain load
-            foreach (TF.State.Domain.Models.Entity.LevelEntity.Chain toLoad in gameState.Entities.Chains.ToArray())
-            {
-                var gameChain = level.GetEntityByDepth(toLoad.ActualDepth) as TowerFall.Chain;
-
-                if (gameChain != null)
-                {
-                    gameChain.LoadState(toLoad);
-                }
-            }
 
             //Lava load
             gameState.LoadLavaControl(level);
@@ -760,9 +731,6 @@ namespace TF.State.TowerFallExtensions
 
             //SpikeBall load
             gameState.LoadSpikeBall(level);
-
-            //Hat load
-            gameState.LoadHats(level);
 
             //Explosion load
             gameState.LoadExplosions(level);
@@ -791,6 +759,11 @@ namespace TF.State.TowerFallExtensions
             //SnowClumps load
             gameState.LoadSnowClumps(level);
 
+            foreach (var jumpPad in level.GetAll<TowerFall.JumpPad>())
+            {
+                jumpPad.SceneBegin();
+            }
+
             //SwitchBlocks (King's Court) load
             gameState.LoadSwitchBlocks(level);
             gameState.LoadSwitchBlockControl(level);
@@ -800,9 +773,6 @@ namespace TF.State.TowerFallExtensions
 
             //ProximityBlocks (Moonstone) load
             gameState.LoadProximityBlocks(level);
-
-            //MoonGlassBlocks (Moonstone) load
-            gameState.LoadMoonGlassBlocks(level);
 
             //GhostPlatforms, LoopPlatforms and RotatePlatforms (The Amaranth) load
             gameState.LoadGhostPlatforms(level);
@@ -816,6 +786,17 @@ namespace TF.State.TowerFallExtensions
             gameState.LoadDummies(level);
             gameState.LoadDummyHeads(level);
             gameState.LoadTrialsControl(level);
+
+            //Chain load
+            foreach (TF.State.Domain.Models.Entity.LevelEntity.Chain toLoad in gameState.Entities.Chains.ToArray())
+            {
+                var gameChain = level.GetEntityByDepth(toLoad.ActualDepth) as TowerFall.Chain;
+
+                if (gameChain != null)
+                {
+                    gameChain.LoadState(toLoad);
+                }
+            }
 
             //Rng
             rngService.LoadState(gameState.Rng);
@@ -831,6 +812,66 @@ namespace TF.State.TowerFallExtensions
             dynGameplayLayer.Get<List<Monocle.Entity>>("toAdd").Clear();
             dynGameplayLayer.Get<HashSet<Monocle.Entity>>("toRemove").Clear();
             dynGameplayLayer.Get<HashSet<Monocle.Entity>>("toRemoveCache").Clear();
+
+            var liveEntities = new HashSet<Monocle.Entity>();
+            foreach (var liveLayer in level.Layers.Values)
+            {
+                foreach (var liveEntity in liveLayer.Entities)
+                {
+                    liveEntities.Add(liveEntity);
+                }
+            }
+
+            foreach (GameTags tag in Enum.GetValues(typeof(GameTags)))
+            {
+                var tagList = level[tag];
+
+                tagList?.RemoveAll(tagged => !liveEntities.Contains(tagged) || !tagged.Tags.Contains(tag));
+            }
+
+            foreach (var liveEntity in liveEntities)
+            {
+                foreach (var tag in liveEntity.Tags)
+                {
+                    var tagList = level[tag];
+                    if (tagList != null && !tagList.Contains(liveEntity))
+                    {
+                        tagList.Add(liveEntity);
+                    }
+                }
+            }
+
+            var dynLevelScene = DynamicData.For(level as Monocle.Scene);
+            foreach (var pending in dynLevelScene.Get<HashSet<Monocle.Entity>[]>("tagsToAdd"))
+            {
+                pending?.Clear();
+            }
+            foreach (var pending in dynLevelScene.Get<HashSet<Monocle.Entity>[]>("tagsToRemove"))
+            {
+                pending?.Clear();
+            }
+
+            //Hat load
+            gameState.LoadHats(level);
+
+            //RoundLogic Spotlights
+            var dynLightingLayer = DynamicData.For(level.LightingLayer);
+            var spotlight = new List<LevelEntity>();
+
+            dynLightingLayer.Set("spotlight", null);
+
+            foreach (var spotlightDepth in gameState.RoundLogic.SpotlightDephts)
+            {
+                if (level.GetEntityByDepth(spotlightDepth) is LevelEntity entity)
+                {
+                    spotlight.Add(entity);
+                }
+            }
+
+            if (spotlight.Count > 0)
+            {
+                dynLightingLayer.Set("spotlight", spotlight.ToArray());
+            }
 
             level.SortGamePlayLayer(CompareDepth);
             level.SortHUDLayer(CompareDepth);
@@ -858,6 +899,7 @@ namespace TF.State.TowerFallExtensions
                 var gamePlayer = self.GetPlayer(toLoad.Index);
 
                 gamePlayer.LoadDeathArrow(toLoad.DeathArrowDepth);
+                gamePlayer.LoadLastCaught(toLoad.LastCaughtArrowDepth);
             }
 
             foreach (TF.State.Domain.Models.Entity.LevelEntity.Arrows.Arrow toLoad in gs.Entities.Arrows.ToArray())
@@ -879,6 +921,26 @@ namespace TF.State.TowerFallExtensions
             {
                 var gameBat = self.GetEntityByDepth(bat.ActualDepth) as TowerFall.Bat;
                 gameBat?.LoadArrowCushionDatas(bat);
+            }
+
+            foreach (var prismToLoad in gs.Entities.Prisms.ToArray())
+            {
+                var gamePrism = self.GetEntityByDepth(prismToLoad.ActualDepth) as TowerFall.Prism;
+                if (gamePrism == null)
+                {
+                    continue;
+                }
+
+                var encasedEnemy = prismToLoad.EncasedEnemyActualDepth != 0
+                    ? self.GetEntityByDepth(prismToLoad.EncasedEnemyActualDepth) as TowerFall.Enemy
+                    : null;
+
+                DynamicData.For(gamePrism).Set("EncasedEnemy", encasedEnemy);
+
+                if (encasedEnemy != null)
+                {
+                    encasedEnemy.Prism = gamePrism;
+                }
             }
         }
 
@@ -1066,6 +1128,7 @@ namespace TF.State.TowerFallExtensions
                 {
                     IsEnding = stateSession.IsEnding,
                     RoundEndCounter = stateSession.RoundEndCounter,
+                    GhostWaitCounter = stateSession.GhostWaitCounter,
                     IsDone = stateSession.IsDone,
                     RoundIndex = stateSession.RoundIndex,
                     RoundStarted = stateSession.RoundStarted,
@@ -2105,6 +2168,20 @@ namespace TF.State.TowerFallExtensions
                 cachedPlayerGhost.LoadState(toLoad);
                 cachedPlayerGhost.LoadDespawnCorpse(toLoad, level);
 
+                cachedPlayerGhost.RestoreEnemyTags(toLoad.State != 3);
+
+                if (toLoad.State >= 1)
+                {
+                    if (!cachedPlayerGhost.Tags.Contains(GameTags.PlayerGhostCollider))
+                    {
+                        cachedPlayerGhost.Tags.Add(GameTags.PlayerGhostCollider);
+                    }
+                }
+                else
+                {
+                    cachedPlayerGhost.Tags.Remove(GameTags.PlayerGhostCollider);
+                }
+
                 level.GetGameplayLayer().Entities.Insert(0, cachedPlayerGhost);
 
                 foreach (var tag in cachedPlayerGhost.Tags)
@@ -2403,6 +2480,13 @@ namespace TF.State.TowerFallExtensions
             {
                 var cachedExplosion = ServiceCollections.GetCachedEntity<TowerFall.Explosion>(toLoad.ActualDepth)
                     ?? Monocle.Cache.Create<TowerFall.Explosion>();
+
+                var dynExplosion = DynamicData.For(cachedExplosion);
+                if (cachedExplosion.Scene == null)
+                {
+                    dynExplosion.Set("Scene", level);
+                }
+                dynExplosion.Set("Level", level);
 
                 cachedExplosion.LoadState(toLoad);
 

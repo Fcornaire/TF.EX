@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using Monocle;
+using TF.State.Domain.Context;
 
 namespace TF.State.Patchs.Layer
 {
@@ -13,6 +14,11 @@ namespace TF.State.Patchs.Layer
         [HarmonyPatch("SequenceD")]
         public static void LightningFlashLayer_SequenceD(TowerFall.Background.LightningFlashLayer __instance)
         {
+            if (!StateFlags.IsCaptureActive)
+            {
+                return;
+            }
+
             var alarm = Traverse.Create(__instance).Field("alarm").GetValue<Alarm>();
 
             alarm.Start(_random.Range(500, 800));
@@ -22,6 +28,11 @@ namespace TF.State.Patchs.Layer
         [HarmonyPatch("SequenceC")]
         public static void LightningFlashLayer_SequenceC(TowerFall.Background.LightningFlashLayer __instance)
         {
+            if (!StateFlags.IsCaptureActive)
+            {
+                return;
+            }
+
             var alarm = Traverse.Create(__instance).Field("alarm").GetValue<Alarm>();
 
             alarm.Start(_random.Range(4, 10));
@@ -31,6 +42,11 @@ namespace TF.State.Patchs.Layer
         [HarmonyPatch("SequenceB")]
         public static void LightningFlashLayer_SequenceB(TowerFall.Background.LightningFlashLayer __instance)
         {
+            if (!StateFlags.IsCaptureActive)
+            {
+                return;
+            }
+
             var alarm = Traverse.Create(__instance).Field("alarm").GetValue<Alarm>();
 
             alarm.Start(_random.Range(6, 10));

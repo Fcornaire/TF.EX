@@ -14,6 +14,12 @@ namespace TF.EX.Patchs.Scene
         [HarmonyPatch("StartSession")]
         public static void StartSession_Prefix()
         {
+            var mode = MainMenu.VersusMatchSettings?.Mode;
+            if (mode == null || !mode.Value.IsNetplay())
+            {
+                return;
+            }
+
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
             var archerService = ServiceCollections.ResolveArcherService();
@@ -35,6 +41,12 @@ namespace TF.EX.Patchs.Scene
         [HarmonyPatch("StartSession")]
         public static void StartSession_Postfix()
         {
+            var mode = MainMenu.VersusMatchSettings?.Mode;
+            if (mode == null || !mode.Value.IsNetplay())
+            {
+                return;
+            }
+
             var inputService = ServiceCollections.ResolveInputService();
 
             StateApi.Current.ResetRng();
@@ -49,7 +61,7 @@ namespace TF.EX.Patchs.Scene
         {
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
 
-            var currentMode = MainMenu.VersusMatchSettings.Mode;
+            var currentMode = MainMenu.VersusMatchSettings?.Mode ?? Modes.LastManStanding;
             if (currentMode.IsNetplay())
             {
                 __instance.Selection.OnDeselect();
@@ -72,6 +84,11 @@ namespace TF.EX.Patchs.Scene
         [HarmonyPatch("GetRandomVersusTower")]
         public static void MapScene_GetRandomVersusTower(TowerFall.MapScene __instance, ref TowerFall.MapButton __result)
         {
+            var mode = MainMenu.VersusMatchSettings?.Mode;
+            if (mode == null || !mode.Value.IsNetplay())
+            {
+                return;
+            }
 
             List<MapButton> list = new List<MapButton>(__instance.Buttons);
             list.RemoveAll((MapButton b) => b is not VersusMapButton);

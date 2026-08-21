@@ -21,7 +21,12 @@ namespace TF.State.Patchs.RoundLogic
         {
             if (!(__instance is LevelTestRoundLogic))
             {
-                return false;
+                return true;
+            }
+
+            if (!TF.State.Domain.Context.StateFlags.IsTestMode)
+            {
+                return true;
             }
 
 

@@ -14,8 +14,7 @@ namespace TF.State.Patchs.Entity.LevelEntity
         [HarmonyPatch("EnforceLimit")]
         public static bool Arrow_EnforceLimit()
         {
-            //Console.WriteLine("Arrow EnforceLimit Ignore for now");
-            return false;
+            return !StateFlags.IsCaptureActive;
         }
 
         //TODO: remove this when a test without this is done
@@ -23,6 +22,11 @@ namespace TF.State.Patchs.Entity.LevelEntity
         [HarmonyPatch(nameof(Arrow.Removed))]
         public static void Arrow_Removed()
         {
+            if (!StateFlags.IsCaptureActive)
+            {
+                return;
+            }
+
             TowerFall.Arrow.FlushCache();
         }
 
@@ -34,6 +38,20 @@ namespace TF.State.Patchs.Entity.LevelEntity
             {
                 __instance.DebugRender();
             }
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch("Drop")]
+        public static void Arrow_Drop_Prefix()
+        {
+            Calc.CalcPatch.RegisterRng();
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("Drop")]
+        public static void Arrow_Drop_Postfix()
+        {
+            Calc.CalcPatch.UnregisterRng();
         }
 
         [HarmonyPrefix]

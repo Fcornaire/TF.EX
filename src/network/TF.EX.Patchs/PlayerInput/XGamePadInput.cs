@@ -221,12 +221,18 @@ namespace TF.EX.Patchs.PlayerInput
 
             var lobby = matchmakingService.GetOwnLobby();
 
+            var currentModeIsNetplay = TowerFall.MainMenu.VersusMatchSettings?.Mode.IsNetplay() == true;
+            if (!currentModeIsNetplay && !isNetplayInit && !isReplayMode && lobby.IsEmpty)
+            {
+                return actualInput;
+            }
+
             if (IsForeignSeat(self))
             {
                 return false; //Ignore input for other players in netplay
             }
 
-            if (TFGame.Instance.Scene is MapScene && !matchmakingService.GetOwnLobby().IsEmpty)
+            if (TFGame.Instance.Scene is MapScene && currentModeIsNetplay && !matchmakingService.GetOwnLobby().IsEmpty)
             {
                 return true;
             }
@@ -243,15 +249,15 @@ namespace TF.EX.Patchs.PlayerInput
 
             if (TFGame.Instance.Scene is TowerFall.Level && (TFGame.Instance.Scene as TowerFall.Level).Session.GetWinner() != -1)
             {
-                var isFinished = Traverse.Create((TFGame.Instance.Scene as TowerFall.Level).Get<VersusMatchResults>()).Field("finished").GetValue<bool>();
+                var matchResults = (TFGame.Instance.Scene as TowerFall.Level).Get<VersusMatchResults>();
 
-                if (isFinished)
+                if (matchResults != null && Traverse.Create(matchResults).Field("finished").GetValue<bool>())
                 {
                     return actualInput;
                 }
             }
 
-            if (TFGame.Instance.Scene is MainMenu)
+            if (TFGame.Instance.Scene is MainMenu && TowerFall.MainMenu.VersusMatchSettings != null)
             {
                 var state = Traverse.Create(TFGame.Instance.Scene as MainMenu).Field("state").GetValue<MainMenu.MenuState>();
 
@@ -316,7 +322,7 @@ namespace TF.EX.Patchs.PlayerInput
                 return false; //Ignore input for other players in netplay
             }
 
-            if (TFGame.Instance.Scene is MainMenu)
+            if (TFGame.Instance.Scene is MainMenu && TowerFall.MainMenu.VersusMatchSettings != null)
             {
                 var state = Traverse.Create(TFGame.Instance.Scene as MainMenu).Field("state").GetValue<MainMenu.MenuState>();
 
@@ -381,9 +387,9 @@ namespace TF.EX.Patchs.PlayerInput
 
             if (TFGame.Instance.Scene is TowerFall.Level && (TFGame.Instance.Scene as TowerFall.Level).Session.GetWinner() != -1)
             {
-                var isFinished = Traverse.Create((TFGame.Instance.Scene as TowerFall.Level).Get<VersusMatchResults>()).Field("finished").GetValue<bool>();
+                var matchResults = (TFGame.Instance.Scene as TowerFall.Level).Get<VersusMatchResults>();
 
-                if (isFinished)
+                if (matchResults != null && Traverse.Create(matchResults).Field("finished").GetValue<bool>())
                 {
                     return actualInput;
                 }
@@ -391,7 +397,9 @@ namespace TF.EX.Patchs.PlayerInput
 
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
 
-            if (TFGame.Instance.Scene is MapScene && !matchmakingService.GetOwnLobby().IsEmpty)
+            if (TFGame.Instance.Scene is MapScene
+                && TowerFall.MainMenu.VersusMatchSettings?.Mode.IsNetplay() == true
+                && !matchmakingService.GetOwnLobby().IsEmpty)
             {
                 return false;
             }
@@ -424,7 +432,7 @@ namespace TF.EX.Patchs.PlayerInput
                 return actualInput;
             }
 
-            if (TFGame.Instance.Scene is MainMenu)
+            if (TFGame.Instance.Scene is MainMenu && TowerFall.MainMenu.VersusMatchSettings != null)
             {
                 var state = Traverse.Create(TFGame.Instance.Scene as MainMenu).Field("state").GetValue<MainMenu.MenuState>();
                 var currentMode = TowerFall.MainMenu.VersusMatchSettings.Mode;
@@ -454,7 +462,9 @@ namespace TF.EX.Patchs.PlayerInput
                 }
             }
 
-            if (TFGame.Instance.Scene is MapScene && !matchmakingService.GetOwnLobby().IsEmpty)
+            if (TFGame.Instance.Scene is MapScene
+                && TowerFall.MainMenu.VersusMatchSettings?.Mode.IsNetplay() == true
+                && !matchmakingService.GetOwnLobby().IsEmpty)
             {
                 return false;
             }

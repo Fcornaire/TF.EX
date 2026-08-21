@@ -57,6 +57,17 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                 Squished = entity.Squished.ToModel(),
                 SquishedCounter = dynPlayerCorpse.Get<Monocle.Counter>("squishedCounter").Value,
                 GhostSpawnCounter = dynPlayerCorpse.Get("ghostSpawnCounter") as float? ?? -1f,
+                PrismHit = entity.PrismHit,
+                PrismFall = dynPlayerCorpse.Get<bool>("prismFall"),
+                PrismTicks = dynPlayerCorpse.Get("prismTicks") as float? ?? -1f,
+                HasBrambles = dynPlayerCorpse.Get<Monocle.FlashingImage[]>("brambles") != null,
+                BrambleTicks = dynPlayerCorpse.Get("brambleTicks") as float? ?? -1f,
+                BrambleCollidable = entity.BrambleCollidable,
+                BramblesVisible = dynPlayerCorpse.Get<bool>("bramblesVisible"),
+                NotCollidable = !entity.Collidable,
+                NotPushable = !entity.Pushable,
+                DodgeTooLateCounter = dynPlayerCorpse.Get<Monocle.Counter>("dodgeTooLateCounter").Value,
+                Depth = entity.Depth,
             };
         }
 
@@ -67,6 +78,15 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             entity.Added();
 
             RemoveRevivers(entity);
+
+            var keepAlarm = dynPlayerCorpse.Get<Monocle.Alarm>("dropArrowAlarm");
+            foreach (var component in entity.Components
+                .Where(c => (c is Monocle.Alarm && c != keepAlarm) || c is Monocle.Tween || c is Monocle.Coroutine)
+                .ToList())
+            {
+                entity.Remove(component);
+            }
+            dynPlayerCorpse.Set("prismCoroutine", null);
 
             dynPlayerCorpse.Set("Facing", (TowerFall.Facing)toLoad.Facing);
             dynPlayerCorpse.Set("actualDepth", toLoad.ActualDepth);
@@ -113,13 +133,78 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                     entity.Remove(dropArrowAlarm);
                     dynPlayerCorpse.Set("dropArrowAlarm", null);
                 }
-
-                dynPlayerCorpse.Set("dropDir", toLoad.DropDir);
             }
+
+            dynPlayerCorpse.Set("dropDir", toLoad.DropDir);
+
+            entity.Collidable = !toLoad.NotCollidable;
+            entity.Pushable = !toLoad.NotPushable;
+            DynamicData.For(dynPlayerCorpse.Get<Monocle.Counter>("dodgeTooLateCounter")).Set("counter", toLoad.DodgeTooLateCounter);
+
+            if (toLoad.Depth != 0)
+            {
+                dynPlayerCorpse.Set("depth", toLoad.Depth);
+            }
+
+            dynPlayerCorpse.Set("PrismHit", toLoad.PrismHit);
+            dynPlayerCorpse.Set("prismFall", toLoad.PrismHit && toLoad.PrismFall);
+            dynPlayerCorpse.Set("prismTicks", toLoad.PrismHit ? toLoad.PrismTicks : -1f);
+
+            LoadBrambleState(entity, dynPlayerCorpse, toLoad);
 
             entity.ArrowCushion.LoadState(toLoad.ArrowCushion);
 
             entity.ArrowCushion.RemoveArrows();
+        }
+
+        private static void LoadBrambleState(TowerFall.PlayerCorpse entity, DynamicData dynPlayerCorpse, PlayerCorpse toLoad)
+        {
+            if (!toLoad.HasBrambles)
+            {
+                dynPlayerCorpse.Set("brambleTicks", -1f);
+                dynPlayerCorpse.Set("BrambleCollidable", false);
+                dynPlayerCorpse.Set("bramblesVisible", false);
+                dynPlayerCorpse.Set("brambles", null);
+
+                if (entity.Tags.Contains(Monocle.GameTags.PlayerCollider))
+                {
+                    entity.Tags.Remove(Monocle.GameTags.PlayerCollider);
+                    entity.Level[Monocle.GameTags.PlayerCollider].Remove(entity);
+                }
+
+                return;
+            }
+
+            if (dynPlayerCorpse.Get<Monocle.FlashingImage[]>("brambles") == null)
+            {
+                var brambles = new Monocle.FlashingImage[2];
+                for (int i = 0; i < brambles.Length; i++)
+                {
+                    var image = new Monocle.FlashingImage(TowerFall.TFGame.Atlas["brambles"]);
+                    image.CenterOrigin();
+                    image.Scale = Vector2.One * Monocle.Calc.Range(Monocle.Calc.Random, 0.8f, 0.4f);
+                    image.Position = new Vector2(Monocle.Calc.Range(Monocle.Calc.Random, -2f, 4f), 4f + Monocle.Calc.Range(Monocle.Calc.Random, -2f, 4f));
+                    image.Rotation = Monocle.Calc.NextAngle(Monocle.Calc.Random);
+                    entity.Add(image);
+                    image.Visible = false;
+                    brambles[i] = image;
+                }
+                dynPlayerCorpse.Set("brambles", brambles);
+            }
+
+            dynPlayerCorpse.Set("brambleTicks", toLoad.BrambleTicks);
+            dynPlayerCorpse.Set("BrambleCollidable", toLoad.BrambleCollidable);
+            dynPlayerCorpse.Set("bramblesVisible", toLoad.BramblesVisible);
+
+            if (!entity.Tags.Contains(Monocle.GameTags.PlayerCollider))
+            {
+                entity.Tags.Add(Monocle.GameTags.PlayerCollider);
+                var tagList = entity.Level[Monocle.GameTags.PlayerCollider];
+                if (!tagList.Contains(entity))
+                {
+                    tagList.Add(entity);
+                }
+            }
         }
 
         private static void RemoveRevivers(TowerFall.PlayerCorpse corpse)

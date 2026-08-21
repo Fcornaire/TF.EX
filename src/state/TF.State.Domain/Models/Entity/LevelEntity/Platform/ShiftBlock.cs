@@ -26,5 +26,8 @@ namespace TF.State.Domain.Models.Entity.LevelEntity.Platform
 
         [Key(6)]
         public double ActualDepth { get; set; }
+
+        [Key(7)]
+        public Vector2f PositionCounter { get; set; }
     }
 }

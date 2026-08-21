@@ -12,6 +12,11 @@ namespace TF.State.Patchs.Entity.LevelEntity
         [HarmonyPatch("Update")]
         public static void Miasma_Update(TowerFall.Miasma __instance)
         {
+            if (!StateFlags.IsCaptureActive)
+            {
+                return;
+            }
+
             if (StateFlags.IsRestoring)
             {
                 return;
@@ -39,7 +44,9 @@ namespace TF.State.Patchs.Entity.LevelEntity
 
             if (MiasmaSequenceController.ShouldRollAmaranthDir(state.Mode, state.Ticks, state.Dir))
             {
+                Calc.CalcPatch.RegisterRng();
                 state.Dir = Monocle.Calc.Random.Choose(1, -1);
+                Calc.CalcPatch.UnregisterRng();
             }
 
             var result = MiasmaSequenceController.Evaluate(state.Mode, state.Ticks, state.Dir);
@@ -61,6 +68,11 @@ namespace TF.State.Patchs.Entity.LevelEntity
         [HarmonyPatch("Dissipate")]
         public static void Miasma_Dissipate(TowerFall.Miasma __instance)
         {
+            if (!StateFlags.IsCaptureActive)
+            {
+                return;
+            }
+
             var state = ServiceCollections.ResolveSessionService().GetSession().Miasma;
 
             if (state.IsDissipating)

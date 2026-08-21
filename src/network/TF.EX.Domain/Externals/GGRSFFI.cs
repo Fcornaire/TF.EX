@@ -33,6 +33,9 @@ namespace TF.EX.Domain.Externals
         public static extern Status netplay_advance_frame(Input input);
 
         [DllImport("ggrs_ffi")]
+        public static extern Status netplay_set_test_inputs(Input[] inputs, int len);
+
+        [DllImport("ggrs_ffi")]
         public static extern NetplayRequets netplay_get_requests();
 
         [DllImport("ggrs_ffi")]

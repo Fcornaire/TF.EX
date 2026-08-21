@@ -3,6 +3,7 @@ using MonoMod.Utils;
 using TF.EX.Common.Extensions;
 using TF.EX.Domain;
 using TF.EX.Domain.CustomComponent;
+using TF.EX.Domain.Extensions;
 using TowerFall;
 using static TowerFall.PauseMenu;
 
@@ -154,6 +155,12 @@ namespace TF.EX.Patchs.Entity
                 return false;
             }
 
+            var mode = TowerFall.MainMenu.VersusMatchSettings?.Mode;
+            if (mode == null || !mode.Value.IsNetplay())
+            {
+                return true;
+            }
+
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
             var lobby = matchmakingService.GetOwnLobby();
             if (lobby.IsEmpty && name == "REMATCH!")
@@ -200,6 +207,12 @@ namespace TF.EX.Patchs.Entity
 
         private static bool IsNetplayEndgame(PauseMenu self)
         {
+            var mode = TowerFall.MainMenu.VersusMatchSettings?.Mode;
+            if (mode == null || !mode.Value.IsNetplay())
+            {
+                return false;
+            }
+
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
             var archerService = ServiceCollections.ResolveArcherService();
 

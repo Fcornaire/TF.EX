@@ -17,6 +17,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             var positionCounter = dynLantern.Get<Vector2>("counter");
             var position = dynLantern.Get<Vector2>("Position");
             var collidable = dynLantern.Get<bool>("Collidable");
+            var chain = dynLantern.Get<TowerFall.Chain>("Chain");
 
             return new Lantern
             {
@@ -26,7 +27,8 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                 IsFalling = falling,
                 Position = position.ToModel(),
                 PositionCounter = positionCounter.ToModel(),
-                VSpeed = vSpeed
+                VSpeed = vSpeed,
+                ChainActualDepth = chain != null ? DynamicData.For(chain).Get<double>("actualDepth") : 0,
             };
         }
 
@@ -49,11 +51,6 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             position = toLoad.Position.ToTFVector();
             vSpeed = toLoad.VSpeed;
             positionCounter = toLoad.PositionCounter.ToTFVector();
-            if (!falling)
-            {
-                dynLantern.Invoke("CheckForChain");
-                entity.ReTag();
-            }
 
             dynLantern.Set("actualDepth", actualDepth);
             dynLantern.Set("dead", dead);
@@ -62,24 +59,65 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             dynLantern.Set("counter", positionCounter);
             dynLantern.Set("Position", position);
             dynLantern.Set("Collidable", collidable);
+
+            if (!falling)
+            {
+                if (toLoad.ChainActualDepth != 0)
+                {
+                    var chain = entity.Level.GetEntityByDepth(toLoad.ChainActualDepth) as TowerFall.Chain;
+                    if (chain != null)
+                    {
+                        dynLantern.Set("Chain", chain);
+                        chain.Holding = entity;
+                    }
+                }
+                else
+                {
+                    dynLantern.Invoke("CheckForChain");
+                }
+
+                entity.ReTag();
+            }
+            else
+            {
+                var heldChain = dynLantern.Get<TowerFall.Chain>("Chain");
+                if (heldChain != null)
+                {
+                    heldChain.Holding = null;
+                    dynLantern.Set("Chain", null);
+                }
+
+                entity.UntagInstant(Monocle.GameTags.Target);
+                entity.UntagInstant(Monocle.GameTags.ExplosionCollider);
+                entity.UntagInstant(Monocle.GameTags.PlayerCollider);
+            }
         }
 
         private static void ReTag(this TowerFall.Lantern entity)
         {
-            if (!entity.Tags.Contains(Monocle.GameTags.Target))
-            {
-                entity.Tag(Monocle.GameTags.Target);
-            }
+            entity.TagInstant(Monocle.GameTags.Target);
+            entity.TagInstant(Monocle.GameTags.ExplosionCollider);
+            entity.TagInstant(Monocle.GameTags.PlayerCollider);
+        }
 
-            if (!entity.Tags.Contains(Monocle.GameTags.ExplosionCollider))
+        private static void TagInstant(this TowerFall.Lantern entity, Monocle.GameTags tag)
+        {
+            if (!entity.Tags.Contains(tag))
             {
-                entity.Tag(Monocle.GameTags.ExplosionCollider);
-            }
+                entity.Tags.Add(tag);
 
-            if (!entity.Tags.Contains(Monocle.GameTags.PlayerCollider))
-            {
-                entity.Tag(Monocle.GameTags.PlayerCollider);
+                var tagList = entity.Level[tag];
+                if (!tagList.Contains(entity))
+                {
+                    tagList.Add(entity);
+                }
             }
+        }
+
+        private static void UntagInstant(this TowerFall.Lantern entity, Monocle.GameTags tag)
+        {
+            entity.Tags.Remove(tag);
+            entity.Level[tag].Remove(entity);
         }
     }
 }

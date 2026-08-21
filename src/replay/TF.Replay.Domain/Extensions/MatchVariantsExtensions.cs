@@ -16,7 +16,7 @@ namespace TF.Replay.Domain.Extensions
 
                 if (found != null)
                 {
-                    found.Value = true;
+                    found.EnableForAll();
                     continue;
                 }
 
@@ -24,7 +24,7 @@ namespace TF.Replay.Domain.Extensions
 
                 if (custom.Value != null)
                 {
-                    custom.Value.Value = true;
+                    custom.Value.EnableForAll();
                     continue;
                 }
 
@@ -32,6 +32,22 @@ namespace TF.Replay.Domain.Extensions
             }
 
             return unknown;
+        }
+
+        public static void EnableForAll(this Variant variant)
+        {
+            if (variant.PerPlayer)
+            {
+                var values = MonoMod.Utils.DynamicData.For(variant).Get<bool[]>("playerValues");
+                for (int i = 0; i < values.Length; i++)
+                {
+                    values[i] = true;
+                }
+
+                return;
+            }
+
+            variant.Value = true;
         }
     }
 }

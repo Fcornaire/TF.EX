@@ -1,6 +1,7 @@
 ﻿using HarmonyLib;
 using MonoMod.Utils;
 using TF.State.Domain;
+using TF.State.Domain.Context;
 using TowerFall;
 
 namespace TF.State.Patchs.Entity.HUD
@@ -13,6 +14,11 @@ namespace TF.State.Patchs.Entity.HUD
         [HarmonyPatch([typeof(Session), typeof(VersusRoundResults)])]
         public static void VersusMatchResults_ctor(VersusMatchResults __instance, Session session)
         {
+            if (!StateFlags.IsCaptureActive)
+            {
+                return;
+            }
+
             var rngService = ServiceCollections.ResolveRngService();
 
             (TFGame.Instance.Scene as Level).Frozen = true;

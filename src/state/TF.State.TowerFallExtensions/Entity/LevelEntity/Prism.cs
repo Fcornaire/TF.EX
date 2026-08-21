@@ -19,6 +19,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                 StartedShaking = dyn.Get<bool>("startedShaking"),
                 OwnerIndex = entity.OwnerIndex,
                 EncasedPlayerIndex = entity.EncasedPlayer != null ? entity.EncasedPlayer.PlayerIndex : -1,
+                EncasedEnemyActualDepth = entity.EncasedEnemy != null ? DynamicData.For(entity.EncasedEnemy).Get<double>("actualDepth") : 0,
                 IsCollidable = entity.Collidable,
                 OnlyCollidableSwitch = entity.OnlyCollidableSwitch,
                 OnlyPlayerIndex = entity.OnlyPlayerIndex,

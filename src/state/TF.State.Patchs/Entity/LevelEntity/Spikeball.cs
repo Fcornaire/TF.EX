@@ -19,6 +19,11 @@ namespace TF.State.Patchs.Entity.LevelEntity
         [HarmonyPatch(MethodType.Constructor, [typeof(Vector2), typeof(Vector2), typeof(bool)])]
         public static void Spikeball_ctor_Vector2_Vector2_bool(Spikeball __instance)
         {
+            if (!StateFlags.IsCaptureActive)
+            {
+                return;
+            }
+
             var dynSpikeball = DynamicData.For(__instance);
 
             CalcPatch.RegisterRng();

@@ -71,6 +71,39 @@ namespace TF.State.Domain.Models.Entity.LevelEntity.Player
 
         [Key(21)]
         public float GhostSpawnCounter { get; set; }
+
+        [Key(22)]
+        public bool PrismHit { get; set; }
+
+        [Key(23)]
+        public bool PrismFall { get; set; }
+
+        [Key(24)]
+        public float PrismTicks { get; set; }
+
+        [Key(25)]
+        public bool HasBrambles { get; set; }
+
+        [Key(26)]
+        public float BrambleTicks { get; set; }
+
+        [Key(27)]
+        public bool BrambleCollidable { get; set; }
+
+        [Key(28)]
+        public bool BramblesVisible { get; set; }
+
+        [Key(29)]
+        public bool NotCollidable { get; set; }
+
+        [Key(30)]
+        public bool NotPushable { get; set; }
+
+        [Key(31)]
+        public float DodgeTooLateCounter { get; set; }
+
+        [Key(32)]
+        public int Depth { get; set; }
     }
 
     [MessagePackObject]

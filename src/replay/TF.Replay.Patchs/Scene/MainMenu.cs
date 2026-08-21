@@ -363,7 +363,7 @@ namespace TF.Replay.Patchs.Scene
             var fightButton = __instance.GetToBeSpawned<FightButton>();
             var coopButton = __instance.GetToBeSpawned<CoOpButton>();
             var bladesButton = __instance.GetAllToBeSpawned<BladeButton>();
-            var modButton = bladesButton.Single(blade =>
+            var modButton = bladesButton.FirstOrDefault(blade =>
             {
                 return Traverse.Create(blade).Field<string>("name").Value == "MODS";
             });
@@ -380,7 +380,10 @@ namespace TF.Replay.Patchs.Scene
             var replayButton = new ReplayButton(new Vector2(105f, 210f), new Vector2(100f, 300f), "REPLAYS", "");
             replayButton.RightItem = trials;
             replayButton.UpItem = fightButton;
-            replayButton.LeftItem = modButton;
+            if (modButton != null)
+            {
+                replayButton.LeftItem = modButton;
+            }
 
             foreach (var blade in bladesButton)
             {

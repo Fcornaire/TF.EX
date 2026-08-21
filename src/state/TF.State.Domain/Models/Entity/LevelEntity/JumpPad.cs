@@ -10,5 +10,8 @@ namespace TF.State.Domain.Models.Entity.LevelEntity
 
         [Key(1)]
         public bool IsOn { get; set; }
+
+        [Key(2)]
+        public float[] ImageScaleYs { get; set; }
     }
 }

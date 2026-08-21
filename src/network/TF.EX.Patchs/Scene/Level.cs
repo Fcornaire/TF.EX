@@ -20,7 +20,11 @@ namespace TF.EX.Patchs.Scene
         [HarmonyPatch("HandlePausing")]
         public static void Level_HandlePausing()
         {
-            ServiceCollections.ResolveInputService().EnsureEveryControllerSlot();
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            if (netplayManager.IsInit() || netplayManager.IsReplayMode() || netplayManager.IsTestMode())
+            {
+                ServiceCollections.ResolveInputService().EnsureEveryControllerSlot();
+            }
         }
 
         private static Random random = new Random();
@@ -67,7 +71,10 @@ namespace TF.EX.Patchs.Scene
                 SetEngineDeltaTime?.Invoke(1f / 60f * TFGame.TimeRate);
             }
 
-            AddPlayersIndicators(__instance);
+            if (ExFlags.IsCaptureActive)
+            {
+                AddPlayersIndicators(__instance);
+            }
 
             return true;
         }
@@ -105,11 +112,18 @@ namespace TF.EX.Patchs.Scene
 
             if (ExFlags.IsCaptureActive)
             {
-                //Moonglass shatter + DarkPortals sequence: TF.State owns them, EX drives
+                //Moonglass shatter + DarkPortals sequence, TF.State owns the controllers and EX drives
                 StateApi.Current.StepOwnedControllers();
             }
 
-            UpdateLayersEntityList(__instance);
+            var isStateDriven = ExFlags.IsCaptureActive
+                || ExFlags.IsReplayMode
+                || !string.IsNullOrEmpty(StateApi.Current.GetFrameDriver());
+
+            if (isStateDriven)
+            {
+                UpdateLayersEntityList(__instance);
+            }
 
             if (ExFlags.IsReplayMode)
             {
@@ -121,7 +135,10 @@ namespace TF.EX.Patchs.Scene
                 StateApi.Current.SynchronizeSfx(GGRSFFI.netplay_current_frame(), ExFlags.IsTestMode);
             }
 
-            SkipLevelLoaderIfNeeded();
+            if (isStateDriven)
+            {
+                SkipLevelLoaderIfNeeded();
+            }
         }
 
         [HarmonyPrefix]
@@ -129,6 +146,12 @@ namespace TF.EX.Patchs.Scene
         public static bool Level_HandlePausing(Level __instance)
         {
             var matchMakingService = ServiceCollections.ResolveMatchmakingService();
+
+            var mode = TowerFall.MainMenu.VersusMatchSettings?.Mode;
+            if (mode == null || !mode.Value.IsNetplay())
+            {
+                return true;
+            }
 
             var lobby = matchMakingService.GetOwnLobby();
             if (lobby != null && (matchMakingService.IsLobbyReady() || !lobby.IsEmpty))

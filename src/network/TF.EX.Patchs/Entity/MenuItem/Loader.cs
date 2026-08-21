@@ -1,6 +1,8 @@
 ﻿using HarmonyLib;
 using Microsoft.Xna.Framework;
 using Monocle;
+using TF.EX.Domain;
+using TF.EX.Domain.Extensions;
 
 namespace TF.EX.Patchs.Entity.MenuItem
 {
@@ -11,6 +13,12 @@ namespace TF.EX.Patchs.Entity.MenuItem
         [HarmonyPatch("TweenIn")]
         public static bool Loader_TweenIn(TowerFall.Loader __instance)
         {
+            var mode = TowerFall.MainMenu.VersusMatchSettings?.Mode;
+            if (mode?.IsNetplay() != true && ServiceCollections.ResolveMatchmakingService().GetOwnLobby().IsEmpty)
+            {
+                return true;
+            }
+
             Tween tween = Tween.Create(Tween.TweenMode.Oneshot, Ease.CubeIn, 12, start: true);
             tween.OnUpdate = delegate (Tween t)
             {
