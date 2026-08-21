@@ -9,7 +9,6 @@ using TF.State.TowerFallExtensions.Entity;
 using TF.State.TowerFallExtensions.Entity.LevelEntity;
 using TowerFall;
 
-using TF.State.Domain.Context;
 namespace TF.State.Patchs.Entity.LevelEntity
 {
     [HarmonyPatch(typeof(Spikeball))]

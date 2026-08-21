@@ -16,16 +16,8 @@ namespace TF.EX.Patchs.Scene
     [HarmonyPatch(typeof(Level))]
     public class LevelPatch
     {
-        [HarmonyPrefix]
-        [HarmonyPatch("HandlePausing")]
-        public static void Level_HandlePausing()
-        {
-            var netplayManager = ServiceCollections.ResolveNetplayManager();
-            if (netplayManager.IsInit() || netplayManager.IsReplayMode() || netplayManager.IsTestMode())
-            {
-                ServiceCollections.ResolveInputService().EnsureEveryControllerSlot();
-            }
-        }
+        private const int HUD_LAYER = 4;
+        private static Level clearedWaitingFor;
 
         private static Random random = new Random();
 
@@ -37,6 +29,17 @@ namespace TF.EX.Patchs.Scene
             var setter = AccessTools.PropertySetter(typeof(Monocle.Engine), property);
 
             return setter == null ? null : (Action<float>)setter.CreateDelegate(typeof(Action<float>));
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch("HandlePausing")]
+        public static void Level_HandlePausing()
+        {
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            if (netplayManager.IsInit() || netplayManager.IsReplayMode() || netplayManager.IsTestMode())
+            {
+                ServiceCollections.ResolveInputService().EnsureEveryControllerSlot();
+            }
         }
 
         [HarmonyPostfix]
@@ -108,6 +111,8 @@ namespace TF.EX.Patchs.Scene
 
             var netplayManager = ServiceCollections.ResolveNetplayManager();
 
+            ClearWaitingNotificationOnceSynchronized(__instance, netplayManager);
+
             netplayManager.SetIsRollbackFrame(false); //Mark the end of the First RBF
 
             if (ExFlags.IsCaptureActive)
@@ -160,6 +165,18 @@ namespace TF.EX.Patchs.Scene
             }
 
             return true;
+        }
+
+        private static void ClearWaitingNotificationOnceSynchronized(Level level, Domain.Ports.INetplayManager netplayManager)
+        {
+            if (ReferenceEquals(clearedWaitingFor, level) || !netplayManager.IsSynchronized())
+            {
+                return;
+            }
+
+            clearedWaitingFor = level;
+
+            Domain.CustomComponent.Notification.Clear(level, HUD_LAYER);
         }
 
         private static void UpdateLayersEntityList(Level level)

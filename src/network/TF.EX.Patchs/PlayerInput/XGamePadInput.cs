@@ -477,9 +477,5 @@ namespace TF.EX.Patchs.PlayerInput
             return actualInput;
         }
 
-        private static bool IsLocalPlayerGamePad(XGamepadInput self, IInputService inputService)
-        {
-            return inputService.GetInputIndex(self) == 0;
-        }
     }
 }

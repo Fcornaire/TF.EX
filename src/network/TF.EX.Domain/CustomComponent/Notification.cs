@@ -48,7 +48,18 @@ namespace TF.EX.Domain.CustomComponent
             {
                 StartAnimation();
             }
+            else if (!isSticky && stayingDuration > 0)
+            {
+                ScheduleRemoval();
+            }
+        }
 
+        private void ScheduleRemoval()
+        {
+            Alarm alarm = Alarm.Create(Alarm.AlarmMode.Oneshot, null, stayingDuration, true);
+            alarm.OnComplete = RemoveSelf;
+
+            Add(alarm);
         }
 
         public static Notification Create(Scene scene, string text, int appearDuration = 20, int stayingDuration = 250, bool isSticky = false, bool withoutAnimation = false)

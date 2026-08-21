@@ -36,6 +36,9 @@ namespace TF.EX.Domain.Ports
         int GetLocalSeat();
         void ReconcileRollcallIfPending();
         void ApplyTeamsToMatchSettings();
+        void RestoreArchersFromLobbyIfNeeded();
+        void NotifyMatchEnded();
+        IEnumerable<Models.WebSocket.EndGameStatus> GetEndGameStatus();
         Task RematchChoice();
         Task ArcherSelectChoice();
     }

@@ -6,7 +6,6 @@ using TF.State.Domain.Context;
 using TF.State.TowerFallExtensions.Entity;
 using TowerFall;
 
-using TF.State.Domain.Context;
 namespace TF.State.Patchs.Entity.LevelEntity
 {
     [HarmonyPatch(typeof(TeamReviver))]

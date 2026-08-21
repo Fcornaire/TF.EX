@@ -159,11 +159,6 @@ namespace TF.Replay.Domain.Services
             _lastFrame = Math.Min(_lastFrame, frame);
         }
 
-        public void AddDesyncRecord(byte[] state, int[] inputs, int frame)
-        {
-            _replay?.Desynchs.Add(new Record { State = state, Inputs = inputs, Frame = frame });
-        }
-
         public string Export()
         {
             if (_replay == null || _fromFile || !_replay.Record.Any())

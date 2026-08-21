@@ -1,4 +1,4 @@
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Monocle;
 using MonoMod.Utils;
 using TowerFall;
@@ -38,7 +38,7 @@ namespace TF.Replay.Domain.CustomComponent
             selected = tweenTo + new Vector2(15f, 0f);
             this._replay = replay;
 
-            this._name = string.Copy(_replay.Informations.Name);
+            this._name = _replay.Informations.Name;
             this._name = _name.Replace("T", " ");
 
             this.confirm = confirmAction;

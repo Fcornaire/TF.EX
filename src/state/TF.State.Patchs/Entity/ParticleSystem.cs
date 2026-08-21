@@ -1,11 +1,10 @@
-using HarmonyLib;
+﻿using HarmonyLib;
 using Microsoft.Xna.Framework;
 using Monocle;
 using TF.State.Domain;
 using TF.State.Domain.Context;
 using TF.State.Patchs.Calc;
 
-using TF.State.Domain.Context;
 namespace TF.State.Patchs.Entity
 {
     [HarmonyPatch(typeof(ParticleSystem))]

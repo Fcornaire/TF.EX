@@ -14,7 +14,6 @@ namespace TF.Replay.Domain.Ports
         void BeginRecording(int towerId, int mode, int versusMatchLength, IEnumerable<string> variants,IEnumerable<CustomMod> mods);
         void AddRecord(byte[] state, int[] inputs, int frame = -1);
         void RemovePredictedRecords(int frame);
-        void AddDesyncRecord(byte[] state, int[] inputs, int frame);
         string Export();
         void Reset();
 

@@ -7,7 +7,6 @@ using TF.State.Domain.Context;
 using TF.State.Patchs.Calc;
 using TowerFall;
 
-using TF.State.Domain.Context;
 namespace TF.State.Patchs
 {
     [HarmonyPatch(typeof(OrbLogic))]

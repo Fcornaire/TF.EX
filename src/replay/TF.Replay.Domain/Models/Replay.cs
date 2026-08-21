@@ -12,8 +12,6 @@ namespace TF.Replay.Domain.Models
         [Key(1)]
         public List<Record> Record { get; set; } = new List<Record>();
 
-        [Key(2)]
-        public List<Record> Desynchs { get; set; } = new List<Record>();
     }
 
     [MessagePackObject]

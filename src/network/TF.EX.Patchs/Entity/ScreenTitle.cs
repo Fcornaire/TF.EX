@@ -8,6 +8,16 @@ namespace TF.EX.Patchs.Entity
     internal class ScreenTitlePatch
     {
         [HarmonyPrefix]
+        [HarmonyPatch(MethodType.Constructor, [typeof(MainMenu.MenuState)])]
+        public static void ScreenTitle_ctor(ref MainMenu.MenuState state)
+        {
+            if (!Enum.IsDefined(typeof(MainMenu.MenuState), state))
+            {
+                state = MainMenu.MenuState.VersusOptions;
+            }
+        }
+
+        [HarmonyPrefix]
         [HarmonyPatch("ChangeState")]
         public static bool ScreenTitle_ChangeState(ScreenTitle __instance, MainMenu.MenuState state)
         {

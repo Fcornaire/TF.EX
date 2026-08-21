@@ -4,7 +4,6 @@ using MonoMod.Utils;
 using TF.State.Domain;
 using TF.State.Domain.Context;
 
-using TF.State.Domain.Context;
 namespace TF.State.Patchs.SFX
 {
     [HarmonyPatch(typeof(SFXInstanced))]

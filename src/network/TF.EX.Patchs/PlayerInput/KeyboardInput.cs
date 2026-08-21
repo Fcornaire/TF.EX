@@ -398,9 +398,5 @@ namespace TF.EX.Patchs.PlayerInput
 
         }
 
-        private static bool IsLocalPlayerKeyboard(KeyboardInput self, IInputService inputService)
-        {
-            return inputService.GetInputIndex(self) == 0;
-        }
     }
 }

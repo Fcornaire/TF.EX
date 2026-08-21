@@ -24,8 +24,11 @@ namespace TF.EX.Patchs.Scene
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
             var archerService = ServiceCollections.ResolveArcherService();
 
+            matchmakingService.RestoreArchersFromLobbyIfNeeded();
+
             var lobby = matchmakingService.GetOwnLobby();
             netplayManager.UpdatePlayers(lobby.Players, lobby.Spectators);
+            netplayManager.UpdateNumPlayers(lobby.Players.Count);
 
             if (lobby.IsEmpty)
             {

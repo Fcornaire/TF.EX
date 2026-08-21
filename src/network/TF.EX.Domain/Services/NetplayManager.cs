@@ -1,4 +1,4 @@
-using MessagePack;
+﻿using MessagePack;
 using Microsoft.Extensions.Logging;
 using Monocle;
 using MonoMod.Utils;
@@ -425,7 +425,7 @@ namespace TF.EX.Domain.Services
                     }
                 }
             }
-            catch (EntryPointNotFoundException e)
+            catch (EntryPointNotFoundException)
             {
                 _supportsPerSeatStats = false;
                 return;
@@ -654,7 +654,7 @@ namespace TF.EX.Domain.Services
 
         public void PublishCaptureFlag()
         {
-            ExFlags.IsCaptureActive = (_isInitInternal && !IsDisconnected()) || _netplayModeInternal == NetplayMode.Replay;
+            ExFlags.IsCaptureActive = _netplayModeInternal == NetplayMode.Replay || (_netplayModeInternal != NetplayMode.Uninitialized && !(_isInitInternal && IsDisconnected()));
             ExFlags.Push();
         }
 
@@ -828,7 +828,7 @@ namespace TF.EX.Domain.Services
 
                 NetplayMeta.Name = NetplayMeta.Name.ToUpper();
             }
-            catch (FileNotFoundException e)
+            catch (FileNotFoundException)
             {
                 NetplayMeta = new NetplayMeta
                 {

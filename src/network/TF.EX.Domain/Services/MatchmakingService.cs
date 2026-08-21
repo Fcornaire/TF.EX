@@ -30,6 +30,7 @@ namespace TF.EX.Domain.Services
         private string peerId = string.Empty;
         private int previousPlayersCount = 1;
         private bool hostStartedMatch = false;
+        private bool matchEndReported = false;
         private Lobby pendingRollcallLobby = null;
 
         private Dictionary<string, Action> onResult = new Dictionary<string, Action>();
@@ -237,6 +238,15 @@ namespace TF.EX.Domain.Services
             await Send(message);
         }
 
+        private async Task SendMatchEnded()
+        {
+            var matchEndedMessage = new MatchEndedMessage { };
+
+            var bytes = MessagePackSerializer.Serialize(matchEndedMessage);
+            var message = MessagePackSerializer.ConvertToJson(bytes);
+            await Send(message);
+        }
+
         private async Task SendStartLobbyChoice()
         {
             var startLobbyMessage = new StartLobbyChoiceMessage { };
@@ -405,12 +415,15 @@ namespace TF.EX.Domain.Services
                 (TFGame.Instance.Scene as Level).Session.MatchSettings.LevelSystem.Dispose();
 
                 Sounds.ui_invalid.Play();
-                Notification.Create(mainMenu, "All players left...");
+                Notification.Create(mainMenu, "No choice made! dropped from lobby");
                 ownLobby = new Lobby();
+                matchEndReported = false;
             }
 
             if (message.Contains("RematchLobby"))
             {
+                matchEndReported = false;
+
                 if (TFGame.Instance.Scene is Level)
                 {
                     _inputService.EnableAllControllers();
@@ -428,6 +441,7 @@ namespace TF.EX.Domain.Services
             if (message.Contains("ArcherSelect"))
             {
                 hostStartedMatch = false;
+                matchEndReported = false;
 
                 if (TFGame.Instance.Scene is Level)
                 {
@@ -437,6 +451,27 @@ namespace TF.EX.Domain.Services
                     _archerService.Reset();
                     (TFGame.Instance.Scene as Level).Session.MatchSettings.LevelSystem.Dispose();
                 }
+            }
+        }
+
+        public void RestoreArchersFromLobbyIfNeeded()
+        {
+            if (ownLobby.IsEmpty || _archerService.GetArchers().Any())
+            {
+                return;
+            }
+
+            foreach (var player in ownLobby.Players.OrderBy(entry => entry.Seat))
+            {
+                if (player.Seat < 0 || player.Seat >= TFGame.Characters.Length)
+                {
+                    continue;
+                }
+
+                TFGame.Characters[player.Seat] = player.ArcherIndex;
+                TFGame.AltSelect[player.Seat] = (ArcherData.ArcherTypes)player.ArcherAltIndex;
+
+                _archerService.AddArcher(player.Seat, player);
             }
         }
 
@@ -828,6 +863,7 @@ namespace TF.EX.Domain.Services
                 Players = lobby.Players,
                 GameData = lobby.GameData,
                 Spectators = lobby.Spectators,
+                EndGameChoice = lobby.EndGameChoice,
                 Mods = lobby.Mods
             };
         }
@@ -930,6 +966,7 @@ namespace TF.EX.Domain.Services
         public void ResetLobby()
         {
             hostStartedMatch = false;
+            matchEndReported = false;
             ownLobby = new Lobby();
             previousPlayersCount = 1;
             pendingRollcallLobby = null;
@@ -943,6 +980,33 @@ namespace TF.EX.Domain.Services
         public async Task RematchChoice()
         {
             await SendRematchChoice();
+        }
+
+        public void NotifyMatchEnded()
+        {
+            if (ownLobby.IsEmpty || matchEndReported)
+            {
+                return;
+            }
+
+            matchEndReported = true;
+
+            Task.Run(async () => await SendMatchEnded());
+        }
+
+        public IEnumerable<EndGameStatus> GetEndGameStatus()
+        {
+            var votes = ownLobby.EndGameChoice ?? new List<EndGameVote>();
+
+            return ownLobby.Players
+                .OrderBy(player => player.Seat)
+                .Select(player => new EndGameStatus
+                {
+                    Seat = player.Seat,
+                    Name = player.Name,
+                    Choice = votes.FirstOrDefault(vote => vote.Addr == player.Addr)?.Choice
+                })
+                .ToList();
         }
 
         public async Task ArcherSelectChoice()

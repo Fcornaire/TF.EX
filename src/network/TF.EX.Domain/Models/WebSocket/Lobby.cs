@@ -12,6 +12,7 @@ namespace TF.EX.Domain.Models.WebSocket
         public ICollection<Player> Players { get; set; } = new List<Player>();
         public ICollection<Player> Spectators { get; set; } = new List<Player>();
         public GameData GameData { get; set; } = new GameData();
+        public ICollection<EndGameVote> EndGameChoice { get; set; } = new List<EndGameVote>();
         public ICollection<CustomMod> Mods { get; set; } = new List<CustomMod>();
 
         [IgnoreMember]
@@ -25,6 +26,20 @@ namespace TF.EX.Domain.Models.WebSocket
 
         [IgnoreMember]
         public string CanNotJoinReason { get; set; } = "";
+    }
+
+    [MessagePackObject(keyAsPropertyName: true)]
+    public class EndGameVote
+    {
+        public string Addr { get; set; } = "";
+        public string Choice { get; set; } = "";
+    }
+
+    public class EndGameStatus
+    {
+        public int Seat { get; set; }
+        public string Name { get; set; } = "";
+        public string Choice { get; set; }
     }
 
     [MessagePackObject(keyAsPropertyName: true)]
