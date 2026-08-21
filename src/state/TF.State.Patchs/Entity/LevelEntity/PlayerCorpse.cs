@@ -4,7 +4,6 @@ using TF.State.Domain;
 using TF.State.Domain.Context;
 using TowerFall;
 
-using TF.State.Domain.Context;
 namespace TF.State.Patchs.Entity.LevelEntity
 {
     [HarmonyPatch(typeof(PlayerCorpse))]

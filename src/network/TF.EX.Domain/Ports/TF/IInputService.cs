@@ -23,6 +23,7 @@ namespace TF.EX.Domain.Ports.TF
 
         int GetInputIndex(PlayerInput input);
         void ObserveLocalDevice();
+        void RebindLocalInput();
         void DisableAllControllers();
         void EnableAllControllers();
 

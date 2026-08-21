@@ -4,7 +4,6 @@ using TF.State.Domain.Context;
 using TF.State.TowerFallExtensions;
 using TowerFall;
 
-using TF.State.Domain.Context;
 namespace TF.State.Patchs.RoundLogic
 {
     [HarmonyPatch(typeof(LastManStandingRoundLogic))]

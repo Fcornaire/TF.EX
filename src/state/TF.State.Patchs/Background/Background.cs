@@ -1,8 +1,7 @@
-using HarmonyLib;
+﻿using HarmonyLib;
 using TF.State.Domain;
 using TF.State.Domain.Context;
 
-using TF.State.Domain.Context;
 namespace TF.State.Patchs.Background
 {
     [HarmonyPatch(typeof(TowerFall.Background))]

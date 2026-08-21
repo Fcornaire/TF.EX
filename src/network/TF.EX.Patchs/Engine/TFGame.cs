@@ -98,7 +98,13 @@ namespace TF.EX.Patchs.Engine
                 }
 
                 netplayManager.Reset();
-                netplayManager.ResetMode();
+
+                var isReturningToLobby = (__instance.Scene as TowerFall.MainMenu).State == TowerFall.MainMenu.MenuState.Rollcall && !ServiceCollections.ResolveMatchmakingService().GetOwnLobby().IsEmpty;
+
+                if (!isReturningToLobby)
+                {
+                    netplayManager.ResetMode();
+                }
 
                 if (wasExDriven)
                 {

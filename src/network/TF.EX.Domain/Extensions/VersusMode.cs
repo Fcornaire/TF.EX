@@ -45,7 +45,7 @@ namespace TF.EX.Domain.Extensions
             RestorePerPlayerVariants(settings.Variants);
         }
 
-        private static readonly HashSet<TowerFall.Variant> netplayNormalizedVariants = [];
+        private static readonly Dictionary<TowerFall.Variant, bool[]> netplayNormalizedVariants = [];
 
         public static void NormalizeForNetplay(this TowerFall.MatchVariants variants)
         {
@@ -53,9 +53,10 @@ namespace TF.EX.Domain.Extensions
             {
                 if (variant.PerPlayer)
                 {
-                    netplayNormalizedVariants.Add(variant);
-
                     var dynVariant = MonoMod.Utils.DynamicData.For(variant);
+
+                    netplayNormalizedVariants[variant] = dynVariant.Get<bool[]>("playerValues");
+
                     dynVariant.Set("playerValues", null);
                     dynVariant.Set("value", false);
                 }
@@ -78,9 +79,10 @@ namespace TF.EX.Domain.Extensions
         {
             foreach (var variant in variants.Variants)
             {
-                if (netplayNormalizedVariants.Remove(variant))
+                if (netplayNormalizedVariants.Remove(variant, out var playerValues) && playerValues != null)
                 {
-                    MonoMod.Utils.DynamicData.For(variant).Set("playerValues", new bool[4]);
+                    Array.Clear(playerValues);
+                    MonoMod.Utils.DynamicData.For(variant).Set("playerValues", playerValues);
                 }
             }
         }

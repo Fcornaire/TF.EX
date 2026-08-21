@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Interop;
 using TF.EX.Domain.Ports;
@@ -259,7 +259,7 @@ namespace TF.EX.Domain.Services
 
             if (frame != start)
             {
-                _logger.LogDebug("[Replay] Primed at frame {frame}", frame, start, frame - 1);
+                _logger.LogDebug("[Replay] Primed at frame {frame} from start {start}", frame, start);
             }
 
             return frame;

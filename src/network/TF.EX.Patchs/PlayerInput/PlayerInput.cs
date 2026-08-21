@@ -18,6 +18,13 @@ namespace TF.EX.Patchs.PlayerInput
                 return true;
             }
 
+            if (TFGame.Instance?.Scene is Level level
+                && level.Session.GetWinner() != -1
+                && !ServiceCollections.ResolveNetplayManager().IsInit())
+            {
+                return true;
+            }
+
             return TFGame.PlayerInputs.All(input => input == null);
         }
 

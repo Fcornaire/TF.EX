@@ -65,8 +65,6 @@ namespace TF.Replay.Domain.Api
 
         public void RemovePredictedRecords(int frame) => _replayService.RemovePredictedRecords(frame);
 
-        public void AddDesyncRecord(byte[] state, int[] inputs, int frame) => _replayService.AddDesyncRecord(state, inputs, frame);
-
         public string Export()
         {
             FlushArchers();

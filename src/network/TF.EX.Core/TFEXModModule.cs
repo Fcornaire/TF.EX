@@ -13,7 +13,6 @@ namespace TF.EX
         public static TFEXModModule Instance;
         public const string ModName = "TF.EX";
 
-        public static Atlas Atlas;
         public static ISubtextureEntry InternetIcon { get; private set; } = null!;
         public static IVariantEntry RightStickVariant { get; private set; } = null!;
 

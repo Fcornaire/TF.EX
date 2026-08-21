@@ -39,6 +39,24 @@ namespace TF.EX.Domain.Services.TF
             }
         }
 
+        public void RebindLocalInput()
+        {
+            var previous = _context.GetLocalInput();
+
+            if (previous == null)
+            {
+                return;
+            }
+
+            var match = TFGame.PlayerInputs.FirstOrDefault(input => input != null && input.ID == previous.ID)
+                ?? TFGame.PlayerInputs.FirstOrDefault(input => input != null && input.Attached);
+
+            if (match != null && !ReferenceEquals(match, previous))
+            {
+                _context.SetLocalInput(match);
+            }
+        }
+
         private static bool HasMenuActivity(PlayerInput input)
         {
             return input.MenuConfirmCheck || input.MenuBackCheck || input.MenuStartCheck

@@ -419,6 +419,15 @@ namespace TF.EX.Patchs.Entity.MenuItem
             var archerType = rollcallElement.Get<ArcherData.ArcherTypes>("archerType");
 
             portrait.SetCharacter(TFGame.Characters[playerIndex], archerType, 1);
+
+            var owner = portrait.Entity;
+            var position = owner?.Position ?? Vector2.Zero;
+
+            if (owner != null)
+            {
+                owner.Position = new Vector2(MathHelper.Clamp(position.X, 0f, 320f), position.Y);
+            }
+
             try
             {
                 portrait.Join(unlock: false);
@@ -428,6 +437,14 @@ namespace TF.EX.Patchs.Entity.MenuItem
                 var logger = ServiceCollections.ResolveLogger();
                 logger.LogWarning($"Failed to join portrait for player {playerIndex}: {e}");
             }
+            finally
+            {
+                if (owner != null)
+                {
+                    owner.Position = position;
+                }
+            }
+
             TFGame.Players[playerIndex] = true;
         }
 

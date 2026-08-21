@@ -6,7 +6,6 @@ using TF.State.Domain.Models;
 using TF.State.TowerFallExtensions.Entity.LevelEntity;
 using TowerFall;
 
-using TF.State.Domain.Context;
 namespace TF.State.Patchs.Entity.LevelEntity
 {
     [HarmonyPatch(typeof(BrambleArrow))]
