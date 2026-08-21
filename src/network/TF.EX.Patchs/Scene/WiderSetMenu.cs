@@ -63,7 +63,7 @@ namespace TF.EX.Patchs.Scene
                 return;
             }
 
-            __instance.MainMenu.State = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
+            __instance.MainMenu.State = TF.EX.Domain.Models.MenuState.NetplaySelect.ToTFModel();
         }
 
         private static MainMenu.MenuState? Resolve()

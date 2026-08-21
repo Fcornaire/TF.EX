@@ -1,5 +1,4 @@
 using HarmonyLib;
-using TF.EX.Domain.Interop;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoMod.Utils;
@@ -8,9 +7,11 @@ using TF.EX.Common.Interop;
 using TF.EX.Domain;
 using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Extensions;
+using TF.EX.Domain.Interop;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Models.WebSocket;
 using TF.EX.Patchs.Entity.MenuItem;
+using TextCopy;
 using TowerFall;
 
 namespace TF.EX.Patchs.Scene
@@ -20,13 +21,23 @@ namespace TF.EX.Patchs.Scene
     {
         private const string LOCAL_BANNER_TITLE = "LOCAL VERSUS";
         private const string ONLINE_BANNER_TITLE = "ONLINE PLAY";
+        private const string QUICKPLAY_BANNER_TITLE = "QUICK PLAY";
+        private const string LOBBIES_BANNER_TITLE = "LOBBIES";
+        private const string PRIVATE_BANNER_TITLE = "PRIVATE";
+        private const string PRIVATE_CREATE_BANNER_TITLE = "CREATE";
+        private const string PRIVATE_JOIN_BANNER_TITLE = "JOIN";
 
         private const float WIDERSET_BUTTON_Y = 70f;
         private const float TOGGLE_Y = 135f;
         private const float BANNER_Y = 185f;
 
         private static readonly string[] LOCAL_BANNER_LINES = { "EVERYONE ON THIS MACHINE.", "GRAB A SECOND CONTROLLER." };
-        private static readonly string[] ONLINE_BANNER_LINES = { "ROLLBACK NETCODE SOLO PLAY,"};
+        private static readonly string[] ONLINE_BANNER_LINES = { "ROLLBACK NETCODE SOLO PLAY," };
+        private static readonly string[] QUICKPLAY_BANNER_LINES = { "JUMP INTO A RANDOM MATCH.", "CLOSEST OPPONENTS FIRST." };
+        private static readonly string[] LOBBIES_BANNER_LINES = { "BROWSE PUBLIC LOBBIES", "OR CREATE YOUR OWN." };
+        private static readonly string[] PRIVATE_BANNER_LINES = { "LOCKED LOBBY, JOINABLE", "ONLY WITH A CODE." };
+        private static readonly string[] PRIVATE_CREATE_BANNER_LINES = { "HOST A PRIVATE LOBBY AND", "SHARE ITS CODE WITH FRIENDS." };
+        private static readonly string[] PRIVATE_JOIN_BANNER_LINES = { "ENTER A CODE TO JOIN", "A FRIEND'S PRIVATE LOBBY." };
 
         private static bool hasShowedWarning = false;
 
@@ -36,6 +47,7 @@ namespace TF.EX.Patchs.Scene
         private static LobbyPanel lobbyPanel = null;
         private static Monocle.Entity spectateEntityButton = null;
         private static Monocle.Entity createEntityButton = null;
+        private static Monocle.Entity copyCodeGuideEntity = null;
 
         private static LobbyVersusModeButton lobbyVersusModeButton = null;
         private static LobbyVersusCoinButton lobbyVersusCoinButton = null;
@@ -45,6 +57,7 @@ namespace TF.EX.Patchs.Scene
         private static List<VariantItem> variants = new List<VariantItem>();
 
         private static DateTime nextServerPull = DateTime.UtcNow;
+        private static DateTime nextJoinCodeAttempt = DateTime.UtcNow;
 
         private static Text noMsg;
 
@@ -62,6 +75,27 @@ namespace TF.EX.Patchs.Scene
                     return false;
                 case Domain.Models.MenuState.VersusSelect:
                     HandleVersusSelect(__instance, name);
+                    return false;
+                case Domain.Models.MenuState.NetplaySelect:
+                    if (name == "Create")
+                    {
+                        CreateNetplaySelect(__instance);
+                    }
+                    return false;
+                case Domain.Models.MenuState.PrivateSelect:
+                    if (name == "Create")
+                    {
+                        CreatePrivateSelect(__instance);
+                    }
+                    return false;
+                case Domain.Models.MenuState.PrivateJoinCode:
+                    if (name == "Create")
+                    {
+                        CreatePrivateJoinCode(__instance);
+                    }
+                    return false;
+                case Domain.Models.MenuState.QuickPlaySearch:
+                    HandleQuickPlaySearch(__instance, name);
                     return false;
                 case MenuState.PressStart:
                     if (!hasShowedWarning)
@@ -123,16 +157,310 @@ namespace TF.EX.Patchs.Scene
             DynamicData.For(self).Invoke("TweenBGCameraToY", 1);
         }
 
+        private static void CreateNetplaySelect(MainMenu self)
+        {
+            if (!MainMenu.VersusMatchSettings.ApplyNetplayMode())
+            {
+                ServiceCollections.ResolveLogger().LogError<MainMenuPatch>("Netplay game mode is not registered", null);
+            }
+
+            MatchVariantsPatchs.DisableUnauthorized(MainMenu.VersusMatchSettings.Variants);
+
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+            matchmakingService.ResetLobby();
+            matchmakingService.ResetPeer();
+            ServiceCollections.ResolveInputService().EnableAllControllers();
+
+            Domain.Context.MenuReturn.NetplayEntry = ResolveNetplayEntryState(self) ?? Domain.Context.MenuReturn.NetplayEntry;
+            Domain.Context.LobbyBuilderContext.IsPrivate = false;
+            self.BackState = Domain.Context.MenuReturn.NetplayEntry ?? MainMenu.MenuState.Main;
+
+            var quickPlay = new NetplayMenuButton(new Vector2(65f, 90f), new Vector2(-160f, 120f), "QUICK PLAY", "2-4 ARCHERS", TFGame.MenuAtlas["GoldenArrow"], () =>
+            {
+                self.State = Domain.Models.MenuState.QuickPlaySearch.ToTFModel();
+            });
+
+            var lobbyList = new NetplayMenuButton(new Vector2(175f, 90f), new Vector2(160f, -80f), "LOBBIES", "BROWSE GAMES", TFGame.MenuAtlas["browseWorkshopButton"], () =>
+            {
+                self.State = Domain.Models.MenuState.LobbyBrowser.ToTFModel();
+            });
+
+            var privateMatch = new NetplayMenuButton(new Vector2(265f, 90f), new Vector2(560f, 120f), "PRIVATE", "INVITE ONLY", TFGame.MenuAtlas["map/towerLock"], () =>
+            {
+                self.State = Domain.Models.MenuState.PrivateSelect.ToTFModel();
+            });
+
+            quickPlay.RightItem = lobbyList;
+            lobbyList.LeftItem = quickPlay;
+            lobbyList.RightItem = privateMatch;
+            privateMatch.LeftItem = lobbyList;
+
+            var banner = BuildVersusSelectBanner();
+            banner.Track(() => quickPlay.Selected, QUICKPLAY_BANNER_TITLE, QUICKPLAY_BANNER_LINES);
+            banner.Track(() => lobbyList.Selected, LOBBIES_BANNER_TITLE, LOBBIES_BANNER_LINES);
+            banner.Track(() => privateMatch.Selected, PRIVATE_BANNER_TITLE, PRIVATE_BANNER_LINES);
+
+            self.Add(new TowerFall.MenuItem[] { quickPlay, lobbyList, privateMatch, banner });
+            self.ToStartSelected = quickPlay;
+
+            DynamicData.For(self).Invoke("TweenBGCameraToY", 1);
+        }
+
+        private static void CreatePrivateSelect(MainMenu self)
+        {
+            self.BackState = Domain.Models.MenuState.NetplaySelect.ToTFModel();
+
+            var create = new NetplayMenuButton(new Vector2(100f, 90f), new Vector2(-160f, 120f), "CREATE", "HOST A LOBBY", TFGame.MenuAtlas["editorQuill"], () =>
+            {
+                Domain.Context.LobbyBuilderContext.IsPrivate = true;
+                self.State = Domain.Models.MenuState.LobbyBuilder.ToTFModel();
+            });
+
+            var join = new NetplayMenuButton(new Vector2(220f, 90f), new Vector2(560f, 120f), "JOIN", "ENTER A CODE", TFGame.MenuAtlas["controls/keyboard/icon"], () =>
+            {
+                self.State = Domain.Models.MenuState.PrivateJoinCode.ToTFModel();
+            });
+
+            create.RightItem = join;
+            join.LeftItem = create;
+
+            var banner = BuildVersusSelectBanner();
+            banner.Track(() => create.Selected, PRIVATE_CREATE_BANNER_TITLE, PRIVATE_CREATE_BANNER_LINES);
+            banner.Track(() => join.Selected, PRIVATE_JOIN_BANNER_TITLE, PRIVATE_JOIN_BANNER_LINES);
+
+            self.Add(new TowerFall.MenuItem[] { create, join, banner });
+            self.ToStartSelected = create;
+
+            DynamicData.For(self).Invoke("TweenBGCameraToY", 1);
+        }
+
+        private static void HandleQuickPlaySearch(MainMenu self, string name)
+        {
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+
+            if (name == "Destroy")
+            {
+                self.RemoveLoader();
+
+                if (matchmakingService.IsSearchingQuickPlay())
+                {
+                    Task.Run(matchmakingService.ExitQuickPlay);
+                }
+
+                return;
+            }
+
+            self.BackState = Domain.Models.MenuState.NetplaySelect.ToTFModel();
+            self.AddLoader("SEARCHING FOR OPPONENTS...");
+            self.ButtonGuideB.SetDetails(MenuButtonGuide.ButtonModes.Back, "CANCEL");
+
+            Task.Run(() => matchmakingService.EnterQuickPlay(
+                _ => { },
+                lobby => OnQuickPlayMatched(self, lobby),
+                message =>
+                {
+                    self.RemoveLoader();
+                    TowerFall.Sounds.ui_invalid.Play();
+                    Notification.Create(self, message, 10, 300);
+                    self.State = Domain.Models.MenuState.NetplaySelect.ToTFModel();
+                }));
+        }
+
+        private static void OnQuickPlayMatched(MainMenu self, Lobby lobby)
+        {
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            var inputService = ServiceCollections.ResolveInputService();
+
+            if (self.State.ToDomainModel() != Domain.Models.MenuState.QuickPlaySearch)
+            {
+                Task.Run(() => matchmakingService.LeaveLobby(matchmakingService.ResetLobby, matchmakingService.ResetLobby));
+                return;
+            }
+
+            self.RemoveLoader();
+            Sounds.ui_click.Play();
+            Notification.Create(self, "OPPONENT FOUND", 10, 200);
+
+            var localPeerId = matchmakingService.GetRoomPeerId();
+            var isHost = lobby.Players.Any(pl => pl.IsHost && pl.RoomPeerId == localPeerId);
+            var roomUrl = $"{Config.SERVER}/room/{lobby.RoomId}";
+
+            netplayManager.SetRoomAndServerMode($"{roomUrl}?peer={localPeerId}", isHost);
+
+            if (!isHost)
+            {
+                netplayManager.UpdatePlayer2Name(lobby.Players.First(pl => pl.IsHost).Name);
+            }
+
+            inputService.EnableAllControllers();
+            inputService.DisableAllControllerExceptLocal();
+
+            StateApi.Current.SetSeed(lobby.GameData.Seed);
+
+            MainMenu.VersusMatchSettings.Variants.ApplyNetplayVariantRules();
+            MainMenu.VersusMatchSettings.MatchLength = (MatchSettings.MatchLengths)lobby.GameData.MatchLength;
+
+            self.State = MainMenu.MenuState.Rollcall;
+        }
+
+        private static void CreatePrivateJoinCode(MainMenu self)
+        {
+            self.BackState = Domain.Models.MenuState.PrivateSelect.ToTFModel();
+
+            var entry = new JoinCodeEntry(new Vector2(160f, 105f), code => SubmitJoinCode(self, code), ReadClipboard);
+
+            self.Add(entry);
+            self.ToStartSelected = entry;
+
+            self.ButtonGuideA.SetDetails(MenuButtonGuide.ButtonModes.Confirm, "JOIN");
+            self.ButtonGuideB.SetDetails(MenuButtonGuide.ButtonModes.Back, "RETURN");
+            self.ButtonGuideC.SetDetails(MenuButtonGuide.ButtonModes.Alt, "PASTE");
+
+            DynamicData.For(self).Invoke("TweenBGCameraToY", 1);
+        }
+
+        private static string ReadClipboard()
+        {
+            try
+            {
+                return ClipboardService.GetText() ?? string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
+
+        private static void SubmitJoinCode(MainMenu self, string code)
+        {
+            if (DateTime.UtcNow < nextJoinCodeAttempt)
+            {
+                TowerFall.Sounds.ui_invalid.Play();
+                return;
+            }
+
+            nextJoinCodeAttempt = DateTime.UtcNow.AddSeconds(3);
+
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+            var inputService = ServiceCollections.ResolveInputService();
+
+            inputService.DisableAllControllers();
+            self.AddLoader("JOINING LOBBY");
+            Sounds.ui_click.Play();
+
+            matchmakingService.JoinPrivate(code,
+                lobby =>
+                {
+                    var (canJoin, reason) = EvaluateLobbyCompatibility(lobby);
+
+                    if (canJoin)
+                    {
+                        OnJoinSuccess(self, lobby, true);
+                        return;
+                    }
+
+                    ServiceCollections.ResolveLogger().LogError<MainMenuPatch>($"Refusing private lobby: {reason}");
+
+                    Action bail = () =>
+                    {
+                        matchmakingService.ResetLobby();
+                        matchmakingService.ResetPeer();
+                        inputService.EnableAllControllers();
+                        self.RemoveLoader();
+                        TowerFall.Sounds.ui_invalid.Play();
+                        Notification.Create(self, reason, 10, 300);
+                    };
+
+                    Task.Run(() => matchmakingService.LeaveLobby(bail, bail));
+                },
+                () =>
+                {
+                    inputService.EnableAllControllers();
+                    self.RemoveLoader();
+                    TowerFall.Sounds.ui_invalid.Play();
+                    Notification.Create(self, "Invalid or expired code", 10, 300);
+                });
+        }
+
+        private static (bool canJoin, string reason) EvaluateLobbyCompatibility(Lobby newLobby)
+        {
+            var widerSetModApi = ServiceCollections.ResolveWiderSetModApi();
+
+            if (newLobby.Mods.Count > 0)
+            {
+                foreach (var mod in newLobby.Mods)
+                {
+                    if (mod.Name == WiderSetModApiData.Name)
+                    {
+                        (bool canJoin, string reason) = WiderSetModApiData.CanUseWiderSet(mod.Data, widerSetModApi);
+
+                        if (!canJoin)
+                        {
+                            return (false, reason);
+                        }
+                    }
+                }
+            }
+            else if (widerSetModApi != null && widerSetModApi.IsWide)
+            {
+                return (false, "WIDERSET MOD ON OFF REQUIRED");
+            }
+
+            var availableVariants = MainMenu.VersusMatchSettings.Variants.Variants
+                .Select(variant => variant.Title)
+                .ToList();
+
+            if (!newLobby.GameData.Variants.All(availableVariants.Contains))
+            {
+                return (false, "MISSING CUSTOM VARIANTS");
+            }
+
+            return (true, "");
+        }
+
         [HarmonyPostfix]
         [HarmonyPatch("CallStateFunc")]
         public static void MainMenu_CallStateFunc_Postfix(MainMenu __instance, string name, MainMenu.MenuState state)
         {
+            if (state == MainMenu.MenuState.Rollcall)
+            {
+                HandleCopyCodeGuide(__instance, name);
+            }
+
             if (name != "Create" || !WiderSetMenu.IsSelectionState(state))
             {
                 return;
             }
 
             AddOnlineToWiderSetSelection(__instance);
+        }
+
+        private static void HandleCopyCodeGuide(MainMenu self, string name)
+        {
+            if (copyCodeGuideEntity != null)
+            {
+                copyCodeGuideEntity.RemoveSelf();
+                copyCodeGuideEntity = null;
+            }
+
+            if (name != "Create")
+            {
+                return;
+            }
+
+            var ownLobby = ServiceCollections.ResolveMatchmakingService().GetOwnLobby();
+
+            if (!ownLobby.IsPrivate || string.IsNullOrEmpty(ownLobby.JoinCode))
+            {
+                return;
+            }
+
+            copyCodeGuideEntity = new Monocle.Entity(-1);
+            var copyCodeGuide = new MenuButtonGuide(0);
+            copyCodeGuide.SetDetails(MenuButtonGuide.ButtonModes.Alt2, "COPY CODE");
+            copyCodeGuideEntity.Add(copyCodeGuide);
+            self.Add(copyCodeGuideEntity);
         }
 
         private static void AddOnlineToWiderSetSelection(MainMenu self)
@@ -182,8 +510,6 @@ namespace TF.EX.Patchs.Scene
 
             return null;
         }
-
-        private static MainMenu.MenuState ResolveLobbyBrowserBackState() => Domain.Context.MenuReturn.NetplayEntry ?? MainMenu.MenuState.Rollcall;
 
         private static VersusSelectBanner BuildVersusSelectBanner()
         {
@@ -248,7 +574,14 @@ namespace TF.EX.Patchs.Scene
 
         private static void CreateLobbyBuilder(MainMenu self)
         {
-            self.BackState = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
+            self.BackState = Domain.Context.LobbyBuilderContext.IsPrivate
+                ? Domain.Models.MenuState.PrivateSelect.ToTFModel()
+                : Domain.Models.MenuState.LobbyBrowser.ToTFModel();
+
+            if (variants.Count == 0)
+            {
+                variants = MainMenu.VersusMatchSettings.Variants.BuildMenu(self, out _, out self.MaxUICameraY);
+            }
 
             lobbyVersusModeButton = new LobbyVersusModeButton(new Vector2(160f, 90f), new Vector2(-100f, 90f));
             self.Add(lobbyVersusModeButton);
@@ -293,7 +626,7 @@ namespace TF.EX.Patchs.Scene
             {
                 createEntityButton = new Monocle.Entity();
                 var createButton = new MenuButtonGuide(4);
-                createButton.SetDetails(MenuButtonGuide.ButtonModes.Start, "CREATE LOBBY");
+                createButton.SetDetails(MenuButtonGuide.ButtonModes.Start,Domain.Context.LobbyBuilderContext.IsPrivate ? "CREATE PRIVATE LOBBY" : "CREATE LOBBY");
                 createEntityButton.Add(createButton);
                 self.Add(createEntityButton);
 
@@ -365,8 +698,7 @@ namespace TF.EX.Patchs.Scene
 
             self.AddLoader("FINDING LOBBIES...");
 
-            Domain.Context.MenuReturn.NetplayEntry = ResolveNetplayEntryState(self) ?? Domain.Context.MenuReturn.NetplayEntry;
-            self.BackState = ResolveLobbyBrowserBackState();
+            self.BackState = Domain.Models.MenuState.NetplaySelect.ToTFModel();
 
             Task.Run(async () =>
             {
@@ -463,9 +795,76 @@ namespace TF.EX.Patchs.Scene
                 }
 
                 RenderWaitingForHost(matchmakingService);
+                RenderQuickPlayStarting(matchmakingService);
+            }
+
+            if (__instance.State.ToDomainModel() == Domain.Models.MenuState.QuickPlaySearch)
+            {
+                var searching = ServiceCollections.ResolveMatchmakingService().GetSearchingCount();
+
+                if (searching > 0)
+                {
+                    var label = searching == 1 ? "1 PLAYER SEARCHING" : $"{searching} PLAYERS SEARCHING";
+                    Monocle.Draw.OutlineTextCentered(TFGame.Font, label, new Vector2(160f, 160f), Color.White, Color.Black);
+                }
             }
 
             Monocle.Draw.SpriteBatch.End();
+        }
+
+        private static void RenderQuickPlayStarting(Domain.Ports.IMatchmakingService matchmakingService)
+        {
+            if (!matchmakingService.IsQuickPlayStarting())
+            {
+                return;
+            }
+
+            var position = new Vector2(160f, 225f);
+
+            Monocle.Draw.OutlineTextureCentered(TFGame.MenuAtlas["portraits/readyBanner"], position, Color.White);
+            Monocle.Draw.OutlineTextCentered(TFGame.Font, "MATCH STARTING...", position - Vector2.UnitY * 2f, Color.White, Color.Black);
+        }
+
+        private static bool Alt2Pressed()
+        {
+            if (MenuInput.Alt2)
+            {
+                return true;
+            }
+
+            foreach (var input in TFGame.PlayerInputs)
+            {
+                if (input != null && input.MenuAlt2)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static void CopyPrivateCodeToClipboard(MainMenu self, Domain.Ports.IMatchmakingService matchmakingService)
+        {
+            var ownLobby = matchmakingService.GetOwnLobby();
+            var logger = ServiceCollections.ResolveLogger();
+
+            if (!ownLobby.IsPrivate || string.IsNullOrEmpty(ownLobby.JoinCode))
+            {
+                return;
+            }
+
+            try
+            {
+                ClipboardService.SetText(ownLobby.JoinCode);
+                Sounds.ui_click.Play();
+                Notification.Create(self, "CODE COPIED");
+                logger.LogDebug<MainMenuPatch>("Join code copied to clipboard");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError<MainMenuPatch>("Failed to copy join code to clipboard", ex);
+                TowerFall.Sounds.ui_invalid.Play();
+            }
         }
 
         private static void RenderWaitingForHost(Domain.Ports.IMatchmakingService matchmakingService)
@@ -550,6 +949,11 @@ namespace TF.EX.Patchs.Scene
             else
             {
                 matchmakingService.ReconcileRollcallIfPending();
+            }
+
+            if (__instance.State == MainMenu.MenuState.Rollcall && Alt2Pressed())
+            {
+                CopyPrivateCodeToClipboard(__instance, matchmakingService);
             }
 
             if (__instance.State.ToDomainModel() == Domain.Models.MenuState.LobbyBrowser)
@@ -643,6 +1047,7 @@ namespace TF.EX.Patchs.Scene
                     lobby.GameData.Variants = variantsToggle.ToArray();
                     lobby.Name = netplayManager.GetNetplayMeta().Name;
                     lobby.RoomId = roomId;
+                    lobby.Kind = (Domain.Context.LobbyBuilderContext.IsPrivate ? LobbyKind.Private : LobbyKind.Standard).ToString();
                     lobby.Players.Add(new Domain.Models.WebSocket.Player
                     {
                         Name = netplayManager.GetNetplayMeta().Name,
@@ -674,7 +1079,7 @@ namespace TF.EX.Patchs.Scene
                         __instance.RemoveLoader();
                         Sounds.ui_click.Play();
                         __instance.State = MainMenu.MenuState.Rollcall;
-                        __instance.BackState = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
+                        __instance.BackState = Domain.Models.MenuState.NetplaySelect.ToTFModel();
                         netplayManager.SetRoomAndServerMode($"{roomUrl}?peer={matchmakingService.GetRoomPeerId()}", true);
 
                         StateApi.Current.SetSeed(matchmakingService.GetOwnLobby().GameData.Seed);
@@ -695,7 +1100,9 @@ namespace TF.EX.Patchs.Scene
                         inputService.EnableAllControllers();
                         __instance.RemoveLoader();
                         TowerFall.Sounds.ui_invalid.Play();
-                        __instance.State = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
+                        __instance.State = Domain.Context.LobbyBuilderContext.IsPrivate
+                            ? Domain.Models.MenuState.PrivateSelect.ToTFModel()
+                            : Domain.Models.MenuState.LobbyBrowser.ToTFModel();
                     };
 
                     matchmakingService.CreateLobby(onSucess, onFail);

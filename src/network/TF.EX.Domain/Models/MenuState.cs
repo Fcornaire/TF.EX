@@ -23,5 +23,9 @@
         LobbyBrowser = 59,
         LobbyBuilder = 60,
         VersusSelect = 61,
+        NetplaySelect = 62,
+        PrivateSelect = 63,
+        PrivateJoinCode = 64,
+        QuickPlaySearch = 65,
     }
 }

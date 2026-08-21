@@ -3,6 +3,13 @@ using TowerFall;
 
 namespace TF.EX.Domain.Models.WebSocket
 {
+    public enum LobbyKind
+    {
+        Standard,
+        QuickPlay,
+        Private,
+    }
+
     [MessagePackObject(keyAsPropertyName: true)]
     public class Lobby
     {
@@ -14,6 +21,18 @@ namespace TF.EX.Domain.Models.WebSocket
         public GameData GameData { get; set; } = new GameData();
         public ICollection<EndGameVote> EndGameChoice { get; set; } = new List<EndGameVote>();
         public ICollection<CustomMod> Mods { get; set; } = new List<CustomMod>();
+   
+        public string Kind { get; set; } = nameof(LobbyKind.Standard);
+        public string JoinCode { get; set; } = "";
+
+        [IgnoreMember]
+        public LobbyKind KindValue => Enum.TryParse<LobbyKind>(Kind, out var kind) ? kind : LobbyKind.Standard;
+
+        [IgnoreMember]
+        public bool IsPrivate => KindValue == LobbyKind.Private;
+
+        [IgnoreMember]
+        public bool IsQuickPlay => KindValue == LobbyKind.QuickPlay;
 
         [IgnoreMember]
         public bool IsEmpty => Players.Count == 0;
