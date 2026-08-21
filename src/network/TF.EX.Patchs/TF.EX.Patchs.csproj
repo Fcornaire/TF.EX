@@ -10,7 +10,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="FortRise.Configuration" Version="1.5.6" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.6" />
 		<PackageReference Include="TextCopy" Version="6.2.1" />
 		<!--<PackageReference Include="MonoMod" Version="22.5.1.1" />
 		<PackageReference Include="MonoMod.RuntimeDetour" Version="22.5.1.1" />-->

@@ -534,7 +534,7 @@ namespace TF.State.TowerFallExtensions
                         level.Session.GetSpawnHatState(toLoad.Index),
                         frozen: false,
                         flash: false,
-                    indicator: false);
+                        indicator: true);
 
                     player.LoadState(toLoad);
                     level.GetGameplayLayer().Entities.Insert(0, player);
