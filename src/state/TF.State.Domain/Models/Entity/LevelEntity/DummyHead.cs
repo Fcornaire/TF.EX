@@ -23,5 +23,8 @@ namespace TF.State.Domain.Models.Entity.LevelEntity
 
         [Key(5)]
         public float ImageScaleX { get; set; }
+
+        [Key(6)]
+        public Vector2f PositionCounter { get; set; }
     }
 }

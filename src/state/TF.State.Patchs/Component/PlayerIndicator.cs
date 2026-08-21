@@ -59,17 +59,5 @@ namespace TF.State.Patchs.Component
             }
         }
 
-        [HarmonyPostfix]
-        [HarmonyPatch("Update")]
-        public static void PlayerIndicator_Update_Postfix(PlayerIndicator __instance)
-        {
-            if (StateFlags.IsCaptureActive)
-            {
-                return;
-            }
-
-            var dynPlayerIndcator = DynamicData.For(__instance);
-            dynPlayerIndcator.Set("colorSwitch", false);
-        }
     }
 }

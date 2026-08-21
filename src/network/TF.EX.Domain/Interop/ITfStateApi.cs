@@ -39,6 +39,7 @@ namespace TF.EX.Domain.Interop
 
         string DumpEntities();
         void GenerateVersusLevels(TowerFall.MatchSettings matchSettings, int mapId, int startLevel);
+        void SetVersusLevels(TowerFall.MatchSettings matchSettings, IEnumerable<string> levelPaths);
 
         void SetSeed(int seed);
         int GetSeed();

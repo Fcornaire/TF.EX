@@ -67,5 +67,8 @@ namespace TF.State.Domain.Models.Entity.LevelEntity.Player
 
         [Key(20)]
         public Vector2f DespawnStart { get; set; }
+
+        [Key(21)]
+        public Vector2f PreviousPosition { get; set; }
     }
 }

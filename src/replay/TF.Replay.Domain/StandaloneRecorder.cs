@@ -53,6 +53,12 @@ namespace TF.Replay.Domain
                 return;
             }
 
+            if (!IsActive && !service.IsPlayback && state.GetFrameDriver() == "TF.Replay")
+            {
+                state.SetFrameDriver(null);
+                state.SetDriverFlags(0, false, false, false, false, 0);
+            }
+
             if (!string.IsNullOrEmpty(state.GetFrameDriver()) || service.IsPlayback)
             {
                 return;
@@ -60,6 +66,17 @@ namespace TF.Replay.Domain
 
             if (Array.IndexOf(Recordable, settings.Mode) < 0)
             {
+                return;
+            }
+
+            if (!RecordingPolicy.Allows((int)settings.Mode))
+            {
+                return;
+            }
+
+            if (settings.Variants != null && HasPartialPerPlayerVariant(settings.Variants))
+            {
+                ServiceCollections.ResolveLogger().LogDebug("A variant is enabled for only some players ?? recording skipped");
                 return;
             }
 
@@ -242,6 +259,29 @@ namespace TF.Replay.Domain
             {
                 ServiceCollections.ResolveLogger().LogDebug("Exported {path}", path);
             }
+        }
+
+        private static bool HasPartialPerPlayerVariant(MatchVariants variants)
+        {
+            foreach (var variant in variants.Variants)
+            {
+                if (!variant.PerPlayer || !variant.Value)
+                {
+                    continue;
+                }
+
+                var values = DynamicData.For(variant).Get<bool[]>("playerValues");
+
+                for (int i = 0; i < TFGame.Players.Length && i < values.Length; i++)
+                {
+                    if (TFGame.Players[i] && !values[i])
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         public static void Reset()

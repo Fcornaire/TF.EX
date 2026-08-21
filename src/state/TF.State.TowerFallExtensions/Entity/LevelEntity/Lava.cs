@@ -27,6 +27,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             var dynLava = DynamicData.For(entity);
             var sine = dynLava.Get<SineWave>("sine");
 
+            dynLava.Set("Side", (TowerFall.Lava.LavaSide)toLoad.Side);
             dynLava.Set("Collidable", toLoad.IsCollidable);
             dynLava.Set("Position", toLoad.Position.ToTFVector());
             dynLava.Set("Percent", toLoad.Percent);

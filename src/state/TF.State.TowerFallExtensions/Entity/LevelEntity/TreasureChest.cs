@@ -126,9 +126,17 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
 
                 if (entity.State <= States.Closed)
                 {
-                    if (!entity.Tags.Contains(GameTags.PlayerCollider))
+                    foreach (var tag in new[] { GameTags.PlayerCollider, GameTags.PlayerGhostCollider })
                     {
-                        entity.Tag(GameTags.PlayerCollider, GameTags.PlayerGhostCollider);
+                        if (!entity.Tags.Contains(tag))
+                        {
+                            entity.Tags.Add(tag);
+                            var tagList = entity.Level[tag];
+                            if (!tagList.Contains(entity))
+                            {
+                                tagList.Add(entity);
+                            }
+                        }
                     }
                 }
 

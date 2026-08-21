@@ -401,10 +401,15 @@ namespace TF.EX.Patchs.Scene
         {
             OnlinePlayToggle.IsOn = false;
 
-            var widerSetModApi = ServiceCollections.ResolveWiderSetModApi();
-            if (widerSetModApi != null && widerSetModApi.IsWide)
+            var mode = TowerFall.MainMenu.VersusMatchSettings?.Mode;
+            var lobby = ServiceCollections.ResolveMatchmakingService().GetOwnLobby();
+            if ((mode != null && mode.Value.IsNetplay()) || !lobby.IsEmpty)
             {
-                widerSetModApi.IsWide = false;
+                var widerSetModApi = ServiceCollections.ResolveWiderSetModApi();
+                if (widerSetModApi != null && widerSetModApi.IsWide)
+                {
+                    widerSetModApi.IsWide = false;
+                }
             }
         }
 
@@ -423,7 +428,7 @@ namespace TF.EX.Patchs.Scene
             Monocle.Draw.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, DepthStencilState.None, RasterizerState.CullNone, null, __instance.UILayer.Camera.Matrix);
 
             if (__instance.State == MainMenu.MenuState.Rollcall
-                && TowerFall.MainMenu.VersusMatchSettings.Mode.IsNetplay())
+                && TowerFall.MainMenu.VersusMatchSettings?.Mode.IsNetplay() == true)
             {
                 var matchmakingService = ServiceCollections.ResolveMatchmakingService();
 
@@ -522,7 +527,15 @@ namespace TF.EX.Patchs.Scene
         [HarmonyPatch("Update")]
         public static void MainMenu_Update_Postfix(MainMenu __instance)
         {
-            TowerFall.MainMenu.NoGamepadUpdates = !ServiceCollections.ResolveMatchmakingService().GetOwnLobby().IsEmpty;
+            var ownLobby = ServiceCollections.ResolveMatchmakingService().GetOwnLobby();
+            if (!ownLobby.IsEmpty)
+            {
+                TowerFall.MainMenu.NoGamepadUpdates = true;
+            }
+            else if (TowerFall.MainMenu.VersusMatchSettings?.Mode.IsNetplay() == true)
+            {
+                TowerFall.MainMenu.NoGamepadUpdates = false;
+            }
 
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();

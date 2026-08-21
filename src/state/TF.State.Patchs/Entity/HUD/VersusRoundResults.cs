@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using TF.State.Domain.Context;
 using TF.State.TowerFallExtensions;
 using TowerFall;
 
@@ -11,6 +12,11 @@ namespace TF.State.Patchs.Entity.HUD
         [HarmonyPatch("Update")]
         public static void VersusRoundResults_Update(VersusRoundResults __instance)
         {
+            if (!StateFlags.IsCaptureActive)
+            {
+                return;
+            }
+
             var finished = Traverse.Create(__instance).Field("finished").GetValue<bool>();
             if (finished)
             {

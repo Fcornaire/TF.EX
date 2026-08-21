@@ -14,8 +14,11 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             var dyn = DynamicData.For(entity);
             var counter = dyn.Get<Counter>("counter");
 
+            using var dynSolid = new DynData<TowerFall.Solid>(entity);
+
             return new ShiftBlock
             {
+                PositionCounter = dynSolid.Get<Vector2>("counter").ToModel(),
                 Position = entity.Position.ToModel(),
                 MoveFrom = dyn.Get<Vector2>("moveFrom").ToModel(),
                 MoveTo = dyn.Get<Vector2>("moveTo").ToModel(),
@@ -29,6 +32,9 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
         public static void LoadState(this TowerFall.ShiftBlock entity, ShiftBlock toLoad)
         {
             var dyn = DynamicData.For(entity);
+
+            using var dynSolid = new DynData<TowerFall.Solid>(entity);
+            dynSolid.Set("counter", toLoad.PositionCounter.ToTFVector());
 
             entity.Position = toLoad.Position.ToTFVector();
             dyn.Set("moveFrom", toLoad.MoveFrom.ToTFVector());

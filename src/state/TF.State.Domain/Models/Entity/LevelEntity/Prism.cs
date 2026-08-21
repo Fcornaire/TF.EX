@@ -34,5 +34,8 @@ namespace TF.State.Domain.Models.Entity.LevelEntity
 
         [Key(9)]
         public int OnlyPlayerIndex { get; set; }
+
+        [Key(10)]
+        public double EncasedEnemyActualDepth { get; set; }
     }
 }

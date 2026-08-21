@@ -7,5 +7,8 @@ namespace TF.State.Domain.Models.EventLog
     {
         [Key(0)]
         public bool[] PlayerWithCrown { get; set; }
+
+        [Key(1)]
+        public int Order { get; set; }
     }
 }

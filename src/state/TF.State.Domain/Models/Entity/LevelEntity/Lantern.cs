@@ -26,6 +26,9 @@ namespace TF.State.Domain.Models.Entity.LevelEntity
         [Key(6)]
         public double ActualDepth { get; set; }
 
+        [Key(7)]
+        public double ChainActualDepth { get; set; }
+
 
         public static Lantern Empty()
         {

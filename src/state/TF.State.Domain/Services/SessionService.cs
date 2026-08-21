@@ -17,16 +17,6 @@ namespace TF.State.Domain.Services
             _context = context;
         }
 
-        public void AddBramblesState(float frameCounter, IEnumerable<MovingPlatform> movingPlatformsStates, Vector2f spreadOrigin)
-        {
-            _context.AddBramblesState(frameCounter, movingPlatformsStates, spreadOrigin);
-        }
-
-        public IEnumerable<BramblesStartingState> GetBramblesStartingState()
-        {
-            return _context.GetBramblesStartingState();
-        }
-
         public Dictionary<int, double> GetGamePlayLayerActualDepthLookup()
         {
             return _context.GetGamePlayerLayerActualDepthLookup();
@@ -35,11 +25,6 @@ namespace TF.State.Domain.Services
         public Session GetSession()
         {
             return _context.GetSession();
-        }
-
-        public void LoadBramblesStartingState(IEnumerable<BramblesStartingState> bramblesStartingState)
-        {
-            _context.LoadBramblesStartingState(bramblesStartingState);
         }
 
         public void Reset()

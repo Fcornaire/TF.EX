@@ -173,5 +173,17 @@ namespace TF.State.Domain.Models.Entity.LevelEntity.Player
 
         [Key(55)]
         public int HatState { get; set; }
+
+        [Key(56)]
+        public bool DodgeCurseSatisfied { get; set; }
+
+        [Key(57)]
+        public Vector2f DodgeSpeed { get; set; }
+
+        [Key(58)]
+        public double LastCaughtArrowDepth { get; set; }
+
+        [Key(59)]
+        public float InvisOpacity { get; set; }
     }
 }

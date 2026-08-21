@@ -85,5 +85,22 @@ namespace TF.State.Domain.Models.Entity.LevelEntity.Arrows
 
         [Key(22)]
         public float TravelFrames { get; set; }
+
+        // 23-26 already used
+
+        [Key(27)]
+        public bool IsSquished { get; set; }
+
+        [Key(28)]
+        public int FrozenPlayerIndexPlusOne { get; set; }
+
+        [Key(29)]
+        public int AllegiancePlusOne { get; set; }
+
+        [Key(30)]
+        public int Depth { get; set; }
+
+        [Key(31)]
+        public bool FromHyper { get; set; }
     }
 }

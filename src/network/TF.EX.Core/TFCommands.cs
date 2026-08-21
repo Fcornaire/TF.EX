@@ -1,8 +1,11 @@
 ﻿using FortRise;
+using Microsoft.Extensions.Logging;
 using Monocle;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
@@ -18,6 +21,10 @@ namespace TF.EX.Core
 {
     internal class TFCommands
     {
+        private const int DEFAULT_SCENARIO_FRAMES = 1800;
+
+        private const int DEFAULT_SCENARIO_SEED = 42;
+
         public Dictionary<string, CommandConfiguration> Commands = [];
 
         public TFCommands()
@@ -35,6 +42,10 @@ namespace TF.EX.Core
             Commands.Add("test", new CommandConfiguration
             {
                 Callback = LaunchTestMode,
+            });
+            Commands.Add("scenario", new CommandConfiguration
+            {
+                Callback = LaunchScenario,
             });
             Commands.Add("local", new CommandConfiguration
             {
@@ -72,18 +83,23 @@ namespace TF.EX.Core
 
         public static void LaunchTestMode(string[] args)
         {
+            args = CollapseVariantBlock(args);
+
             var mode = args.Length > 0 ? ParseMode(args[0]) : TowerFall.Modes.LastManStanding;
             var map = ParseMap(args, 2);
             var startLevel = ParseStartLevel(args, 1, map);
             var seed = args.Length > 3 ? int.Parse(args[3]) : 42;
             var checkDistance = args.Length > 4 ? Math.Min(int.Parse(args[4]), 7) : 2;
-            var variant = args.Length > 5 ? args[5] : "";
+            var variants = ParseVariants(args, 5);
             var playerCount = args.Length > 6 ? Math.Clamp(int.Parse(args[6]), 2, 4) : 2;
 
-            variant = variant.Replace("_", " ");
+            StartTestMode(mode, map, startLevel, seed, checkDistance, variants, playerCount, null);
+        }
 
+        private static void StartTestMode(TowerFall.Modes mode, int map, int startLevel, int seed, int checkDistance, List<string> variants, int playerCount, List<string> levelPaths)
+        {
             var logger = ServiceCollections.ResolveLogger();
-            logger.LogDebug<Commands>($"Launching test mode with mode: {mode}, map: {map} ({GameData.VersusTowers[map].Theme.Name}), startLevel: {startLevel}, seed: {seed}, checkDistance: {checkDistance}, players: {playerCount} with variant {variant}");
+            logger.LogDebug<Commands>($"Launching test mode with mode: {mode}, map: {map} ({GameData.VersusTowers[map].Theme.Name}), startLevel: {startLevel}, seed: {seed}, checkDistance: {checkDistance}, players: {playerCount} with variants [{string.Join(", ", variants)}]");
 
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var replayService = ServiceCollections.ResolveReplayService();
@@ -104,9 +120,117 @@ namespace TF.EX.Core
                 TFGame.PlayerInputs[i] ??= new FakeController();
             }
 
-            StartGame(mode, netplayManager, map, startLevel, variant, playerCount);
+            StartGame(mode, netplayManager, map, startLevel, variants, playerCount, levelPaths);
 
             TFGame.Instance.Commands.Open = false;
+        }
+
+        public static void LaunchScenario(string[] args)
+        {
+            args = CollapseVariantBlock(args);
+
+            var names = ParseScenarioNames(args, 0);
+            var framesPerRun = args.Length > 1 ? Math.Max(60, int.Parse(args[1])) : DEFAULT_SCENARIO_FRAMES;
+
+            var seedArg = args.Length > 2 ? int.Parse(args[2]) : (int?)null;
+
+            var startIndex = 0;
+
+            if (args.Length > 0 && int.TryParse(args[0], out var parsedIndex))
+            {
+                startIndex = Math.Max(0, parsedIndex);
+                names = [];
+            }
+
+            var scenarios = TF.EX.Domain.Scenarios.ScenarioCatalog.Resolve(names);
+
+            if (startIndex > 0)
+            {
+                scenarios = [.. scenarios.Skip(startIndex)];
+            }
+            var logger = ServiceCollections.ResolveLogger();
+
+            if (scenarios.Length == 0)
+            {
+                var known = TF.EX.Domain.Scenarios.ScenarioCatalog.All.Select((scenario, index) => $"{index}:{scenario.Name}");
+
+                TFGame.Instance.Commands.Log($"No matching scenario. Known: {string.Join(", ", known)}");
+                return;
+            }
+
+            if (ScenarioSweeper.IsRunning)
+            {
+                ScenarioSweeper.Abort("restarted");
+            }
+
+            ResetForNextRun();
+
+            var runs = new List<(string, Action, int, Func<TowerFall.Level, bool>)>();
+
+            for (int i = 0; i < scenarios.Length; i++)
+            {
+                var captured = scenarios[i];
+                var index = startIndex + i;
+                var path = TF.EX.Domain.Scenarios.ScenarioMapWriter.Write(captured);
+                var runSeed = seedArg ?? captured.Seed ?? DEFAULT_SCENARIO_SEED;
+
+                runs.Add(($"scenario {index:00} {captured.Name}", () =>
+                {
+                    InputScripter.Start(captured.PlayerCount, captured.Scripts);
+
+                    StartTestMode(
+                        captured.Mode,
+                        0,
+                        0,
+                        runSeed,
+                        2,
+                        [.. captured.Variants],
+                        captured.PlayerCount,
+                        [path]);
+                }
+                , captured.Frames, captured.Expect));
+            }
+
+            logger.LogInformation($"[sweep] starting {runs.Count} scenarios from index {startIndex}, seed {(seedArg.HasValue ? seedArg.Value.ToString() : $"{DEFAULT_SCENARIO_SEED}")}");
+
+            ScenarioSweeper.Start(runs, framesPerRun, ReturnToMenu, () =>
+            {
+                TF.EX.Domain.Scenarios.ScenarioCatalog.LogCoverage(line => logger.LogInformation(line));
+
+                StateApi.Current.SetVersusLevels(null, null);
+
+                ReturnToMenu();
+            });
+
+            TFGame.Instance.Commands.Open = false;
+        }
+
+        private static void ResetForNextRun()
+        {
+            var manager = ServiceCollections.ResolveNetplayManager();
+
+            manager.Reset();
+            manager.ResetMode();
+
+            for (int seat = 0; seat < TFGame.Players.Length; seat++)
+            {
+                TFGame.Players[seat] = false;
+            }
+
+            for (int seat = 0; seat < TFGame.PlayerInputs.Length; seat++)
+            {
+                if (TFGame.PlayerInputs[seat] is FakeController)
+                {
+                    TFGame.PlayerInputs[seat] = null;
+                }
+            }
+        }
+
+        private static void ReturnToMenu()
+        {
+            ResetForNextRun();
+
+            TFGame.Instance.Scene = new MainMenu(MainMenu.MenuState.Main);
         }
 
         public static void LaunchLocalNetplay(string[] args)
@@ -315,7 +439,89 @@ namespace TF.EX.Core
             }
         }
 
-        private static void StartGame(TowerFall.Modes mode, INetplayManager netplayManager = null, int map = 0, int startLevel = 0, string variant = "", int playerCount = 0)
+        private static string[] CollapseVariantBlock(string[] args)
+        {
+            if (!args.Any(a => a.StartsWith("#")))
+            {
+                return args;
+            }
+
+            var collapsed = new List<string>();
+            List<string> block = null;
+
+            foreach (var arg in args)
+            {
+                if (block == null && !arg.StartsWith("#"))
+                {
+                    collapsed.Add(arg);
+                    continue;
+                }
+
+                block ??= [];
+                block.Add(arg);
+
+                if (block.Count > 0 && arg.EndsWith("#") && !(block.Count == 1 && arg == "#"))
+                {
+                    collapsed.Add(string.Join(" ", block));
+                    block = null;
+                }
+            }
+
+            if (block != null)
+            {
+                collapsed.Add(string.Join(" ", block));
+            }
+
+            return [.. collapsed];
+        }
+
+        private static List<string> ParseScenarioNames(string[] args, int index)
+        {
+            if (args.Length <= index || string.IsNullOrWhiteSpace(args[index]))
+            {
+                return [];
+            }
+
+            var raw = args[index].Trim();
+
+            if (raw.Equals("all", StringComparison.OrdinalIgnoreCase))
+            {
+                return [];
+            }
+
+            return [.. raw.Trim('#')
+                .Split(',')
+                .Select(n => n.Trim())
+                .Where(n => !string.IsNullOrEmpty(n))];
+        }
+
+        private static List<string> ParseVariants(string[] args, int index)
+        {
+            if (args.Length <= index || string.IsNullOrWhiteSpace(args[index]))
+            {
+                return [];
+            }
+
+            return [.. args[index].Trim().Trim('#')
+                .Split(',')
+                .Select(v => v.Trim().Replace("_", " ").ToUpper(CultureInfo.InvariantCulture))
+                .Where(v => !string.IsNullOrEmpty(v))];
+        }
+
+        private static void WarnOnUnknownVariants(MatchVariants matchVariants, IEnumerable<string> variants)
+        {
+            foreach (var variant in variants)
+            {
+                var known = matchVariants.Variants.Any(v => v.Title == variant) || matchVariants.CustomVariants.Any(v => v.Value.Title == variant);
+
+                if (!known)
+                {
+                    ServiceCollections.ResolveLogger().LogWarning($"[sweep] unknown variant '{variant}'");
+                }
+            }
+        }
+
+        private static void StartGame(TowerFall.Modes mode, INetplayManager netplayManager = null, int map = 0, int startLevel = 0, List<string> variants = null, int playerCount = 0, List<string> levelPaths = null)
         {
             for (int i = 0; i < 4; i++)
             {
@@ -334,13 +540,16 @@ namespace TF.EX.Core
                 }
             }
 
-            if (!string.IsNullOrEmpty(variant))
+            if (variants != null && variants.Count > 0)
             {
-                matchSettings.Variants.ApplyVariants(new List<string> { variant });
-                MainMenu.VersusMatchSettings?.Variants.ApplyVariants(new List<string> { variant });
+                WarnOnUnknownVariants(matchSettings.Variants, variants);
+
+                matchSettings.Variants.ApplyVariants(variants);
+                MainMenu.VersusMatchSettings?.Variants.ApplyVariants(variants);
             }
 
             TF.EX.Domain.Interop.StateApi.Current.GenerateVersusLevels(matchSettings, map, startLevel);
+            TF.EX.Domain.Interop.StateApi.Current.SetVersusLevels(matchSettings, levelPaths);
 
             var session = new Session(matchSettings);
 

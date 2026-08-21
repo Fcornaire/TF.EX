@@ -14,6 +14,11 @@ namespace TF.State.Patchs.Entity.LevelEntity
         [HarmonyPatch("FinishUnpack")]
         public static void Pickup_FinishUnpack(Pickup __instance)
         {
+            if (!TF.State.Domain.Context.StateFlags.IsCaptureActive)
+            {
+                return;
+            }
+
             var dynPickup = DynamicData.For(__instance);
             dynPickup.Set("FinishedUnpack", true);
         }
@@ -22,6 +27,11 @@ namespace TF.State.Patchs.Entity.LevelEntity
         [HarmonyPatch(MethodType.Constructor, typeof(Vector2), typeof(Vector2))]
         public static void Pickup_ctor(Pickup __instance, Vector2 targetPosition)
         {
+            if (!TF.State.Domain.Context.StateFlags.IsCaptureActive)
+            {
+                return;
+            }
+
             var dynPickup = DynamicData.For(__instance);
             dynPickup.Add("TargetPosition", targetPosition);
             dynPickup.Add("FinishedUnpack", false);

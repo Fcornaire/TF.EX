@@ -12,6 +12,11 @@ namespace TF.State.Patchs
         [HarmonyPatch("Stop")]
         public static bool Audio_Stop()
         {
+            if (!TF.State.Domain.Context.StateFlags.IsCaptureActive)
+            {
+                return true;
+            }
+
             try
             {
                 var field = typeof(Monocle.Audio).GetField("pitchList", BindingFlags.NonPublic | BindingFlags.Static);

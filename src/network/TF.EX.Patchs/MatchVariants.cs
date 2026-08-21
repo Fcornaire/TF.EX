@@ -25,6 +25,11 @@ namespace TF.EX.Patchs
         {
             var isNetplay = TowerFall.MainMenu.VersusMatchSettings != null && TowerFall.MainMenu.VersusMatchSettings.Mode.IsNetplay();
 
+            if (isNetplay)
+            {
+                __instance.NormalizeForNetplay();
+            }
+
             foreach (var variant in __instance.Variants)
             {
                 if (!UnauthorizedVariant.Contains(variant.Title))
@@ -67,14 +72,6 @@ namespace TF.EX.Patchs
             {
                 UnauthorizedVariant = UnauthorizedVariant.Select(GetVariantTitle).ToList();
                 hasInit = true;
-            }
-
-            __instance.TournamentRules();
-            __instance.Variants.First(variant => variant.Title == "FREE AIMING").Value = true;
-            if (__instance.CustomVariants.ContainsKey(Constants.RIGHT_STICK_VARIANT_NAME))
-            {
-                __instance.CustomVariants.TryGetValue(Constants.RIGHT_STICK_VARIANT_NAME, out var variant);
-                variant.Value = true;
             }
         }
 

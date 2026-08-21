@@ -52,6 +52,11 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             builder.WithHasUnhittableEntity(entity.CannotHit != null);
             builder.WithBuriedIn(buriedIn?.GetState());
             builder.WithTravelFrames(entity.TravelFrames);
+            builder.WithIsSquished(dynArrow.Get<bool>("squished"));
+            builder.WithFrozenPlayerIndex(entity.FrozenPlayer?.PlayerIndex ?? -1);
+            builder.WithAllegiance((int)entity.Allegiance);
+            builder.WithDepth(entity.Depth);
+            builder.WithFromHyper(entity.FromHyper);
 
             if (entity.StuckTo != null && entity.State == TowerFall.Arrow.ArrowStates.Stuck)
             {
@@ -150,7 +155,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             return builder.Build();
         }
 
-        public static void LoadState(this TowerFall.Arrow entity, Arrow toLoad, IEnumerable<TF.State.Domain.Models.BramblesStartingState> bramblesStartingStates, int currentFrame)
+        public static void LoadState(this TowerFall.Arrow entity, Arrow toLoad)
         {
             var dynArrow = DynamicData.For(entity);
             dynArrow.Set("Scene", TowerFall.TFGame.Instance.Scene);
@@ -207,6 +212,23 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             dynArrow.Set("Owner", entity.Level.GetPlayerOrCorpse(toLoad.PlayerIndex));
 
             dynArrow.Set("TravelFrames", toLoad.TravelFrames);
+
+            dynArrow.Set("squished", toLoad.IsSquished);
+            dynArrow.Set("FromHyper", toLoad.FromHyper);
+
+            dynArrow.Set("FrozenPlayer", toLoad.FrozenPlayerIndexPlusOne > 0
+                ? entity.Level.GetPlayer(toLoad.FrozenPlayerIndexPlusOne - 1)
+                : null);
+
+            if (toLoad.AllegiancePlusOne > 0)
+            {
+                dynArrow.Set("Allegiance", (TowerFall.Allegiance)(toLoad.AllegiancePlusOne - 1));
+            }
+
+            if (toLoad.Depth != 0)
+            {
+                dynArrow.Set("depth", toLoad.Depth);
+            }
 
             if (toLoad.BuriedIn != null)
             {

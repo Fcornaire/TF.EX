@@ -1,4 +1,5 @@
 using TF.State.Domain;
+using TF.State.Domain.Context;
 
 namespace TF.State.Patchs.Calc
 {
@@ -11,7 +12,7 @@ namespace TF.State.Patchs.Calc
 
         private static void Apply()
         {
-            bool wantGameplay = _gameplayDepth > 0 && _ignoreDepth == 0;
+            bool wantGameplay = _gameplayDepth > 0 && _ignoreDepth == 0 && StateFlags.IsCaptureActive;
 
             if (wantGameplay && !_overriding)
             {

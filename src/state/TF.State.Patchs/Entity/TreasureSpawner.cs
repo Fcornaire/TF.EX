@@ -1,21 +1,16 @@
 ﻿using FortRise;
 using HarmonyLib;
-using Microsoft.Xna.Framework;
 using TF.State.Domain;
 using TF.State.Domain.Context;
 using TowerFall;
-
-using TF.State.Domain.Context;
 namespace TF.State.Patchs.Entity
 {
     [HarmonyPatch(typeof(TreasureSpawner))]
     public class TreasureSpawnerPatch
     {
-        [HarmonyPostfix]
-        [HarmonyPatch(MethodType.Constructor, [typeof(Session), typeof(int[]), typeof(float), typeof(bool)])]
-        public static void TreasureSpawner_ctor_Session_Int32Array_float_bool(TreasureSpawner __instance)
+        public static void UseDeterministRandom(TreasureSpawner spawner)
         {
-            Traverse.Create(__instance).Property("Random").SetValue(ServiceCollections.ResolveRngService().Gameplay);
+            Traverse.Create(spawner).Property("Random").SetValue(ServiceCollections.ResolveRngService().Gameplay);
         }
 
         [HarmonyPrefix]

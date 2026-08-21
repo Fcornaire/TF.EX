@@ -19,8 +19,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                 ActualDepth = dyn.Get<double>("actualDepth"),
                 Speed = dyn.Get<Vector2>("speed").ToModel(),
                 RotateSign = dyn.Get<int>("rotateSign"),
-
-                //The spin is the whole look of it, and it accumulates rather than being derived.
+                PositionCounter = dyn.Get<Vector2>("counter").ToModel(),
                 ImageRotation = image?.Rotation ?? 0f,
                 ImageScaleX = image?.Scale.X ?? 1f,
             };
@@ -35,6 +34,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             dyn.Set("actualDepth", toLoad.ActualDepth);
             dyn.Set("speed", toLoad.Speed.ToTFVector());
             dyn.Set("rotateSign", toLoad.RotateSign);
+            dyn.Set("counter", toLoad.PositionCounter.ToTFVector());
 
             var image = dyn.Get<Image>("image");
 

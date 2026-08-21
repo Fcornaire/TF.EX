@@ -18,6 +18,11 @@ namespace TF.EX.Patchs.Entity.HUD
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var inputService = ServiceCollections.ResolveInputService();
 
+            if (!netplayManager.IsInit() && !netplayManager.IsReplayMode() && !netplayManager.IsTestMode())
+            {
+                return;
+            }
+
             var dynVersusPlayerMatchResults = DynamicData.For(__instance);
             var gem = dynVersusPlayerMatchResults.Get<Sprite<string>>("gem");
 

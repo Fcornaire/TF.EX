@@ -14,7 +14,7 @@ namespace TF.EX.Domain.Extensions
                 var varian = matchVariants.Variants.FirstOrDefault(v => v.Title == variant);
                 if (varian != null)
                 {
-                    varian.Value = true;
+                    varian.EnableForAll();
                     notFound = false;
                 }
                 else
@@ -22,7 +22,7 @@ namespace TF.EX.Domain.Extensions
                     var variantCustom = matchVariants.CustomVariants.FirstOrDefault(v => v.Value.Title == variant);
                     if (variantCustom.Value != null)
                     {
-                        variantCustom.Value.Value = true;
+                        variantCustom.Value.EnableForAll();
                         notFound = false;
                     }
                 }
@@ -37,6 +37,22 @@ namespace TF.EX.Domain.Extensions
         public static bool ContainsCustomVariant(this MatchVariants matchVariants, IEnumerable<string> variants)
         {
             return variants.Any(variant => variant != Constants.RIGHT_STICK_VARIANT_TITLE && matchVariants.CustomVariants.Any(v => v.Value.Title == variant));
+        }
+
+        public static void EnableForAll(this Variant variant)
+        {
+            if (variant.PerPlayer)
+            {
+                var values = MonoMod.Utils.DynamicData.For(variant).Get<bool[]>("playerValues");
+                for (int i = 0; i < values.Length; i++)
+                {
+                    values[i] = true;
+                }
+
+                return;
+            }
+
+            variant.Value = true;
         }
     }
 }

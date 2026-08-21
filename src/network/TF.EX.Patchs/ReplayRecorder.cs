@@ -13,9 +13,9 @@ namespace TF.EX.Patchs
         {
             var netplayManager = TF.EX.Domain.ServiceCollections.ResolveNetplayManager();
 
-            var mode = MainMenu.VersusMatchSettings.Mode;
+            var mode = MainMenu.VersusMatchSettings?.Mode;
 
-            if (mode.IsNetplay() || netplayManager.GetNetplayMode() == Domain.Models.NetplayMode.Test || netplayManager.IsReplayMode())
+            if (mode?.IsNetplay() == true || netplayManager.GetNetplayMode() == Domain.Models.NetplayMode.Test || netplayManager.IsReplayMode())
             {
                 return false;
             }

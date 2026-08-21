@@ -1,6 +1,7 @@
 ﻿using HarmonyLib;
 using TF.EX.Domain;
 using TF.EX.Domain.Context;
+using TF.EX.Domain.Extensions;
 using TowerFall;
 
 namespace TF.EX.Patchs
@@ -29,11 +30,9 @@ namespace TF.EX.Patchs
         [HarmonyPatch("CleanSettingsVersus")]
         public static void MatchSettings_CleanSettingsVersus(MatchSettings __instance)
         {
-            var inputService = ServiceCollections.ResolveInputService();
-
             if (TFGame.PlayerAmount == 0)
             {
-                __instance.Mode = Modes.LastManStanding;
+                __instance.ClearNetplayMode();
             }
         }
     }

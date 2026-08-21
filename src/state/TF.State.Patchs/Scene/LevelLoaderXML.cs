@@ -2,6 +2,7 @@ using HarmonyLib;
 using Microsoft.Xna.Framework;
 using MonoMod.Utils;
 using TF.State.Domain;
+using TF.State.Domain.Context;
 using TF.State.Domain.Models;
 using TF.State.TowerFallExtensions;
 using TowerFall;
@@ -15,7 +16,24 @@ namespace TF.State.Patchs.Scene
         [HarmonyPatch(MethodType.Constructor, [typeof(TowerFall.Session)])]
         public static void LevelLoaderXML_ctor(TowerFall.Session session)
         {
+            if (!StateFlags.IsCaptureActive)
+            {
+                return;
+            }
+
             Reset(session);
+
+            if (session.TreasureSpawner != null)
+            {
+                Entity.TreasureSpawnerPatch.UseDeterministRandom(session.TreasureSpawner);
+            }
+
+            if (session.MatchSettings.LevelSystem is VersusLevelSystem versusLevelSystem)
+            {
+                var dynLevelSystem = Traverse.Create(versusLevelSystem);
+                dynLevelSystem.Property("ShowControls").SetValue(false);
+                dynLevelSystem.Property("ShowTriggerControls").SetValue(false);
+            }
         }
 
         private static void Reset(TowerFall.Session session)

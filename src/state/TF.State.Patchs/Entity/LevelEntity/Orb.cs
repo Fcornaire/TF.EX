@@ -21,7 +21,10 @@ namespace TF.State.Patchs.Entity.LevelEntity
         {
             CalcPatch.UnregisterRng();
 
-            Traverse.Create(__instance).Field("ownerIndex").SetValue(-1);
+            if (TF.State.Domain.Context.StateFlags.IsCaptureActive)
+            {
+                Traverse.Create(__instance).Field("ownerIndex").SetValue(-1);
+            }
         }
     }
 }

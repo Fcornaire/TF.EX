@@ -77,7 +77,9 @@ namespace TF.EX.Patchs.PlayerInput
                 __result = false;
             }
 
-            if (TFGame.Instance.Scene is MapScene && !matchmakingService.GetOwnLobby().IsEmpty)
+            if (TFGame.Instance.Scene is MapScene
+                && TowerFall.MainMenu.VersusMatchSettings?.Mode.IsNetplay() == true
+                && !matchmakingService.GetOwnLobby().IsEmpty)
             {
                 __result = false;
             }
@@ -94,7 +96,9 @@ namespace TF.EX.Patchs.PlayerInput
                 __result = false;
             }
 
-            if (TFGame.Instance.Scene is MapScene && !matchmakingService.GetOwnLobby().IsEmpty)
+            if (TFGame.Instance.Scene is MapScene
+                && TowerFall.MainMenu.VersusMatchSettings?.Mode.IsNetplay() == true
+                && !matchmakingService.GetOwnLobby().IsEmpty)
             {
                 __result = false;
             }
@@ -238,7 +242,7 @@ namespace TF.EX.Patchs.PlayerInput
 
             var lobby = matchmakingService.GetOwnLobby();
 
-            if (!TowerFall.MainMenu.VersusMatchSettings.Mode.IsNetplay() || lobby.IsEmpty)
+            if (TowerFall.MainMenu.VersusMatchSettings?.Mode.IsNetplay() != true || lobby.IsEmpty)
             {
                 return actualResult;
             }
@@ -300,6 +304,12 @@ namespace TF.EX.Patchs.PlayerInput
 
             var lobby = matchmakingService.GetOwnLobby();
 
+            var currentModeIsNetplay = TowerFall.MainMenu.VersusMatchSettings?.Mode.IsNetplay() == true;
+            if (!currentModeIsNetplay && !isNetplayInit && !isReplayMode && lobby.IsEmpty)
+            {
+                return actualInput;
+            }
+
             if (IsForeignSeat(self))
             {
                 return false; //Ignore input for other players in netplay
@@ -317,16 +327,15 @@ namespace TF.EX.Patchs.PlayerInput
 
             if (TFGame.Instance.Scene is Level && (TFGame.Instance.Scene as TowerFall.Level).Session.GetWinner() != -1)
             {
-                var dynMacthResults = DynamicData.For((TFGame.Instance.Scene as TowerFall.Level).Get<VersusMatchResults>());
-                var isFinished = dynMacthResults.Get<bool>("finished");
+                var matchResults = (TFGame.Instance.Scene as TowerFall.Level).Get<VersusMatchResults>();
 
-                if (isFinished)
+                if (matchResults != null && DynamicData.For(matchResults).Get<bool>("finished"))
                 {
                     return actualInput;
                 }
             }
 
-            if (TFGame.Instance.Scene is MapScene && !matchmakingService.GetOwnLobby().IsEmpty)
+            if (TFGame.Instance.Scene is MapScene && currentModeIsNetplay && !matchmakingService.GetOwnLobby().IsEmpty)
             {
                 return true;
             }

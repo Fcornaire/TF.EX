@@ -16,8 +16,7 @@ namespace TF.Replay.Core
         private readonly IReplayService _replayService;
         private readonly IModCollections _modCollections;
 
-        public TFReplayModule(IModContent content, IModuleContext context, ILogger logger)
-            : base(content, context, logger)
+        public TFReplayModule(IModContent content, IModuleContext context, ILogger logger) : base(content, context, logger)
         {
             Instance = this;
 
@@ -34,6 +33,18 @@ namespace TF.Replay.Core
                 if (_replayService?.IsRecording == true)
                 {
                     _replayService.Export();
+                }
+
+                if (StandaloneRecorder.IsActive || StandalonePlayback.IsActive)
+                {
+                    var state = ServiceCollections.ResolveStateApi();
+                    if (state?.GetFrameDriver() == "TF.Replay")
+                    {
+                        state.SetFrameDriver(null);
+                        state.SetDriverFlags(0, false, false, false, false, 0);
+                    }
+
+                    StandaloneRecorder.Reset();
                 }
 
                 _api?.SetRecordDriver(null);

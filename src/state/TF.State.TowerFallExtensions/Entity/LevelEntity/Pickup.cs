@@ -136,7 +136,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                     tween.OnComplete = entity.FinishUnpack;
                     entity.Add(tween);
                 }
-                else
+                else if (entity is TowerFall.BombPickup)
                 {
                     var bombPickup = entity as TowerFall.BombPickup;
                     var dynBombPickup = DynamicData.For(bombPickup);

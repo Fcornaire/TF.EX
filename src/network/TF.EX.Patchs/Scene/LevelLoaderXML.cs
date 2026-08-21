@@ -17,7 +17,7 @@ namespace TF.EX.Patchs.Scene
         {
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             if (__instance.Finished
-                && TowerFall.MainMenu.VersusMatchSettings.Mode.IsNetplay()
+                && TowerFall.MainMenu.VersusMatchSettings?.Mode.IsNetplay() == true
                 && !netplayManager.IsReplayMode()
                 && !netplayManager.IsSynchronized()
                 && __instance.Level.Session.RoundIndex == 0

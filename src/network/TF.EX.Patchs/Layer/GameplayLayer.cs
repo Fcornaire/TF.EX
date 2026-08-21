@@ -32,7 +32,7 @@ namespace TF.EX.Patchs.Layer
                 return;
             }
 
-            if (TowerFall.MainMenu.VersusMatchSettings.Mode.IsNetplay() || netplayManager.GetNetplayMode() == NetplayMode.Local)
+            if (TowerFall.MainMenu.VersusMatchSettings?.Mode.IsNetplay() == true || netplayManager.GetNetplayMode() == NetplayMode.Local)
             {
                 if (matchmakingService.IsSpectator())
                 {

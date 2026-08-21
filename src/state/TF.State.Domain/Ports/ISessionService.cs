@@ -14,9 +14,6 @@ namespace TF.State.Domain.Ports
 
         Dictionary<int, double> GetGamePlayLayerActualDepthLookup();
         void SaveGamePlayLayerActualDepthLookup(Dictionary<int, double> toSave);
-        void AddBramblesState(float frameCounter, IEnumerable<MovingPlatform> movingPlatformsStates, Vector2f spreadOrigin);
-        IEnumerable<BramblesStartingState> GetBramblesStartingState();
-        void LoadBramblesStartingState(IEnumerable<BramblesStartingState> bramblesStartingState);
         void UpdateRoundChests(int roundIndex, List<Chest> chests);
         void UpdateRoundOrbs(int roundIndex, List<Orb> orbs);
         void UpdateRoundLavaControl(int roundIndex, LavaControl lavaControl);

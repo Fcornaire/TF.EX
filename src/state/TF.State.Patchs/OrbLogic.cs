@@ -109,6 +109,20 @@ namespace TF.State.Patchs
         }
 
         [HarmonyPrefix]
+        [HarmonyPatch("StartScroll", new Type[] { })]
+        public static void OrbLogic_StartScroll_Prefix()
+        {
+            CalcPatch.RegisterRng();
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("StartScroll", new Type[] { })]
+        public static void OrbLogic_StartScroll_Postfix()
+        {
+            CalcPatch.UnregisterRng();
+        }
+
+        [HarmonyPrefix]
         [HarmonyPatch("DoTimeOrb")]
         public static void OrbLogic_DoTimeOrb_Prefix()
         {

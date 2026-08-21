@@ -47,11 +47,13 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             var targetCounter = DynamicData.For(counter);
             targetCounter.Set("counter", toLoad.TargetCounter);
 
+            dynLavaControl.Set("mode", (TowerFall.LavaControl.LavaMode)toLoad.Mode);
+            dynLavaControl.Set("OwnerIndex", toLoad.OwnerIndex);
             entity.Target = toLoad.Target;
 
             var lavas = dynLavaControl.Get<TowerFall.Lava[]>("lavas");
 
-            for (int i = 0; i < toLoad.Lavas.Length; i++)
+            for (int i = 0; i < toLoad.Lavas.Length && i < lavas.Length; i++)
             {
                 var currentLava = toLoad.Lavas[i];
                 lavas[i].LoadState(currentLava);

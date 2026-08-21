@@ -51,6 +51,7 @@ namespace TF.State.TowerFallExtensions
             orb.Space.SpaceSpeed = spaceSpeed.ToModel();
             orb.Space.ScreenOffsetStart = screenOffsetStart.ToModel();
             orb.Space.ScreenOffsetEnd = screenOffsetEnd.ToModel();
+            orb.Space.ScreenOffset = TFGame.Instance.Screen.Offset.ToModel();
 
             return orb;
         }
@@ -81,12 +82,12 @@ namespace TF.State.TowerFallExtensions
             var spaceCounter = dynOrb.Get<Counter>("spaceCounter");
             spaceCounter.LoadState(orb.Space.SpaceCounter);
 
+            dynOrb.Set("targetSpaceSpeed", orb.Space.TargetSpaceSpeed.ToTFVector());
+            dynOrb.Set("spaceSpeed", orb.Space.SpaceSpeed.ToTFVector());
+            TFGame.Instance.Screen.Offset = orb.Space.ScreenOffset.ToTFVector();
+
             if (orb.Space.SpaceTweenTimer > 0)
             {
-                dynOrb.Set("targetSpaceSpeed", orb.Space.TargetSpaceSpeed.ToTFVector());
-                dynOrb.Set("spaceSpeed", orb.Space.SpaceSpeed.ToTFVector());
-
-
                 var spaceTween = dynOrb.Get<Tween>("spaceTween");
                 var dynSpaceTween = DynamicData.For(spaceTween);
 

@@ -140,8 +140,19 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                 CanDoubleJump = dynPlayer.Get<bool>("canDoubleJump"),
                 ArrowRegenCounter = dynPlayer.Get<Counter>("arrowRegenCounter").Value,
                 ShieldRegenCounter = dynPlayer.Get<Counter>("shieldRegenCounter").Value,
-                HatState = (int)entity.HatState
+                HatState = (int)entity.HatState,
+                DodgeCurseSatisfied = dynPlayer.Get<bool>("dodgeCurseSatisfied"),
+                DodgeSpeed = dynPlayer.Get<Vector2>("dodgeSpeed").ToModel(),
+                LastCaughtArrowDepth = GetLastCaughtArrowDepth(dynPlayer),
+                InvisOpacity = dynPlayer.Get<float>("InvisOpacity"),
             };
+        }
+
+        private static double GetLastCaughtArrowDepth(DynamicData dynPlayer)
+        {
+            var lastCaught = dynPlayer.Get<TowerFall.Arrow>("lastCaught");
+
+            return lastCaught != null ? DynamicData.For(lastCaught).Get<double>("actualDepth") : 0;
         }
 
         public static void LoadState(this TowerFall.Player entity, Player toLoad)
@@ -284,6 +295,10 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                 entity.TargetCollider = null;
             }
 
+            dynPlayer.Set("dodgeCurseSatisfied", toLoad.DodgeCurseSatisfied);
+            dynPlayer.Set("dodgeSpeed", toLoad.DodgeSpeed.ToTFVector());
+            dynPlayer.Set("InvisOpacity", toLoad.InvisOpacity <= 0f && !toLoad.IsInvisible ? 1f : toLoad.InvisOpacity);
+
             if ((int)entity.HatState != toLoad.HatState)
             {
                 dynPlayer.Set("HatState", (TowerFall.Player.HatStates)toLoad.HatState);
@@ -328,6 +343,15 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             arrowRegenCounter.Set("counter", toLoad.ArrowRegenCounter);
             var shieldRegenCounter = DynamicData.For(dynPlayer.Get<Counter>("shieldRegenCounter"));
             shieldRegenCounter.Set("counter", toLoad.ShieldRegenCounter);
+        }
+
+        public static void LoadLastCaught(this TowerFall.Player self, double lastCaughtArrowDepth)
+        {
+            var dynPlayer = DynamicData.For(self);
+
+            dynPlayer.Set("lastCaught", lastCaughtArrowDepth != 0
+                ? (self.Scene as TowerFall.Level).GetEntityByDepth(lastCaughtArrowDepth) as TowerFall.Arrow
+                : null);
         }
 
         public static void LoadDeathArrow(this TowerFall.Player self, double deathArrowActualDepth)

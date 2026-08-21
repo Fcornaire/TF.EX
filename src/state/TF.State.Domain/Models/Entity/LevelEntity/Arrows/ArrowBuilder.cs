@@ -74,6 +74,36 @@ namespace TF.State.Domain.Models.Entity.LevelEntity.Arrows
             return this;
         }
 
+        public ArrowBuilder WithIsSquished(bool isSquished)
+        {
+            arrow.IsSquished = isSquished;
+            return this;
+        }
+
+        public ArrowBuilder WithFrozenPlayerIndex(int frozenPlayerIndex)
+        {
+            arrow.FrozenPlayerIndexPlusOne = frozenPlayerIndex + 1;
+            return this;
+        }
+
+        public ArrowBuilder WithAllegiance(int allegiance)
+        {
+            arrow.AllegiancePlusOne = allegiance + 1;
+            return this;
+        }
+
+        public ArrowBuilder WithDepth(int depth)
+        {
+            arrow.Depth = depth;
+            return this;
+        }
+
+        public ArrowBuilder WithFromHyper(bool fromHyper)
+        {
+            arrow.FromHyper = fromHyper;
+            return this;
+        }
+
         public ArrowBuilder WithTravelFrames(float travelFrames)
         {
             arrow.TravelFrames = travelFrames;
@@ -330,6 +360,11 @@ namespace TF.State.Domain.Models.Entity.LevelEntity.Arrows
             built.BuriedIn = arrow.BuriedIn;
             built.StuckToActualDepth = arrow.StuckToActualDepth;
             built.TravelFrames = arrow.TravelFrames;
+            built.IsSquished = arrow.IsSquished;
+            built.FrozenPlayerIndexPlusOne = arrow.FrozenPlayerIndexPlusOne;
+            built.AllegiancePlusOne = arrow.AllegiancePlusOne;
+            built.Depth = arrow.Depth;
+            built.FromHyper = arrow.FromHyper;
 
             if (built is BombArrow bombArrow)
             {

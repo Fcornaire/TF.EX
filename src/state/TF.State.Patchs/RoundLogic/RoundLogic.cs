@@ -4,12 +4,7 @@ using Monocle;
 using MonoMod.Utils;
 using TF.State.Domain;
 using TF.State.Domain.Context;
-
-using TF.State.Domain.Extensions;
-using TF.State.Domain.Models;
 using TF.State.TowerFallExtensions;
-
-using TF.State.Domain.Context;
 namespace TF.State.Patchs.RoundLogic
 {
     [HarmonyPatch(typeof(TowerFall.RoundLogic))]
@@ -47,8 +42,13 @@ namespace TF.State.Patchs.RoundLogic
             }
 
             TF.State.Patchs.Calc.CalcPatch.RegisterRng();
-            xMLPositions = CalcExtensions.OwnVectorShuffle(xMLPositions).ToList();
+            var shuffled = CalcExtensions.OwnVectorShuffle(xMLPositions).ToList();
             TF.State.Patchs.Calc.CalcPatch.UnregisterRng();
+
+            if (!TF.State.Domain.Context.ScenarioLevels.IsActive)
+            {
+                xMLPositions = shuffled;
+            }
             int num;
             if (!__instance.Session.IsInOvertime)
             {
@@ -143,15 +143,23 @@ namespace TF.State.Patchs.RoundLogic
                 TopUpSpawns(teamSpawnsB, neededB, playerSpawns.Where(spawn => spawn.X > 160f), playerSpawns, used);
             }
 
-            teamSpawnsA.Sort(SortTeamSpawnsLeft);
-            teamSpawnsB.Sort(SortTeamSpawnsRight);
+            var isActive = TF.State.Domain.Context.ScenarioLevels.IsActive;
+
+            if (!isActive)
+            {
+                teamSpawnsA.Sort(SortTeamSpawnsLeft);
+                teamSpawnsB.Sort(SortTeamSpawnsRight);
+            }
 
             TF.State.Patchs.Calc.CalcPatch.RegisterRng();
             var order = CalcExtensions.OwnShuffledIndexes(Math.Max(teamSpawnsA.Count, teamSpawnsB.Count));
             TF.State.Patchs.Calc.CalcPatch.UnregisterRng();
 
-            teamSpawnsA = ApplyOrder(teamSpawnsA, order);
-            teamSpawnsB = ApplyOrder(teamSpawnsB, order);
+            if (!isActive)
+            {
+                teamSpawnsA = ApplyOrder(teamSpawnsA, order);
+                teamSpawnsB = ApplyOrder(teamSpawnsB, order);
+            }
 
             SpawnTeam(__instance, TowerFall.Allegiance.Blue, teamSpawnsA);
             SpawnTeam(__instance, TowerFall.Allegiance.Red, teamSpawnsB);
