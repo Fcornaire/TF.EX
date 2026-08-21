@@ -11,7 +11,7 @@ namespace TF.State.Patchs.Entity.LevelEntity
     public class PlayerCorpsePatch
     {
         [HarmonyPostfix]
-        [HarmonyPatch(MethodType.Constructor, [typeof(TowerFall.Player), typeof(int)])]
+        [HarmonyPatch(MethodType.Constructor, [typeof(string), typeof(Allegiance), typeof(Microsoft.Xna.Framework.Vector2), typeof(Facing), typeof(int), typeof(int)])]
         public static void PlayerCorpse_ctor_Postfix(PlayerCorpse __instance)
         {
             var dyn = DynamicData.For(__instance);
@@ -70,7 +70,8 @@ namespace TF.State.Patchs.Entity.LevelEntity
 
         private static void StepOwnedSequences(PlayerCorpse corpse, DynamicData dyn)
         {
-            if (corpse.PrismHit && dyn.TryGet("prismTicks", out float prismTicks) && prismTicks >= 0f)
+            var prismTicks = dyn.Get("prismTicks") as float? ?? -1f;
+            if (corpse.PrismHit && prismTicks >= 0f)
             {
                 var next = prismTicks + Monocle.Engine.TimeMult;
                 dyn.Set("prismTicks", next);
@@ -94,7 +95,8 @@ namespace TF.State.Patchs.Entity.LevelEntity
                 }
             }
 
-            if (dyn.TryGet("brambleTicks", out float brambleTicks) && brambleTicks >= 0f)
+            var brambleTicks = dyn.Get("brambleTicks") as float? ?? -1f;
+            if (brambleTicks >= 0f)
             {
                 if (dyn.Get<Monocle.FlashingImage[]>("brambles") == null)
                 {
@@ -145,7 +147,7 @@ namespace TF.State.Patchs.Entity.LevelEntity
                 return;
             }
 
-            var counter = dyn.Get<float>("ghostSpawnCounter");
+            var counter = dyn.Get("ghostSpawnCounter") as float? ?? -1f;
 
             if (counter < 0f)
             {
