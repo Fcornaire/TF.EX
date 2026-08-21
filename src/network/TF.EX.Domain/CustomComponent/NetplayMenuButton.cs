@@ -1,15 +1,15 @@
 using Microsoft.Xna.Framework;
 using Monocle;
-using TF.EX.Domain.Extensions;
 using TowerFall;
 
 namespace TF.EX.Domain.CustomComponent
 {
-    public class OnlineVersusButton : MainModeButton
+    public class NetplayMenuButton : MainModeButton
     {
         private readonly Image icon;
+        private readonly Action onConfirm;
 
-        public override float BaseScale => 1.5f;
+        public override float BaseScale => 1f;
 
         public override float ImageScale
         {
@@ -29,18 +29,18 @@ namespace TF.EX.Domain.CustomComponent
             set { icon.Y = value; }
         }
 
-        public OnlineVersusButton(Vector2 position, Vector2 tweenFrom) : base(position, tweenFrom, "ONLINE", "2 ARCHERS")
+        public NetplayMenuButton(Vector2 position, Vector2 tweenFrom, string title, string subtitle, Subtexture iconTexture, Action onConfirm)
+            : base(position, tweenFrom, title, subtitle)
         {
-            icon = new Image(MenuIcons.Online());
+            this.onConfirm = onConfirm;
+            icon = new Image(iconTexture);
             icon.CenterOrigin();
             Add(icon);
         }
 
         protected override void MenuAction()
         {
-            MainMenu.CurrentMatchSettings = MainMenu.VersusMatchSettings;
-            MainMenu.RollcallMode = MainMenu.RollcallModes.Versus;
-            base.MainMenu.State = Models.MenuState.NetplaySelect.ToTFModel();
+            onConfirm?.Invoke();
         }
 
         public override void Render()

@@ -25,7 +25,11 @@ namespace TF.EX.Patchs.Entity
             if (currentState == Domain.Models.MenuState.ReplaysBrowser
                 || currentState == Domain.Models.MenuState.LobbyBrowser
                 || currentState == Domain.Models.MenuState.LobbyBuilder
-                || currentState == Domain.Models.MenuState.VersusSelect)
+                || currentState == Domain.Models.MenuState.VersusSelect
+                || currentState == Domain.Models.MenuState.NetplaySelect
+                || currentState == Domain.Models.MenuState.PrivateSelect
+                || currentState == Domain.Models.MenuState.PrivateJoinCode
+                || currentState == Domain.Models.MenuState.QuickPlaySearch)
             {
                 Traverse.Create(__instance).Field("targetTexture").SetValue(TFGame.MenuAtlas["menuTitles/fight"]);
 

@@ -32,6 +32,14 @@ namespace TF.EX.Domain.Services
         private bool hostStartedMatch = false;
         private bool matchEndReported = false;
         private Lobby pendingRollcallLobby = null;
+        private string pendingJoinCode = string.Empty;
+        private Lobby privateJoinLobby = null;
+
+        private Action<int> onQuickPlayQueued;
+        private Action<Lobby> onQuickPlayMatched;
+        private Action<string> onQuickPlayFailed;
+        private int searchingCount;
+        private bool isQuickPlayQueued;
 
         private Dictionary<string, Action> onResult = new Dictionary<string, Action>();
         private WSAction currentAction = WSAction.None;
@@ -205,6 +213,48 @@ namespace TF.EX.Domain.Services
             await Send(message);
         }
 
+        private async Task SendJoinPrivate()
+        {
+            var joinPrivateMessage = new JoinPrivateMessage
+            {
+                JoinPrivate = new JoinPrivate
+                {
+                    Code = pendingJoinCode,
+                    Name = _netplayManager.GetNetplayMeta().Name,
+                    IsPlayer = true
+                }
+            };
+
+            var bytes = MessagePackSerializer.Serialize(joinPrivateMessage);
+            var message = MessagePackSerializer.ConvertToJson(bytes);
+            await Send(message);
+        }
+
+        private async Task SendEnterQuickPlay()
+        {
+            var enterQuickPlayMessage = new EnterQuickPlayMessage
+            {
+                EnterQuickPlay = new EnterQuickPlay
+                {
+                    Name = _netplayManager.GetNetplayMeta().Name,
+                    IsWide = ServiceCollections.ResolveWiderSetModApi()?.IsWide == true
+                }
+            };
+
+            var bytes = MessagePackSerializer.Serialize(enterQuickPlayMessage);
+            var message = MessagePackSerializer.ConvertToJson(bytes);
+            await Send(message);
+        }
+
+        private async Task SendExitQuickPlay()
+        {
+            var exitQuickPlayMessage = new ExitQuickPlayMessage { };
+
+            var bytes = MessagePackSerializer.Serialize(exitQuickPlayMessage);
+            var message = MessagePackSerializer.ConvertToJson(bytes);
+            await Send(message);
+        }
+
         private async Task SendUpdatePlayer(Models.WebSocket.Player player)
         {
             var updatePlayerMessage = new UpdatePlayerMessage
@@ -271,15 +321,20 @@ namespace TF.EX.Domain.Services
             await _webSocket.SendAsync(segment, WebSocketMessageType.Binary, true, cancellationToken);
         }
 
+        private static bool IsServerMsg(string message, string tag)
+        {
+            return message.StartsWith($"{{\"{tag}\"", StringComparison.Ordinal);
+        }
+
         private async Task HandleMessageContents(string message)
         {
-            if (message.Contains("KeepAlive"))
+            if (IsServerMsg(message, "KeepAlive"))
             {
                 await Send(message);
                 return;
             }
 
-            if (message.Contains("GetLobbiesResponse"))
+            if (IsServerMsg(message, "GetLobbiesResponse"))
             {
                 var bytes = MessagePackSerializer.ConvertFromJson(message);
                 var response = MessagePackSerializer.Deserialize<GetLobbiesResponseMessage>(bytes);
@@ -288,7 +343,7 @@ namespace TF.EX.Domain.Services
                 onResult["GetLobbies-success"]?.Invoke();
             }
 
-            if (message.Contains("CreateLobbyResponse"))
+            if (IsServerMsg(message, "CreateLobbyResponse"))
             {
                 var bytes = MessagePackSerializer.ConvertFromJson(message);
                 var response = MessagePackSerializer.Deserialize<CreateLobbyResponseMessage>(bytes);
@@ -312,7 +367,7 @@ namespace TF.EX.Domain.Services
             }
             ;
 
-            if (message.Contains("JoinLobby"))
+            if (IsServerMsg(message, "JoinLobbyResponse"))
             {
                 var bytes = MessagePackSerializer.ConvertFromJson(message);
                 var response = MessagePackSerializer.Deserialize<JoinLobbyResponseMessage>(bytes);
@@ -349,7 +404,77 @@ namespace TF.EX.Domain.Services
             }
             ;
 
-            if (message.Contains("PingUpdate"))
+            if (IsServerMsg(message, "QuickPlayMatchFound"))
+            {
+                var bytes = MessagePackSerializer.ConvertFromJson(message);
+                var response = MessagePackSerializer.Deserialize<QuickPlayMatchFoundMessage>(bytes);
+
+                _logger.LogDebug<MatchmakingService>("Quickplay match found!");
+
+                peerId = response.QuickPlayMatchFound.RoomPeerId.ToString();
+                isQuickPlayQueued = false;
+
+                var lobby = response.QuickPlayMatchFound.Lobby;
+                UpdateOwnLobby(lobby);
+
+                onQuickPlayMatched?.Invoke(GetOwnLobby());
+
+                return;
+            }
+
+            if (IsServerMsg(message, "QuickPlayStatus"))
+            {
+                var bytes = MessagePackSerializer.ConvertFromJson(message);
+                var response = MessagePackSerializer.Deserialize<QuickPlayStatusMessage>(bytes);
+
+                searchingCount = response.QuickPlayStatus.Searching;
+
+                if (response.QuickPlayStatus.Queued)
+                {
+                    isQuickPlayQueued = true;
+                    onQuickPlayQueued?.Invoke(searchingCount);
+                }
+                else
+                {
+                    isQuickPlayQueued = false;
+
+                    if (!string.IsNullOrEmpty(response.QuickPlayStatus.Message))
+                    {
+                        _logger.LogDebug<MatchmakingService>($"Quickplay refused : {response.QuickPlayStatus.Message}");
+                        onQuickPlayFailed?.Invoke(response.QuickPlayStatus.Message);
+                    }
+                }
+
+                return;
+            }
+
+            if (IsServerMsg(message, "PrivateJoinResult"))
+            {
+                var bytes = MessagePackSerializer.ConvertFromJson(message);
+                var response = MessagePackSerializer.Deserialize<PrivateJoinResultMessage>(bytes);
+
+                if (response.PrivateJoinResult.Success)
+                {
+                    _logger.LogDebug<MatchmakingService>("Private lobby joined!");
+
+                    peerId = response.PrivateJoinResult.RoomPeerId.ToString();
+                    privateJoinLobby = response.PrivateJoinResult.Lobby;
+
+                    onResult["JoinPrivate-success"]?.Invoke();
+                }
+                else
+                {
+                    _logger.LogDebug<MatchmakingService>($"Private lobby join failed! : {response.PrivateJoinResult.Message}");
+
+                    onResult["JoinPrivate-fail"]?.Invoke();
+                }
+
+                currentAction = WSAction.None;
+
+                return;
+            }
+
+            if (IsServerMsg(message, "PingUpdate"))
             {
                 var bytes = MessagePackSerializer.ConvertFromJson(message);
                 var response = MessagePackSerializer.Deserialize<PingUpdateMessage>(bytes);
@@ -365,7 +490,7 @@ namespace TF.EX.Domain.Services
                 return;
             }
 
-            if (message.Contains("LobbyUpdate"))
+            if (IsServerMsg(message, "LobbyUpdate"))
             {
                 //Needed because UpdatePlayer response is a LobbyUpdate , but not necessarely all the time
                 if (currentAction == WSAction.UpdatePlayer)
@@ -386,7 +511,7 @@ namespace TF.EX.Domain.Services
                 HandleLobbyUpdate(lobby);
             }
 
-            if (message.Contains("LeaveLobbyResponse"))
+            if (IsServerMsg(message, "LeaveLobbyResponse"))
             {
                 if (currentAction != WSAction.None)
                 {
@@ -408,7 +533,7 @@ namespace TF.EX.Domain.Services
                 }
             }
 
-            if (message.Contains("LeaveLobbyForce"))
+            if (IsServerMsg(message, "LeaveLobbyForce"))
             {
                 var mainMenu = new MainMenu(Context.MenuReturn.NetplayEntry ?? MainMenu.MenuState.VersusOptions);
                 Engine.Instance.Scene = mainMenu;
@@ -420,7 +545,7 @@ namespace TF.EX.Domain.Services
                 matchEndReported = false;
             }
 
-            if (message.Contains("RematchLobby"))
+            if (IsServerMsg(message, "RematchLobby"))
             {
                 matchEndReported = false;
 
@@ -433,12 +558,12 @@ namespace TF.EX.Domain.Services
                 }
             }
 
-            if (message.Contains("StartLobby"))
+            if (IsServerMsg(message, "StartLobby"))
             {
                 hostStartedMatch = true;
             }
 
-            if (message.Contains("ArcherSelect"))
+            if (IsServerMsg(message, "ArcherSelectLobby"))
             {
                 hostStartedMatch = false;
                 matchEndReported = false;
@@ -522,7 +647,7 @@ namespace TF.EX.Domain.Services
             {
                 if (TFGame.Instance.Scene is MainMenu)
                 {
-                    (TFGame.Instance.Scene as MainMenu).State = Domain.Models.MenuState.LobbyBrowser.ToTFModel();
+                    (TFGame.Instance.Scene as MainMenu).State = Domain.Models.MenuState.NetplaySelect.ToTFModel();
                     ownLobby = new Lobby();
                 }
 
@@ -825,6 +950,9 @@ namespace TF.EX.Domain.Services
                 case WSAction.JoinAsSpectator:
                     await SendJoinLobby(ownLobby.RoomId);
                     break;
+                case WSAction.JoinPrivate:
+                    await SendJoinPrivate();
+                    break;
                 case WSAction.LeaveLobby:
                     await SendLeaveLobby();
                     break;
@@ -864,7 +992,9 @@ namespace TF.EX.Domain.Services
                 GameData = lobby.GameData,
                 Spectators = lobby.Spectators,
                 EndGameChoice = lobby.EndGameChoice,
-                Mods = lobby.Mods
+                Mods = lobby.Mods,
+                Kind = lobby.Kind,
+                JoinCode = lobby.JoinCode
             };
         }
 
@@ -879,6 +1009,57 @@ namespace TF.EX.Domain.Services
             var action = isPlayer ? WSAction.JoinLobby : WSAction.JoinAsSpectator;
 
             await Update(action, onSucess, onFail);
+        }
+
+        public async Task JoinPrivate(string code, Action<Lobby> onSuccess, Action onFail)
+        {
+            pendingJoinCode = code;
+
+            await Update(WSAction.JoinPrivate, () => onSuccess(privateJoinLobby), onFail);
+        }
+
+        public async Task EnterQuickPlay(Action<int> onQueued, Action<Lobby> onMatched, Action<string> onFail)
+        {
+            onQuickPlayQueued = onQueued;
+            onQuickPlayMatched = onMatched;
+            onQuickPlayFailed = onFail;
+            searchingCount = 0;
+
+            if (!EnsureConnection())
+            {
+                onFail?.Invoke("Cannot reach the server");
+                return;
+            }
+
+            await SendEnterQuickPlay();
+        }
+
+        public async Task ExitQuickPlay()
+        {
+            onQuickPlayQueued = null;
+            onQuickPlayMatched = null;
+            onQuickPlayFailed = null;
+            isQuickPlayQueued = false;
+
+            if (IsConnectedToServer())
+            {
+                await SendExitQuickPlay();
+            }
+        }
+
+        public bool IsSearchingQuickPlay()
+        {
+            return isQuickPlayQueued;
+        }
+
+        public int GetSearchingCount()
+        {
+            return searchingCount;
+        }
+
+        public bool IsQuickPlayStarting()
+        {
+            return ownLobby.IsQuickPlay && IsAwaitingHostStart();
         }
 
         public int GetLocalSeat()
@@ -915,12 +1096,12 @@ namespace TF.EX.Domain.Services
 
         public bool CanHostStart()
         {
-            return IsAwaitingHostStart() && IsHost();
+            return !ownLobby.IsQuickPlay && IsAwaitingHostStart() && IsHost();
         }
 
         public bool IsWaitingForHostStart()
         {
-            return IsAwaitingHostStart() && !IsHost();
+            return !ownLobby.IsQuickPlay && IsAwaitingHostStart() && !IsHost();
         }
 
         private bool IsAwaitingHostStart()
@@ -1023,6 +1204,7 @@ namespace TF.EX.Domain.Services
         JoinLobby,
         LeaveLobby,
         UpdatePlayer,
-        JoinAsSpectator
+        JoinAsSpectator,
+        JoinPrivate
     }
 }

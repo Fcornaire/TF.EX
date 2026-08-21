@@ -26,7 +26,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
                     return false;
                 }
 
-                __instance.MainMenu.State = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
+                __instance.MainMenu.State = TF.EX.Domain.Models.MenuState.NetplaySelect.ToTFModel();
                 return false;
             }
 
