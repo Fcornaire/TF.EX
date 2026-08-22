@@ -13,6 +13,11 @@
     <Project Path="src/state/TF.State.Patchs/TF.State.Patchs.csproj" />
     <Project Path="src/state/TF.State.Core/TF.State.Core.csproj" />
   </Folder>
+  <Folder Name="/src/utilities/TF.InputDisplayer/">
+    <Project Path="src/utilities/TF.InputDisplayer/TF.InputDisplayer.Domain/TF.InputDisplayer.Domain.csproj" />
+    <Project Path="src/utilities/TF.InputDisplayer/TF.InputDisplayer.Patchs/TF.InputDisplayer.Patchs.csproj" />
+    <Project Path="src/utilities/TF.InputDisplayer/TF.InputDisplayer.Core/TF.InputDisplayer.Core.csproj" />
+  </Folder>
   <Folder Name="/src/replay/">
     <Project Path="src/replay/TF.Replay.Domain/TF.Replay.Domain.csproj" />
     <Project Path="src/replay/TF.Replay.Patchs/TF.Replay.Patchs.csproj" />

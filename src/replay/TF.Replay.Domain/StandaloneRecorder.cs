@@ -417,6 +417,7 @@ namespace TF.Replay.Domain
             api.SetPlayerCount(_seats.Length);
 
             api.SetArchersFlat(
+                _seats,
                 _characters,
                 _alts,
                 _seats.Select(seat => won || (_winner != -1 && (_teamMode ? _teams[seat] == _winner : _winner == seat))).ToArray(),

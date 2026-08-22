@@ -103,7 +103,7 @@ namespace TF.Replay.Domain.Api
             FlushArchers();
         }
 
-        public void SetArchersFlat(int[] indexes, int[] types, bool[] hasWon, int[] scores, string[] names)
+        public void SetArchersFlat(int[] seats, int[] indexes, int[] types, bool[] hasWon, int[] scores, string[] names)
         {
             _archers.Clear();
 
@@ -111,6 +111,7 @@ namespace TF.Replay.Domain.Api
             {
                 _archers.Add(new ArcherInfo
                 {
+                    Seat = seats != null && i < seats.Length ? seats[i] : i,
                     Index = indexes[i],
                     Type = (ArcherTypes)types[i],
                     HasWon = hasWon[i],
@@ -138,8 +139,6 @@ namespace TF.Replay.Domain.Api
         public int[] GetInputsAtFrame(int frame) => _replayService.GetRecordAt(frame)?.Inputs;
 
         public byte[] GetStateAtFrame(int frame) => _replayService.GetRecordAt(frame)?.State;
-
-        public void RenderInputOverlay(int[] flatInputs) => InputOverlay.Render(flatInputs);
 
         public string StartPlayback(string replayFileName)
         {

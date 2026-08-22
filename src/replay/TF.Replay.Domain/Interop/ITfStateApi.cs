@@ -14,6 +14,8 @@ namespace TF.Replay.Domain.Interop
 
         string[] ClassifyStateDiff(byte[] liveState, byte[] recordedState);
 
+        string[] DescribePlayers(byte[] state);
+
         bool HasStateEvents(string modName);
 
         void SetFrameDriver(string ownerModName);

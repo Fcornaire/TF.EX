@@ -1,36 +1,56 @@
-using Monocle;
 using TowerFall;
 
 namespace TF.Replay.Domain.Extensions
 {
     public static class ArcherDataExtensions
     {
-        public static (int, int) EnsureArcherDataExist(int archerIndex, int altIndex, IEnumerable<int> usedArchers)
+        public static bool Exists(int archerIndex, int altIndex)
         {
-            var index = archerIndex;
-            var altArcherIndex = altIndex;
+            if (archerIndex < 0 || ArcherData.Archers == null || archerIndex >= ArcherData.Archers.Length)
+            {
+                return false;
+            }
 
             try
             {
-                ArcherData.Get(index, (ArcherData.ArcherTypes)altArcherIndex);
+                return ArcherData.Get(archerIndex, (ArcherData.ArcherTypes)altIndex) != null;
             }
             catch (Exception)
             {
-                bool hasFound = false;
+                return false;
+            }
+        }
 
-                while (!hasFound)
+        public static (int, int) EnsureArcherDataExist(int archerIndex, int altIndex, ISet<int> taken)
+        {
+            if (Exists(archerIndex, altIndex))
+            {
+                taken.Add(archerIndex);
+
+                return (archerIndex, altIndex);
+            }
+
+            for (int index = 0; index < ArcherData.Archers.Length; index++)
+            {
+                if (taken.Contains(index))
                 {
-                    index = Calc.Random.Next(0, 8);
-                    altArcherIndex = Calc.Random.Next(0, 2);
+                    continue;
+                }
 
-                    if (!usedArchers.Contains(index))
+                for (int alt = 0; alt <= (int)ArcherData.ArcherTypes.Secret; alt++)
+                {
+                    if (!Exists(index, alt))
                     {
-                        hasFound = true;
+                        continue;
                     }
+
+                    taken.Add(index);
+
+                    return (index, alt);
                 }
             }
 
-            return (index, altArcherIndex);
+            return (archerIndex, altIndex);
         }
     }
 }

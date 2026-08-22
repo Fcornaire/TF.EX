@@ -1,4 +1,4 @@
-﻿namespace TF.EX.Domain.Interop
+namespace TF.EX.Domain.Interop
 {
     public interface ITfReplayApi
     {
@@ -19,7 +19,7 @@
         void SetSeed(int seed);
         void SetArcher(int seat, int archerIndex, int archerType, bool hasWon, int score, string name);
 
-        void SetArchersFlat(int[] indexes, int[] types, bool[] hasWon, int[] scores, string[] names);
+        void SetArchersFlat(int[] seats, int[] indexes, int[] types, bool[] hasWon, int[] scores, string[] names);
         void SetArcherTeams(int[] teams);
 
         bool IsPlayback { get; }
@@ -35,8 +35,6 @@
         void StopPlayback();
         bool SeekTo(int frame);
         bool UpdatePlaybackControls();
-
-        void RenderInputOverlay(int[] flatInputs);
 
         void SetPlaybackStartedCallback(Action<int> onStarted);
         void SetPlaybackStoppedCallback(Action onStopped);

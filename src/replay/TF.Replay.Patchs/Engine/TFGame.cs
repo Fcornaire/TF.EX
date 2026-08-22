@@ -23,7 +23,7 @@ namespace TF.Replay.Patchs.Engine
             {
                 StandaloneRecorder.Finish();
 
-                InputOverlay.Reset();
+                InputDisplayerOverlay.Reset();
                 PlaybackControls.Reset();
 
                 if (StandalonePlayback.IsActive)

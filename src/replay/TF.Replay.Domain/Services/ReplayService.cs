@@ -1,5 +1,6 @@
 using MessagePack;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 using TF.Replay.Domain.Extensions;
 using TF.Replay.Domain.Interop;
 using TF.Replay.Domain.Models;
@@ -21,6 +22,7 @@ namespace TF.Replay.Domain.Services
         private int _lastFrame;
         private bool _isPlayback;
         private bool _fromFile;
+        private const int SeatScanLimit = 120;
         private bool? _fixedTimeStepBeforeRecording;
 
         private bool[] _playersBeforePlayback;
@@ -89,7 +91,7 @@ namespace TF.Replay.Domain.Services
         public int RecordCount => _replay?.Record.Count ?? 0;
         public int LastFrame => _lastFrame;
 
-        public void BeginRecording(int towerId, int mode, int versusMatchLength,IEnumerable<string> variants, IEnumerable<CustomMod> mods)
+        public void BeginRecording(int towerId, int mode, int versusMatchLength, IEnumerable<string> variants, IEnumerable<CustomMod> mods)
         {
             if (_replay != null)
             {
@@ -305,7 +307,7 @@ namespace TF.Replay.Domain.Services
 
                 if (NeedsMigration(replay.Informations))
                 {
-                    _logger?.LogDebug("{file} was recorded on state schema {schema}, current is {current}",replayFilename, replay.Informations.StateSchemaOrLegacy, CurrentStateSchema());
+                    _logger?.LogDebug("{file} was recorded on state schema {schema}, current is {current}", replayFilename, replay.Informations.StateSchemaOrLegacy, CurrentStateSchema());
 
                     return PlaybackStartResult.Fail("REPLAY NEEDS MIGRATION");
                 }
@@ -325,7 +327,7 @@ namespace TF.Replay.Domain.Services
 
                 if (SeekBlockedBy != null)
                 {
-                    _logger?.LogInformation("{file} carries state from {mod}, which registered no save/load events: seeking is off",replayFilename, SeekBlockedBy);
+                    _logger?.LogInformation("{file} carries state from {mod}, which registered no save/load events: seeking is off", replayFilename, SeekBlockedBy);
                 }
 
                 LoadReplay(replay);
@@ -334,26 +336,7 @@ namespace TF.Replay.Domain.Services
 
                 ApplyMods(replay.Informations);
 
-                var archers = replay.Informations.Archers.ToArray();
-                var usedArchers = archers.Select(archer => archer.Index);
-
-                for (int seat = 0; seat < archers.Length; seat++)
-                {
-                    var (archerIndex, altIndex) = ArcherDataExtensions.EnsureArcherDataExist(
-                        archers[seat].Index, (int)archers[seat].Type, usedArchers);
-
-                    TFGame.Characters[seat] = archerIndex;
-                    TFGame.AltSelect[seat] = (ArcherData.ArcherTypes)altIndex;
-                }
-
-                var playerCount = replay.Informations.PlayerCount > 0
-                    ? replay.Informations.PlayerCount
-                    : archers.Length;
-
-                for (int seat = 0; seat < TFGame.Players.Length; seat++)
-                {
-                    TFGame.Players[seat] = seat < playerCount;
-                }
+                ApplyRecordedArchers();
 
                 StateApi()?.SetSeed(replay.Informations.Seed);
 
@@ -446,6 +429,120 @@ namespace TF.Replay.Domain.Services
             }
         }
 
+        private void ApplyRecordedArchers()
+        {
+            var archers = _replay?.Informations?.Archers?.ToArray();
+
+            if (archers == null || archers.Length == 0)
+            {
+                return;
+            }
+
+            var seats = SeatsFor(archers);
+
+            var taken = new HashSet<int>();
+
+            foreach (var archer in archers)
+            {
+                if (ArcherDataExtensions.Exists(archer.Index, (int)archer.Type))
+                {
+                    taken.Add(archer.Index);
+                }
+            }
+
+            for (int seat = 0; seat < TFGame.Players.Length; seat++)
+            {
+                TFGame.Players[seat] = false;
+            }
+
+            for (int i = 0; i < archers.Length; i++)
+            {
+                var seat = seats[i];
+
+                if (seat < 0 || seat >= TFGame.Characters.Length)
+                {
+                    continue;
+                }
+
+                var (archerIndex, altIndex) = ArcherDataExtensions.EnsureArcherDataExist(
+                    archers[i].Index, (int)archers[i].Type, taken);
+
+                TFGame.Characters[seat] = archerIndex;
+                TFGame.AltSelect[seat] = (ArcherData.ArcherTypes)altIndex;
+                TFGame.Players[seat] = true;
+            }
+        }
+
+        private int[] SeatsFor(Models.ArcherInfo[] archers)
+        {
+            if (archers.All(archer => archer.Seat.HasValue))
+            {
+                return archers.Select(archer => archer.Seat.Value).ToArray();
+            }
+
+            var recorded = RecordedSeats();
+
+            if (recorded != null && recorded.Length == archers.Length)
+            {
+                _logger?.LogDebug("[Replay] Archer seats are not stored", string.Join(",", recorded));
+
+                return recorded;
+            }
+
+            return Enumerable.Range(0, archers.Length).ToArray();
+        }
+
+        private int[] RecordedSeats()
+        {
+            var state = StateApi();
+
+            if (state == null || _replay?.Record == null)
+            {
+                return null;
+            }
+
+            var scanned = 0;
+
+            foreach (var record in _replay.Record)
+            {
+                if (record.State == null || scanned++ > SeatScanLimit)
+                {
+                    continue;
+                }
+
+                string[] described;
+
+                try
+                {
+                    described = state.DescribePlayers(record.State);
+                }
+                catch (Exception e)
+                {
+                    _logger?.LogWarning(e, "[Replay] Could not read the seats from a recorded state");
+                    return null;
+                }
+
+                if (described == null || described.Length == 0)
+                {
+                    continue;
+                }
+
+                var seats = new List<int>();
+
+                foreach (var line in described)
+                {
+                    if (int.TryParse(line.Split(';')[0], out var seat))
+                    {
+                        seats.Add(seat);
+                    }
+                }
+
+                return seats.Count == described.Length ? seats.OrderBy(seat => seat).ToArray() : null;
+            }
+
+            return null;
+        }
+
         public void StartSession()
         {
             var settings = (Modes?)_replay?.Informations?.Mode == Modes.Trials
@@ -517,7 +614,7 @@ namespace TF.Replay.Domain.Services
                     continue;
                 }
 
-                _logger?.LogWarning("Replay was recorded on {mod} {recorded}, this install has {installed}",mod.Name, recorded, installed);
+                _logger?.LogWarning("Replay was recorded on {mod} {recorded}, this install has {installed}", mod.Name, recorded, installed);
 
                 ServiceCollections.Notify($"{mod.Name} IS {installed}, REPLAY USED {recorded}".ToUpperInvariant());
             }
@@ -663,11 +760,11 @@ namespace TF.Replay.Domain.Services
             {
                 var candidate = Math.Min(target + scanned, _lastFrame);
 
-                if (RoundHasStarted(api,candidate))
+                if (RoundHasStarted(api, candidate))
                 {
                     for (int fine = previous + Fine; fine < candidate; fine += Fine)
                     {
-                        if (RoundHasStarted(api,fine))
+                        if (RoundHasStarted(api, fine))
                         {
                             return fine;
                         }
@@ -735,7 +832,7 @@ namespace TF.Replay.Domain.Services
                     }
                     catch (Exception e)
                     {
-                        _logger?.LogDebug("{file} could not be read ({message}), treating as obsolete",Path.GetFileName(file), e.Message);
+                        _logger?.LogDebug("{file} could not be read ({message}), treating as obsolete", Path.GetFileName(file), e.Message);
                         TryRenameObsolete(file);
                         return;
                     }
@@ -754,7 +851,17 @@ namespace TF.Replay.Domain.Services
                     }
                 });
 
-            return replays.OrderBy(replay => replay.Informations.Name).ToList();
+            return replays.OrderByDescending(replay => RecordedAt(replay.Informations.Name))
+                .ThenByDescending(replay => replay.Informations.Name)
+                .ToList();
+        }
+
+        private static DateTime RecordedAt(string name)
+        {
+            return DateTime.TryParseExact(Path.GetFileNameWithoutExtension(name ?? string.Empty),
+                "dd-MM-yyyy'T'HH-mm-ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var at)
+                ? at
+                : DateTime.MinValue;
         }
 
         private void TryRenameObsolete(string file)

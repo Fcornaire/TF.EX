@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Microsoft.Xna.Framework;
 using Monocle;
 using TF.Replay.Domain.Extensions;
@@ -321,7 +321,24 @@ namespace TF.Replay.Domain.CustomComponent
             var archers = replayInfo.Archers.ToArray();
             var order = SeatOrder(replayInfo, archers.Length, out var teamOf);
 
-            var native = ArcherPortrait(archers[order[0]]).Width;
+            var taken = new HashSet<int>();
+
+            foreach (var archer in archers)
+            {
+                if (ArcherDataExtensions.Exists(archer.Index, (int)archer.Type))
+                {
+                    taken.Add(archer.Index);
+                }
+            }
+
+            var portraits = new Dictionary<int, Subtexture>();
+
+            for (int seat = 0; seat < archers.Length; seat++)
+            {
+                portraits[seat] = ArcherPortrait(archers[seat], taken);
+            }
+
+            var native = portraits[order[0]].Width;
 
             var gaps = 0f;
 
@@ -348,7 +365,7 @@ namespace TF.Replay.Domain.CustomComponent
                         : SideGap);
                 }
 
-                _portraits[i] = new Image(ArcherPortrait(archerInfo));
+                _portraits[i] = new Image(portraits[i]);
                 _portraits[i].CenterOrigin();
                 _portraits[i].Scale = Vector2.One * scale;
                 _portraits[i].Position.X += x;
@@ -398,10 +415,9 @@ namespace TF.Replay.Domain.CustomComponent
             }
         }
 
-        private static Subtexture ArcherPortrait(Models.ArcherInfo archerInfo)
+        private static Subtexture ArcherPortrait(Models.ArcherInfo archerInfo, ISet<int> taken)
         {
-            var (archerIndex, altIndex) = ArcherDataExtensions.EnsureArcherDataExist(
-                archerInfo.Index, (int)archerInfo.Type, TFGame.Characters);
+            var (archerIndex, altIndex) = ArcherDataExtensions.EnsureArcherDataExist(archerInfo.Index, (int)archerInfo.Type, taken);
 
             var archerData = ArcherData.Get(archerIndex, (ArcherData.ArcherTypes)altIndex);
 

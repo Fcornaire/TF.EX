@@ -1,4 +1,4 @@
-﻿using HarmonyLib;
+using HarmonyLib;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Interop;
 using TF.EX.Domain;
@@ -19,6 +19,8 @@ namespace TF.EX.Patchs.Scene
             {
                 return;
             }
+
+            NetplayOptions.Apply();
 
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();

@@ -48,12 +48,13 @@ jobs:
           out-file-path: "src/network/TF.EX.Core/Unmanaged/win-x64"
           fileName: "ggrs_ffi.dll"
 
-      - name: Build the three mods
+      - name: Build the mods
         run: |
           set -euo pipefail
           for proj in \
             src/state/TF.State.Core/TF.State.Core.csproj \
             src/replay/TF.Replay.Core/TF.Replay.Core.csproj \
+            src/utilities/TF.InputDisplayer/TF.InputDisplayer.Core/TF.InputDisplayer.Core.csproj \
             src/network/TF.EX.Core/TF.EX.Core.csproj
           do
             echo "::group::build $proj"
@@ -78,6 +79,7 @@ jobs:
           stage src/state/TF.State.Core/bin/Release/net10.0      DShad.TF.State
           stage src/replay/TF.Replay.Core/bin/Release/net10.0    DShad.TF.Replay
           stage src/network/TF.EX.Core/bin/Release/net10.0       DShad.TF.EX
+          stage src/utilities/TF.InputDisplayer/TF.InputDisplayer.Core/bin/Release/net10.0 DShad.TF.InputDisplayer
 
           check_clean() {
             local folder="$1" foreign="$2"
@@ -87,9 +89,10 @@ jobs:
               exit 1
             fi
           }
-          check_clean DShad.TF.EX     'TF\.State\.|TF\.Replay\.'
-          check_clean DShad.TF.Replay 'TF\.State\.|TF\.EX\.'
-          check_clean DShad.TF.State  'TF\.Replay\.|TF\.EX\.'
+          check_clean DShad.TF.EX             'TF\.State\.|TF\.Replay\.|TF\.InputDisplayer\.'
+          check_clean DShad.TF.Replay         'TF\.State\.|TF\.EX\.|TF\.InputDisplayer\.'
+          check_clean DShad.TF.State          'TF\.Replay\.|TF\.EX\.|TF\.InputDisplayer\.'
+          check_clean DShad.TF.InputDisplayer 'TF\.State\.|TF\.Replay\.|TF\.EX\.'
 
           echo "--- staged tree ---"
           (cd staging && find . -maxdepth 2 | sort)
@@ -98,7 +101,7 @@ jobs:
         run: |
           set -euo pipefail
           cd staging
-          zip -r "$GITHUB_WORKSPACE/DShad.TF.EX-pre-release.zip" DShad.TF.EX DShad.TF.Replay DShad.TF.State
+          zip -r "$GITHUB_WORKSPACE/DShad.TF.EX-pre-release.zip" DShad.TF.EX DShad.TF.Replay DShad.TF.State DShad.TF.InputDisplayer
 
       - name: Upload Pre Release
         uses: ncipollo/release-action@v1.14.0

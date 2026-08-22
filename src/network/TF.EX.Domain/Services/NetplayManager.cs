@@ -1,4 +1,4 @@
-﻿using MessagePack;
+using MessagePack;
 using Microsoft.Extensions.Logging;
 using Monocle;
 using MonoMod.Utils;
@@ -944,6 +944,7 @@ namespace TF.EX.Domain.Services
 
                 archersInfo.Add(new Models.ArcherSeatInfo
                 {
+                    Seat = seat,
                     NetplayName = seat == localSeat
                         ? NetplayMeta.Name
                         : players.TryGetValue(seat, out var player) ? player.Name : _player2Name,

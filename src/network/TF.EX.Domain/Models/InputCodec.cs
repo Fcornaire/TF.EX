@@ -36,6 +36,8 @@ namespace TF.EX.Domain.Models
 
     public sealed class ArcherSeatInfo
     {
+        public int Seat { get; set; }
+
         public int Index { get; set; }
         public int Type { get; set; }
         public bool HasWon { get; set; }

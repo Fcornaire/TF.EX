@@ -40,6 +40,8 @@ namespace TF.Replay.Core.Api
 
         public IWiderSetModApi ResolveWiderSet() => Resolve<IWiderSetModApi>(ModData.WiderSetName);
 
+        public IInputDisplayerApi ResolveInputDisplayer() => Resolve<IInputDisplayerApi>(InputDisplayerApiData.Name);
+
         private T Resolve<T>(string modName) where T : class
         {
             if (_apis.TryGetValue(modName, out var cached))
