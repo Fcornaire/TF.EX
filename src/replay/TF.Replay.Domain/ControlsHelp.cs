@@ -20,6 +20,9 @@ namespace TF.Replay.Domain
             ("G", null, "EXPORT GIF"),
             ("R", null, "RESTART REPLAY"),
             (null, "F1", "HURTBOXES"),
+            ("T", null, "START OR STOP TAKEOVER"),
+            (null, "START", "START OR STOP TAKEOVER (PAD)"),
+            (null, "LT/RT", "TAKEOVER SEAT (PAD)"),
             (null, "ESC", "QUIT TO MENU"),
             ("H", null, "CLOSE"),
         ];
@@ -46,7 +49,7 @@ namespace TF.Replay.Domain
             }
             catch
             {
-               
+
             }
 
             _icons[key] = icon;
@@ -66,7 +69,7 @@ namespace TF.Replay.Domain
             }
 
             const float rowHeight = 16f;
-            const float top = 44f;
+            const float top = 20f;
             const float width = 228f;
 
             var left = 46f + Overlay.CenterOffset;
@@ -111,7 +114,7 @@ namespace TF.Replay.Domain
             var total = icon.Width + 4f + titleWidth;
 
             Draw.TextureCentered(icon, new Vector2(GuideX - icon.Width / 2f, GuideY), Color.White);
-            Draw.OutlineTextCentered(TFGame.Font, title,new Vector2(GuideX - total + titleWidth / 2f, GuideY), Color.White, Color.Black);
+            Draw.OutlineTextCentered(TFGame.Font, title, new Vector2(GuideX - total + titleWidth / 2f, GuideY), Color.White, Color.Black);
         }
     }
 }

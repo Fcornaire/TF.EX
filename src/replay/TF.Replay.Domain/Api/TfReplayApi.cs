@@ -221,6 +221,14 @@ namespace TF.Replay.Domain.Api
 
         public bool UpdatePlaybackControls() => PlaybackControls.ShouldRunUpdate();
 
+        public int GetTakeoverSeat() => Takeover.IsLive ? Takeover.Seat : -1;
+
+        public bool IsTakeoverInProgress() => Takeover.SuppressesPlaybackChecks;
+
+        public bool IsTakeoverCapturing() => Takeover.IsCapturing;
+
+        public int[] GetTakeoverInputFlat() => Takeover.GetLiveInputFlat();
+
         public void SetPlaybackStartedCallback(Action<int> onStarted) => PlaybackStarted = onStarted;
 
         public void SetPlaybackStoppedCallback(Action onStopped) => PlaybackStopped = onStopped;

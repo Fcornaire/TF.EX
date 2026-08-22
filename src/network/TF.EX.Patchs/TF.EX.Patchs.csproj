@@ -26,10 +26,10 @@
 			<HintPath>..\..\..\libs\FNA.dll</HintPath>
 			<Private>False</Private>
 		</Reference>
-		<Reference Include="MMHOOK_TowerFall">
+		<!-- <Reference Include="MMHOOK_TowerFall">
 			<HintPath>..\..\..\libs\MMHOOK_TowerFall.dll</HintPath>
 			<Private>False</Private>
-		</Reference>
+		</Reference> -->
 		<!--<Reference Include="System.Windows.Forms" />-->
 		<!--<Reference Include="TowerFall" Condition=" '$(Configuration)' == 'Release'">
 			<HintPath>..\..\..\libs\TowerFall-publicized.exe</HintPath>

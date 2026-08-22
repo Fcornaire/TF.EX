@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using TF.EX.Domain.Interop;
 using Monocle;
 using TF.EX.Domain;
 using TF.EX.Domain.Extensions;
@@ -198,6 +199,23 @@ namespace TF.EX.Patchs.PlayerInput
                 if (seat == inputService.GetLocalPlayerInputIndex() && !netplayManager.IsReplayMode())
                 {
                     inputService.UpdatePolledInput(__result, __instance.GetRightStick());
+                }
+
+                if (netplayManager.IsReplayMode() && seat >= 0 && seat == (ReplayApi.Current?.GetTakeoverSeat() ?? -1))
+                {
+                    if (ReplayApi.Current.IsTakeoverCapturing())
+                    {
+                        return;
+                    }
+
+                    var live = ReplayApi.Current.GetTakeoverInputFlat();
+
+                    if (live != null)
+                    {
+                        __result = live.ToInputs()[0].ToTFInput();
+                    }
+
+                    return;
                 }
 
                 __result = inputService.GetCurrentInput(seat).ToTFInput();

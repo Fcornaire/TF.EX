@@ -93,7 +93,7 @@ namespace TF.Replay.Patchs.Scene
             {
                 PlaybackInputs.CurrentFlat = null;
 
-                if (_prompt == null)
+                if (_prompt == null && !Takeover.SuppressesPlaybackChecks)
                 {
                     __instance.Add(_prompt = new EndOfReplayPrompt());
                 }
@@ -120,7 +120,10 @@ namespace TF.Replay.Patchs.Scene
 
             PlaybackInputs.CurrentFlat = service.GetRecordAt(record.Frame + 1)?.Inputs ?? record.Inputs;
 
-            Verify(record);
+            if (!Takeover.SuppressesPlaybackChecks)
+            {
+                Verify(record);
+            }
         }
 
         private static void Verify(TF.Replay.Domain.Models.Record record)

@@ -9,6 +9,7 @@ namespace TF.Replay.Domain
         private static IInputDisplayerApi _api;
         private static bool _resolved;
         private static object _session;
+        private static int _takeoverFrame = -1;
 
         public static bool Render(IReplayService service)
         {
@@ -33,10 +34,38 @@ namespace TF.Replay.Domain
                 _session = replay;
             }
 
+            if (Takeover.IsLive)
+            {
+                _takeoverFrame = service.PlaybackFrame < service.LastFrame
+                    ? service.PlaybackFrame
+                    : Math.Max(_takeoverFrame + 1, service.PlaybackFrame);
+
+                var live = Takeover.GetLiveInputFlat();
+
+                if (live != null)
+                {
+                    api.PushSeat(_takeoverFrame, Takeover.Seat,
+                        live[InputCodec.MoveX],
+                        live[InputCodec.MoveY],
+                        live[InputCodec.JumpCheck] != 0,
+                        live[InputCodec.ShootCheck] != 0,
+                        live[InputCodec.AltShootCheck] != 0,
+                        live[InputCodec.DodgeCheck] != 0);
+                }
+
+                api.RenderAt(_takeoverFrame);
+
+                return true;
+            }
+
+            _takeoverFrame = -1;
+
             api.RenderAt(service.PlaybackFrame);
 
             return true;
         }
+
+        public static void ReloadSession() => _session = null;
 
         public static void Reset()
         {

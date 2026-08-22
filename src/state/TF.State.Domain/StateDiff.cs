@@ -36,6 +36,25 @@ namespace TF.State.Domain
             }
         }
 
+        public static bool IsRoundResultsShown(byte[] state)
+        {
+            if (state == null)
+            {
+                return false;
+            }
+
+            try
+            {
+                var gameState = MessagePackSerializer.Deserialize<GameState>(state, Options);
+
+                return (gameState?.Entities?.Hud?.VersusRoundResults?.CoroutineState ?? 0) > 0;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         public static int GetIntroCoroutineState(byte[] state)
         {
             if (state == null)

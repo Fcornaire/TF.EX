@@ -20,6 +20,11 @@ namespace TF.EX.Patchs
         [HarmonyPatch("GotoNextRound")]
         public static bool Session_GotoNextRound(Session __instance)
         {
+            if (ReplayApi.Current?.IsTakeoverInProgress() == true)
+            {
+                return false;
+            }
+
             var logger = ServiceCollections.ResolveLogger();
             var mode = TowerFall.MainMenu.VersusMatchSettings?.Mode;
 

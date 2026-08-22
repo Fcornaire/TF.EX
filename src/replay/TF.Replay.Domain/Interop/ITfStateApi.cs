@@ -12,6 +12,8 @@ namespace TF.Replay.Domain.Interop
 
         bool IsRoundStarted(byte[] state);
 
+        bool IsRoundResultsShown(byte[] state);
+
         string[] ClassifyStateDiff(byte[] liveState, byte[] recordedState);
 
         string[] DescribePlayers(byte[] state);

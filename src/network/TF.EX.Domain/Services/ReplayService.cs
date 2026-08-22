@@ -227,7 +227,10 @@ namespace TF.EX.Domain.Services
                 PrimePlayback(frame, recordedState);
             }
 
-            VerifyAgainstRecordedState(frame, recordedState);
+            if (ReplayApi.Current?.IsTakeoverInProgress() != true)
+            {
+                VerifyAgainstRecordedState(frame, recordedState);
+            }
 
             var inputs = ReplayApi.Current.GetInputsAtFrame(frame + 1) ?? ReplayApi.Current.GetInputsAtFrame(frame);
 
