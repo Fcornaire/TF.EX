@@ -1,9 +1,9 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
+using TF.EX.Domain.Context;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Interop;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
-using TF.EX.Domain.Context;
 using TowerFall;
 
 namespace TF.EX.Domain.Services
@@ -99,6 +99,7 @@ namespace TF.EX.Domain.Services
 
             var archers = _netplayManager.GetArchersInfo();
             ReplayApi.Current.SetArchersFlat(
+                archers.Select(a => a.Seat).ToArray(),
                 archers.Select(a => a.Index).ToArray(),
                 archers.Select(a => (int)a.Type).ToArray(),
                 archers.Select(a => a.HasWon).ToArray(),
@@ -344,7 +345,7 @@ namespace TF.EX.Domain.Services
                 if (!_primingDiffReported)
                 {
                     _primingDiffReported = true;
-                    _logger.LogWarning("[Replay] Primed state differs from its own record at frame {frame}",frame);
+                    _logger.LogWarning("[Replay] Primed state differs from its own record at frame {frame}", frame);
                 }
 
                 return;
@@ -355,7 +356,7 @@ namespace TF.EX.Domain.Services
                 if (frame - _lastDivergenceLogFrame >= DivergenceLogInterval)
                 {
                     _lastDivergenceLogFrame = frame;
-                    _logger.LogWarning("[Replay] Playback  diverged at frame {frame}", frame);
+                    _logger.LogWarning("[Replay] Playback diverged at frame {frame} ?", frame);
                 }
 
                 return;
@@ -383,9 +384,7 @@ namespace TF.EX.Domain.Services
                     if (!_encodingDiffReported)
                     {
                         _encodingDiffReported = true;
-                        _logger.LogWarning(
-                            "[Replay] Encoding-only difference at frame {frame}, states are equal but bytes are not.{detail}",
-                            frame, detail);
+                        _logger.LogWarning("[Replay] Encoding-only difference at frame {frame}, states are equal but bytes are not.{detail}", frame, detail);
                     }
 
                     return;
@@ -396,9 +395,7 @@ namespace TF.EX.Domain.Services
                     if (!_renderDiffReported)
                     {
                         _renderDiffReported = true;
-                        _logger.LogWarning(
-                            "[Replay] Render-derived sprite state differs at frame {frame}: {detail}",
-                            frame, detail);
+                        _logger.LogWarning("[Replay] Render-derived sprite state differs at frame {frame}: {detail}", frame, detail);
                     }
 
                     return;
@@ -407,9 +404,9 @@ namespace TF.EX.Domain.Services
                 _divergenceReported = true;
                 _lastDivergenceLogFrame = frame;
 
-                _logger.LogError(
-                    "[Replay] PLAYBACK DIVERGED at frame {frame} (round {round}, live len {liveLen} vs recorded {recLen}), Live vs recorded: {detail}",
-                    frame, round, liveBytes.Length, recordedState.Length, detail);
+                //_logger.LogError(
+                //    "[Replay] PLAYBACK DIVERGED at frame {frame} (round {round}, live len {liveLen} vs recorded {recLen}), Live vs recorded: {detail}",
+                //    frame, round, liveBytes.Length, recordedState.Length, detail);
 
                 foreach (var offset in new[] { -1, 1 })
                 {

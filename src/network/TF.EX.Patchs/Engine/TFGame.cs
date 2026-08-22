@@ -1,4 +1,4 @@
-﻿using HarmonyLib;
+using HarmonyLib;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Xna.Framework;
@@ -86,6 +86,7 @@ namespace TF.EX.Patchs.Engine
                     || netplayManager.IsInit();
 
                 StateApi.Current.ResetRngOverride();
+                SpectatorInputDisplay.Stop();
 
                 if (!ScenarioSweeper.IsRunning)
                 {
@@ -109,6 +110,11 @@ namespace TF.EX.Patchs.Engine
                 if (wasExDriven)
                 {
                     TF.EX.Domain.Extensions.TFGameExtensions.ResetVersusChoices();
+                }
+
+                if (!isReturningToLobby)
+                {
+                    NetplayOptions.Restore();
                 }
             }
         }
@@ -291,6 +297,11 @@ namespace TF.EX.Patchs.Engine
                                 netplayManager.AdvanceGameState();
                                 var dynScene = DynamicData.For(__instance.Scene);
                                 dynScene.Set("FrameCounter", (float)GGRSFFI.netplay_current_frame());
+
+                                if (netplayManager.IsSpectatorMode() && !netplayManager.IsReplayMode())
+                                {
+                                    SpectatorInputDisplay.Feed(inputService.GetCurrentInputs(), GGRSFFI.netplay_current_frame());
+                                }
 
                                 TFGame_Update_orig(__instance, gameTime);
                             }

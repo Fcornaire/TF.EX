@@ -1,8 +1,10 @@
-﻿namespace TF.EX.Common.Interop
+namespace TF.EX.Common.Interop
 {
     public interface IWiderSetModApi
     {
         bool IsWide { get; set; }
+
+        float UIXOffset { get; }
     }
 
     public class WiderSetModApiData

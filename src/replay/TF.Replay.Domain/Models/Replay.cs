@@ -102,6 +102,9 @@ namespace TF.Replay.Domain.Models
 
         [Key(4)]
         public string NetplayName { get; set; }
+
+        [Key(5)]
+        public int? Seat { get; set; }
     }
 
     [MessagePackObject]

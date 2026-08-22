@@ -750,7 +750,6 @@ namespace TF.EX.Patchs.Scene
         public static void MainMenu_ctor()
         {
             TowerFall.TFGame.ConsoleEnabled = true;
-            SaveData.Instance.WithNetplayOptions();
         }
 
         [HarmonyPostfix]

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace TF.Replay.Domain.Ports
 {
@@ -25,7 +25,7 @@ namespace TF.Replay.Domain.Ports
         void SetSeed(int seed);
         void SetArcher(int seat, int archerIndex, int archerType, bool hasWon, int score, string name);
 
-        void SetArchersFlat(int[] indexes, int[] types, bool[] hasWon, int[] scores, string[] names);
+        void SetArchersFlat(int[] seats, int[] indexes, int[] types, bool[] hasWon, int[] scores, string[] names);
 
         void SetArcherTeams(int[] teams);
 
@@ -40,8 +40,6 @@ namespace TF.Replay.Domain.Ports
 
         int[] GetInputsAtFrame(int frame);
         byte[] GetStateAtFrame(int frame);
-
-        void RenderInputOverlay(int[] flatInputs);
 
         string StartPlayback(string replayFileName);
         void StopPlayback();

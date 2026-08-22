@@ -1,4 +1,4 @@
-﻿using TF.Replay.Domain.Models;
+using TF.Replay.Domain.Models;
 
 namespace TF.Replay.Domain.Ports
 {

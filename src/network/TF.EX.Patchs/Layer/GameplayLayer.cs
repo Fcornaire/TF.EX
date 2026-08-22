@@ -1,9 +1,10 @@
-﻿using System.Linq;
+using System.Linq;
 using HarmonyLib;
 using Microsoft.Xna.Framework;
 using Monocle;
 using TF.EX.Domain;
 using TF.EX.Domain.Extensions;
+using TF.EX.Domain.Externals;
 using TF.EX.Domain.Interop;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Ports;
@@ -24,7 +25,7 @@ namespace TF.EX.Patchs.Layer
 
             if (netplayManager.IsSpectatorMode() && !netplayManager.IsReplayMode() && TFGame.GameLoaded)
             {
-                ReplayApi.Current.RenderInputOverlay(inputService.GetCurrentInputs().ToFlatInputs());
+                SpectatorInputDisplay.Render(GGRSFFI.netplay_current_frame());
             }
 
             if (netplayManager.IsReplayMode())
@@ -38,6 +39,7 @@ namespace TF.EX.Patchs.Layer
                 {
                     var lobby = matchmakingService.GetOwnLobby();
                     Draw.OutlineTextCentered(TFGame.Font, $"SPECTATORS : {lobby.Spectators.Count}", new Vector2(30f, 20f), Color.White, Color.Black);
+                    SpectatorInputDisplay.RenderGuide(ServiceCollections.ResolveWiderSetModApi()?.UIXOffset ?? 0f);
                 }
 
                 RenderPings(netplayManager);

@@ -7,6 +7,8 @@ namespace TF.Replay.Domain.Interop
         ITfStateApi ResolveState();
 
         IWiderSetModApi ResolveWiderSet();
+
+        IInputDisplayerApi ResolveInputDisplayer();
     }
 
     public interface IWiderSetModApi

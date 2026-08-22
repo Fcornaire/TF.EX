@@ -36,6 +36,8 @@ namespace TF.EX.Core.Api
 
         public IWiderSetModApi ResolveWiderSet() => Resolve<IWiderSetModApi>(WiderSetModApiData.Name);
 
+        public IInputDisplayerApi ResolveInputDisplayer() => Resolve<IInputDisplayerApi>(InputDisplayerApiData.Name);
+
         private T Resolve<T>(string modName) where T : class
         {
             if (_apis.TryGetValue(modName, out var cached))

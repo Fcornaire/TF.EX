@@ -11,7 +11,6 @@ namespace TF.EX.Domain.CustomComponent
         private const int HUD_LAYER = 4;
 
         private const float MARGIN = 2f;
-        private const float BASE_WIDTH = 320f;
         private const float WIDE_SAFETY = 4f;
         private const float TOP = 32f;
         private const float LINE_HEIGHT = 10f;
@@ -71,8 +70,7 @@ namespace TF.EX.Domain.CustomComponent
 
         private static float LeftEdge()
         {
-            var width = Monocle.Engine.Instance?.Screen?.Width ?? (int)BASE_WIDTH;
-            var offset = (width - BASE_WIDTH) / 2f;
+            var offset = ServiceCollections.ResolveWiderSetModApi()?.UIXOffset ?? 0f;
 
             return offset > WIDE_SAFETY ? WIDE_SAFETY - offset : MARGIN;
         }

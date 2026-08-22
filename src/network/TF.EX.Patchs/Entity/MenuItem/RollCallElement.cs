@@ -321,11 +321,10 @@ namespace TF.EX.Patchs.Entity.MenuItem
                 UpdateControllerIcon(__instance, dynRollcallElement, playerIndex);
             }
 
-            UpdateQuickPlayOpenSeat(__instance, dynRollcallElement, lobby, playerIndex);
+            UpdateOpenSeat(__instance, dynRollcallElement, lobby, playerIndex);
         }
 
-        //Show the searching orb in quickplay instead
-        private static void UpdateQuickPlayOpenSeat(RollcallElement element, DynamicData dynRollcallElement, Domain.Models.WebSocket.Lobby lobby, int playerIndex)
+        private static void UpdateOpenSeat(RollcallElement element, DynamicData dynRollcallElement, Domain.Models.WebSocket.Lobby lobby, int playerIndex)
         {
             var controlIcon = dynRollcallElement.Get<Monocle.Image>("controlIcon");
 
@@ -334,10 +333,9 @@ namespace TF.EX.Patchs.Entity.MenuItem
                 return;
             }
 
-            var orb = dynRollcallElement.Get("qpOpenSeatOrb") as Monocle.Sprite<int>;
+            var orb = dynRollcallElement.Get("openSeatOrb") as Monocle.Sprite<int>;
 
             var openSeat = !lobby.IsEmpty
-                && lobby.IsQuickPlay
                 && playerIndex < lobby.MaxPlayers
                 && !lobby.Players.Any(player => player.Seat == playerIndex);
 
@@ -348,7 +346,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
                 orb.CenterOrigin();
                 orb.Position = controlIcon.Position;
                 element.Add(orb);
-                dynRollcallElement.Set("qpOpenSeatOrb", orb);
+                dynRollcallElement.Set("openSeatOrb", orb);
             }
 
             if (orb != null)

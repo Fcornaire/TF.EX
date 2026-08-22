@@ -1,5 +1,5 @@
-﻿using HarmonyLib;
-using TF.EX.Domain.Extensions;
+using HarmonyLib;
+using TF.EX.Domain;
 using TowerFall;
 
 namespace TF.EX.Patchs
@@ -9,9 +9,10 @@ namespace TF.EX.Patchs
     {
         [HarmonyPrefix]
         [HarmonyPatch(nameof(SaveData.Save))]
-        public static void Save_Patch(SaveData __instance)
-        {
-            __instance.WithNetplayOptions();
-        }
+        public static void Save_Prefix() => NetplayOptions.BeforeSave();
+
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(SaveData.Save))]
+        public static void Save_Postfix() => NetplayOptions.AfterSave();
     }
 }

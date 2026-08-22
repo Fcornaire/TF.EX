@@ -1,0 +1,63 @@
+name: Pre Release - TF.InputDisplayer
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build TF.InputDisplayer
+        run: |
+          set -euo pipefail
+          dotnet build src/utilities/TF.InputDisplayer/TF.InputDisplayer.Core/TF.InputDisplayer.Core.csproj \
+            --configuration Release \
+            -p:ModLoaderPath="$GITHUB_WORKSPACE/libs" \
+            -p:ModEnablePublish=false \
+            -p:ModEnableZip=false
+
+      - name: Stage mod folder
+        run: |
+          set -euo pipefail
+          mkdir -p staging/DShad.TF.InputDisplayer
+          cp -r src/utilities/TF.InputDisplayer/TF.InputDisplayer.Core/bin/Release/net10.0/. staging/DShad.TF.InputDisplayer/
+          rm -f staging/DShad.TF.InputDisplayer/*.deps.json
+          test -f staging/DShad.TF.InputDisplayer/meta.json \
+            || { echo "::error::DShad.TF.InputDisplayer is missing meta.json"; exit 1; }
+          test -d staging/DShad.TF.InputDisplayer/Content/directions \
+            || { echo "::error::DShad.TF.InputDisplayer is missing its direction icons"; exit 1; }
+
+          if ls staging/DShad.TF.InputDisplayer | grep -qE '^(TF\.State\.|TF\.Replay\.|TF\.EX\.)'; then
+            echo "::error::DShad.TF.InputDisplayer contains foreign assemblies"
+            ls staging/DShad.TF.InputDisplayer
+            exit 1
+          fi
+
+          echo "--- staged tree ---"
+          (cd staging && find . -maxdepth 3 | sort)
+
+      - name: Archive
+        run: |
+          set -euo pipefail
+          cd staging
+          zip -r "$GITHUB_WORKSPACE/DShad.TF.InputDisplayer-pre-release.zip" DShad.TF.InputDisplayer
+
+      - name: Upload Pre Release
+        uses: ncipollo/release-action@v1.14.0
+        with:
+          artifacts: "DShad.TF.InputDisplayer-pre-release.zip"
+          tag: inputdisplayer-pre-release
+          name: "TF.InputDisplayer pre-release"
+          prerelease: true
+          allowUpdates: true
+          removeArtifacts: true
+          generateReleaseNotes: true
+          token: ${{ secrets.GITHUB_TOKEN }}

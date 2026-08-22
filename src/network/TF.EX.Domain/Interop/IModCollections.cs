@@ -11,5 +11,7 @@ namespace TF.EX.Domain.Interop
         ITfReplayApi ResolveReplay();
 
         IWiderSetModApi ResolveWiderSet();
+
+        IInputDisplayerApi ResolveInputDisplayer();
     }
 }

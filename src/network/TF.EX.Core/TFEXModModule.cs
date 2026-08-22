@@ -1,4 +1,4 @@
-﻿using FortRise;
+using FortRise;
 using Microsoft.Extensions.Logging;
 using Monocle;
 using TF.EX.Core.RoundLogic;
@@ -97,6 +97,7 @@ namespace TF.EX
             TF.EX.Domain.ServiceCollections.RegisterModCollections(mods);
             TF.EX.Domain.Interop.StateApi.Configure(mods.ResolveState);
             TF.EX.Domain.Interop.ReplayApi.Configure(mods.ResolveReplay);
+            TF.EX.Domain.Interop.InputDisplayerApi.Configure(mods.ResolveInputDisplayer);
 
             OnInitialize = _ => InitializeApis();
 

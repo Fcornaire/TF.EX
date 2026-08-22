@@ -23,11 +23,8 @@ namespace TF.Replay.Patchs.Layer
                 return;
             }
 
-            var flat = PlaybackInputs.CurrentFlat
-                ?? service.GetRecordAt(service.PlaybackFrame)?.Inputs
-                ?? service.GetRecordAt(service.PlaybackFrame - 1)?.Inputs;
+            InputDisplayerOverlay.Render(service);
 
-            InputOverlay.Render(flat);
             SeekBar.Render(service.PlaybackFrame, service.LastFrame,PlaybackControls.IsPaused, PlaybackControls.HoverFrame, service.SeekBlockedBy);
 
             ControlsHelp.Render(PlaybackControls.ShowHelp);

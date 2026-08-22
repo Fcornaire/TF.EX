@@ -1,4 +1,4 @@
-﻿using HarmonyLib;
+using HarmonyLib;
 using TowerFall;
 
 namespace TF.EX.Domain.Extensions
@@ -89,17 +89,6 @@ namespace TF.EX.Domain.Extensions
         public static Monocle.Layer GetHUDLayer(this Level level)
         {
             return level.Layers.FirstOrDefault(l => l.Value.Index == Level.HUD_LAYER).Value;
-        }
-    }
-
-    public static class TowerFallSaveDataExtensions
-    {
-        public static void WithNetplayOptions(this TowerFall.SaveData self)
-        {
-            self.Options.DevConsole = true;
-            self.Options.CanSkipReplays = true;
-            self.Options.ReplayMode = TowerFall.Options.ReplayModes.UseGPU;
-            self.Options.ShowTips = false;
         }
     }
 
