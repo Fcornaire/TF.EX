@@ -39,6 +39,7 @@ namespace TF.Replay.Domain
             _seekRefusalShown = false;
             GifExport.Reset();
             ControlsHelp.Reset();
+            Takeover.Reset();
         }
 
         private static void MarkAt(int frame)
@@ -96,6 +97,52 @@ namespace TF.Replay.Domain
                 HoverFrame = null;
                 MousePosition = null;
                 return true;
+            }
+
+            var frozenByTakeover = Takeover.HandleControls(service);
+
+            if (Takeover.State != Takeover.Phase.Off)
+            {
+                IsPaused = false;
+                _stepQueued = false;
+                HoverFrame = null;
+                MousePosition = null;
+
+                if (MInput.Keyboard.Pressed(Keys.Escape))
+                {
+                    QuitToBrowser();
+
+                    return true;
+                }
+
+                if (Takeover.StopPressed())
+                {
+                    Seek(service, Takeover.StartFrame);
+                    Takeover.ContinueReplay();
+
+                    return true;
+                }
+
+                if (Takeover.State == Takeover.Phase.Done)
+                {
+                    if (HandleTakeoverDone(service))
+                    {
+                        return true;
+                    }
+                }
+                else if (MInput.Keyboard.Pressed(Keys.R))
+                {
+                    RestartReplay(service);
+
+                    return true;
+                }
+
+                if (MInput.Keyboard.Pressed(Keys.F1))
+                {
+                    ShowHurtboxes = !ShowHurtboxes;
+                }
+
+                return !frozenByTakeover;
             }
 
             HandleMouse(service);
@@ -168,6 +215,27 @@ namespace TF.Replay.Domain
 
             _stepQueued = false;
             return true;
+        }
+
+        private static bool HandleTakeoverDone(Ports.IReplayService service)
+        {
+            if (MInput.Keyboard.Pressed(Keys.R) || Takeover.PadPressed(Buttons.A))
+            {
+                Seek(service, Takeover.StartFrame);
+                Takeover.Retry();
+
+                return true;
+            }
+
+            if (MInput.Keyboard.Pressed(Keys.C) || Takeover.PadPressed(Buttons.X))
+            {
+                Seek(service, Takeover.StartFrame);
+                Takeover.ContinueReplay();
+
+                return true;
+            }
+
+            return false;
         }
 
         private static void QuitToBrowser()
@@ -262,6 +330,11 @@ namespace TF.Replay.Domain
             var mouse = GameMousePosition();
 
             MousePosition = mouse;
+
+            if (SeatPicker.HandleClick(service, mouse))
+            {
+                return;
+            }
 
             if (!SeekBar.Contains(mouse))
             {

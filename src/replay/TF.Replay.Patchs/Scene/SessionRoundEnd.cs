@@ -11,14 +11,24 @@ namespace TF.Replay.Patchs.Scene
         [HarmonyPatch("GotoNextRound")]
         public static bool Session_GotoNextRound()
         {
+            var service = ServiceCollections.ResolveReplayService();
+
+            if (service == null || !service.IsPlayback)
+            {
+                return true;
+            }
+
+            if (Takeover.SuppressesPlaybackChecks)
+            {
+                return false;
+            }
+
             if (!StandalonePlayback.IsActive)
             {
                 return true;
             }
 
-            var service = ServiceCollections.ResolveReplayService();
-
-            return service == null || service.PlaybackFrame <= service.LastFrame;
+            return service.PlaybackFrame <= service.LastFrame;
         }
     }
 }

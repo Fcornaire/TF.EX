@@ -27,7 +27,18 @@ namespace TF.Replay.Patchs.Layer
 
             SeekBar.Render(service.PlaybackFrame, service.LastFrame,PlaybackControls.IsPaused, PlaybackControls.HoverFrame, service.SeekBlockedBy);
 
+            if (Takeover.State != Takeover.Phase.Off && service.SeekBlockedBy == null)
+            {
+                SeekBar.RenderTakeoverMark(
+                    Takeover.State == Takeover.Phase.Countdown ? service.PlaybackFrame : Takeover.StartFrame,
+                    service.LastFrame);
+            }
+
             ControlsHelp.Render(PlaybackControls.ShowHelp);
+
+            TakeoverOverlay.Render();
+
+            SeatPicker.Render(service);
 
             if (PlaybackControls.MousePosition.HasValue)
             {

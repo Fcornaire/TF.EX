@@ -54,7 +54,14 @@ namespace TF.Replay.Patchs.PlayerInput
                 return actual;
             }
 
-            return PlaybackInputs.ForSeat(Array.IndexOf(TFGame.PlayerInputs, device));
+            var seat = Array.IndexOf(TFGame.PlayerInputs, device);
+
+            if (Takeover.IsLive && seat == Takeover.Seat)
+            {
+                return Takeover.IsCapturing ? actual : Takeover.LiveInput;
+            }
+
+            return PlaybackInputs.ForSeat(seat);
         }
     }
 

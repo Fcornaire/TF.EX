@@ -131,6 +131,19 @@ namespace TF.Replay.Domain
             }
         }
 
+        public static void RenderTakeoverMark(int frame, int lastFrame)
+        {
+            if (lastFrame <= 0)
+            {
+                return;
+            }
+
+            var x = TrackLeft + TrackWidth * (Math.Clamp(frame, 0, lastFrame) / (float)lastFrame);
+
+            Draw.Rect(x - 1f, TrackY - 4f, 3f, TrackHeight + 8f, Color.Black * 0.75f);
+            Draw.Rect(x, TrackY - 3f, 1f, TrackHeight + 6f, Color.Gold);
+        }
+
         private static void RenderMarker(float x)
         {
             Draw.Rect(x - 1f, TrackY - 4f, 3f, TrackHeight + 8f, Color.Black * 0.75f);

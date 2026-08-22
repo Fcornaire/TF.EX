@@ -157,6 +157,8 @@ namespace TF.State.Core.Api
 
         public bool IsRoundStarted(byte[] state) => TF.State.Domain.StateDiff.IsRoundStarted(state);
 
+        public bool IsRoundResultsShown(byte[] state) => TF.State.Domain.StateDiff.IsRoundResultsShown(state);
+
         public int RestoreGameStateBytes(byte[] state)
         {
             if (state == null || TFGame.Instance?.Scene is not Level level)

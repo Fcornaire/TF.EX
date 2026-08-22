@@ -36,6 +36,11 @@ namespace TF.EX.Domain.Interop
         bool SeekTo(int frame);
         bool UpdatePlaybackControls();
 
+        int GetTakeoverSeat();
+        bool IsTakeoverInProgress();
+        bool IsTakeoverCapturing();
+        int[] GetTakeoverInputFlat();
+
         void SetPlaybackStartedCallback(Action<int> onStarted);
         void SetPlaybackStoppedCallback(Action onStopped);
 

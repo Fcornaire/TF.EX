@@ -55,6 +55,28 @@ You can record all mods except quest
   <img src="../../images/replay_trials.gif" alt="animated" />
 </p>
 
+## Replay Takeover
+
+<p align="center">
+  <img src="../../images/replay_takeover.gif" alt="animated" />
+</p>
+
+At any point of a versus replay you can **take the seat of an
+archer and play the round yourself**, while the other archers keep replaying their recorded inputs
+
+- Pick the seat with the `< PX >` selector at the bottom right (click the arrows with the mouse, or
+  `LT`/`RT` on a pad)
+- Press `T` (keyboard) or `Start` (pad) :The device that pressed is the one that plays
+- A gold marker on the seek bar shows the frame the takeover branched from
+
+The takeover ends :
+
+- the moment the live round ends (round or match results)
+- otherwise ~100 frames after the point where the **recorded** round had ended with a guaranteed minimum of 5 seconds of play
+- or instantly by pressing `T`/`Start` again, which resumes the replay right where you took over
+
+Works in both standalone playback and TF.EX-driven playback
+
 # Install
 
 1. Install [FortRise](https://github.com/Terria-K/FortRise) 5.3.0 (5.X version at least)
@@ -85,17 +107,20 @@ Which modes get recorded is a toggle in the mod's options page (`OPTIONS` → `M
 
 Press `H` in a replay for the same list on screen.
 
-| Input       | Action                                      |
-| ----------- | ------------------------------------------- |
-| `Space`     | Pause / resume                              |
-| `Left`      | Step back one frame                         |
-| `Right`     | Step forward one frame (hold `Down` to run) |
-| Left click  | Seek — hold and drag to scrub               |
-| Right click | Mark GIF in, then out (a third restarts)    |
-| `G`         | Export the marked range as a GIF            |
-| `F1`        | Toggle hurtboxes (needs TF.EX)              |
-| `Esc`       | Quit to the main menu                       |
-| `H`         | Show / hide the controls panel              |
+| Input           | Action                                      |
+| --------------- | ------------------------------------------- |
+| `Space`         | Pause / resume                              |
+| `Left`          | Step back one frame                         |
+| `Right`         | Step forward one frame (hold `Down` to run) |
+| Left click      | Seek — hold and drag to scrub               |
+| Right click     | Mark GIF in, then out (a third restarts)    |
+| `G`             | Export the marked range as a GIF            |
+| `F1`            | Toggle hurtboxes (needs TF.EX)              |
+| `T`             | Start or stop a takeover                    |
+| `Start` (pad)   | Start or stop a takeover                    |
+| `LT`/`RT` (pad) | Change the takeover seat                    |
+| `Esc`           | Quit to the main menu                       |
+| `H`             | Show / hide the controls panel              |
 
 ## GIF export
 

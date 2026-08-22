@@ -1,5 +1,3 @@
-using System;
-
 namespace TF.Replay.Domain.Ports
 {
     public interface ITfReplayApi
@@ -47,10 +45,15 @@ namespace TF.Replay.Domain.Ports
 
         bool UpdatePlaybackControls();
 
+        int GetTakeoverSeat();
+        bool IsTakeoverInProgress();
+        bool IsTakeoverCapturing();
+        int[] GetTakeoverInputFlat();
+
         void SetPlaybackStartedCallback(Action<int> onStarted);
         void SetPlaybackStoppedCallback(Action onStopped);
 
-        void SetHostCallbacks(Action<bool> setInputEnabled, Action ensureFakeControllers,Action<string> notify, Func<string, string, string> launchReplay);
+        void SetHostCallbacks(Action<bool> setInputEnabled, Action ensureFakeControllers, Action<string> notify, Func<string, string, string> launchReplay);
     }
 
     public static class TfReplayApiData
