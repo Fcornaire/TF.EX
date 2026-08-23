@@ -26,7 +26,6 @@ namespace TF.Replay.Domain.Api
 
         private Interop.ITfStateApi StateApi() => _modCollections?.Invoke()?.ResolveState();
 
-        internal bool HasHostDriver => PlaybackStarted != null;
 
         public int ApiVersion => 1;
 

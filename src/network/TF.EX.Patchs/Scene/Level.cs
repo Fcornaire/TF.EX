@@ -133,9 +133,9 @@ namespace TF.EX.Patchs.Scene
             if (ExFlags.IsReplayMode)
             {
                 netplayManager.UpdateFramesToReSimulate(0);
+                StateApi.Current.SynchronizeSfx((int)__instance.FrameCounter, false);
             }
-
-            if (!ExFlags.HasFramesToReSimulate && netplayManager.IsSynchronized())
+            else if (!ExFlags.HasFramesToReSimulate && netplayManager.IsSynchronized())
             {
                 StateApi.Current.SynchronizeSfx(GGRSFFI.netplay_current_frame(), ExFlags.IsTestMode);
             }

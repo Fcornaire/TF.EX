@@ -29,6 +29,8 @@ namespace TF.Replay.Domain.Interop
         void SetCurrentFrame(int frame);
         int GetCurrentFrame();
 
+        void SynchronizeSfx(int currentFrame, bool isTestMode);
+
         void SetSeed(int seed);
         int GetSeed();
 

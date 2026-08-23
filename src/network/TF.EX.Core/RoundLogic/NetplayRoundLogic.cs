@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Xna.Framework;
 using Monocle;
 using TF.EX.Domain;
+using TF.EX.Domain.Context;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
 using TowerFall;
@@ -11,11 +12,20 @@ namespace TF.EX.Core.RoundLogic
 {
     public class NetplayVersusMode : IVersusGameMode
     {
-        public string Name => "Netplay";
+        public string Name => ExFlags.IsReplayMode ? ReplayDisplayName() : "Netplay";
         public Color NameColor => Color.Yellow;
         public ISubtextureEntry Icon => TFEXModModule.InternetIcon;
 
         public bool IsTeamMode => ResolveMode() == TowerFall.Modes.TeamDeathmatch;
+
+        private static string ReplayDisplayName()
+        {
+            var mode = NetplayVersusMode.ResolveMode();
+
+            return mode >= TowerFall.Modes.LastManStanding && mode <= TowerFall.Modes.Warlord
+                ? VersusModeButton.GetModeName(mode)
+                : "Netplay";
+        }
 
         public static TowerFall.Modes ResolveMode()
         {

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using MonoMod.Utils;
 using TF.EX.Domain.Context;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Interop;
@@ -28,9 +29,12 @@ namespace TF.EX.Domain.Services
         private bool _encodingDiffReported;
         private bool _primingDiffReported;
         private bool _playbackPrimed;
+        private int _pendingHoldFrame = -1;
         private int _primingFrame;
         private Level _drivenLevel;
         private Level _outgoingLevel;
+
+        private const int NoResync = -1;
 
         public ReplayService(IInputService inputService, INetplayManager netplayManager, ILogger logger)
         {
@@ -149,6 +153,9 @@ namespace TF.EX.Domain.Services
             ExFlags.CurrentFrame = 0;
             ExFlags.Push();
 
+            ReplayIntroPacing.Reset();
+            ReplayIntroPacing.ConfirmLatched = !RecordedIntroIsHumanPaced();
+
             ApplyNetplayGameMode();
 
             _divergenceReported = false;
@@ -159,6 +166,7 @@ namespace TF.EX.Domain.Services
             _lastDivergenceLogFrame = 0;
             _playbackPrimed = false;
             _primingFrame = 0;
+            _pendingHoldFrame = -1;
             _outgoingLevel = _drivenLevel;
         }
 
@@ -195,7 +203,17 @@ namespace TF.EX.Domain.Services
             _outgoingLevel = null;
             _drivenLevel = level;
 
-            var frame = ReplayApi.Current.ConsumeNextRecordFrame();
+            int frame;
+
+            if (_pendingHoldFrame >= 0)
+            {
+                frame = _pendingHoldFrame;
+                _pendingHoldFrame = -1;
+            }
+            else
+            {
+                frame = ReplayApi.Current.ConsumeNextRecordFrame();
+            }
 
             if (frame < 0)
             {
@@ -214,6 +232,9 @@ namespace TF.EX.Domain.Services
             {
                 _playbackPrimed = true;
                 frame = SkipToSpawnedRound(frame);
+
+                SpawnRoundPlayers(level);
+
                 _primingFrame = frame;
             }
 
@@ -222,6 +243,11 @@ namespace TF.EX.Domain.Services
             ExFlags.CurrentFrame = frame;
             StateApi.Current.SetCurrentFrame(frame);
 
+            if (level != null)
+            {
+                DynamicData.For(level).Set("FrameCounter", (float)frame);
+            }
+
             if (priming)
             {
                 PrimePlayback(frame, recordedState);
@@ -229,15 +255,95 @@ namespace TF.EX.Domain.Services
 
             if (ReplayApi.Current?.IsTakeoverInProgress() != true)
             {
-                VerifyAgainstRecordedState(frame, recordedState);
+                var slip = VerifyAgainstRecordedState(frame, recordedState);
+
+                if (slip > 0)
+                {
+                    for (int skipped = 0; skipped < slip; skipped++)
+                    {
+                        var next = ReplayApi.Current.ConsumeNextRecordFrame();
+
+                        if (next < 0)
+                        {
+                            break;
+                        }
+
+                        frame = next;
+                    }
+
+                    recordedState = ReplayApi.Current.GetStateAtFrame(frame);
+                    ExFlags.CurrentFrame = frame;
+                    StateApi.Current.SetCurrentFrame(frame);
+
+                    if (level != null)
+                    {
+                        DynamicData.For(level).Set("FrameCounter", (float)frame);
+                    }
+                }
+                else if (slip < 0)
+                {
+                    _pendingHoldFrame = frame;
+                }
             }
 
-            var inputs = ReplayApi.Current.GetInputsAtFrame(frame + 1) ?? ReplayApi.Current.GetInputsAtFrame(frame);
+            var inputs = _pendingHoldFrame >= 0
+                ? ReplayApi.Current.GetInputsAtFrame(frame)
+                : ReplayApi.Current.GetInputsAtFrame(frame + 1) ?? ReplayApi.Current.GetInputsAtFrame(frame);
 
             if (inputs != null)
             {
                 _inputService.UpdateCurrent(inputs.ToInputs());
             }
+
+            if (!ReplayIntroPacing.ConfirmLatched
+                && (AnyButtonPressed(inputs)
+                    || (recordedState != null && StateApi.Current.IsRoundStarted(recordedState))))
+            {
+                ReplayIntroPacing.ConfirmLatched = true;
+            }
+        }
+
+        private static bool RecordedIntroIsHumanPaced()
+        {
+            for (int frame = 0; ; frame++)
+            {
+                var inputs = ReplayApi.Current.GetInputsAtFrame(frame);
+
+                if (inputs == null)
+                {
+                    return false;
+                }
+
+                var state = ReplayApi.Current.GetStateAtFrame(frame);
+
+                if (state != null && StateApi.Current.IsRoundStarted(state))
+                {
+                    return false;
+                }
+
+                if (AnyButtonPressed(inputs))
+                {
+                    return true;
+                }
+            }
+        }
+
+        private static bool AnyButtonPressed(int[] flat)
+        {
+            for (int seat = 0; seat < Models.InputCodec.SeatCount(flat); seat++)
+            {
+                var offset = Models.InputCodec.Offset(seat);
+
+                for (int button = Models.InputCodec.JumpCheck; button <= Models.InputCodec.ArrowPressed; button++)
+                {
+                    if (flat[offset + button] != 0)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         private int SkipToSpawnedRound(int frame)
@@ -288,13 +394,8 @@ namespace TF.EX.Domain.Services
             }
         }
 
-        /// <summary>
-        /// A live match idles the level while GGRS synchronizes,playback make the round exactly where the session-established callback did
-        /// </summary>
-        private void PrimePlayback(int frame, byte[] recordedState)
+        private void SpawnRoundPlayers(Level level)
         {
-            var level = TFGame.Instance?.Scene as Level;
-
             if (level?.Session?.RoundLogic is IRoundPlayerSpawner spawner)
             {
                 spawner.SpawnRoundPlayersOnly();
@@ -305,6 +406,11 @@ namespace TF.EX.Domain.Services
             {
                 _logger.LogWarning("[Replay] No round player spawner at playback start");
             }
+        }
+
+        private void PrimePlayback(int frame, byte[] recordedState)
+        {
+            var level = TFGame.Instance?.Scene as Level;
 
             if (recordedState != null && !StateApi.Current.LoadGameStateBytes(recordedState))
             {
@@ -313,17 +419,19 @@ namespace TF.EX.Domain.Services
 
             if (level != null
                 && level.Session?.MatchSettings?.Mode != TowerFall.Modes.Trials
-                && level.Get<VersusStart>() == null)
+                && level.Get<VersusStart>() == null
+                && !(recordedState != null 
+                && StateApi.Current.IsRoundStarted(recordedState)))
             {
                 level.Add(new VersusStart(level.Session));
             }
         }
 
-        private void VerifyAgainstRecordedState(int frame, byte[] recordedState)
+        private int VerifyAgainstRecordedState(int frame, byte[] recordedState)
         {
             if (recordedState == null)
             {
-                return;
+                return 0;
             }
 
             byte[] liveBytes;
@@ -335,12 +443,19 @@ namespace TF.EX.Domain.Services
             catch (Exception e)
             {
                 _logger.LogError(e, "[Replay] Could not capture the live state at frame {frame}", frame);
-                return;
+                return 0;
             }
 
-            if (liveBytes == null || liveBytes.AsSpan().SequenceEqual(recordedState))
+            if (liveBytes == null)
             {
-                return;
+                return 0;
+            }
+
+            if (liveBytes.AsSpan().SequenceEqual(recordedState))
+            {
+                _divergenceReported = false;
+
+                return 0;
             }
 
             if (frame <= _primingFrame)
@@ -351,7 +466,7 @@ namespace TF.EX.Domain.Services
                     _logger.LogWarning("[Replay] Primed state differs from its own record at frame {frame}", frame);
                 }
 
-                return;
+                return 0;
             }
 
             if (_divergenceReported)
@@ -362,10 +477,91 @@ namespace TF.EX.Domain.Services
                     _logger.LogWarning("[Replay] Playback diverged at frame {frame} ?", frame);
                 }
 
-                return;
+                return 0;
+            }
+
+            var slip = DetectOffset(frame, liveBytes);
+
+            if (slip != 0)
+            {
+                _logger.LogWarning("[Replay] Playback slipped {offset} frame at {frame}", slip, frame);
+
+                return slip;
+            }
+
+            var resync = TryResyncAtRoundBoundary(frame, recordedState, liveBytes);
+
+            if (resync != NoResync)
+            {
+                return resync;
             }
 
             LogFirstDivergence(frame, recordedState, liveBytes);
+
+            return 0;
+        }
+
+
+        private int TryResyncAtRoundBoundary(int frame, byte[] recordedState, byte[] liveBytes)
+        {
+            var liveStarted = StateApi.Current.IsRoundStarted(liveBytes);
+            var recordStarted = StateApi.Current.IsRoundStarted(recordedState);
+
+            if (liveStarted && recordStarted)
+            {
+                var previous = ReplayApi.Current.GetStateAtFrame(frame - 1);
+
+                if (previous == null || StateApi.Current.IsRoundStarted(previous) || !StateApi.Current.LoadGameStateBytes(recordedState))
+                {
+                    return NoResync;
+                }
+
+                _logger.LogWarning("[Replay] Round start differs from the record at {frame}", frame);
+
+                return 0;
+            }
+
+            if (liveStarted == recordStarted)
+            {
+                return NoResync;
+            }
+
+            for (int offset = 1; offset <= 3; offset++)
+            {
+                var neighbour = ReplayApi.Current.GetStateAtFrame(frame + offset);
+
+                if (neighbour == null)
+                {
+                    return NoResync;
+                }
+
+                if (StateApi.Current.IsRoundStarted(neighbour) == liveStarted && StateApi.Current.LoadGameStateBytes(neighbour))
+                {
+                    return offset;
+                }
+            }
+
+            return NoResync;
+        }
+
+        private int DetectOffset(int frame, byte[] liveBytes)
+        {
+            foreach (var offset in new[] { 1, -1, 2, -2, 3, -3 })
+            {
+                var neighbourState = ReplayApi.Current.GetStateAtFrame(frame + offset);
+
+                if (neighbourState == null)
+                {
+                    continue;
+                }
+
+                if (StateApi.Current.StateMatchesWithFrame(neighbourState, liveBytes, frame))
+                {
+                    return offset;
+                }
+            }
+
+            return 0;
         }
 
         private void LogFirstDivergence(int frame, byte[] recordedState, byte[] liveBytes)
@@ -407,9 +603,9 @@ namespace TF.EX.Domain.Services
                 _divergenceReported = true;
                 _lastDivergenceLogFrame = frame;
 
-                //_logger.LogError(
-                //    "[Replay] PLAYBACK DIVERGED at frame {frame} (round {round}, live len {liveLen} vs recorded {recLen}), Live vs recorded: {detail}",
-                //    frame, round, liveBytes.Length, recordedState.Length, detail);
+                _logger.LogError(
+                    "[Replay] PLAYBACK DIVERGED at frame {frame} (round {round}, live len {liveLen} vs recorded {recLen}), Live vs recorded: {detail}",
+                    frame, round, liveBytes.Length, recordedState.Length, detail);
 
                 foreach (var offset in new[] { -1, 1 })
                 {
@@ -423,6 +619,11 @@ namespace TF.EX.Domain.Services
                     if (StateApi.Current.StateMatchesWithFrame(neighbourState, liveBytes, frame))
                     {
                         _logger.LogError("[Replay] Live state actually matches record {frame} , playback is offset by {offset}, not desynced", frame + offset, offset);
+                    }
+                    else
+                    {
+                        var neighbourDiff = StateApi.Current.ClassifyStateDiff(liveBytes, neighbourState);
+                        _logger.LogWarning("[Replay] Live vs record {frame} ({kind}): {detail}", frame + offset, neighbourDiff[0], neighbourDiff[1]);
                     }
                 }
             }
