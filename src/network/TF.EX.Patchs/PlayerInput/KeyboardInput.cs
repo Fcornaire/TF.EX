@@ -3,6 +3,7 @@ using TF.EX.Domain.Interop;
 using Monocle;
 using MonoMod.Utils;
 using TF.EX.Domain;
+using TF.EX.Domain.Context;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Ports.TF;
@@ -340,6 +341,11 @@ namespace TF.EX.Patchs.PlayerInput
 
             if (isReplayMode)
             {
+                if (TFGame.Instance.Scene is TowerFall.Level replayLevel && replayLevel.Session?.RoundLogic?.RoundStarted == false)
+                {
+                    return ReplayIntroPacing.ConfirmLatched;
+                }
+
                 return true;
             }
 

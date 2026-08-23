@@ -50,6 +50,11 @@ namespace TF.State.TowerFallExtensions
 
         public static void Delete<T>(this Level level) where T : Monocle.Entity
         {
+            foreach (var layer in level.Layers.Values)
+            {
+                DynamicData.For(layer).Get<List<Monocle.Entity>>("toAdd")?.RemoveAll(entity => entity is T);
+            }
+
             var entity = level.Layers.SelectMany(layer => layer.Value.Entities)
                 .FirstOrDefault(ent => ent is T) as T;
 

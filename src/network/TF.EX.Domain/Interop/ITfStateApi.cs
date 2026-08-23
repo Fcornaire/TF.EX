@@ -12,6 +12,7 @@ namespace TF.EX.Domain.Interop
         int GetFrameOf(byte[] state);
         string CompareStates(byte[] stateA, byte[] stateB);
         string[] DescribePlayers(byte[] state);
+        bool IsRoundStarted(byte[] state);
         string[] ClassifyStateDiff(byte[] liveState, byte[] recordedState);
         bool StateMatchesWithFrame(byte[] candidate, byte[] liveState, int frame);
         void ResetRngOverride();
