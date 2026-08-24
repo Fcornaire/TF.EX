@@ -66,6 +66,13 @@ namespace TF.EX.Domain.CustomComponent
 
                 y += LINE_HEIGHT;
             }
+
+            if (ServiceCollections.ResolveMatchmakingService().IsSpectator())
+            {
+                y += 4f;
+                DrawOutlined("YOU CAN KEEP", new Vector2(left, y), Color.LightGray);
+                DrawOutlined("SPECTATING THE PLAYERS", new Vector2(left, y + LINE_HEIGHT), Color.LightGray);
+            }
         }
 
         private static float LeftEdge()

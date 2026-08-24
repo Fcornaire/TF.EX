@@ -28,6 +28,7 @@ namespace TF.EX.Domain.Services
         private bool _isRollbackFrameInternal;
         private bool _isUpdatingInternal;
         private int _framesAhead;
+        private bool _spectatorCatchupEnabled = false;
 
         private bool _isInit
         {
@@ -258,7 +259,8 @@ namespace TF.EX.Domain.Services
 
         private void OnSessionEstablished(TowerFall.RoundLogic roundLogic)
         {
-            var isSpectator = ServiceCollections.ResolveMatchmakingService().IsSpectator();
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+            var isSpectator = matchmakingService.IsSpectator();
 
             _logger.LogDebug<NetplayManager>(isSpectator
                 ? "Netplay session etablished as spectator"
@@ -365,6 +367,13 @@ namespace TF.EX.Domain.Services
                 if (_events.Any(s => s.Contains(Event.Disconnected.ToString())))
                 {
                     Notification.Clear(TFGame.Instance.Scene, 4);
+
+                    if (!IsDisconnected()
+                        && IsSpectatorMode()
+                        && GGRSFFI.netplay_frames_behind() > 120)
+                    {
+                        ServiceCollections.ResolveMatchmakingService().QueueSpectatorNotice("MATCH OVER, WILL END OR RESTART");
+                    }
 
                     if (IsDisconnected())
                     {
@@ -973,6 +982,7 @@ namespace TF.EX.Domain.Services
         public void SetSpectatorMode(string roomUrl, string toSpectate)
         {
             _netplayMode = NetplayMode.Spectator;
+            _spectatorCatchupEnabled = false;
             GGRSConfig.Netplay.ServerConf = null;
             GGRSConfig.Netplay.SpectatorConf = new NetplaySpectatorConfig
             {
@@ -981,9 +991,37 @@ namespace TF.EX.Domain.Services
             };
         }
 
+        public void SetSpectatorCatchup(bool enabled)
+        {
+            _spectatorCatchupEnabled = enabled;
+        }
+
+        public bool IsSpectatorCatchupEnabled()
+        {
+            return _spectatorCatchupEnabled;
+        }
+
         public bool IsSpectatorMode()
         {
             return _netplayMode == NetplayMode.Spectator;
+        }
+
+        public void AddLateSpectator(string peerId)
+        {
+            if (GGRSFFI.IsInInit || !_isInit)
+            {
+                _logger.LogDebug<NetplayManager>($"Ignoring late spectator {peerId} (no active session)");
+                return;
+            }
+
+            var status = GGRSFFI.netplay_add_spectator(peerId).ToModelGGrsFFI();
+            if (!status.IsOk)
+            {
+                _logger.LogError<NetplayManager>($"Failed to add late spectator {peerId} : {status.Info.AsString()}");
+                return;
+            }
+
+            _logger.LogDebug<NetplayManager>($"Late spectator {peerId} added to the session");
         }
 
         public void AddSpectators(IEnumerable<Domain.Models.WebSocket.Player> spectators)

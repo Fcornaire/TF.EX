@@ -10,6 +10,8 @@ namespace TF.EX.Domain.CustomComponent
     {
         private readonly Color selectedColor = Calc.HexToColor("FFDA9B");
 
+        private static readonly Color liveTint = Calc.HexToColor("B49B3C");
+
         public Lobby Lobby { get; internal set; }
 
         private Action confirm;
@@ -43,6 +45,7 @@ namespace TF.EX.Domain.CustomComponent
             image = new Image(TFGame.MenuAtlas["ascension/slabTop"]);
             image.Origin.Y = image.Height / 2f;
             image.Scale = new Vector2(0.4f, 0.6f);
+            image.Color = BaseColor();
             Add(image);
         }
 
@@ -54,7 +57,11 @@ namespace TF.EX.Domain.CustomComponent
                 RoomId = lobby.RoomId,
                 MaxPlayers = lobby.MaxPlayers,
                 Players = lobby.Players,
-                GameData = lobby.GameData
+                Spectators = lobby.Spectators,
+                GameData = lobby.GameData,
+                Mods = lobby.Mods,
+                InGame = lobby.InGame,
+                Kind = lobby.Kind
             };
         }
 
@@ -79,8 +86,13 @@ namespace TF.EX.Domain.CustomComponent
 
             if (num != selectionLerp)
             {
-                image.Color = Color.Lerp(Color.White, selectedColor, selectionLerp);
+                image.Color = Color.Lerp(BaseColor(), selectedColor, selectionLerp);
             }
+        }
+
+        private Color BaseColor()
+        {
+            return Lobby?.InGame == true ? liveTint : Color.White;
         }
 
         public override void Render()

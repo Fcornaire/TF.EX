@@ -32,6 +32,11 @@ namespace TF.EX.Patchs.Engine
 
         private const double FPS = 60;
         private const double SLOW_RATIO = 1.1;
+
+        private const double DELAYED_CATCHUP_RATIO = 1.25;
+        private const double LIVE_CATCHUP_RATIO = 8.0;
+        private const int DELAYED_CATCHUP_THRESHOLD = 30;
+
         private static readonly MethodInfo _mInputUpdate = AccessTools.Method(typeof(MInput), "Update"); //Minput Update is an internal static method...
 
         private static bool frameByFrame { get; set; } = false;
@@ -252,6 +257,11 @@ namespace TF.EX.Patchs.Engine
 
             if (!netplayManager.IsDisconnected())
             {
+                if (netplayManager.IsSpectatorMode())
+                {
+                    ServiceCollections.ResolveMatchmakingService().ShowPendingSpectatorNoticeIfAny();
+                }
+
                 //ArtificialSlow(); //Only useful to test choppy/freezing condition
 
                 double fpsDelta = 1.0 / FPS;
@@ -259,6 +269,10 @@ namespace TF.EX.Patchs.Engine
                 if (netplayManager.IsFramesAhead())
                 {
                     fpsDelta *= SLOW_RATIO;
+                }
+                else if (netplayManager.IsSpectatorMode() && GGRSFFI.netplay_frames_behind() > DELAYED_CATCHUP_THRESHOLD)
+                {
+                    fpsDelta /= netplayManager.IsSpectatorCatchupEnabled() ? LIVE_CATCHUP_RATIO : DELAYED_CATCHUP_RATIO;
                 }
 
                 var delta = DateTime.Now - LastUpdate;

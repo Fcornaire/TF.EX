@@ -79,5 +79,11 @@ namespace TF.EX.Domain.Externals
 
         [DllImport("ggrs_ffi")]
         public static extern int netplay_remote_player_handle_at(int index);
+
+        [DllImport("ggrs_ffi")]
+        public static extern Status netplay_add_spectator([MarshalAs(UnmanagedType.LPUTF8Str)] string peerId);
+
+        [DllImport("ggrs_ffi")]
+        public static extern int netplay_frames_behind();
     }
 }
