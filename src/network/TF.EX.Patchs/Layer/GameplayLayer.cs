@@ -37,12 +37,22 @@ namespace TF.EX.Patchs.Layer
             {
                 if (matchmakingService.IsSpectator())
                 {
-                    var lobby = matchmakingService.GetOwnLobby();
-                    Draw.OutlineTextCentered(TFGame.Font, $"SPECTATORS : {lobby.Spectators.Count}", new Vector2(30f, 20f), Color.White, Color.Black);
                     SpectatorInputDisplay.RenderGuide(ServiceCollections.ResolveWiderSetModApi()?.UIXOffset ?? 0f);
+
+                    var framesBehind = GGRSFFI.netplay_frames_behind();
+                    if (framesBehind > 120)
+                    {
+                        var chasing = netplayManager.IsSpectatorCatchupEnabled();
+                        Draw.OutlineTextCentered(
+                            TFGame.Font,
+                            chasing ? $"CATCHING UP : {framesBehind}" : $"DELAYED : {framesBehind}",
+                            new Vector2(160f, 30f),
+                            chasing ? Color.Yellow : Color.LightGray,
+                            1f);
+                    }
                 }
 
-                RenderPings(netplayManager);
+                RenderPings(netplayManager, matchmakingService);
 
                 if (netplayManager.GetNetplayMode() != TF.EX.Domain.Models.NetplayMode.Test)
                 {
@@ -54,18 +64,28 @@ namespace TF.EX.Patchs.Layer
             }
         }
 
-        private static void RenderPings(INetplayManager netplayManager)
+        private static void RenderPings(INetplayManager netplayManager, IMatchmakingService matchmakingService)
         {
+            var line = 0;
+
+            if (!matchmakingService.IsSpectator())
+            {
+                var spectatorCount = matchmakingService.GetOwnLobby().Spectators.Count;
+                if (spectatorCount > 0)
+                {
+                    DrawPingLine(line, $"{spectatorCount}", Color.White, Color.LightGray, "SPECTATORS");
+                    line++;
+                }
+            }
+
             var perSeat = netplayManager.GetNetworkStatsPerSeat();
 
             if (perSeat.Count == 0)
             {
                 var latency = netplayManager.GetNetworkStats().ping;
-                DrawPingLine(0, $"{latency} MS", Color.White, GetColor(latency));
+                DrawPingLine(line, $"{latency} MS", Color.White, GetColor(latency));
                 return;
             }
-
-            var line = 0;
 
             foreach (var seat in perSeat.Keys.OrderBy(seat => seat))
             {

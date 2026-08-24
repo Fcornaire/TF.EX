@@ -63,7 +63,8 @@ Or join an available one
   <img src="images/joiningLobby.gif" alt="animated" />
 </p>
 
-Or even spectate! (Experimental)
+Or even spectate! Lobbies whose match already started stay listed in the browser
+and can be joined mid-match: the spectator replays the match from the beginning and catches up.
 
 <p align="center">
   <img src="images/spectate.gif" alt="animated" />

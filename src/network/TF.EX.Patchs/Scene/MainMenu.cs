@@ -948,6 +948,7 @@ namespace TF.EX.Patchs.Scene
             else
             {
                 matchmakingService.ReconcileRollcallIfPending();
+                matchmakingService.ShowPendingSpectatorNoticeIfAny();
             }
 
             if (__instance.State == MainMenu.MenuState.Rollcall && Alt2Pressed())
@@ -1137,6 +1138,12 @@ namespace TF.EX.Patchs.Scene
 
             var reslobbies = matchmakingService.GetLobbies();
 
+            if (noMsg != null && reslobbies.Any())
+            {
+                noMsg.RemoveSelf();
+                noMsg = null;
+            }
+
             if (lobbies.Count == 0 && reslobbies.Count() > 0 || lobbies.Count != reslobbies.Count())
             {
                 var dynMainMenu = DynamicData.For(self);
@@ -1199,6 +1206,13 @@ namespace TF.EX.Patchs.Scene
 
                     Action onClick = () =>
                     {
+                        if (newLobby.InGame)
+                        {
+                            Notification.Create(self, "MATCH IN PROGRESS, SPECTATE ONLY");
+                            TowerFall.Sounds.ui_invalid.Play();
+                            return;
+                        }
+
                         if (!newLobby.CanJoin)
                         {
                             logger.LogError<MainMenuPatch>($"Can't join lobby because of custom mod: {newLobby.CanNotJoinReason}");
@@ -1288,6 +1302,12 @@ namespace TF.EX.Patchs.Scene
                 netplayManager.SetRoomAndServerMode($"{roomUrl}?peer={matchmakingService.GetRoomPeerId()}", false);
                 netplayManager.UpdatePlayer2Name(newLobby.Players.First(pl => pl.IsHost).Name);
             }
+            else
+            {
+                netplayManager.SetSpectatorMode(
+                    $"{roomUrl}?peer={matchmakingService.GetRoomPeerId()}",
+                    newLobby.Players.First(pl => pl.IsHost).RoomPeerId);
+            }
 
             matchmakingService.UpdateOwnLobby(newLobby);
             inputService.EnableAllControllers();
@@ -1298,6 +1318,12 @@ namespace TF.EX.Patchs.Scene
             MainMenu.VersusMatchSettings.Variants.ApplyVariants(newLobby.GameData.Variants);
 
             MainMenu.VersusMatchSettings.MatchLength = (MatchSettings.MatchLengths)newLobby.GameData.MatchLength;
+
+            if (!isPlayer && newLobby.InGame)
+            {
+                Monocle.Engine.Instance.Scene = new MapScene(MainMenu.RollcallModes.Versus);
+                return;
+            }
 
             self.State = MainMenu.MenuState.Rollcall;
 

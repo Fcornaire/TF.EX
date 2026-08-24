@@ -20,7 +20,7 @@ namespace TF.EX.Patchs.Entity
             {
                 var matchmakingService = ServiceCollections.ResolveMatchmakingService();
                 var lobby = matchmakingService.GetOwnLobby();
-                if (lobby.IsEmpty)
+                if (lobby.IsEmpty || matchmakingService.IsSpectator())
                 {
                     var dynPauseMenu = DynamicData.For(__instance);
                     List<string> optionNames = dynPauseMenu.Get<List<string>>("optionNames");
@@ -69,7 +69,7 @@ namespace TF.EX.Patchs.Entity
 
                 Sounds.ui_clickBack.Play();
 
-                TFGame.Instance.Scene = new MainMenu(MainMenu.MenuState.VersusOptions);
+                TFGame.Instance.Scene = new MainMenu(Domain.Context.MenuReturn.NetplayEntry ?? MainMenu.MenuState.VersusOptions);
                 var dynPauseMenu = DynamicData.For(__instance);
                 Level level = dynPauseMenu.Get<Level>("level");
                 level.Session.MatchSettings.LevelSystem.Dispose();

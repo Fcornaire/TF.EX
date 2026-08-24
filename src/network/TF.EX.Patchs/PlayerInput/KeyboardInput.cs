@@ -110,14 +110,14 @@ namespace TF.EX.Patchs.PlayerInput
         [HarmonyPatch("get_MenuUp")]
         public static void MenuUp_patch(ref bool __result, KeyboardInput __instance)
         {
-            if (IsForeignSeat(__instance)) __result = false;
+            if (IsForeignSeat(__instance) || SpectatorRollcallGate.IsInert()) __result = false;
         }
 
         [HarmonyPostfix]
         [HarmonyPatch("get_MenuDown")]
         public static void MenuDown_patch(ref bool __result, KeyboardInput __instance)
         {
-            if (IsForeignSeat(__instance)) __result = false;
+            if (IsForeignSeat(__instance) || SpectatorRollcallGate.IsInert()) __result = false;
         }
 
         private static bool IsForeignSeat(KeyboardInput self)
@@ -140,56 +140,65 @@ namespace TF.EX.Patchs.PlayerInput
         [HarmonyPatch("get_MenuAlt")]
         public static void MenuAlt_patch(ref bool __result, KeyboardInput __instance)
         {
-            if (IsForeignSeat(__instance)) __result = false;
+            if (IsForeignSeat(__instance) || SpectatorRollcallGate.IsInert()) __result = false;
         }
 
         [HarmonyPostfix]
         [HarmonyPatch("get_MenuAlt2")]
         public static void MenuAlt2_patch(ref bool __result, KeyboardInput __instance)
         {
-            if (IsForeignSeat(__instance)) __result = false;
+            if (IsForeignSeat(__instance) || SpectatorRollcallGate.IsInert()) __result = false;
         }
 
         [HarmonyPostfix]
         [HarmonyPatch("get_MenuAlt2Check")]
         public static void MenuAlt2Check_patch(ref bool __result, KeyboardInput __instance)
         {
-            if (IsForeignSeat(__instance)) __result = false;
+            if (IsForeignSeat(__instance) || SpectatorRollcallGate.IsInert()) __result = false;
         }
 
         [HarmonyPostfix]
         [HarmonyPatch("get_MenuBack")]
         public static void MenuBack_patch(ref bool __result, KeyboardInput __instance)
         {
-            if (IsForeignSeat(__instance)) __result = false;
+            if (IsForeignSeat(__instance))
+            {
+                __result = false;
+                return;
+            }
+
+            if (SpectatorRollcallGate.IsInert())
+            {
+                __result = SpectatorRollcallGate.HandleBack(__result);
+            }
         }
 
         [HarmonyPostfix]
         [HarmonyPatch("get_MenuConfirmCheck")]
         public static void MenuConfirmCheck_patch(ref bool __result, KeyboardInput __instance)
         {
-            if (IsForeignSeat(__instance)) __result = false;
+            if (IsForeignSeat(__instance) || SpectatorRollcallGate.IsInert()) __result = false;
         }
 
         [HarmonyPostfix]
         [HarmonyPatch("get_MenuStartCheck")]
         public static void MenuStartCheck_patch(ref bool __result, KeyboardInput __instance)
         {
-            if (IsForeignSeat(__instance)) __result = false;
+            if (IsForeignSeat(__instance) || SpectatorRollcallGate.IsInert()) __result = false;
         }
 
         [HarmonyPostfix]
         [HarmonyPatch("get_MenuBackCheck")]
         public static void MenuBackCheck_patch(ref bool __result, KeyboardInput __instance)
         {
-            if (IsForeignSeat(__instance)) __result = false;
+            if (IsForeignSeat(__instance) || SpectatorRollcallGate.IsInert()) __result = false;
         }
 
         [HarmonyPostfix]
         [HarmonyPatch("get_MenuAltCheck")]
         public static void MenuAltCheck_patch(ref bool __result, KeyboardInput __instance)
         {
-            if (IsForeignSeat(__instance)) __result = false;
+            if (IsForeignSeat(__instance) || SpectatorRollcallGate.IsInert()) __result = false;
         }
 
         [HarmonyPostfix]

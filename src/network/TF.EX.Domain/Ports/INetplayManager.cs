@@ -86,6 +86,9 @@ namespace TF.EX.Domain.Ports
         bool IsServerMode();
         void SetSpectatorMode(string roomUrl, string hostPeerId);
         bool IsSpectatorMode();
+        void AddLateSpectator(string peerId);
+        void SetSpectatorCatchup(bool enabled);
+        bool IsSpectatorCatchupEnabled();
         void AddSpectators(IEnumerable<Player> spectators);
         void UpdatePlayers(ICollection<Player> players, ICollection<Player> spectators);
         void UpdateNumPlayers(int count);

@@ -31,6 +31,8 @@ namespace TF.EX.Domain.CustomComponent
 
         private OutlineText cantJoinReason;
 
+        private OutlineText liveIndicator;
+
         public LobbyPanel(float x, float y) : base(-1)
         {
             Position = new Vector2(x, y);
@@ -90,6 +92,12 @@ namespace TF.EX.Domain.CustomComponent
                 Remove(cantJoinReason);
             }
 
+            if (liveIndicator != null)
+            {
+                Remove(liveIndicator);
+                liveIndicator = null;
+            }
+
             variantsImages.Clear();
         }
 
@@ -115,6 +123,20 @@ namespace TF.EX.Domain.CustomComponent
 
                 Add(cantJoinReason);
                 return;
+            }
+
+            if (lobby.InGame)
+            {
+                liveIndicator = new OutlineText(TFGame.Font, "LIVE, SPECTATE ONLY")
+                {
+                    Scale = Vector2.One * 1.3f,
+                    Color = Color.Yellow,
+                    OutlineColor = Color.Black
+                };
+
+                liveIndicator.Position.Y += 20;
+
+                Add(liveIndicator);
             }
 
             UpdateVariant(lobby.GameData.Variants);

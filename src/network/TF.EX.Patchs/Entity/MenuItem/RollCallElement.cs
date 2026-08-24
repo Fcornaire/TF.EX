@@ -254,7 +254,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
                     {
                         await matchmakingService.LeaveLobby(() =>
                         {
-                            (TFGame.Instance.Scene as MainMenu).State = TF.EX.Domain.Models.MenuState.NetplaySelect.ToTFModel();
+                            (TFGame.Instance.Scene as MainMenu).State = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
                             matchmakingService.ResetPeer();
                         }, () =>
                         {
@@ -262,7 +262,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
                         });
                     }).GetAwaiter().GetResult();
 
-                    (TFGame.Instance.Scene as MainMenu).State = TF.EX.Domain.Models.MenuState.NetplaySelect.ToTFModel();
+                    (TFGame.Instance.Scene as MainMenu).State = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
                 }
             }
 

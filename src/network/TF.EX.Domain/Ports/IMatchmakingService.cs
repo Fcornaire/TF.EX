@@ -37,6 +37,8 @@ namespace TF.EX.Domain.Ports
         bool IsWaitingForHostStart();
         void RequestStart();
         void ResetLobby();
+        void QueueSpectatorNotice(string text);
+        void ShowPendingSpectatorNoticeIfAny();
         bool IsSpectator();
         string GetRoomPeerId();
         int GetLocalSeat();

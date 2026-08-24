@@ -22,6 +22,7 @@ namespace TF.EX.Domain
         private static bool _guideHidden;
 
         private static bool _toggleHeld;
+        private static bool _catchupHeld;
         private static bool _brighterHeld;
         private static bool _dimmerHeld;
         private static bool _guideHeld;
@@ -103,9 +104,12 @@ namespace TF.EX.Domain
             }
 
             DrawEntry("G", "HIDE", ref right);
-            DrawEntry("OemMinus", "INPUT OPACITY DOWN", ref right);
-            DrawEntry("OemPlus", "INPUT OPACITY UP", ref right);
+            DrawEntry("OemMinus", "OPACITY", ref right);
+            DrawEntry("OemPlus", "OPACITY", ref right);
             DrawEntry("I", api.IsEnabled ? "INPUTS ON" : "INPUTS OFF", ref right);
+
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            DrawEntry("C", netplayManager.IsSpectatorCatchupEnabled() ? "GO DELAYED" : "GO LIVE", ref right);
         }
 
         private static void DrawEntry(string key, string label, ref float right)
@@ -170,6 +174,12 @@ namespace TF.EX.Domain
             if (Tapped(ref _guideHeld, Keys.G))
             {
                 _guideHidden = !_guideHidden;
+            }
+
+            if (Tapped(ref _catchupHeld, Keys.C))
+            {
+                var netplayManager = ServiceCollections.ResolveNetplayManager();
+                netplayManager.SetSpectatorCatchup(!netplayManager.IsSpectatorCatchupEnabled());
             }
         }
 

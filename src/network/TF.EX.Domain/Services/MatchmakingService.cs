@@ -8,6 +8,7 @@ using System.Net.WebSockets;
 using TF.EX.Common.Extensions;
 using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Extensions;
+using TF.EX.Domain.Externals;
 using TF.EX.Domain.Models.WebSocket;
 using TF.EX.Domain.Models.WebSocket.Client;
 using TF.EX.Domain.Models.WebSocket.Server;
@@ -31,6 +32,8 @@ namespace TF.EX.Domain.Services
         private int previousPlayersCount = 1;
         private bool hostStartedMatch = false;
         private bool matchEndReported = false;
+
+        private string pendingSpectatorNotice = string.Empty;
         private Lobby pendingRollcallLobby = null;
         private string pendingJoinCode = string.Empty;
         private Lobby privateJoinLobby = null;
@@ -551,6 +554,11 @@ namespace TF.EX.Domain.Services
 
                 if (TFGame.Instance.Scene is Level)
                 {
+                    if (_netplayManager.IsInit())
+                    {
+                        _netplayManager.Reset();
+                    }
+
                     _inputService.EnableAllControllers();
                     Sounds.ui_click.Play();
                     Engine.Instance.Scene = new MapScene(MainMenu.RollcallModes.Versus);
@@ -563,6 +571,20 @@ namespace TF.EX.Domain.Services
                 hostStartedMatch = true;
             }
 
+            if (IsServerMsg(message, "SpectatorJoined"))
+            {
+                var bytes = MessagePackSerializer.ConvertFromJson(message);
+                var response = MessagePackSerializer.Deserialize<SpectatorJoinedMessage>(bytes);
+                var spectatorPeerId = response.SpectatorJoined.RoomPeerId;
+
+                _logger.LogDebug<MatchmakingService>($"Spectator {spectatorPeerId} joined the running match");
+
+                if (IsHost())
+                {
+                    _netplayManager.AddLateSpectator(spectatorPeerId);
+                }
+            }
+
             if (IsServerMsg(message, "ArcherSelectLobby"))
             {
                 hostStartedMatch = false;
@@ -570,6 +592,11 @@ namespace TF.EX.Domain.Services
 
                 if (TFGame.Instance.Scene is Level)
                 {
+                    if (_netplayManager.IsInit())
+                    {
+                        _netplayManager.Reset();
+                    }
+
                     _inputService.EnableAllControllers();
                     Sounds.ui_clickBack.Play();
                     Engine.Instance.Scene = new MainMenu(MainMenu.MenuState.Rollcall);
@@ -581,10 +608,12 @@ namespace TF.EX.Domain.Services
 
         public void RestoreArchersFromLobbyIfNeeded()
         {
-            if (ownLobby.IsEmpty || _archerService.GetArchers().Any())
+            if (ownLobby.IsEmpty)
             {
                 return;
             }
+
+            _archerService.Reset();
 
             foreach (var player in ownLobby.Players.OrderBy(entry => entry.Seat))
             {
@@ -688,12 +717,19 @@ namespace TF.EX.Domain.Services
                 pendingRollcallLobby = lobby;
             }
 
-            if (IsSpectator() && !_netplayManager.IsSpectatorMode())
+            var isSpectatorInLobby = lobby.Spectators.Any(s => s.RoomPeerId == peerId);
+
+            if (isSpectatorInLobby && !_netplayManager.IsSpectatorMode())
             {
                 var roomUrl = $"{SERVER_URL}/room/{lobby.RoomId}?peer={peerId}";
                 var hostPeerId = lobby.Players.First(pl => pl.IsHost).RoomPeerId;
 
                 _netplayManager.SetSpectatorMode(roomUrl, hostPeerId);
+            }
+
+            if (isSpectatorInLobby && lobby.InGame)
+            {
+                hostStartedMatch = true;
             }
 
             if (someoneLeft)
@@ -1086,6 +1122,11 @@ namespace TF.EX.Domain.Services
 
         public bool IsLobbyReady()
         {
+            if (IsSpectator() && ownLobby.InGame)
+            {
+                return hostStartedMatch;
+            }
+
             return AreAllPlayersReady() && hostStartedMatch;
         }
 
@@ -1142,6 +1183,28 @@ namespace TF.EX.Domain.Services
         public void ResetLobbies()
         {
             _lobbies = null;
+        }
+
+        public void QueueSpectatorNotice(string text)
+        {
+            pendingSpectatorNotice = text;
+        }
+
+        public void ShowPendingSpectatorNoticeIfAny()
+        {
+            if (string.IsNullOrEmpty(pendingSpectatorNotice))
+            {
+                return;
+            }
+
+            var scene = TFGame.Instance.Scene;
+            if (scene is not Level && scene is not MainMenu)
+            {
+                return;
+            }
+
+            Notification.Create(scene, pendingSpectatorNotice, 20, 450);
+            pendingSpectatorNotice = string.Empty;
         }
 
         public void ResetLobby()
