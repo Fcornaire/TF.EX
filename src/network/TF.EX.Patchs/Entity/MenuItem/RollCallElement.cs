@@ -265,32 +265,6 @@ namespace TF.EX.Patchs.Entity.MenuItem
                     (TFGame.Instance.Scene as MainMenu).State = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
                 }
             }
-
-            SendBackToVersusSelect(matchmakingService);
-        }
-
-        private static void SendBackToVersusSelect(Domain.Ports.IMatchmakingService matchmakingService)
-        {
-            if (Scene.WiderSetMenu.SelectionState.HasValue
-                || MainMenu.RollcallMode != MainMenu.RollcallModes.Versus
-                || !matchmakingService.GetOwnLobby().IsEmpty)
-            {
-                return;
-            }
-
-            var mainMenu = TFGame.Instance.Scene as MainMenu;
-
-            if (mainMenu == null)
-            {
-                return;
-            }
-
-            var dynMainMenu = DynamicData.For(mainMenu);
-
-            if (dynMainMenu.Get<MainMenu.MenuState>("switchTo") == MainMenu.MenuState.Main)
-            {
-                mainMenu.State = TF.EX.Domain.Models.MenuState.VersusSelect.ToTFModel();
-            }
         }
 
         [HarmonyPrefix]

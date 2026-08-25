@@ -35,6 +35,19 @@ namespace TF.EX.Domain.Extensions
                 .FirstOrDefault(ent => ent is T) as T;
         }
 
+        public static void RemoveToBeSpawned(this Monocle.Scene self, Monocle.Entity entity)
+        {
+            foreach (var layer in self.Layers)
+            {
+                var toAdd = Traverse.Create(layer.Value).Field<List<Monocle.Entity>>("toAdd").Value;
+
+                if (toAdd.Remove(entity))
+                {
+                    return;
+                }
+            }
+        }
+
         public static void DeleteAll<T>(this Monocle.Scene scene) where T : Monocle.Entity
         {
             var entities = scene.Layers.SelectMany(layer => layer.Value.Entities)

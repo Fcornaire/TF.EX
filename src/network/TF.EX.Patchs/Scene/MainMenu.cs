@@ -19,20 +19,21 @@ namespace TF.EX.Patchs.Scene
     [HarmonyPatch(typeof(MainMenu))]
     public class MainMenuPatch
     {
-        private const string LOCAL_BANNER_TITLE = "LOCAL VERSUS";
-        private const string ONLINE_BANNER_TITLE = "ONLINE PLAY";
         private const string QUICKPLAY_BANNER_TITLE = "QUICK PLAY";
         private const string LOBBIES_BANNER_TITLE = "LOBBIES";
         private const string PRIVATE_BANNER_TITLE = "PRIVATE";
         private const string PRIVATE_CREATE_BANNER_TITLE = "CREATE";
         private const string PRIVATE_JOIN_BANNER_TITLE = "JOIN";
 
-        private const float WIDERSET_BUTTON_Y = 70f;
-        private const float TOGGLE_Y = 135f;
         private const float BANNER_Y = 185f;
 
-        private static readonly string[] LOCAL_BANNER_LINES = { "EVERYONE ON THIS MACHINE.", "GRAB A SECOND CONTROLLER." };
-        private static readonly string[] ONLINE_BANNER_LINES = { "ROLLBACK NETCODE SOLO PLAY," };
+        private const float NETPLAY_X = 220f;
+        private const float NETPLAY_Y = 140f;
+        private const float COOP_X = 290f;
+        private const float COOP_Y = 180f;
+        private const float VANILLA_BOTTOM_ROW_Y = 210f;
+        private const float BOTTOM_ROW_SHIFT = 10f;
+
         private static readonly string[] QUICKPLAY_BANNER_LINES = { "JUMP INTO A RANDOM MATCH.", "CLOSEST OPPONENTS FIRST." };
         private static readonly string[] LOBBIES_BANNER_LINES = { "BROWSE PUBLIC LOBBIES", "OR CREATE YOUR OWN." };
         private static readonly string[] PRIVATE_BANNER_LINES = { "LOCKED LOBBY, JOINABLE", "ONLY WITH A CODE." };
@@ -72,9 +73,6 @@ namespace TF.EX.Patchs.Scene
                     return false;
                 case Domain.Models.MenuState.LobbyBuilder:
                     HandleLobbyBuilder(__instance, name);
-                    return false;
-                case Domain.Models.MenuState.VersusSelect:
-                    HandleVersusSelect(__instance, name);
                     return false;
                 case Domain.Models.MenuState.NetplaySelect:
                     if (name == "Create")
@@ -133,7 +131,9 @@ namespace TF.EX.Patchs.Scene
         [HarmonyPatch("CreateMain")]
         public static void MainMenu_CreateMain(MainMenu __instance)
         {
-            OnlinePlayToggle.IsOn = false;
+            WiderSetMenu.IsNetplayRequested = false;
+
+            AddNetplayButtonToMenu(__instance);
 
             var mode = TowerFall.MainMenu.VersusMatchSettings?.Mode;
             var lobby = ServiceCollections.ResolveMatchmakingService().GetOwnLobby();
@@ -221,13 +221,6 @@ namespace TF.EX.Patchs.Scene
             {
                 HandleCopyCodeGuide(__instance, name);
             }
-
-            if (name != "Create" || !WiderSetMenu.IsSelectionState(state))
-            {
-                return;
-            }
-
-            AddOnlineToWiderSetSelection(__instance);
         }
 
         [HarmonyPostfix]
@@ -432,32 +425,79 @@ namespace TF.EX.Patchs.Scene
             }
         }
 
-        private static void HandleVersusSelect(MainMenu self, string name)
+        private static void AddNetplayButtonToMenu(MainMenu self)
         {
-            if (name == "Create")
+            try
             {
-                CreateVersusSelect(self);
+                var fight = self.GetToBeSpawned<FightButton>();
+                var coop = self.GetToBeSpawned<CoOpButton>();
+                var trials = self.GetToBeSpawned<TrialsButton>();
+                var archives = self.GetToBeSpawned<ArchivesButton>();
+                var workshop = self.GetToBeSpawned<WorkshopButton>();
+
+                if (fight == null || coop == null)
+                {
+                    return;
+                }
+
+                self.RemoveToBeSpawned(coop);
+
+                foreach (var button in self.GetAllToBeSpawned<MainModeButton>())
+                {
+                    if (Math.Abs(button.Position.Y - VANILLA_BOTTOM_ROW_Y) < 1f)
+                    {
+                        button.Position.Y += BOTTOM_ROW_SHIFT;
+                        Traverse.Create(button).Field("tweenTo").SetValue(button.Position);
+                    }
+                }
+
+                var netplay = new NetplayButton(new Vector2(NETPLAY_X, NETPLAY_Y), new Vector2(480f, 120f), () =>
+                {
+                    WiderSetMenu.IsNetplayRequested = true;
+                    self.State = WiderSetMenu.SelectionState ?? Domain.Models.MenuState.NetplaySelect.ToTFModel();
+                });
+
+                var compactCoOp = new CompactCoOpButton(new Vector2(COOP_X, COOP_Y), new Vector2(480f, COOP_Y));
+
+                fight.RightItem = netplay;
+                netplay.LeftItem = fight;
+                netplay.RightItem = compactCoOp;
+                compactCoOp.LeftItem = netplay;
+                compactCoOp.UpItem = netplay;
+
+                if (trials != null)
+                {
+                    trials.UpItem = fight;
+                }
+
+                if (archives != null)
+                {
+                    archives.UpItem = netplay;
+                    netplay.DownItem = archives;
+                }
+
+                if (workshop != null)
+                {
+                    workshop.UpItem = compactCoOp;
+                    compactCoOp.DownItem = workshop;
+                }
+                else if (archives != null)
+                {
+                    compactCoOp.DownItem = archives;
+                }
+
+                if (self.ToStartSelected is CoOpButton)
+                {
+                    self.ToStartSelected = compactCoOp;
+                }
+
+                self.Add(new TowerFall.MenuItem[] { netplay, compactCoOp });
             }
-        }
-
-        private static void CreateVersusSelect(MainMenu self)
-        {
-            self.BackState = MainMenu.MenuState.Main;
-
-            var local = new LocalVersusButton(new Vector2(100f, 90f), new Vector2(-160f, 120f));
-            var online = new OnlineVersusButton(new Vector2(220f, 90f), new Vector2(560f, 120f));
-
-            local.RightItem = online;
-            online.LeftItem = local;
-
-            var banner = BuildVersusSelectBanner();
-            banner.Track(() => local.Selected, LOCAL_BANNER_TITLE, LOCAL_BANNER_LINES);
-            banner.Track(() => online.Selected, ONLINE_BANNER_TITLE, ONLINE_BANNER_LINES);
-
-            self.Add(new TowerFall.MenuItem[] { local, online, banner });
-            self.ToStartSelected = local;
-
-            DynamicData.For(self).Invoke("TweenBGCameraToY", 1);
+            catch (Exception ex)
+            {
+                var logger = ServiceCollections.ResolveLogger();
+                logger.LogError<MainMenuPatch>("Error when adding the netplay button to the main menu", ex);
+            }
         }
 
         private static void CreateNetplaySelect(MainMenu self)
@@ -749,47 +789,9 @@ namespace TF.EX.Patchs.Scene
             self.Add(copyCodeGuideEntity);
         }
 
-        private static void AddOnlineToWiderSetSelection(MainMenu self)
-        {
-            try
-            {
-                var existing = self.GetAllToBeSpawned<MainModeButton>().OrderBy(button => button.X).ToList();
-
-                if (existing.Count == 0)
-                {
-                    return;
-                }
-
-                foreach (var button in existing)
-                {
-                    button.Position = new Vector2(button.X, WIDERSET_BUTTON_Y);
-                    Traverse.Create(button).Field("tweenTo").SetValue(button.Position);
-                }
-
-                var toggle = new OnlinePlayToggle(new Vector2(160f, TOGGLE_Y), new Vector2(-160f, TOGGLE_Y));
-
-                foreach (var button in existing)
-                {
-                    button.DownItem = toggle;
-                }
-
-                toggle.UpItem = existing[0];
-
-                var banner = BuildVersusSelectBanner();
-                banner.Track(() => OnlinePlayToggle.IsOn, ONLINE_BANNER_TITLE, ONLINE_BANNER_LINES);
-
-                self.Add(new TowerFall.MenuItem[] { toggle, banner });
-            }
-            catch (Exception ex)
-            {
-                var logger = ServiceCollections.ResolveLogger();
-                logger.LogError<MainMenuPatch>("Error when adding the online toggle to the WiderSet selection", ex);
-            }
-        }
-
         private static MainMenu.MenuState? ResolveNetplayEntryState(MainMenu self)
         {
-            if (WiderSetMenu.IsSelectionState(self.OldState) || self.OldState.ToDomainModel() == Domain.Models.MenuState.VersusSelect)
+            if (WiderSetMenu.IsSelectionState(self.OldState) || self.OldState == MainMenu.MenuState.Main)
             {
                 return self.OldState;
             }

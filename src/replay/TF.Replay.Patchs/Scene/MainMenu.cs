@@ -377,7 +377,7 @@ namespace TF.Replay.Patchs.Scene
             workshopButton.Position.X += 25;
             Traverse.Create(workshopButton).Field("tweenTo").SetValue(workshopButton.Position);
 
-            var replayButton = new ReplayButton(new Vector2(105f, 210f), new Vector2(100f, 300f), "REPLAYS", "");
+            var replayButton = new ReplayButton(new Vector2(105f, trials.Position.Y), new Vector2(100f, 300f), "REPLAYS", "");
             replayButton.RightItem = trials;
             replayButton.UpItem = fightButton;
             if (modButton != null)
@@ -392,10 +392,13 @@ namespace TF.Replay.Patchs.Scene
 
             trials.LeftItem = replayButton;
 
-            trials.UpItem = coopButton;
-            archivesButton.UpItem = coopButton;
-            workshopButton.UpItem = coopButton;
-            coopButton.DownItem = archivesButton;
+            if (coopButton != null)
+            {
+                trials.UpItem = coopButton;
+                archivesButton.UpItem = coopButton;
+                workshopButton.UpItem = coopButton;
+                coopButton.DownItem = archivesButton;
+            }
 
             __instance.Add(replayButton);
         }
