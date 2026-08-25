@@ -485,7 +485,7 @@ namespace TF.EX.Domain.Services
                             return status;
                         }
 
-                        TFGame.Instance.Scene = new MainMenu(MainMenu.MenuState.Main);
+                        TFGame.Instance.Scene = new MainMenu(MainMenu.MenuState.PressStart);
 
                         return status;
                     }

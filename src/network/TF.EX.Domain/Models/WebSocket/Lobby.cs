@@ -47,6 +47,8 @@ namespace TF.EX.Domain.Models.WebSocket
 
         [IgnoreMember]
         public string CanNotJoinReason { get; set; } = "";
+
+        public List<string> MissingVariants { get; set; } = new List<string>();
     }
 
     [MessagePackObject(keyAsPropertyName: true)]
@@ -100,6 +102,8 @@ namespace TF.EX.Domain.Models.WebSocket
     [MessagePackObject(keyAsPropertyName: true)]
     public class CustomMod
     {
+        public const string VersionKey = "Version";
+
         public string Name { get; set; } = "";
         public Dictionary<string, string> Data { get; set; } = new Dictionary<string, string>();
     }

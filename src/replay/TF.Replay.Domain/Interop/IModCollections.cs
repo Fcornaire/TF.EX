@@ -24,6 +24,10 @@ namespace TF.Replay.Domain.Interop
 
         public const string StateEventsKey = "StateEvents";
 
+        public const string UnstatedVariantsKey = "UnstatedVariants";
+
+        public const string BannedVariantsKey = "BannedVariants";
+
         public const string WiderSetName = "Teuria.WiderSet";
 
         public const string IsWideKey = "IsWide";

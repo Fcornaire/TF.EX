@@ -6,6 +6,8 @@ namespace TF.State.Domain.Context
 
         public static bool IsCaptureActive;
 
+        public static bool IsSfxCaptureActive;
+
         public static bool IsTestMode;
 
         public static bool IsReplayMode;
@@ -28,6 +30,7 @@ namespace TF.State.Domain.Context
         {
             CurrentFrame = 0;
             IsCaptureActive = false;
+            IsSfxCaptureActive = false;
             IsTestMode = false;
             IsReplayMode = false;
             IsRestoring = false;

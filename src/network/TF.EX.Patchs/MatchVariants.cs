@@ -7,7 +7,7 @@ using TowerFall;
 namespace TF.EX.Patchs
 {
     [HarmonyPatch(typeof(MatchVariants))]
-    internal class MatchVariantsPatchs
+    public class MatchVariantsPatchs
     {
         private static List<string> UnauthorizedVariant =
         [
@@ -19,6 +19,12 @@ namespace TF.EX.Patchs
 
         private static readonly Dictionary<Variant, bool> hiddenBeforeNetplay = new Dictionary<Variant, bool>();
 
+        private static readonly Dictionary<Variant, bool> valueBeforeNetplay = new Dictionary<Variant, bool>();
+
+        private static readonly HashSet<Variant> restrictedInNetplay = new HashSet<Variant>();
+
+        public static string OwnModName;
+
         [HarmonyPrefix]
         [HarmonyPatch(nameof(MatchVariants.BuildMenu))]
         public static void MatchVariants_BuildMenu_Prefix(MatchVariants __instance)
@@ -28,6 +34,23 @@ namespace TF.EX.Patchs
             if (isNetplay)
             {
                 __instance.NormalizeForNetplay();
+            }
+
+            restrictedInNetplay.Clear();
+
+            foreach (var custom in __instance.CustomVariants)
+            {
+                if (!custom.Key.Contains('/') || IsOwnVariant(custom.Key) || HasVariantStateEvents(custom.Key))
+                {
+                    continue;
+                }
+
+                if (isNetplay)
+                {
+                    restrictedInNetplay.Add(custom.Value);
+                }
+
+                RestrictInNetplay(custom.Value, isNetplay);
             }
 
             foreach (var variant in __instance.Variants)
@@ -50,6 +73,39 @@ namespace TF.EX.Patchs
                 {
                     variant.Hidden = hidden;
                 }
+            }
+        }
+
+        public static bool IsRestricted(Variant variant)
+        {
+            return variant != null && restrictedInNetplay.Contains(variant);
+        }
+
+        private static bool IsOwnVariant(string variantName)
+        {
+            return !string.IsNullOrEmpty(OwnModName) && variantName.StartsWith(OwnModName + "/", StringComparison.Ordinal);
+        }
+
+        private static bool HasVariantStateEvents(string variantName)
+        {
+            return TF.EX.Domain.Interop.StateApi.Current?.HasStateEvents(variantName) ?? false;
+        }
+
+        private static void RestrictInNetplay(Variant variant, bool isNetplay)
+        {
+            if (isNetplay)
+            {
+                if (!valueBeforeNetplay.ContainsKey(variant))
+                {
+                    valueBeforeNetplay[variant] = variant.Value;
+                }
+
+                variant.Value = false;
+            }
+            else if (valueBeforeNetplay.TryGetValue(variant, out var value))
+            {
+                variant.Value = value;
+                valueBeforeNetplay.Remove(variant);
             }
         }
 

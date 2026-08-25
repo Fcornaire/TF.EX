@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Concurrent;
 using TF.State.Domain.Ports;
 
 namespace TF.State.Domain.Services
@@ -9,7 +6,6 @@ namespace TF.State.Domain.Services
     public class APIManager : IAPIManager
     {
         private ConcurrentDictionary<string, IStateEvents> stateEvents = new ConcurrentDictionary<string, IStateEvents>();
-        private ConcurrentBag<string> safeModules = new ConcurrentBag<string>();
 
         public Dictionary<string, string> GetStates()
         {
@@ -34,14 +30,18 @@ namespace TF.State.Domain.Services
             }
         }
 
-        public bool IsModuleSafe(string id)
+        public bool HasStateEvents(string id)
         {
-            return safeModules.Any((mod) => mod == id);
-        }
+            if (string.IsNullOrEmpty(id))
+            {
+                return false;
+            }
 
-        public bool HasStateEvents(string modName)
-        {
-            return !string.IsNullOrEmpty(modName) && stateEvents.Keys.Any(id => id.StartsWith(modName + "-", StringComparison.Ordinal));
+            var separator = id.IndexOf('/');
+
+            return separator > 0
+                ? stateEvents.ContainsKey(id.Substring(0, separator) + "-" + id.Substring(separator + 1))
+                : stateEvents.Keys.Any(key => key.StartsWith(id + "-", StringComparison.Ordinal));
         }
 
         public void RegisterStateEvents(string modName, string key, Func<byte[]> onSaveState, Action<byte[]> onLoadState)
@@ -53,16 +53,6 @@ namespace TF.State.Domain.Services
         public void UnregisterStateEvents(string modName, string key)
         {
             stateEvents.TryRemove($"{modName}-{key}", out _);
-        }
-
-        public void MarkModuleAsSafe(string modName)
-        {
-            if (safeModules.Any((mod) => mod == modName))
-            {
-                return;
-            }
-
-            safeModules.Add(modName);
         }
 
         private sealed class ByteStateEvents : IStateEvents

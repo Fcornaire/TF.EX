@@ -207,6 +207,9 @@ namespace TF.State.TowerFallExtensions
             gameState.AddQuestSpawnPortalsState(self);
             gameState.AddSlimesState(self);
             gameState.AddBatsState(self);
+            gameState.AddChaliceGhostsState(self);
+            gameState.AddTechnoMagesState(self);
+            gameState.AddTechnoMissilesState(self);
             gameState.AddEnemyAttacksState(self);
             gameState.AddDarkPortalsSequenceState(self);
             gameState.AddDummiesState(self);
@@ -604,6 +607,9 @@ namespace TF.State.TowerFallExtensions
             gameState.LoadQuestSpawnPortals(level);
             gameState.LoadSlimes(level);
             gameState.LoadBats(level);
+            gameState.LoadChaliceGhosts(level);
+            gameState.LoadTechnoMages(level);
+            gameState.LoadTechnoMissiles(level);
             gameState.LoadEnemyAttacks(level);
             gameState.LoadDarkPortalsSequence(level);
 
@@ -905,6 +911,7 @@ namespace TF.State.TowerFallExtensions
 
                 gamePlayer.LoadDeathArrow(toLoad.DeathArrowDepth);
                 gamePlayer.LoadLastCaught(toLoad.LastCaughtArrowDepth);
+                gamePlayer.LoadLastPlatform(toLoad.LastPlatformDepth);
             }
 
             foreach (TF.State.Domain.Models.Entity.LevelEntity.Arrows.Arrow toLoad in gs.Entities.Arrows.ToArray())
@@ -1617,6 +1624,36 @@ namespace TF.State.TowerFallExtensions
             }
         }
 
+        private static void AddChaliceGhostsState(this GameState gameState, Level level)
+        {
+            foreach (TowerFall.ChaliceGhost chaliceGhost in level.GetAll<TowerFall.ChaliceGhost>())
+            {
+                var state = chaliceGhost.GetState();
+                gameState.Entities.Enemies.ChaliceGhosts.Add(state);
+                ServiceCollections.AddEntityToCache(state.ActualDepth, chaliceGhost);
+            }
+        }
+
+        private static void AddTechnoMagesState(this GameState gameState, Level level)
+        {
+            foreach (TowerFall.TechnoMage technoMage in level.GetAll<TowerFall.TechnoMage>())
+            {
+                var state = technoMage.GetState();
+                gameState.Entities.Enemies.TechnoMages.Add(state);
+                ServiceCollections.AddEntityToCache(state.ActualDepth, technoMage);
+            }
+        }
+
+        private static void AddTechnoMissilesState(this GameState gameState, Level level)
+        {
+            foreach (TowerFall.TechnoMage.TechnoMissile technoMissile in level.GetAll<TowerFall.TechnoMage.TechnoMissile>())
+            {
+                var state = technoMissile.GetState();
+                gameState.Entities.Enemies.TechnoMissiles.Add(state);
+                ServiceCollections.AddEntityToCache(state.ActualDepth, technoMissile);
+            }
+        }
+
         private static void AddEnemyAttacksState(this GameState gameState, Level level)
         {
             foreach (TowerFall.EnemyAttack enemyAttack in level.GetAll<TowerFall.EnemyAttack>())
@@ -2249,6 +2286,75 @@ namespace TF.State.TowerFallExtensions
 
                 level.GetGameplayLayer().Entities.Insert(0, cachedBat);
                 SyncTags(level, cachedBat);
+            }
+        }
+
+        private static void LoadChaliceGhosts(this GameState gameState, Level level)
+        {
+            level.DeleteAll<TowerFall.ChaliceGhost>();
+            RemoveEnemyTags(level, entity => entity is TowerFall.ChaliceGhost);
+
+            foreach (var toLoad in gameState.Entities.Enemies.ChaliceGhosts)
+            {
+                var cachedChaliceGhost = ServiceCollections.GetCachedEntity<TowerFall.ChaliceGhost>(toLoad.ActualDepth)
+                    ?? CreateChaliceGhost(toLoad);
+
+                cachedChaliceGhost.LoadState(toLoad);
+                cachedChaliceGhost.LoadTarget(toLoad, level);
+
+                level.GetGameplayLayer().Entities.Insert(0, cachedChaliceGhost);
+                SyncTags(level, cachedChaliceGhost);
+            }
+        }
+
+        private static TowerFall.ChaliceGhost CreateChaliceGhost(TF.State.Domain.Models.Entity.LevelEntity.ChaliceGhost toLoad)
+        {
+            var chalicePad = new TowerFall.ChalicePad(toLoad.Position.ToTFVector(), 40);
+            return new TowerFall.ChaliceGhost(toLoad.OwnerIndex, new TowerFall.Chalice(chalicePad));
+        }
+
+        private static void LoadTechnoMages(this GameState gameState, Level level)
+        {
+            level.DeleteAll<TowerFall.TechnoMage>();
+            RemoveEnemyTags(level, entity => entity is TowerFall.TechnoMage);
+
+            foreach (var toLoad in gameState.Entities.Enemies.TechnoMages)
+            {
+                var cachedTechnoMage = ServiceCollections.GetCachedEntity<TowerFall.TechnoMage>(toLoad.ActualDepth) ?? new TowerFall.TechnoMage(toLoad.Position.ToTFVector(), (TowerFall.Facing)toLoad.Facing);
+
+                cachedTechnoMage.LoadState(toLoad);
+                cachedTechnoMage.LoadTarget(toLoad, level);
+
+                level.GetGameplayLayer().Entities.Insert(0, cachedTechnoMage);
+                SyncTags(level, cachedTechnoMage);
+            }
+        }
+
+        private static void LoadTechnoMissiles(this GameState gameState, Level level)
+        {
+            level.DeleteAll<TowerFall.TechnoMage.TechnoMissile>();
+            RemoveEnemyTags(level, entity => entity is TowerFall.TechnoMage.TechnoMissile);
+
+            foreach (var toLoad in gameState.Entities.Enemies.TechnoMissiles)
+            {
+                var target = toLoad.TargetIndex >= 0 ? level.GetPlayer(toLoad.TargetIndex) : null;
+
+                var cachedTechnoMissile = ServiceCollections.GetCachedEntity<TowerFall.TechnoMage.TechnoMissile>(toLoad.ActualDepth);
+
+                if (cachedTechnoMissile == null)
+                {
+                    if (target == null)
+                    {
+                        continue;
+                    }
+
+                    cachedTechnoMissile = new TowerFall.TechnoMage.TechnoMissile(toLoad.Position.ToTFVector(), toLoad.Normal.ToTFVector(), target);
+                }
+
+                cachedTechnoMissile.LoadState(toLoad, level);
+
+                level.GetGameplayLayer().Entities.Insert(0, cachedTechnoMissile);
+                SyncTags(level, cachedTechnoMissile);
             }
         }
 

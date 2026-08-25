@@ -255,10 +255,7 @@ namespace TF.Replay.Domain.CustomComponent
                 var variant = set.Variants.FirstOrDefault(candidate => candidate.Title == name)
                     ?? set.CustomVariants.FirstOrDefault(candidate => candidate.Value?.Title == name).Value;
 
-                if (variant?.Icon != null)
-                {
-                    yield return variant.Icon;
-                }
+                yield return variant?.Icon ?? TFGame.MenuAtlas["controls/keyboard/undefined"];
             }
         }
 

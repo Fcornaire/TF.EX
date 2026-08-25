@@ -21,14 +21,36 @@ namespace TF.EX.Domain.CustomComponent
         private int stayingDuration;
         private bool isSticky;
 
-        private Notification(string text, int layer, int appearDuration = 20, int stayingDuration = 250, bool isSticky = false, bool withoutAnimation = false) : base(layer)
+        private const float RowHeight = 16f;
+
+        private static readonly List<Notification> _lives = new List<Notification>();
+
+        private static readonly Queue<string> _deferred = new Queue<string>();
+
+        public static bool IsDeferedOn;
+
+        private float restingX;
+
+        private float baseY;
+
+        private bool leaving;
+
+        private Notification(string text, int layer, float yOffset, int appearDuration = 20, int stayingDuration = 250, bool isSticky = false, bool withoutAnimation = false) : base(layer)
         {
             this.isSticky = isSticky;
             description = text.ToUpper();
             length = (int)Math.Ceiling(TFGame.Font.MeasureString(description).X / 10.0) + 1;
 
-            initialTweenPosition = new Vector2(-length * 10, 10);
+            restingX = Math.Max(0f, CenterX(layer) - length * 10f / 2f);
+
+            baseY = 10 + yOffset;
+
+            initialTweenPosition = new Vector2(-length * 10, baseY);
             initialPosition = initialTweenPosition;
+
+            _lives.Add(this);
+
+            Depth = -1000;
 
             if (!withoutAnimation)
             {
@@ -36,7 +58,7 @@ namespace TF.EX.Domain.CustomComponent
             }
             else
             {
-                Position = new Vector2(length, 10);
+                Position = new Vector2(restingX, 10 + yOffset);
             }
 
             this.appearDuration = appearDuration;
@@ -54,6 +76,46 @@ namespace TF.EX.Domain.CustomComponent
             }
         }
 
+        public override void Update()
+        {
+            base.Update();
+
+            if (leaving)
+            {
+                return;
+            }
+
+            var slot = 0;
+
+            foreach (var other in _lives)
+            {
+                if (other == this)
+                {
+                    break;
+                }
+
+                if (other.Scene == Scene)
+                {
+                    slot++;
+                }
+            }
+
+            var targetY = baseY + slot * RowHeight;
+            Position.Y += (targetY - Position.Y) * 0.25f;
+        }
+
+        public override void Removed()
+        {
+            base.Removed();
+            _lives.Remove(this);
+        }
+
+        public override void SceneEnd()
+        {
+            base.SceneEnd();
+            _lives.Remove(this);
+        }
+
         private void ScheduleRemoval()
         {
             Alarm alarm = Alarm.Create(Alarm.AlarmMode.Oneshot, null, stayingDuration, true);
@@ -64,12 +126,12 @@ namespace TF.EX.Domain.CustomComponent
 
         public static Notification Create(Scene scene, string text, int appearDuration = 20, int stayingDuration = 250, bool isSticky = false, bool withoutAnimation = false)
         {
-            // Remove all previous notifications (TODO: manage multiple notifications ?)
-
             var layerIndex = scene is MainMenu ? -1 : 4;
-            Clear(scene, layerIndex);
+            RemoveSameText(scene, layerIndex, text.ToUpper());
 
-            var notification = new Notification(text, layerIndex, appearDuration, stayingDuration, isSticky, withoutAnimation);
+            var yOffset = scene is MainMenu menu ? menu.UILayer.Camera.Y : 0f;
+
+            var notification = new Notification(text, layerIndex, yOffset, appearDuration, stayingDuration, isSticky, withoutAnimation);
 
             switch (scene)
             {
@@ -89,6 +151,52 @@ namespace TF.EX.Domain.CustomComponent
             }
 
             return notification;
+        }
+
+        public static void CreateOrDefer(Scene scene, string text)
+        {
+            if (IsDeferedOn)
+            {
+                _deferred.Enqueue(text);
+                return;
+            }
+
+            Create(scene, text);
+        }
+
+        public static void FlushDeferred(Scene scene)
+        {
+            while (_deferred.Count > 0)
+            {
+                Create(scene, _deferred.Dequeue());
+            }
+        }
+
+        public static void ClearDeferred() => _deferred.Clear();
+
+        private static float CenterX(int layerIndex)
+        {
+            var widerSet = layerIndex == 4 ? ServiceCollections.ResolveWiderSetModApi() : null;
+
+            return 160f + (widerSet?.UIXOffset ?? 0f);
+        }
+
+        private static void RemoveSameText(Scene scene, int layerIndex, string text)
+        {
+            var layer = scene.Layers.Single(l => l.Key == layerIndex).Value;
+
+            var toAdd = DynamicData.For(layer).Get<List<Entity>>("toAdd");
+
+            foreach (var pending in toAdd.OfType<Notification>().Where(n => n.description == text).ToList())
+            {
+                toAdd.Remove(pending);
+                pending.Removed();
+            }
+
+            foreach (var shown in layer.Entities.OfType<Notification>().Where(n => n.description == text).ToList())
+            {
+                shown.RemoveSelf();
+            }
         }
 
         public static void Clear(Scene scene, int layerIndex)
@@ -116,7 +224,7 @@ namespace TF.EX.Domain.CustomComponent
             Tween tween = Tween.Create(Tween.TweenMode.Oneshot, Ease.CubeOut, appearDuration, true);
             tween.OnUpdate = (Tween t) =>
             {
-                Position = Vector2.Lerp(initialPosition, new Vector2(length, Position.Y), t.Eased);
+                Position = Vector2.Lerp(initialPosition, new Vector2(restingX, Position.Y), t.Eased);
             };
 
             if (!isSticky)
@@ -127,6 +235,7 @@ namespace TF.EX.Domain.CustomComponent
                     Alarm alarm = Alarm.Create(Alarm.AlarmMode.Oneshot, null, stayingDuration, true);
                     alarm.OnComplete = () =>
                     {
+                        leaving = true;
                         Tween tween2 = Tween.Create(Tween.TweenMode.Oneshot, Ease.CubeOut, 10, true);
                         tween2.OnUpdate = (Tween t) =>
                         {

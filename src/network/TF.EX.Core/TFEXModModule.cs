@@ -49,7 +49,7 @@ namespace TF.EX
                     inputService.DisableAllControllers();
                 },
                 () => inputService.EnsureFakeControllers(),
-                message => TF.EX.Domain.CustomComponent.Notification.Create(TowerFall.TFGame.Instance.Scene, message),
+                message => TF.EX.Domain.CustomComponent.Notification.CreateOrDefer(TowerFall.TFGame.Instance.Scene, message),
                 (replayFileName, currentSong) => replayService.LoadAndStart(replayFileName, currentSong).GetAwaiter().GetResult());
         }
 
@@ -84,7 +84,9 @@ namespace TF.EX
 
             TF.EX.Domain.CustomComponent.MenuIcons.ConfigureOnline(() => InternetIcon.Subtexture);
 
-            context.Registry.GameModes.RegisterVersusGameMode(new NetplayVersusMode());
+            var netplayGameMode = context.Registry.GameModes.RegisterVersusGameMode(new NetplayVersusMode());
+            TF.EX.Domain.Extensions.VersusModeExtensions.SetNetplayMode(netplayGameMode.Modes);
+            TF.EX.Patchs.MatchVariantsPatchs.OwnModName = Meta.Name;
 
             var commands = new TF.EX.Core.TFCommands();
             commands.Register(context);

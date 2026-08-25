@@ -173,6 +173,26 @@ namespace TF.Replay.Domain.Services
                 return null;
             }
 
+            if (StateApi()?.IsTestMode() == true)
+            {
+                _logger?.LogDebug("Test mode, ignore record");
+                Reset();
+
+                return null;
+            }
+
+            //some variants cannot be reproduced by a replay at all
+            var banned = GetBannedVariant(_replay.Informations);
+
+            if (banned != null)
+            {
+                _logger?.LogInformation("Not saving the replay: {variant} cannot be replayed", banned);
+                ServiceCollections.Notify($"NO REPLAY: {banned} CANNOT BE REPLAYED".ToUpperInvariant());
+                Reset();
+
+                return null;
+            }
+
             _replay.Informations.MatchLength = TimeSpan.FromSeconds(_replay.Record.Count / 60);
 
             var folder = Path.Combine(ReplaysRoot, MonthOf(DateTime.UtcNow));
@@ -321,13 +341,22 @@ namespace TF.Replay.Domain.Services
                     return PlaybackStartResult.Fail($"{missingMod} IS MISSING");
                 }
 
+                var missingVariants = GetMissingVariants(replay.Informations);
+
+                if (missingVariants.Count > 0)
+                {
+                    _logger?.LogWarning("{file} uses variants this install does not have: {variants}", replayFilename, string.Join(", ", missingVariants));
+
+                    return PlaybackStartResult.Fail(GetMissingVariantsFailureMessage(missingVariants));
+                }
+
                 WarnOnModVersions(replay.Informations);
 
                 SeekBlockedBy = ModWithoutStateEvents(replay.Informations);
 
                 if (SeekBlockedBy != null)
                 {
-                    _logger?.LogInformation("{file} carries state from {mod}, which registered no save/load events: seeking is off", replayFilename, SeekBlockedBy);
+                    _logger?.LogInformation("{file} uses {source}, which registered no state events: seeking is off", replayFilename, SeekBlockedBy);
                 }
 
                 LoadReplay(replay);
@@ -344,15 +373,7 @@ namespace TF.Replay.Domain.Services
 
                 ApplyTeams(matchSettings, replay.Informations);
 
-                var unknownVariants = matchSettings.Variants.ApplyVariants(replay.Informations.Variants);
-
-                if (unknownVariants.Count > 0)
-                {
-                    var names = string.Join(", ", unknownVariants);
-
-                    _logger?.LogWarning("{file} uses variants this install does not have: {variants}", replayFilename, names);
-                    ServiceCollections.Notify($"MISSING VARIANTS: {names}".ToUpperInvariant());
-                }
+                matchSettings.Variants.ApplyVariants(replay.Informations.Variants);
 
                 matchSettings.MatchLength = (MatchLengths)replay.Informations.VersusMatchLength;
 
@@ -580,13 +601,71 @@ namespace TF.Replay.Domain.Services
                 ?.Name;
         }
 
+        private static string GetBannedVariant(ReplayInfo informations)
+        {
+            return informations?.Mods?
+                .Where(mod => mod?.Data != null)
+                .Select(mod => mod.Data.TryGetValue(ModData.BannedVariantsKey, out var banned) ? banned : null)
+                .FirstOrDefault(banned => !string.IsNullOrEmpty(banned));
+        }
+
+        public List<string> GetMissingVariants(ReplayInfo informations)
+        {
+            var set = TowerFall.MainMenu.VersusMatchSettings?.Variants;
+
+            if (set == null || informations?.Variants == null)
+            {
+                return new List<string>();
+            }
+
+            return informations.Variants
+                .Where(name => set.Variants.All(variant => variant.Title != name) && set.CustomVariants.All(custom => custom.Value?.Title != name))
+                .ToList();
+        }
+
+        private static string GetMissingVariantsFailureMessage(ICollection<string> names)
+        {
+            const float MaxWidth = 290f;
+            const string BrowserPrefix = "CANNOT RESTART REPLAY: ";
+
+            var shown = new List<string>();
+
+            foreach (var name in names)
+            {
+                var candidate = new List<string>(shown) { name };
+
+                if (shown.Count > 0 && TowerFall.TFGame.Font.MeasureString(BrowserPrefix + MissingVariantsFailureMessage(candidate, names.Count)).X > MaxWidth)
+                {
+                    break;
+                }
+
+                shown.Add(name);
+            }
+
+            return MissingVariantsFailureMessage(shown, names.Count);
+        }
+
+        private static string MissingVariantsFailureMessage(ICollection<string> shown, int total)
+        {
+            var hidden = total - shown.Count;
+            var suffix = hidden > 0 ? $" +{hidden} MORE" : "";
+
+            return $"MISSING VARIANTS: {string.Join(", ", shown)}{suffix}";
+        }
+
         private static string ModWithoutStateEvents(ReplayInfo informations)
         {
-            return informations?.Mods?.FirstOrDefault
+            var mod = informations?.Mods?.FirstOrDefault
                 (mod => mod?.Data != null
                     && mod.Data.TryGetValue(ModData.StateEventsKey, out var registered)
-                    && registered == false.ToString())
-                ?.Name;
+                    && registered == false.ToString());
+
+            if (mod == null)
+            {
+                return null;
+            }
+
+            return mod.Data.TryGetValue(ModData.UnstatedVariantsKey, out var variants) && !string.IsNullOrEmpty(variants) ? variants : mod.Name;
         }
 
         private void WarnOnModVersions(ReplayInfo informations)
@@ -616,7 +695,11 @@ namespace TF.Replay.Domain.Services
 
                 _logger?.LogWarning("Replay was recorded on {mod} {recorded}, this install has {installed}", mod.Name, recorded, installed);
 
-                ServiceCollections.Notify($"{mod.Name} IS {installed}, REPLAY USED {recorded}".ToUpperInvariant());
+                var shortName = mod.Name.LastIndexOf('.') is int separator && separator > 0 && separator < mod.Name.Length - 1
+                    ? mod.Name.Substring(separator + 1)
+                    : mod.Name;
+
+                ServiceCollections.Notify($"{shortName} {installed} (REPLAY WAS {recorded}) - MAY NOT WORK".ToUpperInvariant());
             }
         }
 

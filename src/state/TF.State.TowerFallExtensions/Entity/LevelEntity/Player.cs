@@ -267,25 +267,6 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                 startCounters.Copy(toLoad.Scheduler.SchedulerStartCounters);
             }
 
-            var platforms = entity.Level.GetAll<TowerFall.Platform>().ToArray();
-            var foundPlat = false;
-            foreach (var plat in platforms)
-            {
-                var dynPlat = DynamicData.For(plat);
-                var actualDepth = dynPlat.Get<double>("actualDepth");
-
-                if (actualDepth == toLoad.LastPlatformDepth)
-                {
-                    dynPlayer.Set("lastPlatform", plat);
-                    foundPlat = true;
-                    break;
-                }
-            }
-            if (!foundPlat)
-            {
-                dynPlayer.Set("lastPlatform", null);
-            }
-
             if (dynShield.Get<bool>("Visible"))
             {
                 entity.TargetCollider = dynPlayer.Get<TowerFall.WrapHitbox>("shieldHitbox");
@@ -343,6 +324,22 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             arrowRegenCounter.Set("counter", toLoad.ArrowRegenCounter);
             var shieldRegenCounter = DynamicData.For(dynPlayer.Get<Counter>("shieldRegenCounter"));
             shieldRegenCounter.Set("counter", toLoad.ShieldRegenCounter);
+        }
+
+        public static void LoadLastPlatform(this TowerFall.Player self, double lastPlatformDepth)
+        {
+            var dynPlayer = DynamicData.For(self);
+
+            if (lastPlatformDepth == -1)
+            {
+                dynPlayer.Set("lastPlatform", null);
+                return;
+            }
+
+            var platform = self.Level.GetAll<TowerFall.Platform>()
+                .FirstOrDefault(plat => DynamicData.For(plat).Get<double>("actualDepth") == lastPlatformDepth);
+
+            dynPlayer.Set("lastPlatform", platform);
         }
 
         public static void LoadLastCaught(this TowerFall.Player self, double lastCaughtArrowDepth)

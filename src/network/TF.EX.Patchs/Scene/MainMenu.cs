@@ -2,6 +2,7 @@ using HarmonyLib;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoMod.Utils;
+using TextCopy;
 using TF.EX.Common.Extensions;
 using TF.EX.Common.Interop;
 using TF.EX.Domain;
@@ -11,7 +12,6 @@ using TF.EX.Domain.Interop;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Models.WebSocket;
 using TF.EX.Patchs.Entity.MenuItem;
-using TextCopy;
 using TowerFall;
 
 namespace TF.EX.Patchs.Scene
@@ -126,6 +126,309 @@ namespace TF.EX.Patchs.Scene
                     return true;
                 default:
                     return true;
+            }
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("CreateMain")]
+        public static void MainMenu_CreateMain(MainMenu __instance)
+        {
+            OnlinePlayToggle.IsOn = false;
+
+            var mode = TowerFall.MainMenu.VersusMatchSettings?.Mode;
+            var lobby = ServiceCollections.ResolveMatchmakingService().GetOwnLobby();
+            if ((mode != null && mode.Value.IsNetplay()) || !lobby.IsEmpty)
+            {
+                var widerSetModApi = ServiceCollections.ResolveWiderSetModApi();
+                if (widerSetModApi != null && widerSetModApi.IsWide)
+                {
+                    widerSetModApi.IsWide = false;
+                }
+            }
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch(MethodType.Constructor, [typeof(MainMenu.MenuState)])]
+        public static void MainMenu_ctor()
+        {
+            TowerFall.TFGame.ConsoleEnabled = true;
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("Render")]
+        public static void MainMenu_Render(MainMenu __instance)
+        {
+            Monocle.Draw.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, DepthStencilState.None, RasterizerState.CullNone, null, __instance.UILayer.Camera.Matrix);
+
+            if (__instance.State == MainMenu.MenuState.Rollcall
+                && TowerFall.MainMenu.VersusMatchSettings?.Mode.IsNetplay() == true)
+            {
+                var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+
+                var localPeerId = matchmakingService.GetRoomPeerId();
+                var lobbyPlayers = matchmakingService.GetOwnLobby().Players.ToArray();
+                var localSeat = matchmakingService.GetLocalSeat();
+
+                foreach (var rollcallElement in __instance.GetAll<RollcallElement>())
+                {
+                    var seat = DynamicData.For(rollcallElement).Get<int>("playerIndex");
+
+                    var seated = lobbyPlayers.FirstOrDefault(player => player.Seat == seat);
+
+                    if (seated == null)
+                    {
+                        continue;
+                    }
+
+                    var isShown = matchmakingService.IsSpectator()
+                        ? seated.IsHost
+                        : seat != localSeat && seated.RoomPeerId != localPeerId;
+
+                    if (!isShown)
+                    {
+                        continue;
+                    }
+
+                    var latency = matchmakingService.GetPingTo(seated);
+                    var label = $"{latency} MS";
+
+                    Monocle.Draw.OutlineTextCentered(TFGame.Font, label, RollcallLayout.PingAt(rollcallElement), GetPingColor(latency), Color.Black);
+                }
+
+                RenderWaitingForHost(matchmakingService);
+                RenderQuickPlayStarting(matchmakingService);
+            }
+
+            if (__instance.State.ToDomainModel() == Domain.Models.MenuState.QuickPlaySearch)
+            {
+                var searching = ServiceCollections.ResolveMatchmakingService().GetSearchingCount();
+
+                if (searching > 0)
+                {
+                    var label = searching == 1 ? "1 PLAYER SEARCHING" : $"{searching} PLAYERS SEARCHING";
+                    Monocle.Draw.OutlineTextCentered(TFGame.Font, label, new Vector2(160f, 160f), Color.White, Color.Black);
+                }
+            }
+
+            Monocle.Draw.SpriteBatch.End();
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("CallStateFunc")]
+        public static void MainMenu_CallStateFunc_Postfix(MainMenu __instance, string name, MainMenu.MenuState state)
+        {
+            if (state == MainMenu.MenuState.Rollcall)
+            {
+                HandleCopyCodeGuide(__instance, name);
+            }
+
+            if (name != "Create" || !WiderSetMenu.IsSelectionState(state))
+            {
+                return;
+            }
+
+            AddOnlineToWiderSetSelection(__instance);
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("CreateVersusOptions")]
+        public static void MainMenu_CreateVersusOptions(MainMenu __instance)
+        {
+            if (MainMenu.VersusMatchSettings.Mode == TowerFall.Modes.LastManStanding)
+            {
+                var button = TFGame.Instance.Scene.GetToBeSpawned<VersusModeButton>();
+                __instance.ToStartSelected = button;
+            }
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch("Update")]
+        public static void MainMenu_Update_Postfix(MainMenu __instance)
+        {
+            var ownLobby = ServiceCollections.ResolveMatchmakingService().GetOwnLobby();
+            if (!ownLobby.IsEmpty)
+            {
+                TowerFall.MainMenu.NoGamepadUpdates = true;
+            }
+            else if (TowerFall.MainMenu.VersusMatchSettings?.Mode.IsNetplay() == true)
+            {
+                TowerFall.MainMenu.NoGamepadUpdates = false;
+            }
+
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+            var replayService = ServiceCollections.ResolveReplayService();
+            var inputService = ServiceCollections.ResolveInputService();
+            var logger = ServiceCollections.ResolveLogger();
+
+            if (matchmakingService.GetOwnLobby().IsEmpty)
+            {
+                inputService.ObserveLocalDevice();
+            }
+            else
+            {
+                matchmakingService.ReconcileRollcallIfPending();
+                matchmakingService.ShowPendingSpectatorNoticeIfAny();
+            }
+
+            if (__instance.State == MainMenu.MenuState.Rollcall && Alt2Pressed())
+            {
+                CopyPrivateCodeToClipboard(__instance, matchmakingService);
+            }
+
+            if (__instance.State.ToDomainModel() == Domain.Models.MenuState.LobbyBrowser)
+            {
+                if (MenuInput.Start)
+                {
+                    __instance.State = TF.EX.Domain.Models.MenuState.LobbyBuilder.ToTFModel();
+                    return;
+                }
+
+                if (MenuInput.Alt && DateTime.UtcNow >= nextServerPull)
+                {
+                    inputService.DisableAllControllers();
+
+                    nextServerPull = DateTime.UtcNow.AddSeconds(3);
+                    Sounds.ui_altCostumeShift.Play();
+                    __instance.AddLoader("FINDING LOBBIES...");
+
+                    foreach (var lobby in lobbies.ToArray())
+                    {
+                        lobby.RemoveSelf();
+                    }
+
+                    lobbies.Clear();
+
+                    if (lobbyPanel != null)
+                    {
+                        lobbyPanel.RemoveSelf();
+                        lobbyPanel = null;
+                    }
+
+                    matchmakingService.ResetLobbies();
+                    matchmakingService.GetLobbies(OnRetrieveSuccess, () =>
+                    {
+                        __instance.RemoveLoader();
+                        Notification.Create(__instance, "Failed to retrieve lobbies...");
+                        Sounds.ui_invalid.Play();
+                        inputService.EnableAllControllers();
+                    });
+                    return;
+                }
+
+                if (MenuInput.Alt2)
+                {
+                    if (!lobbies.SingleOrDefault(lobby => lobby.Selected))
+                    {
+                        Notification.Create(__instance, "You must select a lobby to spectate!");
+                        Sounds.ui_invalid.Play();
+                        return;
+                    }
+
+                    var lobbyToSpectate = lobbies.Single(lobby => lobby.Selected).Lobby;
+                    var (canSpectate, message) = (lobbyToSpectate.CanJoin, lobbyToSpectate.CanNotJoinReason);
+
+                    if (!canSpectate)
+                    {
+                        logger.LogError<MainMenuPatch>($"Can't join lobby because of custom mod: {message}");
+
+                        TowerFall.Sounds.ui_invalid.Play();
+                        return;
+                    }
+
+                    if (string.IsNullOrEmpty(lobbyToSpectate.RoomId))
+                    {
+                        logger.LogError<MainMenuPatch>("Lobby to spectate is null?");
+
+                        return;
+                    }
+
+                    inputService.DisableAllControllers();
+                    __instance.AddLoader("JOINING LOBBY AS SPECTATOR");
+
+                    matchmakingService.JoinLobby(lobbyToSpectate.RoomId, false, () => OnJoinSuccess(__instance, lobbyToSpectate, false), () => OnFailedToJoinLobby(__instance));
+                }
+            }
+
+            if (__instance.State.ToDomainModel() == Domain.Models.MenuState.LobbyBuilder)
+            {
+                if (MenuInput.Start)
+                {
+                    var variantsToggle = variants
+                        .Where(v => v is VariantToggle && (v as VariantToggle).Variant.Value)
+                        .Select(v => (v as VariantToggle).Variant.Title)
+                        .ToList();
+
+                    var roomId = Guid.NewGuid().ToString();
+
+                    var roomUrl = $"{Config.SERVER}/room/{roomId}";
+
+                    var lobby = matchmakingService.GetOwnLobby();
+                    lobby.GameData.Variants = variantsToggle.ToArray();
+                    CatalogLobbyMods(lobby, variantsToggle);
+                    lobby.Name = netplayManager.GetNetplayMeta().Name;
+                    lobby.RoomId = roomId;
+                    lobby.Kind = (Domain.Context.LobbyBuilderContext.IsPrivate ? LobbyKind.Private : LobbyKind.Standard).ToString();
+                    lobby.Players.Add(new Domain.Models.WebSocket.Player
+                    {
+                        Name = netplayManager.GetNetplayMeta().Name,
+                        Addr = string.Empty,
+                        IsHost = true
+                    });
+                    var widerSetModApi = ServiceCollections.ResolveWiderSetModApi();
+                    if (widerSetModApi != null)
+                    {
+                        lobby.Mods.Add(new Domain.Models.WebSocket.CustomMod
+                        {
+                            Name = WiderSetModApiData.Name,
+                            Data = new Dictionary<string, string>
+                            {
+                                { "IsWide", widerSetModApi.IsWide.ToString() },
+                                { Domain.Models.WebSocket.CustomMod.VersionKey, ServiceCollections.ResolveModCollections()?.GetVersion(WiderSetModApiData.Name) ?? "" }
+                            }
+                        });
+                    }
+
+                    __instance.AddLoader("CREATING LOBBY...");
+                    Sounds.ui_click.Play();
+
+                    inputService.DisableAllControllers();
+
+                    Action onSucess = () =>
+                    {
+                        inputService.EnableAllControllers();
+                        inputService.DisableAllControllerExceptLocal();
+                        __instance.RemoveLoader();
+                        Sounds.ui_click.Play();
+                        __instance.State = MainMenu.MenuState.Rollcall;
+                        __instance.BackState = Domain.Models.MenuState.NetplaySelect.ToTFModel();
+                        netplayManager.SetRoomAndServerMode($"{roomUrl}?peer={matchmakingService.GetRoomPeerId()}", true);
+
+                        StateApi.Current.SetSeed(matchmakingService.GetOwnLobby().GameData.Seed);
+
+                        //Apply length
+                        MainMenu.VersusMatchSettings.MatchLength = (MatchSettings.MatchLengths)lobby.GameData.MatchLength;
+
+                        //if (MainMenu.VersusMatchSettings.Variants.ContainsCustomVariant(lobby.GameData.Variants))
+                        //{
+                        //    Sounds.ui_clickSpecial.Play(160, 4);
+                        //    Notification.Create(__instance, $"Be CAREFUL! Custom variants might not work properly", 15, 500);
+                        //}
+                    };
+
+                    Action onFail = () =>
+                    {
+                        Notification.Create(__instance, $"Failed to create lobby", 10, 120);
+                        inputService.EnableAllControllers();
+                        __instance.RemoveLoader();
+                        TowerFall.Sounds.ui_invalid.Play();
+                        __instance.State = Domain.Context.LobbyBuilderContext.IsPrivate
+                            ? Domain.Models.MenuState.PrivateSelect.ToTFModel()
+                            : Domain.Models.MenuState.LobbyBrowser.ToTFModel();
+                    };
+
+                    matchmakingService.CreateLobby(onSucess, onFail);
+                }
             }
         }
 
@@ -419,23 +722,6 @@ namespace TF.EX.Patchs.Scene
             return (true, "");
         }
 
-        [HarmonyPostfix]
-        [HarmonyPatch("CallStateFunc")]
-        public static void MainMenu_CallStateFunc_Postfix(MainMenu __instance, string name, MainMenu.MenuState state)
-        {
-            if (state == MainMenu.MenuState.Rollcall)
-            {
-                HandleCopyCodeGuide(__instance, name);
-            }
-
-            if (name != "Create" || !WiderSetMenu.IsSelectionState(state))
-            {
-                return;
-            }
-
-            AddOnlineToWiderSetSelection(__instance);
-        }
-
         private static void HandleCopyCodeGuide(MainMenu self, string name)
         {
             if (copyCodeGuideEntity != null)
@@ -626,7 +912,7 @@ namespace TF.EX.Patchs.Scene
             {
                 createEntityButton = new Monocle.Entity();
                 var createButton = new MenuButtonGuide(4);
-                createButton.SetDetails(MenuButtonGuide.ButtonModes.Start,Domain.Context.LobbyBuilderContext.IsPrivate ? "CREATE PRIVATE LOBBY" : "CREATE LOBBY");
+                createButton.SetDetails(MenuButtonGuide.ButtonModes.Start, Domain.Context.LobbyBuilderContext.IsPrivate ? "CREATE PRIVATE LOBBY" : "CREATE LOBBY");
                 createEntityButton.Add(createButton);
                 self.Add(createEntityButton);
 
@@ -682,6 +968,35 @@ namespace TF.EX.Patchs.Scene
             }
         }
 
+        private static string GetMissingVariantsMessage(ICollection<string> names)
+        {
+            const float MaxWidth = 290f;
+
+            var shown = new List<string>();
+
+            foreach (var name in names)
+            {
+                var candidate = new List<string>(shown) { name };
+
+                if (shown.Count > 0 && TowerFall.TFGame.Font.MeasureString(MissingVariantsMessage(candidate, names.Count)).X > MaxWidth)
+                {
+                    break;
+                }
+
+                shown.Add(name);
+            }
+
+            return MissingVariantsMessage(shown, names.Count);
+        }
+
+        private static string MissingVariantsMessage(ICollection<string> shown, int total)
+        {
+            var hidden = total - shown.Count;
+            var suffix = hidden > 0 ? $" +{hidden} MORE" : "";
+
+            return $"CAN'T JOIN - MISSING VARIANTS: {string.Join(", ", shown)}{suffix}";
+        }
+
         private static void CreateLobbyBrowser(MainMenu self)
         {
             if (!MainMenu.VersusMatchSettings.ApplyNetplayMode())
@@ -727,89 +1042,7 @@ namespace TF.EX.Patchs.Scene
             });
         }
 
-        [HarmonyPostfix]
-        [HarmonyPatch("CreateMain")]
-        public static void MainMenu_CreateMain(MainMenu __instance)
-        {
-            OnlinePlayToggle.IsOn = false;
 
-            var mode = TowerFall.MainMenu.VersusMatchSettings?.Mode;
-            var lobby = ServiceCollections.ResolveMatchmakingService().GetOwnLobby();
-            if ((mode != null && mode.Value.IsNetplay()) || !lobby.IsEmpty)
-            {
-                var widerSetModApi = ServiceCollections.ResolveWiderSetModApi();
-                if (widerSetModApi != null && widerSetModApi.IsWide)
-                {
-                    widerSetModApi.IsWide = false;
-                }
-            }
-        }
-
-        [HarmonyPostfix]
-        [HarmonyPatch(MethodType.Constructor, [typeof(MainMenu.MenuState)])]
-        public static void MainMenu_ctor()
-        {
-            TowerFall.TFGame.ConsoleEnabled = true;
-        }
-
-        [HarmonyPostfix]
-        [HarmonyPatch("Render")]
-        public static void MainMenu_Render(MainMenu __instance)
-        {
-            Monocle.Draw.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, DepthStencilState.None, RasterizerState.CullNone, null, __instance.UILayer.Camera.Matrix);
-
-            if (__instance.State == MainMenu.MenuState.Rollcall
-                && TowerFall.MainMenu.VersusMatchSettings?.Mode.IsNetplay() == true)
-            {
-                var matchmakingService = ServiceCollections.ResolveMatchmakingService();
-
-                var localPeerId = matchmakingService.GetRoomPeerId();
-                var lobbyPlayers = matchmakingService.GetOwnLobby().Players.ToArray();
-                var localSeat = matchmakingService.GetLocalSeat();
-
-                foreach (var rollcallElement in __instance.GetAll<RollcallElement>())
-                {
-                    var seat = DynamicData.For(rollcallElement).Get<int>("playerIndex");
-
-                    var seated = lobbyPlayers.FirstOrDefault(player => player.Seat == seat);
-
-                    if (seated == null)
-                    {
-                        continue;
-                    }
-
-                    var isShown = matchmakingService.IsSpectator()
-                        ? seated.IsHost
-                        : seat != localSeat && seated.RoomPeerId != localPeerId;
-
-                    if (!isShown)
-                    {
-                        continue;
-                    }
-
-                    var latency = matchmakingService.GetPingTo(seated);
-                    var label = $"{latency} MS";
-
-                    Monocle.Draw.OutlineTextCentered(TFGame.Font, label, RollcallLayout.PingAt(rollcallElement), GetPingColor(latency), Color.Black);
-                }
-
-                RenderWaitingForHost(matchmakingService);
-                RenderQuickPlayStarting(matchmakingService);
-            }
-
-            if (__instance.State.ToDomainModel() == Domain.Models.MenuState.QuickPlaySearch)
-            {
-                var searching = ServiceCollections.ResolveMatchmakingService().GetSearchingCount();
-
-                if (searching > 0)
-                {
-                    var label = searching == 1 ? "1 PLAYER SEARCHING" : $"{searching} PLAYERS SEARCHING";
-                    Monocle.Draw.OutlineTextCentered(TFGame.Font, label, new Vector2(160f, 160f), Color.White, Color.Black);
-                }
-            }
-
-            Monocle.Draw.SpriteBatch.End();
-        }
 
         private static void RenderQuickPlayStarting(Domain.Ports.IMatchmakingService matchmakingService)
         {
@@ -910,206 +1143,6 @@ namespace TF.EX.Patchs.Scene
         //     //}
         // }
 
-        [HarmonyPostfix]
-        [HarmonyPatch("CreateVersusOptions")]
-        public static void MainMenu_CreateVersusOptions(MainMenu __instance)
-        {
-            if (MainMenu.VersusMatchSettings.Mode == TowerFall.Modes.LastManStanding)
-            {
-                var button = TFGame.Instance.Scene.GetToBeSpawned<VersusModeButton>();
-                __instance.ToStartSelected = button;
-            }
-        }
-
-        [HarmonyPrefix]
-        [HarmonyPatch("Update")]
-        public static void MainMenu_Update_Postfix(MainMenu __instance)
-        {
-            var ownLobby = ServiceCollections.ResolveMatchmakingService().GetOwnLobby();
-            if (!ownLobby.IsEmpty)
-            {
-                TowerFall.MainMenu.NoGamepadUpdates = true;
-            }
-            else if (TowerFall.MainMenu.VersusMatchSettings?.Mode.IsNetplay() == true)
-            {
-                TowerFall.MainMenu.NoGamepadUpdates = false;
-            }
-
-            var netplayManager = ServiceCollections.ResolveNetplayManager();
-            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
-            var replayService = ServiceCollections.ResolveReplayService();
-            var inputService = ServiceCollections.ResolveInputService();
-            var logger = ServiceCollections.ResolveLogger();
-
-            if (matchmakingService.GetOwnLobby().IsEmpty)
-            {
-                inputService.ObserveLocalDevice();
-            }
-            else
-            {
-                matchmakingService.ReconcileRollcallIfPending();
-                matchmakingService.ShowPendingSpectatorNoticeIfAny();
-            }
-
-            if (__instance.State == MainMenu.MenuState.Rollcall && Alt2Pressed())
-            {
-                CopyPrivateCodeToClipboard(__instance, matchmakingService);
-            }
-
-            if (__instance.State.ToDomainModel() == Domain.Models.MenuState.LobbyBrowser)
-            {
-                if (MenuInput.Start)
-                {
-                    __instance.State = TF.EX.Domain.Models.MenuState.LobbyBuilder.ToTFModel();
-                    return;
-                }
-
-                if (MenuInput.Alt && DateTime.UtcNow >= nextServerPull)
-                {
-                    inputService.DisableAllControllers();
-
-                    nextServerPull = DateTime.UtcNow.AddSeconds(3);
-                    Sounds.ui_altCostumeShift.Play();
-                    __instance.AddLoader("FINDING LOBBIES...");
-
-                    foreach (var lobby in lobbies.ToArray())
-                    {
-                        lobby.RemoveSelf();
-                    }
-
-                    lobbies.Clear();
-
-                    if (lobbyPanel != null)
-                    {
-                        lobbyPanel.RemoveSelf();
-                        lobbyPanel = null;
-                    }
-
-                    matchmakingService.ResetLobbies();
-                    matchmakingService.GetLobbies(OnRetrieveSuccess, () =>
-                    {
-                        __instance.RemoveLoader();
-                        Notification.Create(__instance, "Failed to retrieve lobbies...");
-                        Sounds.ui_invalid.Play();
-                        inputService.EnableAllControllers();
-                    });
-                    return;
-                }
-
-                if (MenuInput.Alt2)
-                {
-                    if (!lobbies.SingleOrDefault(lobby => lobby.Selected))
-                    {
-                        Notification.Create(__instance, "You must select a lobby to spectate!");
-                        Sounds.ui_invalid.Play();
-                        return;
-                    }
-
-                    var lobbyToSpectate = lobbies.Single(lobby => lobby.Selected).Lobby;
-                    var (canSpectate, message) = (lobbyToSpectate.CanJoin, lobbyToSpectate.CanNotJoinReason);
-
-                    if (!canSpectate)
-                    {
-                        logger.LogError<MainMenuPatch>($"Can't join lobby because of custom mod: {message}");
-
-                        TowerFall.Sounds.ui_invalid.Play();
-                        return;
-                    }
-
-                    if (string.IsNullOrEmpty(lobbyToSpectate.RoomId))
-                    {
-                        logger.LogError<MainMenuPatch>("Lobby to spectate is null?");
-
-                        return;
-                    }
-
-                    inputService.DisableAllControllers();
-                    __instance.AddLoader("JOINING LOBBY AS SPECTATOR");
-
-                    matchmakingService.JoinLobby(lobbyToSpectate.RoomId, false, () => OnJoinSuccess(__instance, lobbyToSpectate, false), () => OnFailedToJoinLobby(__instance));
-                }
-            }
-
-            if (__instance.State.ToDomainModel() == Domain.Models.MenuState.LobbyBuilder)
-            {
-                if (MenuInput.Start)
-                {
-                    var variantsToggle = variants
-                        .Where(v => v is VariantToggle && (v as VariantToggle).Variant.Value)
-                        .Select(v => (v as VariantToggle).Variant.Title)
-                        .ToList();
-
-                    var roomId = Guid.NewGuid().ToString();
-
-                    var roomUrl = $"{Config.SERVER}/room/{roomId}";
-
-                    var lobby = matchmakingService.GetOwnLobby();
-                    lobby.GameData.Variants = variantsToggle.ToArray();
-                    lobby.Name = netplayManager.GetNetplayMeta().Name;
-                    lobby.RoomId = roomId;
-                    lobby.Kind = (Domain.Context.LobbyBuilderContext.IsPrivate ? LobbyKind.Private : LobbyKind.Standard).ToString();
-                    lobby.Players.Add(new Domain.Models.WebSocket.Player
-                    {
-                        Name = netplayManager.GetNetplayMeta().Name,
-                        Addr = string.Empty,
-                        IsHost = true
-                    });
-                    var widerSetModApi = ServiceCollections.ResolveWiderSetModApi();
-                    if (widerSetModApi != null)
-                    {
-                        lobby.Mods.Add(new Domain.Models.WebSocket.CustomMod
-                        {
-                            Name = WiderSetModApiData.Name,
-                            Data = new Dictionary<string, string>
-                            {
-                                { "IsWide", widerSetModApi.IsWide.ToString() }
-                            }
-                        });
-                    }
-
-                    __instance.AddLoader("CREATING LOBBY...");
-                    Sounds.ui_click.Play();
-
-                    inputService.DisableAllControllers();
-
-                    Action onSucess = () =>
-                    {
-                        inputService.EnableAllControllers();
-                        inputService.DisableAllControllerExceptLocal();
-                        __instance.RemoveLoader();
-                        Sounds.ui_click.Play();
-                        __instance.State = MainMenu.MenuState.Rollcall;
-                        __instance.BackState = Domain.Models.MenuState.NetplaySelect.ToTFModel();
-                        netplayManager.SetRoomAndServerMode($"{roomUrl}?peer={matchmakingService.GetRoomPeerId()}", true);
-
-                        StateApi.Current.SetSeed(matchmakingService.GetOwnLobby().GameData.Seed);
-
-                        //Apply length
-                        MainMenu.VersusMatchSettings.MatchLength = (MatchSettings.MatchLengths)lobby.GameData.MatchLength;
-
-                        //if (MainMenu.VersusMatchSettings.Variants.ContainsCustomVariant(lobby.GameData.Variants))
-                        //{
-                        //    Sounds.ui_clickSpecial.Play(160, 4);
-                        //    Notification.Create(__instance, $"Be CAREFUL! Custom variants might not work properly", 15, 500);
-                        //}
-                    };
-
-                    Action onFail = () =>
-                    {
-                        Notification.Create(__instance, $"Failed to create lobby", 10, 120);
-                        inputService.EnableAllControllers();
-                        __instance.RemoveLoader();
-                        TowerFall.Sounds.ui_invalid.Play();
-                        __instance.State = Domain.Context.LobbyBuilderContext.IsPrivate
-                            ? Domain.Models.MenuState.PrivateSelect.ToTFModel()
-                            : Domain.Models.MenuState.LobbyBrowser.ToTFModel();
-                    };
-
-                    matchmakingService.CreateLobby(onSucess, onFail);
-                }
-            }
-        }
-
         private static void OnRetrieveSuccess()
         {
             var inputService = ServiceCollections.ResolveInputService();
@@ -1194,9 +1227,9 @@ namespace TF.EX.Patchs.Scene
                            .Select(v => (v as VariantToggle).Variant.Title)
                        .ToList();
 
-                        bool doesHaveAllVariant = newLobby.GameData.Variants.All(str => variantsToggle.Contains(str));
+                        newLobby.MissingVariants = newLobby.GameData.Variants.Where(str => !variantsToggle.Contains(str)).ToList();
 
-                        if (!doesHaveAllVariant)
+                        if (newLobby.MissingVariants.Count > 0)
                         {
                             logger.LogError<MainMenuPatch>("Can't join lobby because of custom variants");
                             newLobby.CanNotJoinReason = "MISSING CUSTOM VARIANTS";
@@ -1216,6 +1249,8 @@ namespace TF.EX.Patchs.Scene
                         if (!newLobby.CanJoin)
                         {
                             logger.LogError<MainMenuPatch>($"Can't join lobby because of custom mod: {newLobby.CanNotJoinReason}");
+
+                            Notification.Create(self, newLobby.MissingVariants.Count > 0 ? GetMissingVariantsMessage(newLobby.MissingVariants) : $"CAN'T JOIN - {newLobby.CanNotJoinReason}");
 
                             TowerFall.Sounds.ui_invalid.Play();
                             return;
@@ -1286,6 +1321,61 @@ namespace TF.EX.Patchs.Scene
             }
         }
 
+        private static void CatalogLobbyMods(Lobby lobby, ICollection<string> enabledTitles)
+        {
+            lobby.Mods.Clear();
+
+            var catalog = ServiceCollections.ResolveModCollections();
+
+            var owners = MainMenu.VersusMatchSettings.Variants.CustomVariants
+                .Where(custom => custom.Key.Contains('/') && custom.Value != null && enabledTitles.Contains(custom.Value.Title))
+                .Select(custom => custom.Key.Substring(0, custom.Key.IndexOf('/')))
+                .Distinct();
+
+            foreach (var owner in owners)
+            {
+                lobby.Mods.Add(new Domain.Models.WebSocket.CustomMod
+                {
+                    Name = owner,
+                    Data = new Dictionary<string, string>
+                    {
+                        { Domain.Models.WebSocket.CustomMod.VersionKey, catalog?.GetVersion(owner) ?? "" }
+                    }
+                });
+            }
+        }
+
+        private static void NotifyOnVersionMismatch(MainMenu self, Lobby lobby)
+        {
+            var catalog = ServiceCollections.ResolveModCollections();
+
+            var mismatches = lobby.Mods
+                .Where(mod => mod.Data != null
+                    && mod.Data.TryGetValue(Domain.Models.WebSocket.CustomMod.VersionKey, out var host)
+                    && !string.IsNullOrEmpty(host)
+                    && catalog?.GetVersion(mod.Name) is string installed
+                    && installed != host)
+                .Select(mod => $"{ShortModName(mod.Name)} {catalog.GetVersion(mod.Name)} (HOST {mod.Data[Domain.Models.WebSocket.CustomMod.VersionKey]})")
+                .ToList();
+
+            if (mismatches.Count == 0)
+            {
+                return;
+            }
+
+            var extra = mismatches.Count > 1 ? $" +{mismatches.Count - 1} MORE" : "";
+
+            Sounds.ui_clickSpecial.Play();
+            Notification.Create(self, $"{mismatches[0]}{extra} - MAY NOT WORK".ToUpperInvariant());
+        }
+
+        private static string ShortModName(string name)
+        {
+            var separator = name.LastIndexOf('.');
+
+            return separator > 0 && separator < name.Length - 1 ? name.Substring(separator + 1) : name;
+        }
+
         private static void OnJoinSuccess(MainMenu self, Lobby newLobby, bool isPlayer)
         {
             var inputService = ServiceCollections.ResolveInputService();
@@ -1326,6 +1416,8 @@ namespace TF.EX.Patchs.Scene
             }
 
             self.State = MainMenu.MenuState.Rollcall;
+
+            NotifyOnVersionMismatch(self, newLobby);
 
             //if (MainMenu.VersusMatchSettings.Variants.ContainsCustomVariant(newLobby.GameData.Variants))
             //{

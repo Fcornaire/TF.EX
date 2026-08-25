@@ -528,9 +528,11 @@ namespace TF.EX.Core
                 TFGame.Players[i] = playerCount > 0 ? i < playerCount : TFGame.PlayerInputs[i] != null;
             }
 
-            MatchSettings matchSettings = MatchSettings.GetDefaultVersus();
+            MatchSettings matchSettings = MainMenu.VersusMatchSettings ?? MatchSettings.GetDefaultVersus();
             matchSettings.LevelSystem = GameData.VersusTowers[map].GetLevelSystem();
             matchSettings.Mode = mode;
+
+            MainMenu.CurrentMatchSettings = matchSettings;
 
             if (matchSettings.TeamMode)
             {
@@ -540,13 +542,9 @@ namespace TF.EX.Core
                 }
             }
 
-            if (variants != null && variants.Count > 0)
-            {
-                WarnOnUnknownVariants(matchSettings.Variants, variants);
-
-                matchSettings.Variants.ApplyVariants(variants);
-                MainMenu.VersusMatchSettings?.Variants.ApplyVariants(variants);
-            }
+            variants ??= [];
+            WarnOnUnknownVariants(matchSettings.Variants, variants);
+            matchSettings.Variants.ApplyVariants(variants);
 
             TF.EX.Domain.Interop.StateApi.Current.GenerateVersusLevels(matchSettings, map, startLevel);
             TF.EX.Domain.Interop.StateApi.Current.SetVersusLevels(matchSettings, levelPaths);

@@ -1,3 +1,4 @@
+using HarmonyLib;
 using TF.State.Domain;
 using TF.State.Domain.Context;
 
@@ -59,6 +60,8 @@ namespace TF.State.Patchs.Calc
             Apply();
         }
 
+        public static bool IsGameplayRngActive => _overriding;
+
         public static void Reset()
         {
             _gameplayDepth = 0;
@@ -70,6 +73,23 @@ namespace TF.State.Patchs.Calc
                 _cosmeticBackup = null;
                 _overriding = false;
             }
+        }
+    }
+
+    [HarmonyPatch(typeof(Monocle.Calc))]
+    internal class CalcPushRandomPatch
+    {
+        [HarmonyPrefix]
+        [HarmonyPatch("PushRandom", [])]
+        public static bool Calc_PushRandom()
+        {
+            if (!CalcPatch.IsGameplayRngActive)
+            {
+                return true;
+            }
+
+            Monocle.Calc.PushRandom(Monocle.Calc.Random.Next());
+            return false;
         }
     }
 }

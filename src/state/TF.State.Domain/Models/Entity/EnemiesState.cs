@@ -20,5 +20,14 @@ namespace TF.State.Domain.Models.Entity
 
         [Key(4)]
         public DarkPortalsSequence DarkPortalsSequence { get; set; }
+
+        [Key(5)]
+        public ICollection<ChaliceGhost> ChaliceGhosts { get; set; } = new List<ChaliceGhost>();
+
+        [Key(6)]
+        public ICollection<TechnoMage> TechnoMages { get; set; } = new List<TechnoMage>();
+
+        [Key(7)]
+        public ICollection<TechnoMissile> TechnoMissiles { get; set; } = new List<TechnoMissile>();
     }
 }

@@ -218,6 +218,8 @@ namespace TF.State.Core.Api
             StateFlags.FramesToReSimulate = framesToReSimulate;
         }
 
+        public void SetSfxCapture(bool active) => StateFlags.IsSfxCaptureActive = active;
+
         public void SetRestoring(bool value) => StateFlags.IsRestoring = value;
 
         public void SetCurrentFrame(int frame) => StateFlags.CurrentFrame = frame;
@@ -254,10 +256,10 @@ namespace TF.State.Core.Api
 
         public void UnregisterStateEvents(string modName, string key) => ServiceCollections.ResolveAPIManager().UnregisterStateEvents(modName, key);
 
-        public void MarkModuleAsSafe(string modName) => ServiceCollections.ResolveAPIManager().MarkModuleAsSafe(modName);
 
-        public bool HasStateEvents(string modName) => ServiceCollections.ResolveAPIManager().HasStateEvents(modName);
+        public bool HasStateEvents(string id) => ServiceCollections.ResolveAPIManager().HasStateEvents(id);
 
-        public bool IsModuleSafe(string modName) => ServiceCollections.ResolveAPIManager().IsModuleSafe(modName);
+        public bool IsTestMode() => StateFlags.IsTestMode;
+
     }
 }

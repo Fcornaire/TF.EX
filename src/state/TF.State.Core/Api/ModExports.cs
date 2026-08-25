@@ -1,6 +1,7 @@
 using FortRise;
 using MonoMod.ModInterop;
 using TF.State.Domain;
+using TF.State.Domain.Context;
 
 namespace TF.State.Core.Api
 {
@@ -31,16 +32,31 @@ namespace TF.State.Core.Api
         }
 
         /// <summary>
-        /// Mark a module as netplay safe.
+        /// True while the rollback system is replaying frames it has already run once.
         ///
-        /// <para>This is only to prevent EX showing a warning when a mod is loaded, and to let the mod's
-        /// pickups through the treasure spawner.</para>
-        ///
-        /// <para> It does not mean the mod is compatible and test should be done first. </para>
+        /// <para>Untracked cosmetics must not advance during a replay: their Update would run several times
+        /// per frame and they would animate utra fast, so there is a guard to prevent it</para>
         /// </summary>
-        public static void MarkModuleAsSafe(Mod module)
+        public static bool ShouldFreezeCosmetics()
         {
-            ServiceCollections.ResolveAPIManager().MarkModuleAsSafe(module.Meta.Name);
+            return StateFlags.IsRollbackFrame || StateFlags.HasFramesToReSimulate;
         }
+
+        /// <summary>
+        /// Make <c>Monocle.Calc.Random</c> the tracked gameplay RNG until <see cref="UnregisterRng"/>
+        /// </summary>
+        public static void RegisterRng()
+        {
+            TF.State.Patchs.Calc.CalcPatch.RegisterRng();
+        }
+
+        /// <summary>
+        /// End the bracket opened by <see cref="RegisterRng"/>.
+        /// </summary>
+        public static void UnregisterRng()
+        {
+            TF.State.Patchs.Calc.CalcPatch.UnregisterRng();
+        }
+
     }
 }

@@ -194,12 +194,6 @@ namespace TF.Replay.Domain.Api
 
             PlaybackControls.Reset();
 
-            if (PlaybackStopped != null)
-            {
-                PlaybackStopped();
-                return;
-            }
-
             if (StateApi()?.GetFrameDriver() == "TF.Replay")
             {
                 StateApi().SetFrameDriver(null);
@@ -211,6 +205,12 @@ namespace TF.Replay.Domain.Api
                     TowerFall.TFGame.Instance.IsFixedTimeStep = _fixedTimeStepBeforePlayback.Value;
                     _fixedTimeStepBeforePlayback = null;
                 }
+            }
+
+            if (PlaybackStopped != null)
+            {
+                PlaybackStopped();
+                return;
             }
 
             ServiceCollections.SetInputEnabled(true);

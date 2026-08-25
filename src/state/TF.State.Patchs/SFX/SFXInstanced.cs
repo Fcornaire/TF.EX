@@ -19,6 +19,11 @@ namespace TF.State.Patchs.SFX
                 return true;
             }
 
+            if (!StateFlags.IsSfxCaptureActive || Monocle.Engine.Instance?.Scene is not TowerFall.Level)
+            {
+                return true;
+            }
+
             if (StateFlags.IsRestoring)
             {
                 return false; //Ignore SFXs on the first frame of a rollback (Coroutines update might play a sound)

@@ -80,6 +80,8 @@ namespace TF.EX.Domain
 
         public static IWiderSetModApi ResolveWiderSetModApi() => _modCollections?.ResolveWiderSet();
 
+        public static IModCollections ResolveModCollections() => _modCollections;
+
         public static ILogger ResolveLogger() { return ServiceProvider.GetRequiredService<ILogger>(); }
 
         public static IModuleContext ResolveContext()

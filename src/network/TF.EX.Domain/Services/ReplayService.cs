@@ -130,10 +130,22 @@ namespace TF.EX.Domain.Services
 
         public async Task<string> LoadAndStart(string replayFilename, string currentSong = "")
         {
-            var failure = ReplayApi.Current.StartPlayback(replayFilename);
+            CustomComponent.Notification.IsDeferedOn = true;
+
+            string failure;
+
+            try
+            {
+                failure = ReplayApi.Current.StartPlayback(replayFilename);
+            }
+            finally
+            {
+                CustomComponent.Notification.IsDeferedOn = false;
+            }
 
             if (failure != null)
             {
+                CustomComponent.Notification.ClearDeferred();
                 Monocle.Music.Play(currentSong);
                 return failure;
             }
@@ -185,9 +197,9 @@ namespace TF.EX.Domain.Services
                 return;
             }
 
-            if (!matchSettings.ApplyNetplayMode())
+            if (!matchSettings.ApplyNetplayMode(applyVariantRules: false))
             {
-                _logger.LogWarning("[Replay] Netplay game mode is not registered - playback would run vanilla round logic and diverge");
+                _logger.LogWarning("[Replay] Netplay game mode is not registered");
             }
         }
 
@@ -420,7 +432,7 @@ namespace TF.EX.Domain.Services
             if (level != null
                 && level.Session?.MatchSettings?.Mode != TowerFall.Modes.Trials
                 && level.Get<VersusStart>() == null
-                && !(recordedState != null 
+                && !(recordedState != null
                 && StateApi.Current.IsRoundStarted(recordedState)))
             {
                 level.Add(new VersusStart(level.Session));
