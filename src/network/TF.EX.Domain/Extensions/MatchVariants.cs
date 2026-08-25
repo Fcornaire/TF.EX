@@ -43,7 +43,15 @@ namespace TF.EX.Domain.Extensions
         {
             if (variant.PerPlayer)
             {
-                var values = MonoMod.Utils.DynamicData.For(variant).Get<bool[]>("playerValues");
+                var dynVariant = MonoMod.Utils.DynamicData.For(variant);
+                var values = dynVariant.Get<bool[]>("playerValues");
+
+                if (values == null)
+                {
+                    values = new bool[4];
+                    dynVariant.Set("playerValues", values);
+                }
+
                 for (int i = 0; i < values.Length; i++)
                 {
                     values[i] = true;

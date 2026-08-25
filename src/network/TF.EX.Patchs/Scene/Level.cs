@@ -109,6 +109,8 @@ namespace TF.EX.Patchs.Scene
                 return;
             }
 
+            Domain.CustomComponent.Notification.FlushDeferred(__instance);
+
             var netplayManager = ServiceCollections.ResolveNetplayManager();
 
             ClearWaitingNotificationOnceSynchronized(__instance, netplayManager);

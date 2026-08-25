@@ -6,6 +6,7 @@ namespace TF.Replay.Domain.Interop
         string GetStateSchemaVersion();
 
         bool IsStateAvailable();
+        bool IsTestMode();
         byte[] GetGameStateBytes();
         byte[] GetGameStateBytesForRecording();
         bool LoadGameStateBytes(byte[] state);

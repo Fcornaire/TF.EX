@@ -30,6 +30,7 @@ namespace TF.EX.Domain.Context
             }
 
             StateApi.Current.SetDriverFlags(CurrentFrame, IsCaptureActive, IsTestMode, IsReplayMode, IsRollbackFrame, FramesToReSimulate);
+            StateApi.Current.SetSfxCapture(IsCaptureActive && !IsReplayMode);
         }
 
         public static void Reset()

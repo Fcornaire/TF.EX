@@ -135,7 +135,7 @@ namespace TF.State.Domain.Services
                 .ToList()
                 .ForEach(sfx =>
                 {
-                    if (!IsSfxSynchedToCurrent(sfx) && sfx.Frame <= currentFrame && sfx.Frame >= _stateContext.GetLastRollbackFrame() && sfx.Data != null)
+                    if (!IsSfxSynchedToCurrent(sfx) && sfx.Frame >= _stateContext.GetLastRollbackFrame() && sfx.Frame <= currentFrame && sfx.Data != null)
                     {
                         var toPlay = sfx.ToSoundEffectInstance();
 

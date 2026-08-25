@@ -6,6 +6,7 @@ namespace TF.EX.Domain.Interop
         string GetStateSchemaVersion();
 
         bool IsStateAvailable();
+        bool HasStateEvents(string id);
         byte[] GetGameStateBytes();
         byte[] GetGameStateBytesForRecording();
         bool LoadGameStateBytes(byte[] state);
@@ -26,8 +27,8 @@ namespace TF.EX.Domain.Interop
 
         bool IsSmoothRendering();
 
-        void SetDriverFlags(int currentFrame, bool isCaptureActive, bool isTestMode,
-                            bool isReplayMode, bool isRollbackFrame, double framesToReSimulate);
+        void SetDriverFlags(int currentFrame, bool isCaptureActive, bool isTestMode,bool isReplayMode, bool isRollbackFrame, double framesToReSimulate);
+        void SetSfxCapture(bool active);
         void SetRestoring(bool value);
         void SetCurrentFrame(int frame);
         int GetCurrentFrame();

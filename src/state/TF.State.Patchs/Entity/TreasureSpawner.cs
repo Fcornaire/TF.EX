@@ -69,7 +69,7 @@ namespace TF.State.Patchs.Entity
 
             var separator = entry.Name.IndexOf('/');
 
-            return separator > 0 && ServiceCollections.ResolveAPIManager().IsModuleSafe(entry.Name.Substring(0, separator));
+            return separator > 0 && ServiceCollections.ResolveAPIManager().HasStateEvents(entry.Name.Substring(0, separator));
         }
 
         [HarmonyPrefix]

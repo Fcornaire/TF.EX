@@ -2,13 +2,17 @@ namespace TF.EX.Domain.Extensions
 {
     public static class VersusModeExtensions
     {
-        public const int NetplayModeValue = 11;
+        public const int NetplayModeValue = 11; //fallback ,this is only true if no other mode registered
 
-        public static TowerFall.Modes NetplayMode => (TowerFall.Modes)NetplayModeValue;
+        private static TowerFall.Modes? registeredNetplayMode;
+
+        public static TowerFall.Modes NetplayMode => registeredNetplayMode ?? (TowerFall.Modes)NetplayModeValue;
+
+        public static void SetNetplayMode(TowerFall.Modes mode) => registeredNetplayMode = mode;
 
         public static bool IsNetplay(this TowerFall.Modes mode) => mode == NetplayMode;
 
-        public static bool ApplyNetplayMode(this TowerFall.MatchSettings settings)
+        public static bool ApplyNetplayMode(this TowerFall.MatchSettings settings, bool applyVariantRules = true)
         {
             if (settings == null || !FortRise.GameModeRegistry.ModesToVersusGameMode.TryGetValue(NetplayMode, out var entry))
             {
@@ -20,7 +24,10 @@ namespace TF.EX.Domain.Extensions
 
             MonoMod.Utils.DynamicData.For(settings).Set("CustomVersusModeName", entry.Name);
 
-            settings.Variants.ApplyNetplayVariantRules();
+            if (applyVariantRules)
+            {
+                settings.Variants.ApplyNetplayVariantRules();
+            }
 
             return true;
         }

@@ -444,11 +444,21 @@ namespace TF.Replay.Domain
             return teams;
         }
 
+        /// <summary>
+        /// Variants a replay cannot reproduce, by their FortRise name
+        ///
+        /// <para>ChaoticRoll rewrites MatchSettings.Variants each round, break checksums</para>
+        /// </summary>
+        private static readonly string[] BannedVariants =
+        [
+            "Teuria.AdditionalVariants/ChaoticRoll",
+        ];
+
         private static void RecordMods(Ports.ITfReplayApi api, MatchSettings settings)
         {
-            var catalog = ServiceCollections.ResolveModCollections();
+            var modCollections = ServiceCollections.ResolveModCollections();
 
-            if (catalog == null)
+            if (modCollections == null)
             {
                 return;
             }
@@ -456,15 +466,35 @@ namespace TF.Replay.Domain
             var state = ServiceCollections.ResolveStateApi();
             var mods = new Dictionary<string, Dictionary<string, string>>();
 
-            foreach (var owner in CustomVariantOwners(settings))
+            foreach (var owner in ActiveCustomVariantsByOwner(settings))
             {
-                mods[owner] = new Dictionary<string, string>
+                var unstated = owner
+                    .Where(pair => !(state?.HasStateEvents(pair.Key) ?? false))
+                    .Select(pair => pair.Value.Title)
+                    .ToArray();
+
+                mods[owner.Key] = new Dictionary<string, string>
                 {
-                    [Interop.ModData.StateEventsKey] = (state?.HasStateEvents(owner) ?? false).ToString(),
+                    [Interop.ModData.StateEventsKey] = (unstated.Length == 0).ToString(),
                 };
+
+                if (unstated.Length > 0)
+                {
+                    mods[owner.Key][Interop.ModData.UnstatedVariantsKey] = string.Join(", ", unstated);
+                }
+
+                var banned = owner
+                    .Where(pair => BannedVariants.Contains(pair.Key, StringComparer.Ordinal))
+                    .Select(pair => pair.Value.Title)
+                    .ToArray();
+
+                if (banned.Length > 0)
+                {
+                    mods[owner.Key][Interop.ModData.BannedVariantsKey] = string.Join(", ", banned);
+                }
             }
 
-            var widerSet = catalog.ResolveWiderSet();
+            var widerSet = modCollections.ResolveWiderSet();
 
             if (widerSet != null && widerSet.IsWide)
             {
@@ -476,13 +506,13 @@ namespace TF.Replay.Domain
 
             foreach (var mod in mods)
             {
-                mod.Value[Interop.ModData.VersionKey] = catalog.GetVersion(mod.Key) ?? "";
+                mod.Value[Interop.ModData.VersionKey] = modCollections.GetVersion(mod.Key) ?? "";
 
                 api.AddRecordingMod(mod.Key, mod.Value.Keys.ToArray(), mod.Value.Values.ToArray());
             }
         }
 
-        private static IEnumerable<string> CustomVariantOwners(MatchSettings settings)
+        private static IEnumerable<IGrouping<string, KeyValuePair<string, Variant>>> ActiveCustomVariantsByOwner(MatchSettings settings)
         {
             var variants = settings?.Variants?.CustomVariants;
 
@@ -493,8 +523,7 @@ namespace TF.Replay.Domain
 
             return variants
                 .Where(pair => pair.Value != null && pair.Value.Value && pair.Key.Contains('/'))
-                .Select(pair => pair.Key.Split('/')[0])
-                .Distinct();
+                .GroupBy(pair => pair.Key.Split('/')[0]);
         }
 
         private static string[] ActiveVariants(MatchSettings settings)

@@ -110,7 +110,8 @@ namespace TF.EX.Domain.CustomComponent
             UpdateTitle(lobby.GameData.MapId);
 
             var (canJoin, reason) = (lobby.CanJoin, lobby.CanNotJoinReason);
-            if (!canJoin)
+
+            if (!canJoin && lobby.MissingVariants.Count == 0)
             {
                 cantJoinReason = new OutlineText(TFGame.Font, reason)
                 {
@@ -234,12 +235,7 @@ namespace TF.EX.Domain.CustomComponent
             {
                 var variant = MainMenu.VersusMatchSettings.Variants.Variants.FirstOrDefault(v => v.Title == var);
 
-                var sub = TFGame.MenuAtlas["controls/none"];
-
-                if (variant != null)
-                {
-                    sub = variant.Icon;
-                }
+                var sub = variant != null ? variant.Icon : TFGame.MenuAtlas["controls/keyboard/undefined"];
 
                 var img = new Image(sub);
                 img.CenterOrigin();

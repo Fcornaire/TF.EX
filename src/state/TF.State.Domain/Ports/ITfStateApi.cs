@@ -28,6 +28,7 @@ namespace TF.State.Domain.Ports
         bool IsSmoothRendering();
 
         void SetDriverFlags(int currentFrame, bool isCaptureActive, bool isTestMode,bool isReplayMode, bool isRollbackFrame, double framesToReSimulate);
+        void SetSfxCapture(bool active);
 
         void SetRestoring(bool value);
         void SetCurrentFrame(int frame);
@@ -74,9 +75,8 @@ namespace TF.State.Domain.Ports
 
         void RegisterStateEvents(string modName, string key, Func<byte[]> onSaveState, Action<byte[]> onLoadState);
         void UnregisterStateEvents(string modName, string key);
-        void MarkModuleAsSafe(string modName);
-        bool IsModuleSafe(string modName);
-        bool HasStateEvents(string modName);
+        bool HasStateEvents(string id);
+        bool IsTestMode();
     }
 
     public static class TfStateApiData
