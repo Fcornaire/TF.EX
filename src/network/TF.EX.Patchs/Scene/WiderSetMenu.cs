@@ -1,6 +1,5 @@
 using FortRise;
 using HarmonyLib;
-using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Extensions;
 using TowerFall;
 
@@ -19,6 +18,8 @@ namespace TF.EX.Patchs.Scene
 
         private static bool resolved;
         private static MainMenu.MenuState? selectionState;
+
+        public static bool IsNetplayRequested;
 
         public static MainMenu.MenuState? SelectionState
         {
@@ -57,7 +58,7 @@ namespace TF.EX.Patchs.Scene
 
         public static void SelectionButton_MenuAction(TowerFall.MenuItem __instance)
         {
-            if (!OnlinePlayToggle.IsOn)
+            if (!IsNetplayRequested)
             {
                 MainMenu.VersusMatchSettings.ClearNetplayMode();
                 return;

@@ -13,12 +13,8 @@ namespace TF.EX.Patchs.Entity.MenuItem
         [HarmonyPatch("MenuAction")]
         public static void FightButton_MenuAction(FightButton __instance)
         {
-            if (WiderSetMenu.SelectionState.HasValue)
-            {
-                return;
-            }
-
-            __instance.MainMenu.State = TF.EX.Domain.Models.MenuState.VersusSelect.ToTFModel();
+            WiderSetMenu.IsNetplayRequested = false;
+            MainMenu.VersusMatchSettings.ClearNetplayMode();
         }
     }
 }
