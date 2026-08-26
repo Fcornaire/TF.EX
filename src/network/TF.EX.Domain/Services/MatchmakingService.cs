@@ -9,6 +9,7 @@ using TF.EX.Common.Extensions;
 using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Externals;
+using TF.EX.Domain.Models;
 using TF.EX.Domain.Models.WebSocket;
 using TF.EX.Domain.Models.WebSocket.Client;
 using TF.EX.Domain.Models.WebSocket.Server;
@@ -206,7 +207,7 @@ namespace TF.EX.Domain.Services
                 JoinLobby = new JoinLobby
                 {
                     RoomId = roomId,
-                    Name = _netplayManager.GetNetplayMeta().Name,
+                    Name = NetplayPreferences.Name,
                     IsPlayer = currentAction == WSAction.JoinLobby
                 }
             };
@@ -223,7 +224,7 @@ namespace TF.EX.Domain.Services
                 JoinPrivate = new JoinPrivate
                 {
                     Code = pendingJoinCode,
-                    Name = _netplayManager.GetNetplayMeta().Name,
+                    Name = NetplayPreferences.Name,
                     IsPlayer = true
                 }
             };
@@ -239,7 +240,7 @@ namespace TF.EX.Domain.Services
             {
                 EnterQuickPlay = new EnterQuickPlay
                 {
-                    Name = _netplayManager.GetNetplayMeta().Name,
+                    Name = NetplayPreferences.Name,
                     IsWide = ServiceCollections.ResolveWiderSetModApi()?.IsWide == true
                 }
             };

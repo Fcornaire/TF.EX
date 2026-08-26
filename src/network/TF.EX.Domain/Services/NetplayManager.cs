@@ -106,7 +106,6 @@ namespace TF.EX.Domain.Services
         private CancellationToken _cancellationToken;
 
         public GGRSConfig GGRSConfig { get; internal set; }
-        public NetplayMeta NetplayMeta { get; internal set; }
 
         public NetplayManager(
             IInputService inputService,
@@ -127,7 +126,10 @@ namespace TF.EX.Domain.Services
 
             _netplayMode = NetplayMode.Uninitialized;
 
-            LoadConfig();
+            GGRSConfig = new GGRSConfig
+            {
+                Netplay = new NetplayConfig(),
+            };
 
             _inputService = inputService;
             _logger = logger;
@@ -147,8 +149,8 @@ namespace TF.EX.Domain.Services
 
             StateApi.Current.SetFrameDriver(Models.Constants.DRIVER_NAME);
 
-            GGRSConfig.Name = NetplayMeta.Name;
-            GGRSConfig.InputDelay = NetplayMeta.InputDelay;
+            GGRSConfig.Name = NetplayPreferences.Name;
+            GGRSConfig.InputDelay = NetplayPreferences.InputDelay;
 
             _cancellationTokenSource = new CancellationTokenSource();
             _cancellationToken = _cancellationTokenSource.Token;
@@ -780,76 +782,6 @@ namespace TF.EX.Domain.Services
             }
         }
 
-        public NetplayMeta GetNetplayMeta()
-        {
-            return NetplayMeta;
-        }
-
-        public void UpdateMeta(NetplayMeta config)
-        {
-            NetplayMeta = config;
-        }
-
-        public void SaveConfig()
-        {
-            var bytes = MessagePackSerializer.Serialize(NetplayMeta, SerializationOptions.GetContractlessOptions());
-
-            var jsonToSave = MessagePackSerializer.ConvertToJson(bytes, SerializationOptions.GetContractlessOptions());
-            File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), "netplay_meta.json"), jsonToSave);
-        }
-
-        private void LoadConfig()
-        {
-            try
-            {
-                string filePath = "netplay_conf.json";
-                if (File.Exists(filePath))
-                {
-                    File.Delete(filePath);
-                }
-
-                GGRSConfig = new GGRSConfig
-                {
-                    Netplay = new NetplayConfig(),
-                };
-
-                var json = File.ReadAllText("netplay_meta.json");
-
-                var bytes = MessagePackSerializer.ConvertFromJson(json, SerializationOptions.GetContractlessOptions());
-                NetplayMeta = MessagePackSerializer.Deserialize<NetplayMeta>(bytes, SerializationOptions.GetContractlessOptions());
-                if (NetplayMeta.InputDelay == 0)
-                {
-                    NetplayMeta.InputDelay = 2;
-                    SaveConfig();
-                }
-
-                if (string.IsNullOrEmpty(NetplayMeta.Name))
-                {
-                    NetplayMeta.Name = "PLAYER";
-                    SaveConfig();
-                }
-
-                if (NetplayMeta.Name.Length > 10)
-                {
-                    NetplayMeta.Name = NetplayMeta.Name.Substring(0, Math.Min(NetplayMeta.Name.Length, 10));
-                    SaveConfig();
-                }
-
-                NetplayMeta.Name = NetplayMeta.Name.ToUpper();
-            }
-            catch (FileNotFoundException)
-            {
-                NetplayMeta = new NetplayMeta
-                {
-                    InputDelay = 2,
-                    Name = "PLAYER",
-                };
-
-                SaveConfig();
-            }
-
-        }
-
         public string GetPlayer2Name()
         {
             return _player2Name;
@@ -877,7 +809,7 @@ namespace TF.EX.Domain.Services
         {
             if (seat == _gameContext.GetLocalPlayerIndex())
             {
-                return NetplayMeta.Name;
+                return NetplayPreferences.Name;
             }
 
             var player = _gameContext.GetPlayers().FirstOrDefault(entry => entry.Item1 == seat).Item2;
@@ -955,7 +887,7 @@ namespace TF.EX.Domain.Services
                 {
                     Seat = seat,
                     NetplayName = seat == localSeat
-                        ? NetplayMeta.Name
+                        ? NetplayPreferences.Name
                         : players.TryGetValue(seat, out var player) ? player.Name : _player2Name,
                     Index = int.Parse(splitted[0]),
                     HasWon = seat < level.Session.MatchStats.Length && level.Session.MatchStats[seat].Won,

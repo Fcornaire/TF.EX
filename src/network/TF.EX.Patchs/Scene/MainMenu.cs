@@ -359,12 +359,12 @@ namespace TF.EX.Patchs.Scene
                     var lobby = matchmakingService.GetOwnLobby();
                     lobby.GameData.Variants = variantsToggle.ToArray();
                     CatalogLobbyMods(lobby, variantsToggle);
-                    lobby.Name = netplayManager.GetNetplayMeta().Name;
+                    lobby.Name = NetplayPreferences.Name;
                     lobby.RoomId = roomId;
                     lobby.Kind = (Domain.Context.LobbyBuilderContext.IsPrivate ? LobbyKind.Private : LobbyKind.Standard).ToString();
                     lobby.Players.Add(new Domain.Models.WebSocket.Player
                     {
-                        Name = netplayManager.GetNetplayMeta().Name,
+                        Name = NetplayPreferences.Name,
                         Addr = string.Empty,
                         IsHost = true
                     });

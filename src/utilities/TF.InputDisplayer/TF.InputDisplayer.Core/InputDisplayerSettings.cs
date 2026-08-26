@@ -24,25 +24,25 @@ namespace TF.InputDisplayer.Core
             {
                 Enabled = value;
                 Apply();
-            });
+            }, "Show each player's input history in the side bars");
 
             settings.CreateOnOff("SHOW IN INSTANT REPLAY", ShowInInstantReplay, value =>
             {
                 ShowInInstantReplay = value;
                 Apply();
-            });
+            }, "Keep the input display visible during instant replays");
 
             settings.CreateNumber("HISTORY ROWS", MaxHistoryRows, value =>
             {
                 MaxHistoryRows = value;
                 Apply();
-            }, MinRows, MaxRows, 1);
+            }, "How many inputs are kept on screen for each player", MinRows, MaxRows, 1);
 
             settings.CreateNumber("OPACITY", Opacity, value =>
             {
                 Opacity = value;
                 Apply();
-            }, MinOpacity, MaxOpacity, 1);
+            }, "Opacity of the input display, from subtle to fully solid", MinOpacity, MaxOpacity, 1);
         }
 
         public override void OnVerify() => Apply();

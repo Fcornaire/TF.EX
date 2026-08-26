@@ -19,25 +19,25 @@ namespace TF.Replay.Core
             {
                 RecordLastManStanding = value;
                 Apply();
-            });
+            }, "Automatically record Last Man Standing matches as replays");
 
             settings.CreateOnOff("RECORD HEADHUNTERS", RecordHeadHunters, value =>
             {
                 RecordHeadHunters = value;
                 Apply();
-            });
+            }, "Automatically record Headhunters matches as replays");
 
             settings.CreateOnOff("RECORD TEAM DEATHMATCH", RecordTeamDeathmatch, value =>
             {
                 RecordTeamDeathmatch = value;
                 Apply();
-            });
+            }, "Automatically record Team Deathmatch matches as replays");
 
             settings.CreateOnOff("RECORD TRIALS", RecordTrials, value =>
             {
                 RecordTrials = value;
                 Apply();
-            });
+            }, "Automatically record Trials runs as replays");
         }
 
         public override void OnVerify() => Apply();

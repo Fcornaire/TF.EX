@@ -13,7 +13,7 @@ namespace TF.State.Core
             {
                 SmoothRendering = value;
                 Apply();
-            });
+            }, "Render at your display's refresh rate");
         }
 
         public override void OnVerify() => Apply();

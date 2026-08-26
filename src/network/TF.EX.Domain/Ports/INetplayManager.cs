@@ -61,9 +61,6 @@ namespace TF.EX.Domain.Ports
         bool IsFramesAhead();
 
         void Reset();
-        NetplayMeta GetNetplayMeta();
-        void UpdateMeta(NetplayMeta config);
-        void SaveConfig();
 
         string GetPlayer2Name();
 
