@@ -12,6 +12,9 @@ namespace TF.EX
     {
         public int InputDelay { get; set; } = 2;
         public string Name { get; set; } = "PLAYER";
+        public string AutoAdjustInputDelay { get; set; } = "PROPOSE";
+
+        private static readonly string[] AutoAdjustModes = { "DISABLED", "PROPOSE", "ENABLED" };
 
         public override void Create(ISettingsCreate settings)
         {
@@ -26,6 +29,17 @@ namespace TF.EX
                 "Frames of local input delay. Raise it to smooth out a laggy connection. \n Do note that less input delay play better but rollback more. \n More input delay mean less rollback but play cluncky. \n Find the sweetspot in between",
                 NetplayPreferences.MinInputDelay,
                 NetplayPreferences.MaxInputDelay);
+
+            settings.CreateOptions(
+                "AUTO ADJUST INPUT DELAY",
+                AutoAdjustInputDelay,
+                AutoAdjustModes,
+                selection =>
+                {
+                    AutoAdjustInputDelay = selection.Item1;
+                    Apply();
+                },
+                "Adapt the input delay to the connection when joining a lobby. \n PROPOSE suggests a value you can accept or ignore. \n Hold the button to reset. \n ENABLED applies it automatically. \n (Note: Your saved input delay is never changed)");
 
             settings.CreateInput(
                 "NETPLAY NAME",
@@ -55,8 +69,14 @@ namespace TF.EX
             }
             Name = name.Substring(0, Math.Min(name.Length, NetplayPreferences.MaxNameLength));
 
+            var mode = Enum.TryParse<AutoAdjustInputDelayMode>(AutoAdjustInputDelay, true, out var parsed)
+                ? parsed
+                : AutoAdjustInputDelayMode.Propose;
+            AutoAdjustInputDelay = mode.ToString().ToUpperInvariant();
+
             NetplayPreferences.InputDelay = InputDelay;
             NetplayPreferences.Name = Name;
+            NetplayPreferences.AutoAdjustInputDelay = mode;
         }
 
         private void MigrateLegacyConfig()

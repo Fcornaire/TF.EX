@@ -61,6 +61,8 @@ namespace TF.EX.Domain.Ports
         bool IsFramesAhead();
 
         void Reset();
+        void SetSessionInputDelay(int inputDelay);
+        void ClearSessionInputDelay();
 
         string GetPlayer2Name();
 
