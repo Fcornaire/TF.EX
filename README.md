@@ -106,7 +106,8 @@ It fairly easy to install this mod:
 5. You are now ready and the mod should be referenced and loaded by FortRise when the game starts
 
 You have the option to change your username in the in-game options.
-You can also change the input delay, but leaving it at 2 is usually fine.
+You can also change the input delay, start at 2 then adjust based on your taste.
+The `AUTO ADJUST INPUT DELAY` option can adapt it to the connection when joining a lobby: `PROPOSE` shows a suggestion based on the laggiest player's ping that you can accept or ignore, `ENABLED` applies it automatically.
 
 You should also be able to see a new versus mode called Netplay (all the way to the right). This allows you to create and join online lobbies.
 

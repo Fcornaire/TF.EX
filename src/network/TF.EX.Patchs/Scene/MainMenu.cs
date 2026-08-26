@@ -197,6 +197,7 @@ namespace TF.EX.Patchs.Scene
 
                 RenderWaitingForHost(matchmakingService);
                 RenderQuickPlayStarting(matchmakingService);
+                InputDelayAdvisor.Render();
             }
 
             if (__instance.State.ToDomainModel() == Domain.Models.MenuState.QuickPlaySearch)
@@ -264,7 +265,9 @@ namespace TF.EX.Patchs.Scene
                 matchmakingService.ShowPendingSpectatorNoticeIfAny();
             }
 
-            if (__instance.State == MainMenu.MenuState.Rollcall && Alt2Pressed())
+            InputDelayAdvisor.Update(__instance);
+
+            if (__instance.State == MainMenu.MenuState.Rollcall && !InputDelayAdvisor.ConsumedAlt2 && Alt2Pressed())
             {
                 CopyPrivateCodeToClipboard(__instance, matchmakingService);
             }

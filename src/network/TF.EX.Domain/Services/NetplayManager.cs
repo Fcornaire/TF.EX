@@ -102,6 +102,7 @@ namespace TF.EX.Domain.Services
         private IReadOnlyDictionary<int, NetworkStats> _networkStatsPerSeat = new Dictionary<int, NetworkStats>();
         private bool _supportsPerSeatStats = true;
         private string _player2Name = "PLAYER";
+        private int? _sessionInputDelay;
         private CancellationTokenSource _cancellationTokenSource;
         private CancellationToken _cancellationToken;
 
@@ -150,7 +151,7 @@ namespace TF.EX.Domain.Services
             StateApi.Current.SetFrameDriver(Models.Constants.DRIVER_NAME);
 
             GGRSConfig.Name = NetplayPreferences.Name;
-            GGRSConfig.InputDelay = NetplayPreferences.InputDelay;
+            GGRSConfig.InputDelay = _sessionInputDelay ?? NetplayPreferences.InputDelay;
 
             _cancellationTokenSource = new CancellationTokenSource();
             _cancellationToken = _cancellationTokenSource.Token;
@@ -779,6 +780,21 @@ namespace TF.EX.Domain.Services
                 GGRSFFI.IsInInit = false;
                 _cancellationTokenSource = new CancellationTokenSource();
                 _cancellationToken = _cancellationTokenSource.Token;
+            }
+        }
+
+        public void SetSessionInputDelay(int inputDelay)
+        {
+            _sessionInputDelay = inputDelay;
+            _logger.LogDebug<NetplayManager>($"Session input delay set to {inputDelay}");
+        }
+
+        public void ClearSessionInputDelay()
+        {
+            if (_sessionInputDelay != null)
+            {
+                _sessionInputDelay = null;
+                _logger.LogDebug<NetplayManager>("Session input delay cleared");
             }
         }
 
