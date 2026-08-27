@@ -25,6 +25,7 @@
 		<ProjectReference Include="..\..\replay\TF.Replay.Domain\TF.Replay.Domain.csproj" />
 		<ProjectReference Include="..\..\state\TF.State.Core\TF.State.Core.csproj" />
 		<ProjectReference Include="..\..\replay\TF.Replay.Core\TF.Replay.Core.csproj" />
+		<ProjectReference Include="..\..\network\TF.EX.Core\TF.EX.Core.csproj" />
 	</ItemGroup>
 
 	<!--<ItemGroup>

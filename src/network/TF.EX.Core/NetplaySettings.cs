@@ -13,8 +13,10 @@ namespace TF.EX
         public int InputDelay { get; set; } = 2;
         public string Name { get; set; } = "PLAYER";
         public string AutoAdjustInputDelay { get; set; } = "PROPOSE";
+        public string CustomSkins { get; set; } = "FULL";
 
         private static readonly string[] AutoAdjustModes = { "DISABLED", "PROPOSE", "ENABLED" };
+        private static readonly string[] CustomSkinModes = { "DISABLED", "FULL" };
 
         public override void Create(ISettingsCreate settings)
         {
@@ -40,6 +42,17 @@ namespace TF.EX
                     Apply();
                 },
                 "Adapt the input delay to the connection when joining a lobby. \n PROPOSE suggests a value you can accept or ignore. \n Hold the button to reset. \n ENABLED applies it automatically. \n (Note: Your saved input delay is never changed)");
+
+            settings.CreateOptions(
+                "CUSTOM SKINS",
+                CustomSkins,
+                CustomSkinModes,
+                selection =>
+                {
+                    CustomSkins = selection.Item1;
+                    Apply();
+                },
+                "Show opponents' custom archer skins. \n Skins are visual only, streamed in memory and never saved. \n Sounds and music are omitted and re use vanilla");
 
             settings.CreateInput(
                 "NETPLAY NAME",
@@ -74,9 +87,15 @@ namespace TF.EX
                 : AutoAdjustInputDelayMode.Propose;
             AutoAdjustInputDelay = mode.ToString().ToUpperInvariant();
 
+            var skinMode = Enum.TryParse<CustomSkinMode>(CustomSkins, true, out var parsedSkin)
+                ? parsedSkin
+                : CustomSkinMode.Full;
+            CustomSkins = skinMode.ToString().ToUpperInvariant();
+
             NetplayPreferences.InputDelay = InputDelay;
             NetplayPreferences.Name = Name;
             NetplayPreferences.AutoAdjustInputDelay = mode;
+            NetplayPreferences.CustomSkins = skinMode;
         }
 
         private void MigrateLegacyConfig()

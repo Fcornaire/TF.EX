@@ -105,6 +105,12 @@ namespace TF.Replay.Domain.Models
 
         [Key(5)]
         public int? Seat { get; set; }
+
+        [Key(6)]
+        public string CustomArcherId { get; set; } = "";
+
+        [Key(7)]
+        public string SkinArcherId { get; set; } = "";
     }
 
     [MessagePackObject]

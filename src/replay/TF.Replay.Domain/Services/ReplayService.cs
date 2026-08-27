@@ -373,8 +373,6 @@ namespace TF.Replay.Domain.Services
 
                 ApplyTeams(matchSettings, replay.Informations);
 
-                matchSettings.Variants.ApplyVariants(replay.Informations.Variants);
-
                 matchSettings.MatchLength = (MatchLengths)replay.Informations.VersusMatchLength;
 
                 if (replay.Informations.CustomGoal > 0)
@@ -461,13 +459,18 @@ namespace TF.Replay.Domain.Services
 
             var seats = SeatsFor(archers);
 
+            var wantedIndexes = archers.Select(archer => string.IsNullOrEmpty(archer.CustomArcherId)
+                    ? archer.Index
+                    : ArcherDataExtensions.ResolveCustomArcher(archer.CustomArcherId))
+                .ToArray();
+
             var taken = new HashSet<int>();
 
-            foreach (var archer in archers)
+            for (int i = 0; i < archers.Length; i++)
             {
-                if (ArcherDataExtensions.Exists(archer.Index, (int)archer.Type))
+                if (ArcherDataExtensions.Exists(wantedIndexes[i], (int)archers[i].Type))
                 {
-                    taken.Add(archer.Index);
+                    taken.Add(wantedIndexes[i]);
                 }
             }
 
@@ -475,6 +478,9 @@ namespace TF.Replay.Domain.Services
             {
                 TFGame.Players[seat] = false;
             }
+
+            var skinSeats = new List<int>();
+            var skinIds = new List<string>();
 
             for (int i = 0; i < archers.Length; i++)
             {
@@ -485,12 +491,53 @@ namespace TF.Replay.Domain.Services
                     continue;
                 }
 
-                var (archerIndex, altIndex) = ArcherDataExtensions.EnsureArcherDataExist(
-                    archers[i].Index, (int)archers[i].Type, taken);
+                var (archerIndex, altIndex) = ArcherDataExtensions.EnsureArcherDataExist(wantedIndexes[i], (int)archers[i].Type, taken);
 
                 TFGame.Characters[seat] = archerIndex;
                 TFGame.AltSelect[seat] = (ArcherData.ArcherTypes)altIndex;
                 TFGame.Players[seat] = true;
+
+                var skinId = string.IsNullOrEmpty(archers[i].SkinArcherId) ? archers[i].CustomArcherId : archers[i].SkinArcherId;
+
+                if (!string.IsNullOrEmpty(skinId))
+                {
+                    skinSeats.Add(seat);
+                    skinIds.Add(skinId);
+                }
+            }
+
+            SetReplaySkinSeats(skinSeats.ToArray(), skinIds.ToArray());
+        }
+
+        private void SetReplaySkinSeats(int[] seats, string[] skinIds)
+        {
+            try
+            {
+                var api = _modCollections?.Invoke()?.ResolveTfExArcherSkin();
+
+                if (seats.Length > 0)
+                {
+                    api?.SetReplaySkinSeats(seats, skinIds);
+                }
+                else
+                {
+                    api?.ClearReplaySkinSeats();
+                }
+            }
+            catch (Exception e)
+            {
+                _logger?.LogDebug("Could not hand the replay skins to EX: {error}", e.Message);
+            }
+        }
+
+        private void ClearReplaySkinSeats()
+        {
+            try
+            {
+                _modCollections?.Invoke()?.ResolveTfExArcherSkin()?.ClearReplaySkinSeats();
+            }
+            catch (Exception)
+            {
             }
         }
 
@@ -571,6 +618,18 @@ namespace TF.Replay.Domain.Services
                 : TowerFall.MainMenu.VersusMatchSettings;
 
             new Session(settings).StartGame();
+        }
+
+        public void ApplyRecordedVariants()
+        {
+            var informations = _replay?.Informations;
+
+            if (informations == null)
+            {
+                return;
+            }
+
+            TowerFall.MainMenu.CurrentMatchSettings?.Variants.ApplyVariants(informations.Variants);
         }
 
         public void StopPlayback()
@@ -763,6 +822,8 @@ namespace TF.Replay.Domain.Services
 
                 _widerSetBeforePlayback = null;
             }
+
+            ClearReplaySkinSeats();
 
             if (_playersBeforePlayback == null)
             {

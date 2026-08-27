@@ -9,6 +9,8 @@ namespace TF.Replay.Domain.Interop
         IWiderSetModApi ResolveWiderSet();
 
         IInputDisplayerApi ResolveInputDisplayer();
+
+        ITfExArcherSkinApi ResolveTfExArcherSkin();
     }
 
     public interface IWiderSetModApi

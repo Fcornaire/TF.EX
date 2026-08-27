@@ -90,6 +90,32 @@ namespace TF.EX.Domain.Models.WebSocket
         public int Seat { get; set; } = 0;
 
         public int Team { get; set; } = (int)TowerFall.Allegiance.Neutral;
+
+        public string CustomArcherId { get; set; } = "";
+
+        public List<string> ArcherMods { get; set; } = new List<string>();
+
+        [IgnoreMember]
+        public bool HasCustomArcher => !string.IsNullOrEmpty(CustomArcherId);
+
+        public Player WithResolvedArcher(int archerIndex, int archerAltIndex)
+        {
+            return new Player
+            {
+                Name = Name,
+                Addr = Addr,
+                ArcherIndex = archerIndex,
+                ArcherAltIndex = archerAltIndex,
+                Ready = Ready,
+                RoomPeerId = RoomPeerId,
+                IsHost = IsHost,
+                Ping = Ping,
+                Seat = Seat,
+                Team = Team,
+                CustomArcherId = CustomArcherId,
+                ArcherMods = ArcherMods,
+            };
+        }
     }
 
     [MessagePackObject(keyAsPropertyName: true)]

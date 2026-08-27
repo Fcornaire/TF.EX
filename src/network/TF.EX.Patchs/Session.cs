@@ -43,7 +43,7 @@ namespace TF.EX.Patchs
                     var dynMatchResult = DynamicData.For(vsMatchResult);
                     dynMatchResult.Set("roundResults", vsRoundResult);
                     __instance.CurrentLevel.Frozen = true;
-                    ArcherData.Get(TFGame.Characters[__instance.GetWinner()], TFGame.AltSelect[__instance.GetWinner()]).PlayVictoryMusic();
+                    PlayWinnerVictoryMusic(__instance);
                 }
                 return false;
             }
@@ -67,7 +67,7 @@ namespace TF.EX.Patchs
                 logger.LogDebug<Session>("VersusMatchResults found, skipping CreateResults");
                 versusMatchResults.TweenIn();
 
-                ArcherData.Get(TFGame.Characters[__instance.GetWinner()], TFGame.AltSelect[__instance.GetWinner()]).PlayVictoryMusic();
+                PlayWinnerVictoryMusic(__instance);
                 __instance.CurrentLevel.Frozen = true;
                 return false;
             }
@@ -80,6 +80,21 @@ namespace TF.EX.Patchs
         public static void Session_StartRound()
         {
             StateApi.Current.SetSessionRoundStarted(true);
+        }
+
+        private static void PlayWinnerVictoryMusic(Session session)
+        {
+            var winner = session.GetWinner();
+
+            try
+            {
+                Domain.Models.Skin.SkinSlot.Enter(winner);
+                ArcherData.Get(TFGame.Characters[winner], TFGame.AltSelect[winner]).PlayVictoryMusic();
+            }
+            finally
+            {
+                Domain.Models.Skin.SkinSlot.Exit();
+            }
         }
     }
 }

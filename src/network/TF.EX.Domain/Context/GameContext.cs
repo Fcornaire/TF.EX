@@ -153,14 +153,7 @@ namespace TF.EX.Domain.Context
 
         public void AddArcher(int index, Player player)
         {
-            var current = ArcherSelections;
-
-            if (current.ContainsKey(index))
-            {
-                return;
-            }
-
-            ArcherSelections = new Dictionary<int, Player>(current) { [index] = player };
+            ArcherSelections = new Dictionary<int, Player>(ArcherSelections) { [index] = player };
         }
 
         public void ResetArcherSelections()

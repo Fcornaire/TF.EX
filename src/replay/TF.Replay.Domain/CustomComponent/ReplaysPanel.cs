@@ -54,6 +54,8 @@ namespace TF.Replay.Domain.CustomComponent
         private const float TeammateGap = 2f;
         private const float SideGap = 24f;
 
+        private static readonly Dictionary<Subtexture, Subtexture> _trimmedPortraits = [];
+
         public ReplaysPanel(float x, float y)
         {
             Position = new Vector2(x, y);
@@ -335,7 +337,7 @@ namespace TF.Replay.Domain.CustomComponent
                 portraits[seat] = ArcherPortrait(archers[seat], taken);
             }
 
-            var native = portraits[order[0]].Width;
+            var native = portraits.Values.Min(subtexture => Math.Max(subtexture.Width, subtexture.Height));
 
             var gaps = 0f;
 
@@ -364,7 +366,7 @@ namespace TF.Replay.Domain.CustomComponent
 
                 _portraits[i] = new Image(portraits[i]);
                 _portraits[i].CenterOrigin();
-                _portraits[i].Scale = Vector2.One * scale;
+                _portraits[i].Scale = Vector2.One * (size / Math.Max(portraits[i].Width, portraits[i].Height));
                 _portraits[i].Position.X += x;
                 _portraits[i].Position.Y += 20;
 
@@ -416,9 +418,99 @@ namespace TF.Replay.Domain.CustomComponent
         {
             var (archerIndex, altIndex) = ArcherDataExtensions.EnsureArcherDataExist(archerInfo.Index, (int)archerInfo.Type, taken);
 
+            var skinned = GetSkinnedPortrait(archerInfo);
+
+            if (skinned != null)
+            {
+                return skinned;
+            }
+
             var archerData = ArcherData.Get(archerIndex, (ArcherData.ArcherTypes)altIndex);
 
             return archerInfo.HasWon ? archerData.Portraits.Win : archerData.Portraits.Lose;
+        }
+
+        private static Subtexture GetSkinnedPortrait(Models.ArcherInfo archerInfo)
+        {
+            var skinId = string.IsNullOrEmpty(archerInfo.SkinArcherId) ? archerInfo.CustomArcherId : archerInfo.SkinArcherId;
+
+            if (string.IsNullOrEmpty(skinId))
+            {
+                return null;
+            }
+
+            try
+            {
+                var registered = Interop.ArcherRegistryApi.Current?.RegisteredArchers;
+
+                if (registered == null || !registered.TryGetValue(skinId, out var entry) || entry?.ArcherData == null)
+                {
+                    return null;
+                }
+
+                return TrimTransparentMargins(archerInfo.HasWon ? entry.ArcherData.Portraits.Win : entry.ArcherData.Portraits.Lose);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        // custom portrait fix
+        private static Subtexture TrimTransparentMargins(Subtexture source)
+        {
+            if (source?.Texture?.Texture2D == null)
+            {
+                return source;
+            }
+
+            if (_trimmedPortraits.TryGetValue(source, out var cached))
+            {
+                return cached;
+            }
+
+            try
+            {
+                var rect = source.Rect;
+                var pixels = new Microsoft.Xna.Framework.Color[rect.Width * rect.Height];
+                source.Texture.Texture2D.GetData(0, rect, pixels, 0, pixels.Length);
+
+                int minX = rect.Width, minY = rect.Height, maxX = -1, maxY = -1;
+
+                for (int y = 0; y < rect.Height; y++)
+                {
+                    for (int x = 0; x < rect.Width; x++)
+                    {
+                        if (pixels[y * rect.Width + x].A == 0)
+                        {
+                            continue;
+                        }
+
+                        minX = Math.Min(minX, x);
+                        minY = Math.Min(minY, y);
+                        maxX = Math.Max(maxX, x);
+                        maxY = Math.Max(maxY, y);
+                    }
+                }
+
+                if (maxX < 0)
+                {
+                    return _trimmedPortraits[source] = source;
+                }
+
+                var width = maxX - minX + 1;
+                var height = maxY - minY + 1;
+
+                var side = Math.Min(width, height);
+                var squareX = minX + (width - side) / 2;
+                var squareY = minY;
+
+                return _trimmedPortraits[source] = new Subtexture(source.Texture, rect.X + squareX, rect.Y + squareY, side, side);
+            }
+            catch (Exception)
+            {
+                return _trimmedPortraits[source] = source;
+            }
         }
 
         private static int[] SeatOrder(Models.ReplayInfo replayInfo, int count, out int[] teamOf)

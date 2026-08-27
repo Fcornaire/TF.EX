@@ -39,6 +39,8 @@ namespace TF.EX.Domain
             ServiceCollection.AddSingleton<IGameContext, GameContext>();
             ServiceCollection.AddSingleton<INetplayManager, NetplayManager>();
             ServiceCollection.AddSingleton<IMatchmakingService, MatchmakingService>();
+            ServiceCollection.AddSingleton<ISkinStreamService, SkinStreamService>();
+            ServiceCollection.AddSingleton<ISkinOverlayService, SkinOverlayService>();
             ServiceCollection.AddSingleton<IReplayService, ReplayService>();
             ServiceCollection.AddSingleton<ISyncTestUtilsService, SyncTestUtilsService>();
 
@@ -75,6 +77,8 @@ namespace TF.EX.Domain
         public static ISyncTestUtilsService ResolveSyncTestUtilsService() { return ServiceProvider.GetRequiredService<ISyncTestUtilsService>(); }
 
         public static IInputService ResolveInputService() { return ServiceProvider.GetRequiredService<IInputService>(); }
+
+        public static ISkinOverlayService ResolveSkinOverlayService() { return ServiceProvider.GetRequiredService<ISkinOverlayService>(); }
 
         public static void RegisterModCollections(IModCollections modCollections) => _modCollections = modCollections;
 
