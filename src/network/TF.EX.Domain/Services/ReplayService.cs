@@ -58,7 +58,24 @@ namespace TF.EX.Domain.Services
                 CurrentTowerId(),
                 mode,
                 gameData?.MatchLength ?? 2,
-                (gameData?.Variants ?? new List<string>()).ToArray());
+                EffectiveVariants());
+        }
+
+        private static string[] EffectiveVariants()
+        {
+            var settings = (TowerFall.TFGame.Instance?.Scene as TowerFall.Level)?.Session?.MatchSettings ?? TowerFall.MainMenu.VersusMatchSettings;
+            var variants = settings?.Variants;
+
+            if (variants == null)
+            {
+                return [];
+            }
+
+            return
+            [
+                .. variants.Variants.Where(variant => variant.Value).Select(variant => variant.Title),
+                .. variants.CustomVariants.Where(pair => pair.Value.Value).Select(pair => pair.Value.Title),
+            ];
         }
 
         private static int CurrentTowerId()
@@ -109,6 +126,9 @@ namespace TF.EX.Domain.Services
                 archers.Select(a => a.HasWon).ToArray(),
                 archers.Select(a => a.Score).ToArray(),
                 archers.Select(a => a.NetplayName).ToArray());
+
+            ReplayApi.Current.SetArcherCustomIds(archers.Select(a => a.CustomArcherId ?? "").ToArray());
+            ReplayApi.Current.SetArcherSkinIds(archers.Select(a => a.SkinArcherId ?? "").ToArray());
 
             ReplayApi.Current.SetArcherTeams(CurrentTeams());
 
@@ -486,7 +506,7 @@ namespace TF.EX.Domain.Services
                 if (frame - _lastDivergenceLogFrame >= DivergenceLogInterval)
                 {
                     _lastDivergenceLogFrame = frame;
-                    _logger.LogWarning("[Replay] Playback diverged at frame {frame} ?", frame);
+                    Log(ServiceCollections.ResolveSkinOverlayService().HasReplaySkins, "[Replay] Playback diverged at frame {frame} ?", frame);
                 }
 
                 return 0;
@@ -615,7 +635,9 @@ namespace TF.EX.Domain.Services
                 _divergenceReported = true;
                 _lastDivergenceLogFrame = frame;
 
-                _logger.LogError(
+                var hasReplaySkins = ServiceCollections.ResolveSkinOverlayService().HasReplaySkins;
+
+                Log(hasReplaySkins,
                     "[Replay] PLAYBACK DIVERGED at frame {frame} (round {round}, live len {liveLen} vs recorded {recLen}), Live vs recorded: {detail}",
                     frame, round, liveBytes.Length, recordedState.Length, detail);
 
@@ -630,18 +652,30 @@ namespace TF.EX.Domain.Services
 
                     if (StateApi.Current.StateMatchesWithFrame(neighbourState, liveBytes, frame))
                     {
-                        _logger.LogError("[Replay] Live state actually matches record {frame} , playback is offset by {offset}, not desynced", frame + offset, offset);
+                        Log(hasReplaySkins, "[Replay] Live state actually matches record {frame} , playback is offset by {offset}, not desynced", frame + offset, offset);
                     }
                     else
                     {
                         var neighbourDiff = StateApi.Current.ClassifyStateDiff(liveBytes, neighbourState);
-                        _logger.LogWarning("[Replay] Live vs record {frame} ({kind}): {detail}", frame + offset, neighbourDiff[0], neighbourDiff[1]);
+                        Log(hasReplaySkins, "[Replay] Live vs record {frame} ({kind}): {detail}", frame + offset, neighbourDiff[0], neighbourDiff[1]);
                     }
                 }
             }
             catch (Exception e)
             {
                 _logger.LogError(e, "[Replay] Divergence detected at frame {frame} but the diff itself failed ?", frame);
+            }
+        }
+
+        private void Log(bool quiet, string message, params object[] args)
+        {
+            if (quiet)
+            {
+                _logger.LogDebug(message, args);
+            }
+            else
+            {
+                _logger.LogWarning(message, args);
             }
         }
 

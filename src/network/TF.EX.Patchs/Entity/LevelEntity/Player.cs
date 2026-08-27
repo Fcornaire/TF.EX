@@ -21,6 +21,20 @@ namespace TF.EX.Patchs.Entity.LevelEntity
         //Player_ctor and the DropArrow RNG bracket moved to
         //TF.State.Patchs.Entity.LevelEntity.PlayerStatePatch.
 
+        [HarmonyPrefix]
+        [HarmonyPatch(MethodType.Constructor, new Type[] { typeof(int), typeof(Vector2), typeof(Allegiance), typeof(Allegiance), typeof(PlayerInventory), typeof(HatStates), typeof(bool), typeof(bool), typeof(bool) })]
+        public static void Player_Ctor_Prefix(int playerIndex)
+        {
+            Domain.Models.Skin.SkinSlot.Enter(playerIndex);
+        }
+
+        [HarmonyFinalizer]
+        [HarmonyPatch(MethodType.Constructor, new Type[] { typeof(int), typeof(Vector2), typeof(Allegiance), typeof(Allegiance), typeof(PlayerInventory), typeof(HatStates), typeof(bool), typeof(bool), typeof(bool) })]
+        public static void Player_Ctor_Finalizer()
+        {
+            Domain.Models.Skin.SkinSlot.Exit();
+        }
+
         [HarmonyPostfix]
         [HarmonyPatch("Update")]
         public static void Player_Update_Postfix(TowerFall.Player __instance)

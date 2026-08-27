@@ -27,6 +27,11 @@ namespace TF.EX.Utils
             => AssertSubsetOf(typeof(global::TF.EX.Domain.Interop.ITfReplayApi),
                               typeof(global::TF.Replay.Domain.Api.TfReplayApi));
 
+        [Fact]
+        public void ReplayExSkinApiSliceMatchesProvider()
+            => AssertSubsetOf(typeof(global::TF.Replay.Domain.Interop.ITfExArcherSkinApi),
+                              typeof(global::TF.EX.Core.Api.TfExApi));
+
         private static void AssertSubsetOf(Type consumerInterface, Type provider)
         {
             var providerMethods = provider
@@ -94,14 +99,13 @@ namespace TF.EX.Utils
             }
         }
 
-        private static string Describe(MethodInfo m)
-            => $"{m.ReturnType.Name} {m.Name}({string.Join(", ", m.GetParameters().Select(p => p.ParameterType.Name))})";
+        private static string Describe(MethodInfo m) => $"{m.ReturnType.Name} {m.Name}({string.Join(", ", m.GetParameters().Select(p => p.ParameterType.Name))})";
 
         private static string Message(Type consumer, Type provider, List<string> missing)
         {
             var sb = new StringBuilder();
-            sb.AppendLine($"{consumer.FullName} declares members that {provider.FullName} does not provide.");
-            sb.AppendLine("GetApi<T>() would throw at mod load. Add them to the provider or remove them here:");
+            sb.AppendLine($"{consumer.FullName} declares members that {provider.FullName} does not provide");
+            sb.AppendLine("GetApi<T>() would throw at mod load");
             foreach (var m in missing)
             {
                 sb.AppendLine("  " + m);

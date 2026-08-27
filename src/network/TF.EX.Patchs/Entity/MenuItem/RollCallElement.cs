@@ -1,14 +1,12 @@
-﻿using System.Linq;
-using HarmonyLib;
+﻿using HarmonyLib;
 using Microsoft.Extensions.Logging;
-using TF.EX.Common.Extensions;
 using Microsoft.Xna.Framework;
 using Monocle;
 using MonoMod.Utils;
+using TF.EX.Common.Extensions;
 using TF.EX.Domain;
 using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Extensions;
-using TF.EX.Domain.Models;
 using TowerFall;
 
 namespace TF.EX.Patchs.Entity.MenuItem
@@ -91,9 +89,12 @@ namespace TF.EX.Patchs.Entity.MenuItem
                     if (playerIndex == matchmakingService.GetLocalSeat())
                     {
                         var player = lobby.Players.FirstOrDefault(pl => pl.RoomPeerId == matchmakingService.GetRoomPeerId());
-                        if (player != null && player.Ready)
+                        if (player != null)
                         {
                             player.Ready = false;
+                            player.ArcherIndex = TFGame.Characters[playerIndex];
+                            player.ArcherAltIndex = (int)TFGame.AltSelect[playerIndex];
+                            player.CustomArcherId = ArcherDataExtensions.GetCustomArcherId(player.ArcherIndex, player.ArcherAltIndex);
                             archerService.RemoveArcher(playerIndex);
 
                             inputService.DisableAllControllers();
@@ -122,10 +123,20 @@ namespace TF.EX.Patchs.Entity.MenuItem
         public static bool RollcallElement_NotJoinedUpdate_Prefix(RollcallElement __instance, ref int __result)
         {
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+            var lobby = matchmakingService.GetOwnLobby();
 
-            if (matchmakingService.GetOwnLobby().IsEmpty || MainMenu.VersusMatchSettings?.Mode.IsNetplay() != true)
+            if (lobby.IsEmpty || MainMenu.VersusMatchSettings?.Mode.IsNetplay() != true)
             {
                 return true;
+            }
+
+
+            var playerIndex = DynamicData.For(__instance).Get<int>("playerIndex");
+
+            if (playerIndex != matchmakingService.GetLocalSeat() && lobby.Players.Any(pl => pl.Seat == playerIndex))
+            {
+                __result = 0;
+                return false;
             }
 
             var input = DynamicData.For(__instance).Get<TowerFall.PlayerInput>("input");
@@ -184,6 +195,20 @@ namespace TF.EX.Patchs.Entity.MenuItem
             }
         }
 
+        [HarmonyPrefix]
+        [HarmonyPatch(MethodType.Constructor, new[] { typeof(int) })]
+        public static void RollcallElement_Ctor_Prefix(int playerIndex)
+        {
+            Domain.Models.Skin.SkinSlot.Enter(playerIndex);
+        }
+
+        [HarmonyFinalizer]
+        [HarmonyPatch(MethodType.Constructor, new[] { typeof(int) })]
+        public static void RollcallElement_Ctor_Finalizer()
+        {
+            Domain.Models.Skin.SkinSlot.Exit();
+        }
+
         [HarmonyPostfix]
         [HarmonyPatch("EnterJoined")]
         public static void RollcallElement_EnterJoined(RollcallElement __instance)
@@ -202,13 +227,23 @@ namespace TF.EX.Patchs.Entity.MenuItem
                 if (playerIndex == matchmakingService.GetLocalSeat() && !matchmakingService.IsSpectator())
                 {
                     var player = lobby.Players.FirstOrDefault(pl => pl.RoomPeerId == matchmakingService.GetRoomPeerId());
-                    if (player != null && !player.Ready)
+
+                    if (player != null)
                     {
                         player.Ready = true;
                         player.ArcherIndex = TFGame.Characters[playerIndex];
                         player.ArcherAltIndex = (int)TFGame.AltSelect[playerIndex];
+                        player.CustomArcherId = ArcherDataExtensions.GetCustomArcherId(player.ArcherIndex, player.ArcherAltIndex);
+
+                        var modCollections = ServiceCollections.ResolveModCollections();
+                        player.ArcherMods = ArcherDataExtensions.GetInstalledArcherMods(mod => modCollections?.GetVersion(mod));
 
                         archerService.AddArcher(playerIndex, player);
+
+                        if (player.HasCustomArcher)
+                        {
+                            matchmakingService.PublishCustomSkin(player.ArcherIndex, player.ArcherAltIndex);
+                        }
 
                         inputService.DisableAllControllers();
 
@@ -293,9 +328,57 @@ namespace TF.EX.Patchs.Entity.MenuItem
             else if (lobby.Players.Any(player => player.Seat == playerIndex))
             {
                 UpdateControllerIcon(__instance, dynRollcallElement, playerIndex);
+                RefreshPortraitIfStale(dynRollcallElement, playerIndex);
             }
 
             UpdateOpenSeat(__instance, dynRollcallElement, lobby, playerIndex);
+        }
+
+        private static void RefreshPortraitIfStale(DynamicData dynRollcallElement, int playerIndex)
+        {
+            if (dynRollcallElement.Get<Monocle.StateMachine>("state").State != 1)
+            {
+                return;
+            }
+
+            var index = TFGame.Characters[playerIndex];
+
+            if (index < 0 || ArcherData.Archers == null || index >= ArcherData.Archers.Length)
+            {
+                return;
+            }
+
+            var alt = TFGame.AltSelect[playerIndex];
+            var expected = ArcherData.Get(index, alt);
+
+            if (expected == null)
+            {
+                return;
+            }
+
+            if (index < ArcherDataExtensions.VanillaArcherCount)
+            {
+                var skinned = ServiceCollections.ResolveSkinOverlayService().ResolveArcherSkinned(playerIndex, index, (int)alt, expected);
+
+                if (skinned != null)
+                {
+                    expected = skinned;
+                }
+            }
+
+            var archerPortrait = dynRollcallElement.Get<ArcherPortrait>("portrait");
+            var dynPortrait = DynamicData.For(archerPortrait);
+
+            if (ReferenceEquals(dynPortrait.Get<ArcherData>("ArcherData"), expected))
+            {
+                return;
+            }
+
+            dynPortrait.Set("ArcherData", expected);
+            dynPortrait.Get<Image>("portrait").SwapSubtexture(expected.Portraits.Joined);
+            dynPortrait.Invoke("InitGem");
+
+            ServiceCollections.ResolveLogger().LogDebug<RollCallElementPatch>($"Rollcall portrait refreshed for seat {playerIndex} ({expected.Name0} {expected.Name1})");
         }
 
         private static void UpdateOpenSeat(RollcallElement element, DynamicData dynRollcallElement, Domain.Models.WebSocket.Lobby lobby, int playerIndex)
@@ -426,7 +509,15 @@ namespace TF.EX.Patchs.Entity.MenuItem
             var portrait = rollcallElement.Get<ArcherPortrait>("portrait");
             var archerType = rollcallElement.Get<ArcherData.ArcherTypes>("archerType");
 
-            portrait.SetCharacter(TFGame.Characters[playerIndex], archerType, 1);
+            try
+            {
+                Domain.Models.Skin.SkinSlot.Enter(playerIndex);
+                portrait.SetCharacter(TFGame.Characters[playerIndex], archerType, 1);
+            }
+            finally
+            {
+                Domain.Models.Skin.SkinSlot.Exit();
+            }
 
             var owner = portrait.Entity;
             var position = owner?.Position ?? Vector2.Zero;

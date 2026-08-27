@@ -1,5 +1,4 @@
 using HarmonyLib;
-using TF.EX.Domain.Interop;
 using MessagePack;
 using Microsoft.Extensions.Logging;
 using Monocle;
@@ -8,8 +7,9 @@ using System.Net.WebSockets;
 using TF.EX.Common.Extensions;
 using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Extensions;
-using TF.EX.Domain.Externals;
+using TF.EX.Domain.Interop;
 using TF.EX.Domain.Models;
+using TF.EX.Domain.Models.Skin;
 using TF.EX.Domain.Models.WebSocket;
 using TF.EX.Domain.Models.WebSocket.Client;
 using TF.EX.Domain.Models.WebSocket.Server;
@@ -23,6 +23,9 @@ namespace TF.EX.Domain.Services
     {
         private readonly string SERVER_URL = Config.SERVER;
         private string MATCHMAKING_URL => $"{SERVER_URL}/ws";
+
+        private readonly SemaphoreSlim _sendGate = new(1, 1);
+        private HashSet<string> _skinKnownPeers = new HashSet<string>();
 
         private ClientWebSocket _webSocket;
         private byte[] _buffer = new byte[1056];
@@ -51,13 +54,15 @@ namespace TF.EX.Domain.Services
         private readonly INetplayManager _netplayManager;
         private readonly IArcherService _archerService;
         private readonly IInputService _inputService;
+        private readonly ISkinStreamService _skinStreamService;
         private readonly ILogger _logger;
 
-        private CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+        private CancellationTokenSource cancellationTokenSource = new();
         private CancellationToken cancellationToken;
         public MatchmakingService(INetplayManager netplayManager,
             IArcherService archerService,
             IInputService inputService,
+            ISkinStreamService skinStreamService,
             ILogger logger)
         {
             _webSocket = new ClientWebSocket();
@@ -66,6 +71,7 @@ namespace TF.EX.Domain.Services
             _logger = logger;
             _archerService = archerService;
             _inputService = inputService;
+            _skinStreamService = skinStreamService;
         }
 
         public bool ConnectToServerAndListen()
@@ -322,7 +328,79 @@ namespace TF.EX.Domain.Services
         private async Task Send(string msg)
         {
             var segment = new ArraySegment<byte>(System.Text.Encoding.UTF8.GetBytes(msg));
-            await _webSocket.SendAsync(segment, WebSocketMessageType.Binary, true, cancellationToken);
+
+            await _sendGate.WaitAsync(cancellationToken);
+
+            try
+            {
+                await _webSocket.SendAsync(segment, WebSocketMessageType.Binary, true, cancellationToken);
+            }
+            finally
+            {
+                _sendGate.Release();
+            }
+        }
+
+        public void PublishCustomSkin(int archerIndex, int archerAltIndex)
+        {
+            if (archerIndex < Extensions.ArcherDataExtensions.VanillaArcherCount || IsSpectator())
+            {
+                return;
+            }
+
+            var bundle = _skinStreamService.GetOrBuildArcherBundle(archerIndex, archerAltIndex);
+
+            if (bundle == null)
+            {
+                return;
+            }
+
+            _skinStreamService.MarkPublished(bundle);
+
+            Task.Run(() => SendSkinBundle(bundle));
+        }
+
+        private async Task SendSkinBundle(ArtifactSkinBundle bundle)
+        {
+            try
+            {
+                var chunkCount = (uint)((bundle.Bytes.Length + Models.Skin.SkinLimits.MaxChunkBytes - 1) / Models.Skin.SkinLimits.MaxChunkBytes);
+
+                if (chunkCount == 0 || chunkCount > Models.Skin.SkinLimits.MaxChunks)
+                {
+                    return;
+                }
+
+                for (uint index = 0; index < chunkCount; index++)
+                {
+                    var offset = (int)index * Models.Skin.SkinLimits.MaxChunkBytes;
+                    var length = Math.Min(Models.Skin.SkinLimits.MaxChunkBytes, bundle.Bytes.Length - offset);
+
+                    var message = new SkinChunkMessage
+                    {
+                        SkinChunk = new SkinChunkSend
+                        {
+                            Chunk = new SkinChunk
+                            {
+                                BundleId = bundle.BundleId,
+                                CustomArcherId = bundle.CustomArcherId,
+                                ChunkIndex = index,
+                                ChunkCount = chunkCount,
+                                Data = Convert.ToBase64String(bundle.Bytes, offset, length),
+                            }
+                        }
+                    };
+
+                    var bytes = MessagePackSerializer.Serialize(message);
+                    await Send(MessagePackSerializer.ConvertToJson(bytes));
+                }
+
+                _logger.LogDebug<MatchmakingService>($"Skin bundle {bundle.CustomArcherId} sent ({bundle.Bytes.Length} bytes, {chunkCount} chunks)");
+            }
+            catch (Exception e)
+            {
+                _logger.LogError<MatchmakingService>("Failed to send the skin bundle", e);
+            }
         }
 
         private static bool IsServerMsg(string message, string tag)
@@ -335,6 +413,26 @@ namespace TF.EX.Domain.Services
             if (IsServerMsg(message, "KeepAlive"))
             {
                 await Send(message);
+                return;
+            }
+
+            if (IsServerMsg(message, "SkinChunk"))
+            {
+                try
+                {
+                    var bytes = MessagePackSerializer.ConvertFromJson(message);
+                    var chunkMsg = MessagePackSerializer.Deserialize<SkinChunkServerMessage>(bytes);
+
+                    if (chunkMsg?.SkinChunk != null && chunkMsg.SkinChunk.From != peerId)
+                    {
+                        _skinStreamService.ReceiveChunk(chunkMsg.SkinChunk.From, chunkMsg.SkinChunk.Chunk);
+                    }
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError<MatchmakingService>("Failed to handle a skin chunk", e);
+                }
+
                 return;
             }
 
@@ -616,6 +714,8 @@ namespace TF.EX.Domain.Services
 
             _archerService.Reset();
 
+            var resolvedArchers = ArcherDataExtensions.ResolveArchers(ownLobby);
+
             foreach (var player in ownLobby.Players.OrderBy(entry => entry.Seat))
             {
                 if (player.Seat < 0 || player.Seat >= TFGame.Characters.Length)
@@ -623,10 +723,14 @@ namespace TF.EX.Domain.Services
                     continue;
                 }
 
-                TFGame.Characters[player.Seat] = player.ArcherIndex;
-                TFGame.AltSelect[player.Seat] = (ArcherData.ArcherTypes)player.ArcherAltIndex;
+                (var archerIndex, var altIndex) = resolvedArchers.TryGetValue(player.Seat, out var resolved)
+                    ? resolved
+                    : (player.ArcherIndex, player.ArcherAltIndex);
 
-                _archerService.AddArcher(player.Seat, player);
+                TFGame.Characters[player.Seat] = archerIndex;
+                TFGame.AltSelect[player.Seat] = (ArcherData.ArcherTypes)altIndex;
+
+                _archerService.AddArcher(player.Seat, player.WithResolvedArcher(archerIndex, altIndex));
             }
         }
 
@@ -709,14 +813,7 @@ namespace TF.EX.Domain.Services
                 }
             }
 
-            if (TFGame.Instance.Scene is MainMenu && (TFGame.Instance.Scene as MainMenu).State == MainMenu.MenuState.Rollcall && rollCalls.Any())
-            {
-                ReconcileRollcall(lobby, rollCalls);
-            }
-            else
-            {
-                pendingRollcallLobby = lobby;
-            }
+            pendingRollcallLobby = lobby;
 
             var isSpectatorInLobby = lobby.Spectators.Any(s => s.RoomPeerId == peerId);
 
@@ -741,7 +838,33 @@ namespace TF.EX.Domain.Services
                 }
             }
 
+            ResendSkinToNewMembers(lobby);
+
             UpdateOwnLobby(lobby);
+        }
+
+        private void ResendSkinToNewMembers(Lobby lobby)
+        {
+            var members = lobby.Players.Concat(lobby.Spectators)
+                .Select(member => member.RoomPeerId)
+                .Where(id => !string.IsNullOrEmpty(id) && id != peerId)
+                .ToHashSet();
+
+            var hasNewMember = members.Any(id => !_skinKnownPeers.Contains(id));
+
+            _skinKnownPeers = members;
+
+            if (!hasNewMember)
+            {
+                return;
+            }
+
+            var published = _skinStreamService.GetLastPublished();
+
+            if (published != null)
+            {
+                Task.Run(() => SendSkinBundle(published));
+            }
         }
 
         public void ReconcileRollcallIfPending()
@@ -821,27 +944,20 @@ namespace TF.EX.Domain.Services
 
                 if (player.Ready)
                 {
+                    var resolvedArchers = ArcherDataExtensions.ResolveArchers(lobby);
+
+                    (var archerIndex, var altIndex) = resolvedArchers.TryGetValue(player.Seat, out var resolved)
+                        ? resolved
+                        : (0, (int)ArcherData.ArcherTypes.Normal);
+
+                    var updatedPlayer = player.WithResolvedArcher(archerIndex, altIndex);
+                    
+                    TFGame.Characters[playerIndex] = archerIndex;
+                    TFGame.AltSelect[playerIndex] = (ArcherData.ArcherTypes)altIndex;
+                    _archerService.AddArcher(playerIndex, updatedPlayer);
+
                     if (state.State == 0)
                     {
-                        var usedArchers = lobby.Players.Select(pl => pl.ArcherIndex);
-
-                        (var archerIndex, var altIndex) = ArcherDataExtensions.EnsureArcherDataExist(player.ArcherIndex, player.ArcherAltIndex, usedArchers);
-
-                        var updatedPlayer = new Domain.Models.WebSocket.Player
-                        {
-                            ArcherIndex = archerIndex,
-                            ArcherAltIndex = altIndex,
-                            IsHost = player.IsHost,
-                            Name = player.Name,
-                            Ready = player.Ready,
-                            RoomPeerId = player.RoomPeerId,
-                            Seat = player.Seat
-                        };
-
-                        TFGame.Characters[playerIndex] = archerIndex;
-                        TFGame.AltSelect[playerIndex] = (ArcherData.ArcherTypes)altIndex;
-                        _archerService.AddArcher(playerIndex, updatedPlayer);
-
                         _inputService.EnsureRemoteControllers(lobby.Players.Select(pl => pl.Seat));
 
                         var input = Traverse.Create(rollCall).Field("input").GetValue<PlayerInput>();
@@ -899,6 +1015,8 @@ namespace TF.EX.Domain.Services
         public void ResetPeer()
         {
             peerId = "";
+            _skinKnownPeers = new HashSet<string>();
+            _skinStreamService.Reset();
         }
 
         /// <summary>
@@ -1167,7 +1285,7 @@ namespace TF.EX.Domain.Services
                 && ownLobby.Players.All(pl => pl.Ready)
                 && AreTeamsPlayable();
         }
-        
+
         private bool AreTeamsPlayable()
         {
             if (!ownLobby.IsTeamMode)

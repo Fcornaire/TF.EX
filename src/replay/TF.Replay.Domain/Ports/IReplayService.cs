@@ -37,6 +37,8 @@ namespace TF.Replay.Domain.Ports
 
         void StartSession();
 
+        void ApplyRecordedVariants();
+
         void StopPlayback();
         Record GetRecordAt(int frame);
         Record ConsumeNextRecord();

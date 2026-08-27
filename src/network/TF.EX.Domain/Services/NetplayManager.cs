@@ -392,13 +392,27 @@ namespace TF.EX.Domain.Services
 
                 var desynchStrings = _events.Where(s => s.Contains(Event.DesyncDetected.ToString())).ToList();
 
-                if (desynchStrings.Count > 0)
+                //Custom skin produce desynch message, ignoring it for now
+                //TODO: Find a way to only exclude them and catch real desynch
+                if (desynchStrings.Count > 0 && !HasCustomSkinInLobby())
                 {
                     foreach (var desynchString in desynchStrings)
                     {
                         _logger.LogWarning<NetplayManager>(desynchString);
                     }
                 }
+            }
+        }
+
+        private static bool HasCustomSkinInLobby()
+        {
+            try
+            {
+                return ServiceCollections.ResolveMatchmakingService().GetOwnLobby().Players.Any(player => !string.IsNullOrEmpty(player.CustomArcherId));
+            }
+            catch (Exception)
+            {
+                return false;
             }
         }
 
@@ -899,16 +913,22 @@ namespace TF.EX.Domain.Services
                 var splitted = archerAlt.Split('-');
                 Enum.TryParse(splitted[1], out ArcherData.ArcherTypes alt);
 
+                var index = int.Parse(splitted[0]);
+
                 archersInfo.Add(new Models.ArcherSeatInfo
                 {
                     Seat = seat,
                     NetplayName = seat == localSeat
                         ? NetplayPreferences.Name
                         : players.TryGetValue(seat, out var player) ? player.Name : _player2Name,
-                    Index = int.Parse(splitted[0]),
+                    Index = index,
                     HasWon = seat < level.Session.MatchStats.Length && level.Session.MatchStats[seat].Won,
                     Score = GetScore(level.Session, seat),
                     Type = (int)alt,
+                    CustomArcherId = index >= Extensions.ArcherDataExtensions.VanillaArcherCount && players.TryGetValue(seat, out var owner)
+                        ? owner.CustomArcherId ?? ""
+                        : "",
+                    SkinArcherId = players.TryGetValue(seat, out var skinOwner) ? skinOwner.CustomArcherId ?? "" : "",
                 });
             }
 

@@ -43,5 +43,7 @@ namespace TF.EX.Domain.Models
         public bool HasWon { get; set; }
         public int Score { get; set; }
         public string NetplayName { get; set; }
+        public string CustomArcherId { get; set; } = "";
+        public string SkinArcherId { get; set; } = "";
     }
 }

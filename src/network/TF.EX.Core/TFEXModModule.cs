@@ -29,6 +29,10 @@ namespace TF.EX
 
         public override ModuleSettings CreateSettings() => new NetplaySettings();
 
+        private readonly Core.Api.TfExApi _api = new Core.Api.TfExApi();
+
+        public override object GetApi() => _api;
+
         private void InitializeApis()
         {
             var replayService = TF.EX.Domain.ServiceCollections.ResolveReplayService();
@@ -97,6 +101,8 @@ namespace TF.EX
             var mods = new TF.EX.Core.Api.ModCollections(context, logger);
 
             TF.EX.Domain.ServiceCollections.RegisterModCollections(mods);
+            TF.EX.Domain.Interop.ArcherRegistryApi.Configure(context.Registry.Archers);
+            TF.EX.Domain.Interop.ModRegistryApi.Configure(context.Registry, Meta.Name);
             TF.EX.Domain.Interop.StateApi.Configure(mods.ResolveState);
             TF.EX.Domain.Interop.ReplayApi.Configure(mods.ResolveReplay);
             TF.EX.Domain.Interop.InputDisplayerApi.Configure(mods.ResolveInputDisplayer);

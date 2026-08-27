@@ -122,6 +122,26 @@ namespace TF.Replay.Domain.Api
             FlushArchers();
         }
 
+        public void SetArcherCustomIds(string[] customArcherIds)
+        {
+            for (int i = 0; i < (customArcherIds?.Length ?? 0) && i < _archers.Count; i++)
+            {
+                _archers[i].CustomArcherId = customArcherIds[i] ?? "";
+            }
+
+            FlushArchers();
+        }
+
+        public void SetArcherSkinIds(string[] skinArcherIds)
+        {
+            for (int i = 0; i < (skinArcherIds?.Length ?? 0) && i < _archers.Count; i++)
+            {
+                _archers[i].SkinArcherId = skinArcherIds[i] ?? "";
+            }
+
+            FlushArchers();
+        }
+
         public void SetArcherTeams(int[] teams) => _replayService.SetTeams(teams);
 
         private void FlushArchers() => _replayService.SetArchers(_archers);
@@ -180,6 +200,8 @@ namespace TF.Replay.Domain.Api
                     }
                 }
             }
+
+            _replayService.ApplyRecordedVariants();
 
             StandalonePlayback.BeginSession();
 

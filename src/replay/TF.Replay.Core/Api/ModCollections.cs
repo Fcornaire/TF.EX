@@ -42,6 +42,8 @@ namespace TF.Replay.Core.Api
 
         public IInputDisplayerApi ResolveInputDisplayer() => Resolve<IInputDisplayerApi>(InputDisplayerApiData.Name);
 
+        public ITfExArcherSkinApi ResolveTfExArcherSkin() => Resolve<ITfExArcherSkinApi>(TfExApiData.Name);
+
         private T Resolve<T>(string modName) where T : class
         {
             if (_apis.TryGetValue(modName, out var cached))

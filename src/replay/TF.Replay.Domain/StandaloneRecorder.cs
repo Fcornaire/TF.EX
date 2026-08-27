@@ -25,6 +25,7 @@ namespace TF.Replay.Domain
         private static int[] _seats;
         private static int[] _characters;
         private static int[] _alts;
+        private static string[] _customIds;
         private static int[] _teams;
         private static bool _teamMode;
         private static int[] _scores;
@@ -297,6 +298,7 @@ namespace TF.Replay.Domain
             _seats = null;
             _characters = null;
             _alts = null;
+            _customIds = null;
             _teams = null;
             _teamMode = false;
             _scores = null;
@@ -384,6 +386,7 @@ namespace TF.Replay.Domain
                 _seats = seats.ToArray();
                 _characters = _seats.Select(seat => TFGame.Characters[seat]).ToArray();
                 _alts = _seats.Select(seat => (int)TFGame.AltSelect[seat]).ToArray();
+                _customIds = _characters.Select((character, i) => Extensions.ArcherDataExtensions.GetCustomArcherId(character, _alts[i])).ToArray();
                 _teams = Teams(session?.MatchSettings ?? TowerFall.MainMenu.VersusMatchSettings);
                 _teamMode = session?.MatchSettings?.TeamMode == true && _teams.Length > 0;
                 _scores = new int[_seats.Length];
@@ -423,6 +426,9 @@ namespace TF.Replay.Domain
                 _seats.Select(seat => won || (_winner != -1 && (_teamMode ? _teams[seat] == _winner : _winner == seat))).ToArray(),
                 _scores,
                 _seats.Select(seat => $"P{seat + 1}").ToArray());
+
+            api.SetArcherCustomIds(_customIds ?? []);
+            api.SetArcherSkinIds(_customIds ?? []);
 
             api.SetArcherTeams(_teams);
         }

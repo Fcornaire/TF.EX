@@ -20,6 +20,8 @@ namespace TF.Replay.Core
         {
             Instance = this;
 
+            ArcherRegistryApi.Configure(context.Registry.Archers);
+
             _modCollections = new Api.ModCollections(context, logger);
 
             _replayService = new ReplayService(() => _modCollections, logger);

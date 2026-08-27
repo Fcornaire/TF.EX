@@ -29,6 +29,7 @@ namespace TF.EX.Domain.Ports
         bool IsQuickPlayStarting();
 
         Task UpdatePlayer(Player player, Action onSucess, Action onFail);
+        void PublishCustomSkin(int archerIndex, int archerAltIndex);
         Task LeaveLobby(Action onSuccess, Action onFail);
         void ResetPeer();
         bool IsLobbyReady();
