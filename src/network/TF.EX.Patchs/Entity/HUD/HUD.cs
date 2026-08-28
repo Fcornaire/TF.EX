@@ -27,7 +27,15 @@ namespace TF.EX.Patchs.Entity.HUD
 
                 if (finished && !hasReset)
                 {
-                    replayService.Export();
+                    if (netplayManager.IsTestMode())
+                    {
+                        replayService.Reset();
+                    }
+                    else
+                    {
+                        replayService.Export();
+                    }
+
                     ServiceCollections.ResolveNetplayManager().Reset();
                     dynVersusMatchResults.Field("HasReset").SetValue(true);
                 }

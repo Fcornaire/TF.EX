@@ -24,15 +24,11 @@ namespace TF.State.Core
             context.Harmony.PatchAll(typeof(TF.State.Patchs.Calc.CalcPatch).Assembly);
             context.Harmony.PatchAll(typeof(Patchs.StateFrameDriverPatch).Assembly);
 
-            OnInitialize = _ => GetSettings<StateSettings>()?.Apply();
-
             OnUnload = _ =>
             {
                 _api.SetFrameDriver(null);
             };
         }
-
-        public override ModuleSettings CreateSettings() => new StateSettings();
 
         public override object GetApi() => _api;
     }

@@ -1,8 +1,8 @@
 using HarmonyLib;
-using TF.EX.Domain.Models;
-using TF.EX.Domain.Interop;
 using TF.EX.Domain;
 using TF.EX.Domain.Extensions;
+using TF.EX.Domain.Interop;
+using TF.EX.Domain.Models;
 using TowerFall;
 
 namespace TF.EX.Patchs.Scene
@@ -75,9 +75,19 @@ namespace TF.EX.Patchs.Scene
 
                 //TODO: && button is not AdventureChaoticRandomSelect
 
-                __instance.Selection = __instance.Buttons.First(button => mapId == -1 ? (button is VersusRandomSelect) : mapId == button.Data?.ID.X);
-                __instance.Selection.OnSelect();
-                __instance.ScrollToButton(__instance.Selection);
+                var target = __instance.Buttons.FirstOrDefault(button => mapId == -1 ? (button is VersusRandomSelect) : mapId == button.Data?.ID.X);
+
+                if (target == null)
+                {
+                    target = __instance.Buttons.FirstOrDefault(button => button is VersusRandomSelect);
+                }
+
+                if (target != null)
+                {
+                    __instance.Selection = target;
+                    __instance.Selection.OnSelect();
+                    __instance.ScrollToButton(__instance.Selection);
+                }
             }
         }
 

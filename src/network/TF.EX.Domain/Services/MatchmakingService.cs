@@ -59,6 +59,9 @@ namespace TF.EX.Domain.Services
 
         private CancellationTokenSource cancellationTokenSource = new();
         private CancellationToken cancellationToken;
+
+        private string abandonedRoomId = null;
+
         public MatchmakingService(INetplayManager netplayManager,
             IArcherService archerService,
             IInputService inputService,
@@ -751,6 +754,12 @@ namespace TF.EX.Domain.Services
 
         private void HandleLobbyUpdate(Lobby lobby)
         {
+            if (!string.IsNullOrEmpty(abandonedRoomId) && lobby.RoomId == abandonedRoomId)
+            {
+                ownLobby = new Lobby();
+                return;
+            }
+
             NormaliseSeats(lobby);
 
             Sounds.ui_clickSpecialAsc.Play();
@@ -766,6 +775,7 @@ namespace TF.EX.Domain.Services
                 Notification.Create(TFGame.Instance.Scene, "All players left...", 10, 500);
                 Task.Run(SendLeaveLobby);
 
+                abandonedRoomId = lobby.RoomId;
                 ownLobby = new Lobby();
 
                 _inputService.EnableAllControllers();
@@ -779,6 +789,8 @@ namespace TF.EX.Domain.Services
             //Leave if host left
             if (!lobby.Players.Any(pl => pl.IsHost))
             {
+                abandonedRoomId = lobby.RoomId;
+
                 if (TFGame.Instance.Scene is MainMenu)
                 {
                     (TFGame.Instance.Scene as MainMenu).State = Domain.Models.MenuState.NetplaySelect.ToTFModel();
@@ -1136,6 +1148,8 @@ namespace TF.EX.Domain.Services
 
         public void UpdateOwnLobby(Domain.Models.WebSocket.Lobby lobby)
         {
+            abandonedRoomId = null;
+
             NormaliseSeats(lobby);
 
             ownLobby = new Lobby

@@ -49,7 +49,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                 Sprite = sprite,
                 FinishedUnpack = finishUnpack,
                 BottomlessChestDepth = dynPickup.Get<double>("bottomlessChestDepth"),
-                TimeoutCounter = dynPickup.Get<Counter>("timeoutCounter")?.Value ?? -1f,
+                TimeoutCounter = dynPickup.Get<Counter>("timeoutCounter") is Counter timeout ? Math.Max(timeout.Value, 0f) : -1f,
                 Flash = new TF.State.Domain.Models.Entity.LevelEntity.Flash
                 {
                     IsFlashing = entity.Flashing,

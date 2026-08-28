@@ -96,10 +96,10 @@ namespace TF.EX.Core
             StartTestMode(mode, map, startLevel, seed, checkDistance, variants, playerCount, null);
         }
 
-        private static void StartTestMode(TowerFall.Modes mode, int map, int startLevel, int seed, int checkDistance, List<string> variants, int playerCount, List<string> levelPaths)
+        private static void StartTestMode(TowerFall.Modes mode, int map, int startLevel, int seed, int checkDistance, List<string> variants, int playerCount, List<string> levelPaths, int fps = TF.EX.Domain.Models.Constants.NETPLAY_FPS)
         {
             var logger = ServiceCollections.ResolveLogger();
-            logger.LogDebug<Commands>($"Launching test mode with mode: {mode}, map: {map} ({GameData.VersusTowers[map].Theme.Name}), startLevel: {startLevel}, seed: {seed}, checkDistance: {checkDistance}, players: {playerCount} with variants [{string.Join(", ", variants)}]");
+            logger.LogDebug<Commands>($"Launching test mode with mode: {mode}, map: {map} ({GameData.VersusTowers[map].Theme.Name}), startLevel: {startLevel}, seed: {seed}, checkDistance: {checkDistance}, players: {playerCount}, fps: {fps} with variants [{string.Join(", ", variants)}]");
 
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var replayService = ServiceCollections.ResolveReplayService();
@@ -110,7 +110,7 @@ namespace TF.EX.Core
                 return;
             }
 
-            netplayManager.SetTestMode(checkDistance, playerCount);
+            netplayManager.SetTestMode(checkDistance, playerCount, fps);
 
             StateApi.Current.SetSeed(seed);
             replayService.Initialize();
@@ -186,7 +186,8 @@ namespace TF.EX.Core
                         2,
                         [.. captured.Variants],
                         captured.PlayerCount,
-                        [path]);
+                        [path],
+                        TF.EX.Domain.Models.Constants.VANILLA_FPS);
                 }
                 , captured.Frames, captured.Expect));
             }

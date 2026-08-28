@@ -151,7 +151,7 @@ namespace TF.EX.Domain.Services
             StateApi.Current.SetFrameDriver(Models.Constants.DRIVER_NAME);
 
             GGRSConfig.Name = NetplayPreferences.Name;
-            GGRSConfig.InputDelay = _sessionInputDelay ?? NetplayPreferences.InputDelay;
+            GGRSConfig.InputDelay = _sessionInputDelay ?? NetplayPreferences.InputDelay * GGRSConfig.Fps / Models.Constants.VANILLA_FPS; //preferences in 60Hz frames, override in native frames
 
             _cancellationTokenSource = new CancellationTokenSource();
             _cancellationToken = _cancellationTokenSource.Token;
@@ -373,7 +373,7 @@ namespace TF.EX.Domain.Services
 
                     if (!IsDisconnected()
                         && IsSpectatorMode()
-                        && GGRSFFI.netplay_frames_behind() > 120)
+                        && GGRSFFI.netplay_frames_behind() > 2 * Models.Constants.NETPLAY_FPS)
                     {
                         ServiceCollections.ResolveMatchmakingService().QueueSpectatorNotice("MATCH OVER, WILL END OR RESTART");
                     }
@@ -857,11 +857,16 @@ namespace TF.EX.Domain.Services
             return _netplayMode != NetplayMode.Uninitialized;
         }
 
-        public void SetTestMode(int checkDistance, int numPlayers)
+        public void SetTestMode(int checkDistance, int numPlayers, int fps = Models.Constants.NETPLAY_FPS)
         {
             _netplayMode = NetplayMode.Test;
-            GGRSConfig = GGRSConfig.DefaultTest(checkDistance, numPlayers);
+            GGRSConfig = GGRSConfig.DefaultTest(checkDistance, numPlayers, fps);
             _syncTestUtilsService.Reset();
+        }
+
+        public int GetSessionFps()
+        {
+            return GGRSConfig?.Fps ?? Models.Constants.NETPLAY_FPS;
         }
 
         public void SetLocalMode(string addr, ushort localPort, PlayerDraw draw)

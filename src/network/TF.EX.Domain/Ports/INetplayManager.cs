@@ -73,7 +73,8 @@ namespace TF.EX.Domain.Ports
         string GetNameForSeat(int seat);
         void SetLocalSeat(int seat);
         bool HasSetMode();
-        void SetTestMode(int checkDistance, int numPlayers);
+        void SetTestMode(int checkDistance, int numPlayers, int fps = Models.Constants.NETPLAY_FPS);
+        int GetSessionFps();
         void SetLocalMode(string addr, ushort localPort, PlayerDraw draw);
 
         void SetServerMode(string roomUrl);

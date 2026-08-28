@@ -27,15 +27,16 @@ namespace TF.EX.Patchs.Engine
     {
         private static bool _shouldShowUpdateNotif = true;
 
-        private static DateTime LastUpdate;
+        private static readonly Stopwatch UpdateClock = Stopwatch.StartNew();
+        private static TimeSpan LastUpdate;
         private static TimeSpan Accumulator;
 
-        private const double FPS = 60;
         private const double SLOW_RATIO = 1.1;
 
         private const double DELAYED_CATCHUP_RATIO = 1.25;
         private const double LIVE_CATCHUP_RATIO = 8.0;
-        private const int DELAYED_CATCHUP_THRESHOLD = 30;
+        private const int DELAYED_CATCHUP_THRESHOLD = Domain.Models.Constants.NETPLAY_FPS / 2;
+        private static bool? _preSessionFixedStep;
 
         private static readonly MethodInfo _mInputUpdate = AccessTools.Method(typeof(MInput), "Update"); //Minput Update is an internal static method...
 
@@ -128,7 +129,7 @@ namespace TF.EX.Patchs.Engine
         [HarmonyPatch("Load")]
         public static void TFGame_Load()
         {
-            LastUpdate = DateTime.Now;
+            LastUpdate = UpdateClock.Elapsed;
             Accumulator = TimeSpan.Zero;
 
             if (Config.SERVER.Contains(".scw.cloud")) //TODO: find a better way to detect local / production
@@ -207,14 +208,8 @@ namespace TF.EX.Patchs.Engine
 
             if (!netplayManager.IsSynchronized() && netplayManager.GetNetplayMode() != NetplayMode.Test)
             {
-                LastUpdate = DateTime.Now;
+                LastUpdate = UpdateClock.Elapsed;
                 Accumulator = TimeSpan.Zero;
-            }
-
-            if (netplayManager.IsDisconnected())
-            {
-                TFGame_Update_orig(__instance, gameTime);
-                return false;
             }
 
             if (netplayManager.HasFailedInitialConnection())
@@ -222,9 +217,26 @@ namespace TF.EX.Patchs.Engine
                 if (netplayManager.ConsumeAbortToVersusOptions() && __instance.Scene is TowerFall.Level failedLevel)
                 {
                     TowerFall.Sounds.ui_invalid.Play();
-                    Domain.Extensions.LevelExtensions.GoToNetplayEntryMenu(failedLevel);
+
+                    var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+                    matchmakingService.DisconnectFromServer();
+                    matchmakingService.ResetPeer();
+                    matchmakingService.UpdateOwnLobby(new Domain.Models.WebSocket.Lobby());
+
+                    var menu = Domain.Extensions.LevelExtensions.GoToNetplayEntryMenu(failedLevel);
+
+                    inputService.EnableAllControllers();
+                    inputService.RebindLocalInput();
+
+                    Notification.Create(menu, "Connection to the other players failed", 10, 450);
                 }
 
+                TFGame_Update_orig(__instance, gameTime);
+                return false;
+            }
+
+            if (netplayManager.IsDisconnected())
+            {
                 TFGame_Update_orig(__instance, gameTime);
                 return false;
             }
@@ -264,7 +276,7 @@ namespace TF.EX.Patchs.Engine
 
                 //ArtificialSlow(); //Only useful to test choppy/freezing condition
 
-                double fpsDelta = 1.0 / FPS;
+                double fpsDelta = __instance.IsFixedTimeStep ? __instance.TargetElapsedTime.TotalSeconds : 1.0 / Domain.Models.Constants.VANILLA_FPS;
 
                 if (netplayManager.IsFramesAhead())
                 {
@@ -275,9 +287,9 @@ namespace TF.EX.Patchs.Engine
                     fpsDelta /= netplayManager.IsSpectatorCatchupEnabled() ? LIVE_CATCHUP_RATIO : DELAYED_CATCHUP_RATIO;
                 }
 
-                var delta = DateTime.Now - LastUpdate;
-                Accumulator = Accumulator.Add(delta);
-                LastUpdate = DateTime.Now;
+                var now = UpdateClock.Elapsed;
+                Accumulator = Accumulator.Add(now - LastUpdate);
+                LastUpdate = now;
 
                 while (Accumulator.TotalSeconds > fpsDelta)
                 {
@@ -542,14 +554,16 @@ namespace TF.EX.Patchs.Engine
 
         private static void ManageTimeStep(TowerFall.TFGame self)
         {
-            if (StateApi.Current?.IsSmoothRendering() == true)
-            {
-                return;
-            }
-
             var netplayManager = ServiceCollections.ResolveNetplayManager();
-            if (!netplayManager.IsInit() && !netplayManager.IsReplayMode() && !netplayManager.IsTestMode())
+            var sessionActive = netplayManager.IsInit() || netplayManager.IsReplayMode() || netplayManager.IsTestMode();
+
+            if (!sessionActive)
             {
+                if (self.Scene is not Level)
+                {
+                    RestoreTimeStep(self);
+                }
+
                 return;
             }
 
@@ -559,19 +573,35 @@ namespace TF.EX.Patchs.Engine
                 case LevelLoaderXML _:
                     if (!self.IsFixedTimeStep)
                     {
+                        _preSessionFixedStep ??= false;
                         self.IsFixedTimeStep = true;
-                        return;
+                    }
+
+                    var sessionFps = netplayManager.GetSessionFps();
+                    if (!netplayManager.IsReplayMode() && sessionFps != Domain.Models.Constants.NETPLAY_FPS)
+                    {
+                        var ticks = (long)Math.Round(TimeSpan.TicksPerSecond / (double)sessionFps);
+                        if (self.TargetElapsedTime.Ticks != ticks)
+                        {
+                            self.TargetElapsedTime = TimeSpan.FromTicks(ticks);
+                        }
                     }
                     break;
                 case TowerFall.MainMenu _:
-                    if (self.IsFixedTimeStep)
-                    {
-                        self.IsFixedTimeStep = false;
-                        return;
-                    }
-                    return;
+                    RestoreTimeStep(self);
+                    break;
             }
         }
+
+        private static void RestoreTimeStep(TowerFall.TFGame self)
+        {
+            if (_preSessionFixedStep is bool previous)
+            {
+                _preSessionFixedStep = null;
+                self.IsFixedTimeStep = previous;
+            }
+        }
+
     }
 
 }

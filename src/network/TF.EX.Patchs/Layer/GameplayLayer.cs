@@ -37,16 +37,18 @@ namespace TF.EX.Patchs.Layer
             {
                 if (matchmakingService.IsSpectator())
                 {
-                    SpectatorInputDisplay.RenderGuide(ServiceCollections.ResolveWiderSetModApi()?.UIXOffset ?? 0f);
+                    var wideOffset = ServiceCollections.ResolveWiderSetModApi()?.UIXOffset ?? 0f;
+
+                    SpectatorInputDisplay.RenderGuide(wideOffset);
 
                     var framesBehind = GGRSFFI.netplay_frames_behind();
-                    if (framesBehind > 120)
+                    if (framesBehind > 2 * TF.EX.Domain.Models.Constants.NETPLAY_FPS)
                     {
                         var chasing = netplayManager.IsSpectatorCatchupEnabled();
                         Draw.OutlineTextCentered(
                             TFGame.Font,
                             chasing ? $"CATCHING UP : {framesBehind}" : $"DELAYED : {framesBehind}",
-                            new Vector2(160f, 30f),
+                            new Vector2(160f + wideOffset, 30f),
                             chasing ? Color.Yellow : Color.LightGray,
                             1f);
                     }

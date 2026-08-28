@@ -1,5 +1,4 @@
 ﻿using HarmonyLib;
-using TF.State.Domain;
 using TF.State.Domain.Context;
 using TowerFall;
 
@@ -51,6 +50,13 @@ namespace TF.State.Patchs.Entity.LevelEntity
         public static void Arrow_Drop_Postfix()
         {
             Calc.CalcPatch.UnregisterRng();
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("Init", [typeof(TowerFall.LevelEntity), typeof(Microsoft.Xna.Framework.Vector2), typeof(float)])]
+        public static void Arrow_Init_Postfix(Arrow __instance)
+        {
+            MonoMod.Utils.DynamicData.For(__instance).Set("counter", Microsoft.Xna.Framework.Vector2.Zero);
         }
 
         [HarmonyPrefix]

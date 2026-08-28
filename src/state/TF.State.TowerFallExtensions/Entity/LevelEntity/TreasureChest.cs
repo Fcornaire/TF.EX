@@ -94,6 +94,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                 entity.Collidable = toLoad.IsCollidable;
                 entity.LightVisible = toLoad.IsLightVisible;
 
+                entity.StopFlashing();
                 entity.Visible = entity.State != States.WaitingToAppear;
 
                 var sprite = dynTreasureChest.Get<Sprite<int>>("sprite");
@@ -106,6 +107,10 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                 {
                     entity.LightVisible = true;
                     entity.Visible = true;
+                    if (toLoad.AppearTimer > 0)
+                    {
+                        entity.Flash((int)toLoad.AppearTimer);
+                    }
                     var appearAlarm = Alarm.Set(entity, (int)toLoad.AppearTimer, delegate
                     {
                         var dynTreasureChestAlarm = DynamicData.For(entity);

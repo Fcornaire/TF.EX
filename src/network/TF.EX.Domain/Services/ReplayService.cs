@@ -29,12 +29,19 @@ namespace TF.EX.Domain.Services
         private bool _encodingDiffReported;
         private bool _primingDiffReported;
         private bool _playbackPrimed;
+        private bool _keyframeMismatch;
+        private int _lastHealFrame = int.MinValue;
         private int _pendingHoldFrame = -1;
+        private int _consecutiveHolds;
+        private int _cursorAfterRun = -1;
         private int _primingFrame;
         private Level _drivenLevel;
         private Level _outgoingLevel;
 
         private const int NoResync = -1;
+        private const int MaxConsecutiveHolds = 10;
+        private const int RoundResyncScanLimit = 64;
+        private const int HealCooldownFrames = 240;
 
         public ReplayService(IInputService inputService, INetplayManager netplayManager, ILogger logger)
         {
@@ -71,11 +78,9 @@ namespace TF.EX.Domain.Services
                 return [];
             }
 
-            return
-            [
-                .. variants.Variants.Where(variant => variant.Value).Select(variant => variant.Title),
-                .. variants.CustomVariants.Where(pair => pair.Value.Value).Select(pair => pair.Value.Title),
-            ];
+            return [.. variants.Variants.Where(variant => variant.Value).Select(variant => variant.Title)
+                .Concat(variants.CustomVariants.Where(pair => pair.Value.Value).Select(pair => pair.Value.Title))
+                .Distinct()];
         }
 
         private static int CurrentTowerId()
@@ -197,8 +202,12 @@ namespace TF.EX.Domain.Services
             _primingDiffReported = false;
             _lastDivergenceLogFrame = 0;
             _playbackPrimed = false;
+            _keyframeMismatch = false;
+            _lastHealFrame = int.MinValue;
             _primingFrame = 0;
             _pendingHoldFrame = -1;
+            _consecutiveHolds = 0;
+            _cursorAfterRun = -1;
             _outgoingLevel = _drivenLevel;
         }
 
@@ -235,6 +244,14 @@ namespace TF.EX.Domain.Services
             _outgoingLevel = null;
             _drivenLevel = level;
 
+            if (_cursorAfterRun >= 0 && ReplayApi.Current.PlaybackFrame != _cursorAfterRun) //a seek moved the cursor
+            {
+                _pendingHoldFrame = -1;
+                _consecutiveHolds = 0;
+                _divergenceReported = false;
+                _keyframeMismatch = false;
+            }
+
             int frame;
 
             if (_pendingHoldFrame >= 0)
@@ -254,6 +271,8 @@ namespace TF.EX.Domain.Services
                     _outOfRecordsReported = true;
                     _logger.LogDebug("[Replay] Ran out of records at playback frame {frame}", ReplayApi.Current.PlaybackFrame);
                 }
+
+                _cursorAfterRun = ReplayApi.Current.PlaybackFrame;
 
                 return;
             }
@@ -289,6 +308,11 @@ namespace TF.EX.Domain.Services
             {
                 var slip = VerifyAgainstRecordedState(frame, recordedState);
 
+                if (slip >= 0)
+                {
+                    _consecutiveHolds = 0;
+                }
+
                 if (slip > 0)
                 {
                     for (int skipped = 0; skipped < slip; skipped++)
@@ -314,7 +338,21 @@ namespace TF.EX.Domain.Services
                 }
                 else if (slip < 0)
                 {
-                    _pendingHoldFrame = frame;
+                    if (++_consecutiveHolds > MaxConsecutiveHolds)
+                    {
+                        _consecutiveHolds = 0;
+
+                        var healState = recordedState ?? PreviousRecordedState(frame + 1);
+
+                        if (healState == null || !StateApi.Current.LoadGameStateBytes(healState))
+                        {
+                            _logger.LogWarning("[Replay] Could not load the recorded state at frame {frame}", frame);
+                        }
+                    }
+                    else
+                    {
+                        _pendingHoldFrame = frame;
+                    }
                 }
             }
 
@@ -333,6 +371,8 @@ namespace TF.EX.Domain.Services
             {
                 ReplayIntroPacing.ConfirmLatched = true;
             }
+
+            _cursorAfterRun = ReplayApi.Current.PlaybackFrame;
         }
 
         private static bool RecordedIntroIsHumanPaced()
@@ -461,7 +501,7 @@ namespace TF.EX.Domain.Services
 
         private int VerifyAgainstRecordedState(int frame, byte[] recordedState)
         {
-            if (recordedState == null)
+            if (recordedState == null && (!_keyframeMismatch || !HasNearbyRecordedState(frame)))
             {
                 return 0;
             }
@@ -483,16 +523,17 @@ namespace TF.EX.Domain.Services
                 return 0;
             }
 
-            if (liveBytes.AsSpan().SequenceEqual(recordedState))
+            if (recordedState != null && liveBytes.AsSpan().SequenceEqual(recordedState))
             {
                 _divergenceReported = false;
+                _keyframeMismatch = false;
 
                 return 0;
             }
 
             if (frame <= _primingFrame)
             {
-                if (!_primingDiffReported)
+                if (recordedState != null && !_primingDiffReported)
                 {
                     _primingDiffReported = true;
                     _logger.LogWarning("[Replay] Primed state differs from its own record at frame {frame}", frame);
@@ -503,7 +544,7 @@ namespace TF.EX.Domain.Services
 
             if (_divergenceReported)
             {
-                if (frame - _lastDivergenceLogFrame >= DivergenceLogInterval)
+                if (recordedState != null && frame - _lastDivergenceLogFrame >= DivergenceLogInterval)
                 {
                     _lastDivergenceLogFrame = frame;
                     Log(ServiceCollections.ResolveSkinOverlayService().HasReplaySkins, "[Replay] Playback diverged at frame {frame} ?", frame);
@@ -516,10 +557,17 @@ namespace TF.EX.Domain.Services
 
             if (slip != 0)
             {
-                _logger.LogWarning("[Replay] Playback slipped {offset} frame at {frame}", slip, frame);
+                _keyframeMismatch = false;
 
                 return slip;
             }
+
+            if (recordedState == null)
+            {
+                return 0;
+            }
+
+            _keyframeMismatch = true;
 
             var resync = TryResyncAtRoundBoundary(frame, recordedState, liveBytes);
 
@@ -530,7 +578,31 @@ namespace TF.EX.Domain.Services
 
             LogFirstDivergence(frame, recordedState, liveBytes);
 
+            if (_divergenceReported && frame - _lastHealFrame >= HealCooldownFrames)
+            {
+                _lastHealFrame = frame;
+
+                if (StateApi.Current.LoadGameStateBytes(recordedState))
+                {
+                    _divergenceReported = false;
+                    _keyframeMismatch = false;
+                }
+            }
+
             return 0;
+        }
+
+        private static bool HasNearbyRecordedState(int frame)
+        {
+            for (int offset = 1; offset <= 3; offset++)
+            {
+                if (ReplayApi.Current.GetStateAtFrame(frame + offset) != null || ReplayApi.Current.GetStateAtFrame(frame - offset) != null)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
 
@@ -541,7 +613,7 @@ namespace TF.EX.Domain.Services
 
             if (liveStarted && recordStarted)
             {
-                var previous = ReplayApi.Current.GetStateAtFrame(frame - 1);
+                var previous = PreviousRecordedState(frame);
 
                 if (previous == null || StateApi.Current.IsRoundStarted(previous) || !StateApi.Current.LoadGameStateBytes(recordedState))
                 {
@@ -558,13 +630,13 @@ namespace TF.EX.Domain.Services
                 return NoResync;
             }
 
-            for (int offset = 1; offset <= 3; offset++)
+            for (int offset = 1; offset <= RoundResyncScanLimit; offset++)
             {
                 var neighbour = ReplayApi.Current.GetStateAtFrame(frame + offset);
 
                 if (neighbour == null)
                 {
-                    return NoResync;
+                    continue;
                 }
 
                 if (StateApi.Current.IsRoundStarted(neighbour) == liveStarted && StateApi.Current.LoadGameStateBytes(neighbour))
@@ -574,6 +646,21 @@ namespace TF.EX.Domain.Services
             }
 
             return NoResync;
+        }
+
+        private static byte[] PreviousRecordedState(int frame)
+        {
+            for (int offset = 1; offset <= RoundResyncScanLimit; offset++)
+            {
+                var state = ReplayApi.Current.GetStateAtFrame(frame - offset);
+
+                if (state != null)
+                {
+                    return state;
+                }
+            }
+
+            return null;
         }
 
         private int DetectOffset(int frame, byte[] liveBytes)

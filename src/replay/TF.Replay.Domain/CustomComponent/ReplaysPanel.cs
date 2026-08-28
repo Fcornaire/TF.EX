@@ -211,7 +211,7 @@ namespace TF.Replay.Domain.CustomComponent
 
         private void UpdateVariants(Models.ReplayInfo replayInfo)
         {
-            var icons = ResolveVariantIcons(replayInfo.Variants).Take(MaxVariantIcons).ToArray();
+            var icons = ResolveVariantIcons(replayInfo.Variants?.Distinct()).Take(MaxVariantIcons).ToArray();
 
             if (icons.Length == 0)
             {

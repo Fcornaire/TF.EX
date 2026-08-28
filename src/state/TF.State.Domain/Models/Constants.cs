@@ -4,9 +4,9 @@
     {
         public static readonly int PLAYER_DEPTH = -100;
         public static readonly int PLAYER_PRISM_DEPTH = -98;
-        public static readonly int MAX_SFX_DELAY = 10;
-        public static readonly int SFX_STATE_LIFETIME = 60; //Desired sfx expire by age
-        public static readonly int SFX_SNAPSHOT_HISTORY = 240;
+        public static readonly int MAX_SFX_DELAY = 40;
+        public static readonly int SFX_STATE_LIFETIME = 240; //Desired sfx expire by age
+        public static readonly int SFX_SNAPSHOT_HISTORY = 960;
         public static readonly float INITIAL_END_COUNTER = 90.0f;
         public static readonly float DEFAULT_MIASMA_COUNTER = 1500.0f;
 

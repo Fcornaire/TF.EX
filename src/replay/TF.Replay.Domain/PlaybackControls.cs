@@ -42,20 +42,22 @@ namespace TF.Replay.Domain
             Takeover.Reset();
         }
 
-        private static void MarkAt(int frame)
+        private static void MarkAt(Ports.IReplayService service, int frame)
         {
             GifExport.Reset();
 
+            int SnapIn(int clicked) => service?.SeekLandingFor(clicked) is int landing && landing >= 0 ? landing : clicked;
+
             if (MarkIn == null || MarkOut != null)
             {
-                MarkIn = frame;
+                MarkIn = SnapIn(frame);
                 MarkOut = null;
                 return;
             }
 
             if (frame <= MarkIn.Value)
             {
-                MarkIn = frame;
+                MarkIn = SnapIn(frame);
                 return;
             }
 
@@ -91,6 +93,8 @@ namespace TF.Replay.Domain
             _mInputUpdate?.Invoke(null, null);
 
             var service = ServiceCollections.ResolveReplayService();
+
+            service?.EnsurePlaybackTickRate();
 
             if (GifExport.IsCapturing)
             {
@@ -299,8 +303,7 @@ namespace TF.Replay.Domain
 
             Seek(service, MarkIn.Value);
 
-            var refusal = GifExport.Begin(MarkIn.Value, MarkOut.Value,
-                service.GetReplay()?.Informations?.Name, service.CurrentFolder);
+            var refusal = GifExport.Begin(service.PlaybackFrame, MarkOut.Value, service.GetReplay()?.Informations?.Name, service.CurrentFolder);
 
             if (refusal != null)
             {
@@ -345,7 +348,7 @@ namespace TF.Replay.Domain
 
             if (MInput.Mouse.RightPressed)
             {
-                MarkAt(HoverFrame.Value);
+                MarkAt(service, HoverFrame.Value);
             }
 
             if (!MInput.Mouse.LeftCheck)

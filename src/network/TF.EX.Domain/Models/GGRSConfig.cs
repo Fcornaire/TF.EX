@@ -3,17 +3,19 @@
     public class GGRSConfig
     {
         public int InputDelay { get; set; }
+        public int Fps { get; set; } = Constants.NETPLAY_FPS;
         public string Name { get; set; }
 
         public NetplayConfig Netplay { get; set; }
 
         public TestConfig Test { get; set; }
 
-        public static GGRSConfig DefaultTest(int checkDistance, int numPlayers)
+        public static GGRSConfig DefaultTest(int checkDistance, int numPlayers, int fps = Constants.NETPLAY_FPS)
         {
             return new GGRSConfig
             {
                 InputDelay = 2,
+                Fps = fps,
                 Name = "TEST",
                 Netplay = new NetplayConfig
                 {

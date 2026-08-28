@@ -16,6 +16,7 @@ namespace TF.Replay.Domain.Ports
         void RemovePredictedRecords(int frame);
         string Export();
         void Reset();
+        void RestorePendingTimeStep();
 
         void SetLocalSeat(int seat);
         void SetPlayerCount(int count);
@@ -40,10 +41,13 @@ namespace TF.Replay.Domain.Ports
         void ApplyRecordedVariants();
 
         void StopPlayback();
+        void EnsurePlaybackTickRate();
         Record GetRecordAt(int frame);
         Record ConsumeNextRecord();
 
         bool SeekTo(int frame);
+
+        int SeekLandingFor(int frame);
 
         bool RestoreStateAt(int frame);
 
