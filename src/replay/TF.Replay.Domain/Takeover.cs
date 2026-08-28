@@ -91,8 +91,10 @@ namespace TF.Replay.Domain
 
                     ProbeRecordedEnd(service);
 
+                    var tickScale = Math.Max(1, (service?.GetReplay()?.Informations?.TickRateOrLegacy ?? Models.ReplayInfo.LegacyTickRate) / 60);
+
                     if (_recordedEndTick >= 0
-                        && _activeTicks >= Math.Max(_recordedEndTick + ResultsGraceFrames, MinimumFrames))
+                        && _activeTicks >= Math.Max(_recordedEndTick + ResultsGraceFrames * tickScale, MinimumFrames * tickScale))
                     {
                         OnRoundEnded();
                     }

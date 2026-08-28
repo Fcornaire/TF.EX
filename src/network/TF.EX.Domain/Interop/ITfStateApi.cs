@@ -25,8 +25,6 @@ namespace TF.EX.Domain.Interop
         void SetFrameDriver(string ownerModName);
         string GetFrameDriver();
 
-        bool IsSmoothRendering();
-
         void SetDriverFlags(int currentFrame, bool isCaptureActive, bool isTestMode,bool isReplayMode, bool isRollbackFrame, double framesToReSimulate);
         void SetSfxCapture(bool active);
         void SetRestoring(bool value);

@@ -5,14 +5,18 @@ namespace TF.EX.Domain.Extensions
 {
     public static class LevelExtensions
     {
-        public static void GoToNetplayEntryMenu(this Level level)
+        public static MainMenu GoToNetplayEntryMenu(this Level level)
         {
             Sounds.ui_clickBack.Play();
 
             var state = MenuReturn.NetplayEntry ?? MainMenu.MenuState.VersusOptions;
 
-            TFGame.Instance.Scene = new MainMenu(state);
+            var menu = new MainMenu(state);
+
+            TFGame.Instance.Scene = menu;
             level.Session.MatchSettings.LevelSystem.Dispose();
+
+            return menu;
         }
     }
 }

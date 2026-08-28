@@ -70,8 +70,9 @@ namespace TF.EX.Patchs.Scene
 
             if (ExFlags.IsCaptureActive || ExFlags.HasFramesToReSimulate)
             {
-                SetEngineTimeMult?.Invoke(TFGame.TimeRate); //In fixed timestep, TimeMult = TimeRate
-                SetEngineDeltaTime?.Invoke(1f / 60f * TFGame.TimeRate);
+                var actualDelta = (float)Monocle.Engine.Instance.TargetElapsedTime.TotalSeconds * TFGame.TimeRate;
+                SetEngineTimeMult?.Invoke(actualDelta * 60f);
+                SetEngineDeltaTime?.Invoke(actualDelta);
             }
 
             if (ExFlags.IsCaptureActive)
@@ -137,7 +138,7 @@ namespace TF.EX.Patchs.Scene
                 netplayManager.UpdateFramesToReSimulate(0);
                 StateApi.Current.SynchronizeSfx((int)__instance.FrameCounter, false);
             }
-            else if (!ExFlags.HasFramesToReSimulate && netplayManager.IsSynchronized())
+            else if (!ExFlags.HasFramesToReSimulate && netplayManager.IsSynchronized() && !netplayManager.IsDisconnected())
             {
                 StateApi.Current.SynchronizeSfx(GGRSFFI.netplay_current_frame(), ExFlags.IsTestMode);
             }

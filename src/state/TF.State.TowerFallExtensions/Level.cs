@@ -1060,10 +1060,6 @@ namespace TF.State.TowerFallExtensions
 
                 foreach (TowerFall.Arrow arrow in arrows)
                 {
-                    var dynArrow = DynamicData.For(arrow);
-                    dynArrow.Set("counter", Vector2.Zero);//For some weird reason, the counter is not reseted an ctor, so we do it here
-                                                          //Oh i think i found why, it's might be du to the arrow cache 
-
                     gameState.Entities.Arrows.Add(arrow.GetState());
                 }
             }
@@ -1971,7 +1967,7 @@ namespace TF.State.TowerFallExtensions
             {
                 var cachedMoonGlassBlock = ServiceCollections.GetCachedEntity<TowerFall.MoonGlassBlock>(toLoad.ActualDepth);
 
-                if (cachedMoonGlassBlock == null)
+                if (cachedMoonGlassBlock == null || (int)cachedMoonGlassBlock.Width != toLoad.Width || (int)cachedMoonGlassBlock.Height != toLoad.Height)
                 {
                     cachedMoonGlassBlock = new TowerFall.MoonGlassBlock(
                         toLoad.Position.ToTFVector(), toLoad.Width, toLoad.Height);
@@ -2819,7 +2815,7 @@ namespace TF.State.TowerFallExtensions
             {
                 var cachedCrumbleBlock = ServiceCollections.GetCachedEntity<TowerFall.CrumbleBlock>(toLoad.ActualDepth);
 
-                if (cachedCrumbleBlock == null)
+                if (cachedCrumbleBlock == null || (int)cachedCrumbleBlock.Width != toLoad.Width || (int)cachedCrumbleBlock.Height != toLoad.Height)
                 {
                     cachedCrumbleBlock = new TowerFall.CrumbleBlock(toLoad.Position.ToTFVector(), toLoad.Width, toLoad.Height);
                 }

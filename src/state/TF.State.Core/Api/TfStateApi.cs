@@ -205,8 +205,6 @@ namespace TF.State.Core.Api
 
         public string GetFrameDriver() => StateFlags.FrameDriverOwner;
 
-        public bool IsSmoothRendering() => StateFlags.SmoothRendering;
-
         public void SetDriverFlags(int currentFrame, bool isCaptureActive, bool isTestMode,
                                    bool isReplayMode, bool isRollbackFrame, double framesToReSimulate)
         {

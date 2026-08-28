@@ -4,6 +4,9 @@ namespace TF.EX.Domain.Models
     {
         public const string DRIVER_NAME = "TF.EX";
 
+        public const int VANILLA_FPS = 60;
+        public const int NETPLAY_FPS = 240;
+
         public static readonly IEnumerable<string> NETPLAY_SAFE_MAP = new List<string> //Not all map are supported in netplay right now... //TODO: it actually is, remove this next time
         {
             "SACRED GROUND",

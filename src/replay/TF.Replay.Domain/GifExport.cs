@@ -80,7 +80,9 @@ namespace TF.Replay.Domain
             _stallLimit = span * 3 + 600;
 
             _stride = Math.Max(MinStride, (int)Math.Ceiling(span / (float)MaxFrames));
-            _delayMs = (int)Math.Round(_stride * 1000.0 / 60.0);
+
+            var tickRate = ServiceCollections.ResolveReplayService()?.GetReplay()?.Informations?.TickRateOrLegacy ?? Models.ReplayInfo.LegacyTickRate;
+            _delayMs = (int)Math.Round(_stride * 1000.0 / tickRate);
 
             Progress = 0f;
             Message = "CAPTURING...";

@@ -369,16 +369,41 @@ namespace TF.EX.Patchs.Entity.MenuItem
             var archerPortrait = dynRollcallElement.Get<ArcherPortrait>("portrait");
             var dynPortrait = DynamicData.For(archerPortrait);
 
-            if (ReferenceEquals(dynPortrait.Get<ArcherData>("ArcherData"), expected))
+            var previous = dynPortrait.Get<ArcherData>("ArcherData");
+
+            if (!ReferenceEquals(previous, expected))
             {
-                return;
+                dynPortrait.Set("ArcherData", expected);
+
+                var portraitImage = dynPortrait.Get<Image>("portrait");
+                var next = expected.Portraits.Joined;
+
+                Microsoft.Xna.Framework.Rectangle? crop = null;
+                var oldClip = portraitImage.ClipRect;
+                var prevJoined = previous?.Portraits.Joined;
+
+                if (prevJoined != null && next != null && prevJoined.Rect.Contains(oldClip)
+                    && (oldClip.Width < prevJoined.Rect.Width || oldClip.Height < prevJoined.Rect.Height))
+                {
+                    crop = new Microsoft.Xna.Framework.Rectangle(
+                        next.Rect.X + (oldClip.X - prevJoined.Rect.X),
+                        next.Rect.Y + (oldClip.Y - prevJoined.Rect.Y),
+                        Math.Min(oldClip.Width, next.Rect.Width),
+                        Math.Min(oldClip.Height, next.Rect.Height));
+                }
+
+                portraitImage.SwapSubtexture(next, crop);
+                portraitImage.CenterOrigin();
+
+                dynPortrait.Invoke("InitGem");
+
+                ServiceCollections.ResolveLogger().LogDebug<RollCallElementPatch>($"Rollcall portrait refreshed for seat {playerIndex} ({expected.Name0} {expected.Name1})");
             }
 
-            dynPortrait.Set("ArcherData", expected);
-            dynPortrait.Get<Image>("portrait").SwapSubtexture(expected.Portraits.Joined);
-            dynPortrait.Invoke("InitGem");
-
-            ServiceCollections.ResolveLogger().LogDebug<RollCallElementPatch>($"Rollcall portrait refreshed for seat {playerIndex} ({expected.Name0} {expected.Name1})");
+            if (!dynPortrait.Get<bool>("joined"))
+            {
+                archerPortrait.StartJoined();
+            }
         }
 
         private static void UpdateOpenSeat(RollcallElement element, DynamicData dynRollcallElement, Domain.Models.WebSocket.Lobby lobby, int playerIndex)

@@ -625,9 +625,9 @@ namespace TF.EX.Domain.Scenarios
                 Spawns = [(60, SpawnY), (140, SpawnY), (280, SpawnY)],
                 Scripts =
                 [
-                    Sequence(Walk(1, 30), Jump(24), Walk(-1, 30), Dodge(1), Wait(20), AimAndFire(1, 0), Wait(160)),
+                    Sequence(Walk(1, 30), Jump(24), Walk(-1, 30), Dodge(1), Wait(60), AimAndFire(1, -1), Wait(90), AimAndFire(1, 0), Wait(160)),
                     Still,
-                    Sequence(Walk(-1, 25), Jump(24), Walk(1, 25), Dodge(-1), Wait(60)),
+                    Sequence(Walk(-1, 25), Jump(24), Walk(1, 25), Dodge(-1), Wait(60), AimAndFire(-1, -1), Wait(90), AimAndFire(-1, 0), Wait(60)),
                 ],
                 Expect = level => DynamicData.For(level.OrbLogic).Get<float>("gameRateTarget") == 0.5f && AllOf<PlayerCorpse>(level).Any(),
             },

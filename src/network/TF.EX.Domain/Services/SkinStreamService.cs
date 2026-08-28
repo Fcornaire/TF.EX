@@ -212,6 +212,7 @@ namespace TF.EX.Domain.Services
             _incoming.Clear();
             _bundles.Clear();
             _completedIds.Clear();
+            _localBundles.Clear();
             _lastPublished = null;
         }
 

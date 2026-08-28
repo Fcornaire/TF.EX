@@ -183,11 +183,8 @@ namespace TF.Replay.Domain.Api
                 StateApi()?.SetDriverFlags(0, true, false, true, false, 0);
                 StateApi()?.SetFrameDriver("TF.Replay");
 
-                if (StateApi()?.IsSmoothRendering() != true)
-                {
-                    _fixedTimeStepBeforePlayback = TowerFall.TFGame.Instance.IsFixedTimeStep;
-                    TowerFall.TFGame.Instance.IsFixedTimeStep = true;
-                }
+                _fixedTimeStepBeforePlayback = TowerFall.TFGame.Instance.IsFixedTimeStep;
+                TowerFall.TFGame.Instance.IsFixedTimeStep = true;
 
                 ServiceCollections.SetInputEnabled(true);
 

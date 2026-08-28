@@ -25,6 +25,7 @@ namespace TF.Replay.Domain.CustomComponent
 
         private ReplaysPanel _panel;
         private bool _isDisabled = false;
+        private const float PanelScreenY = 88f;
 
         public string _name = "";
         public string OriginalName => _replay.Informations.Name;
@@ -120,20 +121,18 @@ namespace TF.Replay.Domain.CustomComponent
         protected override void OnSelect()
         {
             var mainMenu = TFGame.Instance.Scene as MainMenu;
-            mainMenu.TweenUICameraToY(Math.Max(0f, base.Y - 200f));
+            var cameraY = Math.Max(0f, base.Y - 200f);
+            mainMenu.TweenUICameraToY(cameraY);
 
-            if (base.Y - 200f > 0)
+            Tween tweenProxi = Tween.Create(Tween.TweenMode.Oneshot, Ease.CubeOut, 12, start: true);
+            Vector2 start = _panel.Position;
+            Vector2 end = new(_panel.Position.X, cameraY + PanelScreenY);
+
+            tweenProxi.OnUpdate = delegate (Tween t)
             {
-                Tween tweenProxi = Tween.Create(Tween.TweenMode.Oneshot, Ease.CubeOut, 12, start: true);
-                Vector2 start = _panel.Position;
-                Vector2 end = new Vector2(_panel.Position.X, Position.Y - 100f);
-
-                tweenProxi.OnUpdate = delegate (Tween t)
-                {
-                    _panel.Position = Vector2.Lerp(start, end, t.Eased);
-                };
-                _panel.Add(tweenProxi);
-            }
+                _panel.Position = Vector2.Lerp(start, end, t.Eased);
+            };
+            _panel.Add(tweenProxi);
 
             _panel.UpdateInfo(_replay.Informations);
 

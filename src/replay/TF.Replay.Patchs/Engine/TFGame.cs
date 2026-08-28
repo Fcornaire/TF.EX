@@ -17,6 +17,8 @@ namespace TF.Replay.Patchs.Engine
                 {
                     StandaloneRecorder.Finish();
                 }
+
+                ServiceCollections.ResolveReplayService().RestorePendingTimeStep();
             }
 
             if (__instance.Scene is TowerFall.MainMenu)

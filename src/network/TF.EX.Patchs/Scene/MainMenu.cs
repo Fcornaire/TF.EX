@@ -1414,9 +1414,14 @@ namespace TF.EX.Patchs.Scene
 
             MainMenu.VersusMatchSettings.MatchLength = (MatchSettings.MatchLengths)newLobby.GameData.MatchLength;
 
+            if (!isPlayer)
+            {
+                ApplyLobbyWideForSpectator(newLobby);
+            }
+
             if (!isPlayer && newLobby.InGame)
             {
-                Monocle.Engine.Instance.Scene = new MapScene(MainMenu.RollcallModes.Versus);
+                MainMenu.GotoVersusLevelSelect();
                 return;
             }
 
@@ -1429,6 +1434,28 @@ namespace TF.EX.Patchs.Scene
             //    Sounds.ui_clickSpecial.Play(160, 4);
             //    Notification.Create(self, $"Be CAREFUL! Custom variants might not work properly", 15, 500);
             //}
+        }
+
+        private static void ApplyLobbyWideForSpectator(Lobby lobby)
+        {
+            var widerSetModApi = ServiceCollections.ResolveWiderSetModApi();
+            var data = lobby.Mods?.FirstOrDefault(mod => mod?.Name == WiderSetModApiData.Name)?.Data;
+
+            if (widerSetModApi == null || data == null
+                || !data.TryGetValue("IsWide", out var raw) || !bool.TryParse(raw, out var wide)
+                || widerSetModApi.IsWide == wide)
+            {
+                return;
+            }
+
+            widerSetModApi.IsWide = wide;
+
+            var screen = Monocle.Engine.Instance?.Screen;
+
+            if (screen != null)
+            {
+                screen.PadOffset = wide ? -50f : 0f;
+            }
         }
 
         private static void OnFailedToJoinLobby(MainMenu self)

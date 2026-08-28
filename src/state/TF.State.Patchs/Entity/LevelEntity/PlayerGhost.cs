@@ -85,6 +85,18 @@ namespace TF.State.Patchs.Entity.LevelEntity
             __instance.DeleteAllComponents<Tween>();
         }
 
+        [HarmonyPrefix]
+        [HarmonyPatch("Update")]
+        public static bool PlayerGhost_Update_Prefix(PlayerGhost __instance)
+        {
+            var inputs = TFGame.PlayerInputs;
+
+            return inputs != null
+                && __instance.PlayerIndex >= 0
+                && __instance.PlayerIndex < inputs.Length
+                && inputs[__instance.PlayerIndex] != null;
+        }
+
         [HarmonyPostfix]
         [HarmonyPatch("Update")]
         public static void PlayerGhost_Update_Postfix(PlayerGhost __instance)

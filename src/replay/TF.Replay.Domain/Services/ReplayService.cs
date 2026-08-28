@@ -23,7 +23,10 @@ namespace TF.Replay.Domain.Services
         private bool _isPlayback;
         private bool _fromFile;
         private const int SeatScanLimit = 120;
+        private const int KeyframesPerSecond = 16;
+        private const int StateSnapWindow = 64;
         private bool? _fixedTimeStepBeforeRecording;
+        private bool _tickRateOverridden;
 
         private bool[] _playersBeforePlayback;
         private int[] _charactersBeforePlayback;
@@ -108,7 +111,7 @@ namespace TF.Replay.Domain.Services
             _lastFrame = 0;
             _fromFile = false;
 
-            if (TowerFall.TFGame.Instance != null && StateApi()?.IsSmoothRendering() != true)
+            if (TowerFall.TFGame.Instance != null)
             {
                 _fixedTimeStepBeforeRecording = TowerFall.TFGame.Instance.IsFixedTimeStep;
                 TowerFall.TFGame.Instance.IsFixedTimeStep = true;
@@ -121,6 +124,7 @@ namespace TF.Replay.Domain.Services
                     Id = towerId,
                     LocalSeat = -1,
                     Version = ReplayVersionExtensions.GetLatest(),
+                    TickRate = CurrentTickRate(),
                     StateSchema = StateApi()?.GetStateSchemaVersion(),
                     CustomGoal = TowerFall.MatchSettings.CustomGoal,
                     Mode = mode,
@@ -142,13 +146,15 @@ namespace TF.Replay.Domain.Services
 
             _replay.Record.Add(new Record
             {
-                State = state,
+                State = recordedFrame % KeyframeStride() == 0 ? state : null,
                 Inputs = inputs,
                 Frame = recordedFrame,
             });
 
             _lastFrame = Math.Max(_lastFrame, recordedFrame);
         }
+
+        private int KeyframeStride() => Math.Max(1, CurrentTickRate() / KeyframesPerSecond);
 
         public void RemovePredictedRecords(int frame)
         {
@@ -193,7 +199,7 @@ namespace TF.Replay.Domain.Services
                 return null;
             }
 
-            _replay.Informations.MatchLength = TimeSpan.FromSeconds(_replay.Record.Count / 60);
+            _replay.Informations.MatchLength = TimeSpan.FromSeconds(_replay.Record.Count / (double)_replay.Informations.TickRateOrLegacy);
 
             var folder = Path.Combine(ReplaysRoot, MonthOf(DateTime.UtcNow));
 
@@ -216,13 +222,20 @@ namespace TF.Replay.Domain.Services
 
         public void Reset()
         {
+            RestoreTickRateOverride();
+
             _replay = null;
             _currentReplayFrame = 0;
             _lastFrame = 0;
             _isPlayback = false;
             _fromFile = false;
 
-            if (_fixedTimeStepBeforeRecording != null && TowerFall.TFGame.Instance != null)
+            RestorePendingTimeStep();
+        }
+
+        public void RestorePendingTimeStep()
+        {
+            if (_fixedTimeStepBeforeRecording != null && TowerFall.TFGame.Instance != null && TowerFall.TFGame.Instance.Scene is not TowerFall.Level)
             {
                 TowerFall.TFGame.Instance.IsFixedTimeStep = _fixedTimeStepBeforeRecording.Value;
                 _fixedTimeStepBeforeRecording = null;
@@ -634,6 +647,8 @@ namespace TF.Replay.Domain.Services
 
         public void StopPlayback()
         {
+            RestoreTickRateOverride();
+
             _isPlayback = false;
             _currentReplayFrame = 0;
 
@@ -643,6 +658,59 @@ namespace TF.Replay.Domain.Services
             SeekBlockedBy = null;
 
             RestoreSelection();
+        }
+
+        public void EnsurePlaybackTickRate()
+        {
+            if (!_isPlayback || _replay == null)
+            {
+                return;
+            }
+
+            var game = TowerFall.TFGame.Instance;
+
+            if (game == null || !game.IsFixedTimeStep)
+            {
+                return;
+            }
+
+            var rate = _replay.Informations?.TickRateOrLegacy ?? ReplayInfo.LegacyTickRate;
+
+            if (CurrentTickRate() == rate)
+            {
+                return;
+            }
+
+            game.TargetElapsedTime = TimeSpan.FromTicks((long)Math.Round(TimeSpan.TicksPerSecond / (double)rate));
+            _tickRateOverridden = true;
+            _logger?.LogDebug("Playback engine tick rate set to {rate}", rate);
+        }
+
+        private void RestoreTickRateOverride()
+        {
+            if (!_tickRateOverridden)
+            {
+                return;
+            }
+
+            _tickRateOverridden = false;
+
+            if (TowerFall.TFGame.Instance?.IsFixedTimeStep == true)
+            {
+                TowerFall.TFGame.Instance.IsFixedTimeStep = true;
+            }
+        }
+
+        private static int CurrentTickRate()
+        {
+            var game = TowerFall.TFGame.Instance;
+
+            if (game == null || !game.IsFixedTimeStep)
+            {
+                return ReplayInfo.LegacyTickRate;
+            }
+
+            return (int)Math.Round(1.0 / game.TargetElapsedTime.TotalSeconds);
         }
 
         public string MissingMod(ReplayInfo informations)
@@ -873,23 +941,50 @@ namespace TF.Replay.Domain.Services
             }
 
             var target = SkipRoundIntro(Math.Clamp(frame, 0, _lastFrame));
+            var landed = RestoreNearestStateAt(target);
 
-            if (!RestoreStateAt(target))
+            if (landed < 0)
             {
                 return false;
             }
 
-            _currentReplayFrame = target;
+            _currentReplayFrame = landed;
             return true;
+        }
+
+        private Record NearestStateRecord(int frame)
+        {
+            for (int distance = 0; distance <= StateSnapWindow; distance++)
+            {
+                var record = GetRecordAt(frame - distance);
+
+                if (record?.State != null)
+                {
+                    return record;
+                }
+
+                if (distance > 0)
+                {
+                    record = GetRecordAt(frame + distance);
+
+                    if (record?.State != null)
+                    {
+                        return record;
+                    }
+                }
+            }
+
+            return null;
         }
 
         private bool IsTrials => (Modes?)_replay?.Informations?.Mode == Modes.Trials;
 
         private int SkipRoundIntro(int target)
         {
-            const int Coarse = 60;
-            const int Fine = 5;
-            const int MaxScan = 3600;
+            var tickScale = Math.Max(1, (_replay?.Informations?.TickRateOrLegacy ?? ReplayInfo.LegacyTickRate) / 60);
+            int Coarse = 60 * tickScale;
+            int Fine = 5 * tickScale;
+            int MaxScan = 3600 * tickScale;
 
             var api = StateApi();
 
@@ -932,18 +1027,32 @@ namespace TF.Replay.Domain.Services
 
         private bool RoundHasStarted(ITfStateApi api, int frame)
         {
-            var record = _replay.Record.Find(rec => rec.Frame == frame);
+            var record = NearestStateRecord(frame);
 
-            return record?.State == null || api.IsRoundStarted(record.State);
+            return record == null || api.IsRoundStarted(record.State);
         }
 
-        public bool RestoreStateAt(int frame)
+        public int SeekLandingFor(int frame)
         {
-            var record = _replay?.Record.Find(rec => rec.Frame == frame);
+            if (_replay == null || !_replay.Record.Any())
+            {
+                return -1;
+            }
 
-            return record?.State != null
-                && StateApi() is not null
-                && StateApi().LoadGameStateBytes(record.State);
+            var target = SkipRoundIntro(Math.Clamp(frame, 0, _lastFrame));
+
+            return NearestStateRecord(target)?.Frame ?? -1;
+        }
+
+        public bool RestoreStateAt(int frame) => RestoreNearestStateAt(frame) >= 0;
+
+        private int RestoreNearestStateAt(int frame)
+        {
+            var record = NearestStateRecord(frame);
+
+            return record != null && StateApi() is not null && StateApi().LoadGameStateBytes(record.State)
+                ? record.Frame
+                : -1;
         }
 
         public Models.Replay GetReplay() => _replay;

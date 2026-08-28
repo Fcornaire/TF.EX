@@ -10,7 +10,8 @@ namespace TF.EX.Patchs
         private static readonly TimeSpan PingWaitTimeout = TimeSpan.FromSeconds(5);
         private static readonly TimeSpan ResetHoldDuration = TimeSpan.FromSeconds(1);
         private static readonly TimeSpan EnabledStabilityWindow = TimeSpan.FromSeconds(2);
-        private const double FrameMs = 1000.0 / 60.0;
+        private const double FrameMs = 1000.0 / Constants.NETPLAY_FPS;
+        private const int Scale = Constants.NETPLAY_FPS / Constants.VANILLA_FPS;
 
         private static string roomId = "";
         private static string ownSignature = "";
@@ -87,12 +88,12 @@ namespace TF.EX.Patchs
             }
 
             var laggiest = remotes.Max(player => matchmakingService.GetPingTo(player));
-            proposedDelay = Math.Clamp((int)Math.Ceiling(laggiest / 2.0 / FrameMs), NetplayPreferences.MinInputDelay, NetplayPreferences.MaxInputDelay);
-            currentDelay = appliedDelay ?? NetplayPreferences.InputDelay;
+            proposedDelay = Math.Clamp((int)Math.Ceiling(laggiest / 2.0 / FrameMs), NetplayPreferences.MinInputDelay * Scale, NetplayPreferences.MaxInputDelay * Scale);
+            currentDelay = appliedDelay ?? NetplayPreferences.InputDelay * Scale;
 
             if (mode == AutoAdjustInputDelayMode.Enabled)
             {
-                if (proposedDelay != currentDelay)
+                if (proposedDelay > currentDelay || proposedDelay < currentDelay - 1)
                 {
                     enabledPendingSince ??= DateTime.UtcNow;
 
@@ -157,7 +158,7 @@ namespace TF.EX.Patchs
                     {
                         appliedDelay = null;
                         netplayManager.ClearSessionInputDelay();
-                        currentDelay = NetplayPreferences.InputDelay;
+                        currentDelay = NetplayPreferences.InputDelay * Scale;
                         Sounds.ui_clickBack.Play();
                     }
                 }
@@ -179,7 +180,7 @@ namespace TF.EX.Patchs
         {
             if (displaying)
             {
-                Monocle.Draw.OutlineTextCentered(TFGame.Font, $"INPUT DELAY : {currentDelay} - PROPOSED : {proposedDelay}", new Vector2(130f, 235f), Color.White, Color.Black);
+                Monocle.Draw.OutlineTextCentered(TFGame.Font, $"INPUT DELAY : {Frames(currentDelay)} - PROPOSED : {Frames(proposedDelay)}", new Vector2(130f, 235f), Color.White, Color.Black);
 
                 var input = FirstPlayerInput();
                 if (input == null)
@@ -195,9 +196,11 @@ namespace TF.EX.Patchs
 
             if (appliedDelay != null)
             {
-                Monocle.Draw.OutlineTextCentered(TFGame.Font, $"INPUT DELAY : {appliedDelay}", new Vector2(160f, 235f), Color.White, Color.Black);
+                Monocle.Draw.OutlineTextCentered(TFGame.Font, $"INPUT DELAY : {Frames(appliedDelay.Value)}", new Vector2(160f, 235f), Color.White, Color.Black);
             }
         }
+
+        private static string Frames(int delay) => $"{Math.Round(delay / (double)Scale)} ({Math.Round(delay * 1000.0 / Constants.NETPLAY_FPS)}MS)";
 
         private static void Apply(Domain.Ports.INetplayManager netplayManager)
         {

@@ -69,10 +69,17 @@ namespace TF.Replay.Domain.Models
         [Key(16)]
         public int CustomGoal { get; set; } //Only useful with Custom match lengths
 
+        [Key(17)]
+        public int TickRate { get; set; }
+
         [IgnoreMember]
         public string StateSchemaOrLegacy => string.IsNullOrEmpty(StateSchema) ? ReplayInfo.LegacyStateSchema : StateSchema;
 
+        [IgnoreMember]
+        public int TickRateOrLegacy => TickRate > 0 ? TickRate : LegacyTickRate;
+
         public const string LegacyStateSchema = "TF.State/1";
+        public const int LegacyTickRate = 60;
     }
 
     [MessagePackObject]
