@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework;
 using Monocle;
 using TowerFall;
 
@@ -8,9 +8,9 @@ namespace TF.EX.Domain.CustomComponent
     {
         private float alpha;
 
-        public Fader() : base(0)
+        public Fader(int layerIndex = 0, int depth = 10000) : base(layerIndex)
         {
-            base.Depth = 10000;
+            base.Depth = depth;
             Tween tween = Tween.Create(Tween.TweenMode.Oneshot, Ease.CubeOut, 50, start: true);
             tween.OnUpdate = delegate (Tween t)
             {

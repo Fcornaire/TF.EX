@@ -122,7 +122,7 @@ namespace TF.EX.Domain.CustomComponent
             return (character >= 'A' && character <= 'Z' && character != 'I' && character != 'O') || (character >= '2' && character <= '9');
         }
 
-        protected override void OnConfirm()
+        public void Submit()
         {
             if (code.Length != CODE_LEN)
             {
@@ -132,6 +132,8 @@ namespace TF.EX.Domain.CustomComponent
 
             onSubmit?.Invoke(code);
         }
+
+        protected override void OnConfirm() => Submit();
 
         public override void Render()
         {

@@ -21,7 +21,7 @@ namespace TF.EX.Domain.Ports
         void UpdateOwnLobby(Lobby lobby);
         Task CreateLobby(Action onSuccess, Action onFail);
         Task JoinLobby(string roomId, bool isPlayer, Action onSucess, Action onFail);
-        Task JoinPrivate(string code, Action<Lobby> onSuccess, Action onFail);
+        Task JoinPrivate(string code, bool asPlayer, Action<Lobby> onSuccess, Action onFail);
         Task EnterQuickPlay(Action<int> onQueued, Action<Lobby> onMatched, Action<string> onFail);
         Task ExitQuickPlay();
         bool IsSearchingQuickPlay();

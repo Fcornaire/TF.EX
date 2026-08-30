@@ -21,7 +21,8 @@
 
 # About The Project
 
-TF EX is a mod that attempts to bring netplay to TowerFall (EX as in a Fighting game EX move, usually costing meter). It uses [FortRise](https://github.com/Terria-K/FortRise) (the supported version is [4.7.2](https://github.com/FortRise/FortRise/releases/tag/4.7.2) , there is a [pre release](https://github.com/Fcornaire/TF.EX/releases/tag/1.0.0-rc) compatible with 5.0.0)+ Rollback netcode as infrastructure.
+TF EX is a mod that attempts to bring netplay to TowerFall (EX as in a Fighting game EX move). It uses [FortRise](https://github.com/Terria-K/FortRise) (the supported version is [5.4.0-rc.1
+](https://github.com/FortRise/FortRise/releases/tag/5.4.0-rc.1))+ Rollback netcode as infrastructure.
 Due to the nature of the project, the mod is also able to record + view previous matches.
 Also, this project is still WIP!
 
@@ -42,92 +43,76 @@ one to read.
 - Online Netplay
 
 <p align="center">
-  <img src="images/demo.gif" alt="animated" />
+  <img src="images/demo.gif" alt="Online" />
 </p>
 
-1 new mode available, `Netplay`
+- Quickplay
 
 <p align="center">
-  <img src="images/lobbies.gif" alt="animated" />
+  <img src="images/quickplay.gif" alt="quickplay" />
 </p>
 
-Create a lobby for some online action!
+- Lobbies
 
 <p align="center">
-  <img src="images/createLobby.gif" alt="animated" />
+  <img src="images/joiningALobby.gif" alt="joining lobby" />
 </p>
 
-Or join an available one
+- Private lobbies
 
 <p align="center">
-  <img src="images/joiningLobby.gif" alt="animated" />
+  <img src="images/joiningAPrivateLobby.gif" alt="joining private lobby" />
 </p>
 
-Or even spectate! Lobbies whose match already started stay listed in the browser
-and can be joined mid-match: the spectator replays the match from the beginning and catches up.
-
-<p align="center">
-  <img src="images/spectate.gif" alt="animated" />
-</p>
-
-- Modded variants
-
-  Ability to run online play with custom variants as long as they are compatible. Read [TF.State](src/state/README.md) for more details.
+- Replays (via **[TF.Replay](src/replay/README.md)** )
 
   <p align="center">
-    <img src="images/moddedVariant.gif" alt="animated" />
-  </p>
-
-- Replays
-
-  Replay is "normally" automatically exported at the end of a game.
-  Use the `replays` menu to watch precedent games. Seeking, frame stepping and GIF export are documented
-  in [TF.Replay](src/replay/README.md).
-
-  <p align="center">
-    <img src="images/replays.gif" alt="animated" />
-  </p>
-
-  <p align="center">
-    <img src="images/replay_play.gif" alt="animated" />
+    <img src="images/replay_browseAndPlay.gif" alt="animated" />
   </p>
 
 # Usage
 
 It fairly easy to install this mod:
 
-1. Install [FortRise](https://github.com/Terria-K/FortRise) with Debug ON , this can be changed by modifying the `PatchVersion.txt` file in the Towerfall root directory
+1. Install [FortRise](https://github.com/Terria-K/FortRise)
    > [!WARNING]  
-   > The last supported version is [5.3.0](https://github.com/FortRise/FortRise/releases/tag/5.3.0), This mean the mod won't load/work on version 4.X.X and older or even beyond.
-   > Effort will be made to upgrade at some point
-2. Download the latest TF EX [release](https://github.com/Fcornaire/TF.EX/releases)
-3. Create a `Mods` directory at the root of your Towerfall install directory if not done already
-4. Extract the `TF.EX` zip into the `Mods` folder.
-5. You are now ready and the mod should be referenced and loaded by FortRise when the game starts
+   > The last supported version is [5.4.0](https://github.com/FortRise/FortRise/releases/tag/5.4.0-rc.1), This mean the mod won't load/work on version 4.X.X and older or even beyond.
+2. Download the latest TF EX [release](https://github.com/Fcornaire/TF.EX/releases) (`DShad.TF.EX-vX.Y.Z.zip` bundles the four mods; the other zips are the standalone parts)
+3. Create a `Mods` directory in the FortRise folder downloaded
+4. Extract the zip into the `Mods` folder (you should end up with `Mods/DShad.TF.EX`, `Mods/DShad.TF.Replay`, `Mods/DShad.TF.State` and `Mods/DShad.TF.InputDisplayer`)
+5. Launch `FortRise.exe` in FortRise folder directly, it will launch and patch Towerfall directly
 
-You have the option to change your username in the in-game options.
-You can also change the input delay, start at 2 then adjust based on your taste.
-The `AUTO ADJUST INPUT DELAY` option can adapt it to the connection when joining a lobby: `PROPOSE` shows a suggestion based on the laggiest player's ping that you can accept or ignore, `ENABLED` applies it automatically.
+After that first install the mod keeps itself up to date: when you enter NETPLAY it checks for a new version.
+Online play always requires the latest version.
 
-You should also be able to see a new versus mode called Netplay (all the way to the right). This allows you to create and join online lobbies.
+# Options (Each standalone mod have his options)
 
-If you've played some matches, a `Replays` directory should have been created in the Towerfall root directory.
-You can view the replays by:
+All options live in the in-game `OPTIONS` menu or with FortRise mods buttons.
 
-1. Launching Towerfall
-2. In the main menu, press ` to open it and enter the following command
+TF.EX options:
 
-```
-replay {replay_name}
-```
+| Option                    | Default    | What it does                                                                                                                                                                                                                      |
+| ------------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `INPUT DELAY`             | `2`        | Frames of local input delay (0-20). Less delay plays better but rollbacks more, more delay rollbacks less but feels clunky. Find your sweetspot                                                                                   |
+| `AUTO ADJUST INPUT DELAY` | `PROPOSE`  | Adapts the input delay to the connection when joining a lobby: `PROPOSE` shows a suggestion (based on the laggiest player's ping) you can accept or ignore, `ENABLED` applies it automatically. Your saved value is never changed |
+| `CUSTOM SKINS`            | `FULL`     | Show opponents' custom archer skins. Skins are visual only, streamed in memory and never saved                                                                                                                                    |
+| `NETPLAY NAME`            | `PLAYER`   | Your player name, shown to opponents in lobbies and matches                                                                                                                                                                       |
+| `SERVER`                  | `OFFICIAL` | The matchmaking server to connect to. Displays `OFFICIAL`, `LOCAL` or `CUSTOM`                                                                                                                                                    |
+| `AUTO UPDATE`             | `ON`       | Downloads and applies the latest version automatically when entering netplay. Even with it disabled, online play still requires the latest version                                                                                |
 
-whith {replay_name} being something like "20-06-2023T22-17-46" (No file extension)
+The other mods' options are documented in their own README: **[TF.Replay](src/replay/README.md)** and **[TF.InputDisplayer](src/utilities/TF.InputDisplayer/README.md)** (TF.State has none).
 
-# Troubleshooting
+# Replays
 
-I advise to not use this mod with mods that do other things than cosmetics/skins.
-For example, [WiderSetMod](https://github.com/Terria-K/WiderSetMod) has been reported to break the mod.
-I will try to investigate why it's happening but for now, only use the TF EX mod by itself.
+Recorded matches are browsable in game: the main menu has a `REPLAYS` button with a browser (play, seek, take over, export as GIF...).
+
+On disk, replays are stored in `FortRise/Saves/TF.Replay/Replays` and GIF exports land in `FortRise/Saves/TF.Replay/Gifs`.
+
+# Playing with other mods
+
+- Cosmetic mods (skins, custom archers...) are fine. With `CUSTOM SKINS` enabled, your custom archer is even streamed to opponents that don't have the mod.
+- [WiderSetMod](https://github.com/Terria-K/WiderSetMod) is fully supported: wide players match together in wide netplay lobbies.
+- Mods that change gameplay (custom variants...) are hidden in netplay unless the mod integrates with [TF.State](src/state/README.md) so its state can be tracked by the rollback. If you author such a mod, that README explains how.
 
 # Develop
 
@@ -135,7 +120,7 @@ This project uses:
 
 - [FortRise](https://github.com/Terria-K/FortRise) as the main loader (C#)
 - [ggrs-ffi](https://github.com/Fcornaire/ggrs-ffi) which is a library that allows the [GGRS](https://github.com/gschup/ggrs) API to be called by non-rust projects (Rust)
-- A matchmaking server which is closed source for now, it manages matchmaking and also runs a signaling endpoint for easier connection (Rust)
+- A matchmaking server that manages matchmaking (quickplay, lobbies, private codes) and also runs a signaling endpoint for easier connection (Rust)
 
 ## Installation
 

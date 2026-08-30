@@ -34,27 +34,6 @@ jobs:
             exit 1
           fi
 
-      - name: Check if Config exists
-        id: check-config
-        run: |
-          if [[ -f ./src/network/TF.EX.Domain/Config.cs ]]; then
-            echo "config-existing=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "config-existing=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Replace Config file
-        if: steps.check-config.outputs.config-existing == 'true'
-        run: |
-          cat > ./src/network/TF.EX.Domain/Config.cs <<EOF
-          namespace TF.EX.Domain
-          {
-              public static class Config
-              {
-                  public static readonly string SERVER = "${{ secrets.SERVER_URL }}";
-              }
-          }
-          EOF
       - name: Download ggrs-ffi lib
         uses: robinraju/release-downloader@v1.11
         with:

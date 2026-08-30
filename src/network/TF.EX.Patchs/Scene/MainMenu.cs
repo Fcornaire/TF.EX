@@ -357,7 +357,7 @@ namespace TF.EX.Patchs.Scene
 
                     var roomId = Guid.NewGuid().ToString();
 
-                    var roomUrl = $"{Config.SERVER}/room/{roomId}";
+                    var roomUrl = $"{NetplayPreferences.Server}/room/{roomId}";
 
                     var lobby = matchmakingService.GetOwnLobby();
                     lobby.GameData.Variants = variantsToggle.ToArray();
@@ -456,8 +456,11 @@ namespace TF.EX.Patchs.Scene
 
                 var netplay = new NetplayButton(new Vector2(NETPLAY_X, NETPLAY_Y), new Vector2(480f, 120f), () =>
                 {
-                    WiderSetMenu.IsNetplayRequested = true;
-                    self.State = WiderSetMenu.SelectionState ?? Domain.Models.MenuState.NetplaySelect.ToTFModel();
+                    Engine.TFGamePatch.RequestNetplayEntry(self, () =>
+                    {
+                        WiderSetMenu.IsNetplayRequested = true;
+                        self.State = WiderSetMenu.SelectionState ?? Domain.Models.MenuState.NetplaySelect.ToTFModel();
+                    });
                 });
 
                 var compactCoOp = new CompactCoOpButton(new Vector2(COOP_X, COOP_Y), new Vector2(480f, COOP_Y));
@@ -630,7 +633,7 @@ namespace TF.EX.Patchs.Scene
 
             var localPeerId = matchmakingService.GetRoomPeerId();
             var isHost = lobby.Players.Any(pl => pl.IsHost && pl.RoomPeerId == localPeerId);
-            var roomUrl = $"{Config.SERVER}/room/{lobby.RoomId}";
+            var roomUrl = $"{NetplayPreferences.Server}/room/{lobby.RoomId}";
 
             netplayManager.SetRoomAndServerMode($"{roomUrl}?peer={localPeerId}", isHost);
 
@@ -650,13 +653,39 @@ namespace TF.EX.Patchs.Scene
             self.State = MainMenu.MenuState.Rollcall;
         }
 
+        //Just to prevent scrolling to
+        private class StaticOptionsButton(string title) : OptionsButton(title)
+        {
+            protected override void OnSelect() => Wiggle();
+
+            public override void Update()
+            {
+                Selected = true;
+                base.Update();
+            }
+        }
+
         private static void CreatePrivateJoinCode(MainMenu self)
         {
             self.BackState = Domain.Models.MenuState.PrivateSelect.ToTFModel();
 
-            var entry = new JoinCodeEntry(new Vector2(160f, 105f), code => SubmitJoinCode(self, code), ReadClipboard);
+            var joinAsPlayer = true;
+
+            var entry = new JoinCodeEntry(new Vector2(160f, 105f), code => SubmitJoinCode(self, code, joinAsPlayer), ReadClipboard);
+
+            var role = new StaticOptionsButton("JOIN AS");
+            var roleX = 160f - (45f - TFGame.Font.MeasureString("JOIN AS").X) / 2f;
+            role.Position = role.TweenFrom = role.TweenTo = new Vector2(roleX, 155f);
+
+            Action toggleRole = () => joinAsPlayer = !joinAsPlayer;
+            role.SetCallbacks(() =>
+            {
+                role.State = joinAsPlayer ? "PLAYER" : "SPECT";
+                role.CanLeft = role.CanRight = true;
+            }, toggleRole, toggleRole, null);
 
             self.Add(entry);
+            self.Add(role);
             self.ToStartSelected = entry;
 
             self.ButtonGuideA.SetDetails(MenuButtonGuide.ButtonModes.Confirm, "JOIN");
@@ -678,7 +707,7 @@ namespace TF.EX.Patchs.Scene
             }
         }
 
-        private static void SubmitJoinCode(MainMenu self, string code)
+        private static void SubmitJoinCode(MainMenu self, string code, bool asPlayer)
         {
             if (DateTime.UtcNow < nextJoinCodeAttempt)
             {
@@ -692,17 +721,17 @@ namespace TF.EX.Patchs.Scene
             var inputService = ServiceCollections.ResolveInputService();
 
             inputService.DisableAllControllers();
-            self.AddLoader("JOINING LOBBY");
+            self.AddLoader(asPlayer ? "JOINING LOBBY" : "JOINING LOBBY AS SPECTATOR");
             Sounds.ui_click.Play();
 
-            matchmakingService.JoinPrivate(code,
+            matchmakingService.JoinPrivate(code, asPlayer,
                 lobby =>
                 {
                     var (canJoin, reason) = EvaluateLobbyCompatibility(lobby);
 
                     if (canJoin)
                     {
-                        OnJoinSuccess(self, lobby, true);
+                        OnJoinSuccess(self, lobby, asPlayer);
                         return;
                     }
 
@@ -1390,7 +1419,7 @@ namespace TF.EX.Patchs.Scene
             self.RemoveLoader();
             Sounds.ui_click.Play();
 
-            var roomUrl = $"{Config.SERVER}/room/{newLobby.RoomId}";
+            var roomUrl = $"{NetplayPreferences.Server}/room/{newLobby.RoomId}";
 
             if (isPlayer)
             {

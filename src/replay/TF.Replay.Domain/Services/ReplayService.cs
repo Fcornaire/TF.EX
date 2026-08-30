@@ -37,13 +37,19 @@ namespace TF.Replay.Domain.Services
         private bool? _widerSetBeforePlayback;
         private int? _customGoalBeforePlayback;
 
-        private static string ReplaysRoot => Path.Combine(Directory.GetCurrentDirectory(), "Replays");
+        private static string SavesRootFolder => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Saves", "TF.Replay");
+
+        internal static string ReplaysRootFolder => Path.Combine(SavesRootFolder, "Replays");
+
+        internal static string GifsRootFolder => Path.Combine(SavesRootFolder, "Gifs");
+
+        internal static string GetLegacyReplaysFolder => Path.Combine(Directory.GetCurrentDirectory(), "Replays");
 
         private string _month;
 
         public string CurrentMonth => _month ?? "";
 
-        private string ReplaysFolder => string.IsNullOrEmpty(_month) ? ReplaysRoot : Path.Combine(ReplaysRoot, _month);
+        private string ReplaysFolder => string.IsNullOrEmpty(_month) ? ReplaysRootFolder : Path.Combine(ReplaysRootFolder, _month);
 
         public string CurrentFolder => ReplaysFolder;
 
@@ -51,12 +57,12 @@ namespace TF.Replay.Domain.Services
 
         public string[] GetMonths()
         {
-            if (!Directory.Exists(ReplaysRoot))
+            if (!Directory.Exists(ReplaysRootFolder))
             {
                 return [];
             }
 
-            var folders = Directory.EnumerateDirectories(ReplaysRoot)
+            var folders = Directory.EnumerateDirectories(ReplaysRootFolder)
                 .Where(dir => Directory.EnumerateFiles(dir, "*.tow").Any())
                 .Select(Path.GetFileName)
                 .ToList();
@@ -65,7 +71,7 @@ namespace TF.Replay.Domain.Services
                 .Concat(folders.Where(name => !IsMonthFolder(name)).OrderBy(name => name))
                 .ToList();
 
-            if (Directory.EnumerateFiles(ReplaysRoot, "*.tow").Any())
+            if (Directory.EnumerateFiles(ReplaysRootFolder, "*.tow").Any())
             {
                 months.Add("");
             }
@@ -201,7 +207,7 @@ namespace TF.Replay.Domain.Services
 
             _replay.Informations.MatchLength = TimeSpan.FromSeconds(_replay.Record.Count / (double)_replay.Informations.TickRateOrLegacy);
 
-            var folder = Path.Combine(ReplaysRoot, MonthOf(DateTime.UtcNow));
+            var folder = Path.Combine(ReplaysRootFolder, MonthOf(DateTime.UtcNow));
 
             Directory.CreateDirectory(folder);
 
@@ -1064,7 +1070,7 @@ namespace TF.Replay.Domain.Services
             _lastFrame = replay != null && replay.Record.Any() ? replay.Record.Max(rec => rec.Frame) : 0;
         }
 
-        public async Task<IEnumerable<Models.Replay>> LoadAndGetReplays()
+        public async Task<IEnumerable<Models.Replay>> LoadAndGetReplays(Action<int, int> onProgress = null)
         {
             if (!Directory.Exists(ReplaysFolder))
             {
@@ -1072,39 +1078,46 @@ namespace TF.Replay.Domain.Services
             }
 
             var files = Directory.EnumerateFiles(ReplaysFolder, "*.tow").ToList();
-            var replays = new List<Models.Replay>();
+            var slots = new Models.Replay[files.Count];
+            var processed = 0;
 
-            await Parallel.ForEachAsync(files, new ParallelOptions { MaxDegreeOfParallelism = 10 },
-                async (file, _) =>
+            await Parallel.ForEachAsync(Enumerable.Range(0, files.Count), new ParallelOptions { MaxDegreeOfParallelism = 10 },
+                async (index, _) =>
                 {
-                    Models.Replay replay;
+                    var file = files[index];
 
                     try
                     {
-                        replay = await ToReplay(file, headerOnly: true);
-                    }
-                    catch (Exception e)
-                    {
-                        _logger?.LogDebug("{file} could not be read ({message}), treating as obsolete", Path.GetFileName(file), e.Message);
-                        TryRenameObsolete(file);
-                        return;
-                    }
+                        Models.Replay replay;
 
-                    if (replay?.Informations == null)
-                    {
-                        TryRenameObsolete(file);
-                        return;
+                        try
+                        {
+                            replay = await ToReplay(file, headerOnly: true);
+                        }
+                        catch (Exception e)
+                        {
+                            _logger?.LogDebug("{file} could not be read ({message}), treating as obsolete", Path.GetFileName(file), e.Message);
+                            TryRenameObsolete(file);
+                            return;
+                        }
+
+                        if (replay?.Informations == null)
+                        {
+                            TryRenameObsolete(file);
+                            return;
+                        }
+
+                        replay.Informations.Name ??= Path.GetFileName(file);
+                        slots[index] = replay;
                     }
-
-                    replay.Informations.Name ??= Path.GetFileName(file);
-
-                    lock (replays)
+                    finally
                     {
-                        replays.Add(replay);
+                        onProgress?.Invoke(Interlocked.Increment(ref processed), files.Count);
                     }
                 });
 
-            return replays.OrderByDescending(replay => RecordedAt(replay.Informations.Name))
+            return slots.Where(replay => replay != null)
+                .OrderByDescending(replay => RecordedAt(replay.Informations.Name))
                 .ThenByDescending(replay => replay.Informations.Name)
                 .ToList();
         }

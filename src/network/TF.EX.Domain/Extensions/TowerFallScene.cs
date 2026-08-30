@@ -63,18 +63,24 @@ namespace TF.EX.Domain.Extensions
             }
         }
 
-        public static void AddLoader(this Monocle.Scene scene, string msg)
+        public static void AddLoader(this Monocle.Scene scene, string msg, bool withFade = false)
         {
             var currentLoader = scene.Get<Loader>();
             if (currentLoader == null)
             {
                 var loader = new Loader(true);
+                loader.Depth = -1000;
                 Loader.Message = msg;
                 scene.Add(loader);
             }
             else
             {
                 Loader.Message = msg;
+            }
+
+            if (withFade && scene.Get<CustomComponent.Fader>() == null)
+            {
+                scene.Add(new CustomComponent.Fader(-1, -500));
             }
 
             if (scene is TowerFall.MainMenu)
@@ -91,6 +97,13 @@ namespace TF.EX.Domain.Extensions
             if (loader != null)
             {
                 loader.RemoveSelf();
+            }
+
+            var fader = scene.Get<CustomComponent.Fader>();
+
+            if (fader != null)
+            {
+                fader.RemoveSelf();
             }
         }
 

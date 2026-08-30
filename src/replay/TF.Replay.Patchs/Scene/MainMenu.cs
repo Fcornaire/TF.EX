@@ -16,7 +16,7 @@ namespace TF.Replay.Patchs.Scene
         private static List<ReplayInfos> _replays = new List<ReplayInfos>();
         private static ReplaysPanel _replaysPanel = null;
         private static Text _noMsg;
-        private static Text _loadingMsg;
+        private static LoadingGauge _loadingMsg;
         private static Text _monthMsg;
         private static bool _loading;
 
@@ -101,8 +101,7 @@ namespace TF.Replay.Patchs.Scene
         {
             HideLoading();
 
-            _loadingMsg = new Text(message);
-            _loadingMsg.Position = new Vector2(100, 80);
+            _loadingMsg = new LoadingGauge(message);
             scene.Add(_loadingMsg);
         }
 
@@ -204,12 +203,13 @@ namespace TF.Replay.Patchs.Scene
             self.Add(_monthMsg);
 
             var generation = Interlocked.Increment(ref _generation);
+            var gauge = _loadingMsg;
 
             Task.Run(async () =>
             {
                 try
                 {
-                    var replays = (await replayService.LoadAndGetReplays()).ToArray();
+                    var replays = (await replayService.LoadAndGetReplays(gauge.Report)).ToArray();
 
                     Publish(generation, () => BuildBrowser(self, replays, months.Length > 1, logger));
                 }

@@ -21,7 +21,7 @@ namespace TF.EX.Domain.Services
 {
     public class MatchmakingService : IMatchmakingService
     {
-        private readonly string SERVER_URL = Config.SERVER;
+        private static string SERVER_URL => NetplayPreferences.Server;
         private string MATCHMAKING_URL => $"{SERVER_URL}/ws";
 
         private readonly SemaphoreSlim _sendGate = new(1, 1);
@@ -40,6 +40,7 @@ namespace TF.EX.Domain.Services
         private string pendingSpectatorNotice = string.Empty;
         private Lobby pendingRollcallLobby = null;
         private string pendingJoinCode = string.Empty;
+        private bool pendingJoinAsPlayer = true;
         private Lobby privateJoinLobby = null;
 
         private Action<int> onQuickPlayQueued;
@@ -234,7 +235,7 @@ namespace TF.EX.Domain.Services
                 {
                     Code = pendingJoinCode,
                     Name = NetplayPreferences.Name,
-                    IsPlayer = true
+                    IsPlayer = pendingJoinAsPlayer
                 }
             };
 
@@ -1180,9 +1181,10 @@ namespace TF.EX.Domain.Services
             await Update(action, onSucess, onFail);
         }
 
-        public async Task JoinPrivate(string code, Action<Lobby> onSuccess, Action onFail)
+        public async Task JoinPrivate(string code, bool asPlayer, Action<Lobby> onSuccess, Action onFail)
         {
             pendingJoinCode = code;
+            pendingJoinAsPlayer = asPlayer;
 
             await Update(WSAction.JoinPrivate, () => onSuccess(privateJoinLobby), onFail);
         }
