@@ -119,7 +119,7 @@ namespace TF.Replay.Domain.Services
 
             if (TowerFall.TFGame.Instance != null)
             {
-                _fixedTimeStepBeforeRecording = TowerFall.TFGame.Instance.IsFixedTimeStep;
+                _fixedTimeStepBeforeRecording ??= TowerFall.TFGame.Instance.IsFixedTimeStep;
                 TowerFall.TFGame.Instance.IsFixedTimeStep = true;
             }
 
@@ -663,7 +663,28 @@ namespace TF.Replay.Domain.Services
             _lastFrame = 0;
             SeekBlockedBy = null;
 
+            RemovePlaybackControllers();
+
             RestoreSelection();
+        }
+
+        private static void RemovePlaybackControllers()
+        {
+            for (int seat = 0; seat < TFGame.PlayerInputs.Length; seat++)
+            {
+                if (TFGame.PlayerInputs[seat] is PlaybackController)
+                {
+                    TFGame.PlayerInputs[seat] = null;
+                }
+            }
+
+            for (int i = 0; i < MenuInput.MenuInputs.Length; i++)
+            {
+                if (MenuInput.MenuInputs[i] is PlaybackController)
+                {
+                    MenuInput.MenuInputs[i] = null;
+                }
+            }
         }
 
         public void EnsurePlaybackTickRate()

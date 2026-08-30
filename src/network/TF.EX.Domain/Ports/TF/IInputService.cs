@@ -21,6 +21,8 @@ namespace TF.EX.Domain.Ports.TF
 
         void EnsureFakeControllers();
 
+        void RemoveFakeControllers();
+
         int GetInputIndex(PlayerInput input);
         void ObserveLocalDevice();
         void RebindLocalInput();

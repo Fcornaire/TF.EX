@@ -101,6 +101,9 @@ namespace TF.Replay.Domain
             {
                 Draw.OutlineTextCentered(TFGame.Font, "THE REPLAY IS OVER",
                     new Vector2(CenterX, EndedY), Color.Gold, Color.Black);
+
+                Draw.OutlineTextCentered(TFGame.Font, "PRESS H FOR CONTROLS",
+                    new Vector2(CenterX, EndedY + 9f), Color.White, Color.Black);
             }
 
             RenderStatus();

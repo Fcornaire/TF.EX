@@ -37,15 +37,16 @@ namespace TF.Replay.Domain
 
         public static void TryBegin(Session session)
         {
-            if (ExportPending)
+            var api = ServiceCollections.ResolveApi();
+            var service = ServiceCollections.ResolveReplayService();
+
+            if (ExportPending || (IsActive && service?.IsRecording == true))
             {
-                ServiceCollections.ResolveApi().ResetRecording();
+                api?.ResetRecording();
             }
 
             Reset();
 
-            var api = ServiceCollections.ResolveApi();
-            var service = ServiceCollections.ResolveReplayService();
             var state = ServiceCollections.ResolveStateApi();
             var settings = session?.MatchSettings;
 
