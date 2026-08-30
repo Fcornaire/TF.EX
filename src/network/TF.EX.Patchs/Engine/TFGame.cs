@@ -134,6 +134,8 @@ namespace TF.EX.Patchs.Engine
             var syncTestUtilsService = ServiceCollections.ResolveSyncTestUtilsService();
             var logger = ServiceCollections.ResolveLogger();
 
+            ServiceCollections.ResolveMatchmakingService().DrainGameThreadActions();
+
             netplayManager.PublishCaptureFlag();
 
             if (ScenarioSweeper.IsRunning)

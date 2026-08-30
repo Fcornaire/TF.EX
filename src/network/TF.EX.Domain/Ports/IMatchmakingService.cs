@@ -44,6 +44,7 @@ namespace TF.EX.Domain.Ports
         string GetRoomPeerId();
         int GetLocalSeat();
         void ReconcileRollcallIfPending();
+        void DrainGameThreadActions();
         void ApplyTeamsToMatchSettings();
         void RestoreArchersFromLobbyIfNeeded();
         void NotifyMatchEnded();
