@@ -8,6 +8,7 @@ namespace TF.Replay.Domain
         public static bool RecordHeadHunters { get; set; } = true;
         public static bool RecordTeamDeathmatch { get; set; } = true;
         public static bool RecordTrials { get; set; } = true;
+        public static bool FullStates { get; set; } = true;
 
         public static bool Allows(int mode) => (Modes)mode switch
         {

@@ -103,24 +103,31 @@ Which modes get recorded is a toggle in the mod's options page (`OPTIONS` → `M
 - `RECORD TEAM DEATHMATCH`
 - `RECORD TRIALS`
 
+The `SAVE STATE` option picks how much game state a recording keeps:
+
+- `FULL` (default) saves the state every frame, it give exact frame stepping, but a match replay takes more disk space
+- `KEY` saves a few states per second, much smaller files, but going back or seeking snaps to the last saved state
+
+The choice only matters at recording time (playback handles both).
+
 ## Controls
 
 Press `H` in a replay for the same list on screen.
 
-| Input           | Action                                      |
-| --------------- | ------------------------------------------- |
-| `Space`         | Pause / resume                              |
-| `Left`          | Step back one frame                         |
-| `Right`         | Step forward one frame (hold `Down` to run) |
-| Left click      | Seek — hold and drag to scrub               |
-| Right click     | Mark GIF in, then out (a third restarts)    |
-| `G`             | Export the marked range as a GIF            |
-| `F1`            | Toggle hurtboxes (needs TF.EX)              |
-| `T`             | Start or stop a takeover                    |
-| `Start` (pad)   | Start or stop a takeover                    |
-| `LT`/`RT` (pad) | Change the takeover seat                    |
-| `Esc`           | Quit to the main menu                       |
-| `H`             | Show / hide the controls panel              |
+| Input           | Action                                                       |
+| --------------- | ------------------------------------------------------------ |
+| `Space`         | Pause / resume                                               |
+| `Left`          | Step back one frame (`KEY` replays: to the last saved state) |
+| `Right`         | Step forward one frame (hold `Down` to run)                  |
+| Left click      | Seek — hold and drag to scrub                                |
+| Right click     | Mark GIF in, then out (a third restarts)                     |
+| `G`             | Export the marked range as a GIF                             |
+| `F1`            | Toggle hurtboxes (needs TF.EX)                               |
+| `T`             | Start or stop a takeover                                     |
+| `Start` (pad)   | Start or stop a takeover                                     |
+| `LT`/`RT` (pad) | Change the takeover seat                                     |
+| `Esc`           | Quit to the main menu                                        |
+| `H`             | Show / hide the controls panel                               |
 
 ## GIF export
 

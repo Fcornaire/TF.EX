@@ -86,7 +86,7 @@ namespace TF.InputDisplayer.Patchs
                 for (int seat = 0; seat < InputHistory.MaxSeats; seat++)
                 {
                     var state = seat < input.Length ? input[seat] : default;
-                    var packed = InputPacker.Pack(state.MoveX, state.MoveY, state.JumpCheck, state.ShootCheck, state.AltShootCheck, state.DodgeCheck);
+                    var packed = InputPacker.Pack(state.MoveX, state.MoveY, state.JumpCheck, state.ShootCheck, state.AltShootCheck, state.DodgeCheck,state.JumpPressed, state.ShootPressed, state.AltShootPressed, state.DodgePressed);
                     _history.Push(frame, seat, packed);
                 }
             }

@@ -50,7 +50,11 @@ namespace TF.Replay.Domain
                         live[InputCodec.JumpCheck] != 0,
                         live[InputCodec.ShootCheck] != 0,
                         live[InputCodec.AltShootCheck] != 0,
-                        live[InputCodec.DodgeCheck] != 0);
+                        live[InputCodec.DodgeCheck] != 0,
+                        live[InputCodec.JumpPressed] != 0,
+                        live[InputCodec.ShootPressed] != 0,
+                        live[InputCodec.AltShootPressed] != 0,
+                        live[InputCodec.DodgePressed] != 0);
                 }
 
                 api.RenderAt(_takeoverFrame);
@@ -138,7 +142,7 @@ namespace TF.Replay.Domain
 
             if (at + InputCodec.Stride > inputs.Length)
             {
-                api.PushSeat(frame, seat, 0, 0, false, false, false, false);
+                api.PushSeat(frame, seat, 0, 0, false, false, false, false, false, false, false, false);
                 return;
             }
 
@@ -148,7 +152,11 @@ namespace TF.Replay.Domain
                 inputs[at + InputCodec.JumpCheck] != 0,
                 inputs[at + InputCodec.ShootCheck] != 0,
                 inputs[at + InputCodec.AltShootCheck] != 0,
-                inputs[at + InputCodec.DodgeCheck] != 0);
+                inputs[at + InputCodec.DodgeCheck] != 0,
+                inputs[at + InputCodec.JumpPressed] != 0,
+                inputs[at + InputCodec.ShootPressed] != 0,
+                inputs[at + InputCodec.AltShootPressed] != 0,
+                inputs[at + InputCodec.DodgePressed] != 0);
         }
     }
 }

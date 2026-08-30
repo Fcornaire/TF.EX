@@ -49,6 +49,8 @@ namespace TF.Replay.Domain.Ports
 
         int SeekLandingFor(int frame);
 
+        int PreviousStateFrame(int frame);
+
         bool RestoreStateAt(int frame);
 
         string CurrentMonth { get; }

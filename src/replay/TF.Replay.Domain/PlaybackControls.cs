@@ -367,7 +367,7 @@ namespace TF.Replay.Domain
         }
 
 
-        private static int StepBackTarget(Ports.IReplayService service) => service.PlaybackFrame - (StandalonePlayback.IsActive ? 2 : 1);
+        private static int StepBackTarget(Ports.IReplayService service) => service.PreviousStateFrame(service.PlaybackFrame - (StandalonePlayback.IsActive ? 1 : 0));
 
 
         private static bool SeekingIsOff(Ports.IReplayService service)

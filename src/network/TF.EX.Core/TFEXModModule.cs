@@ -1,6 +1,5 @@
 using FortRise;
 using Microsoft.Extensions.Logging;
-using Monocle;
 using TF.EX.Core.RoundLogic;
 using TF.EX.Domain;
 using TF.EX.Domain.Models;
@@ -29,7 +28,7 @@ namespace TF.EX
 
         public override ModuleSettings CreateSettings() => new NetplaySettings();
 
-        private readonly Core.Api.TfExApi _api = new Core.Api.TfExApi();
+        private readonly Core.Api.TfExApi _api = new();
 
         public override object GetApi() => _api;
 
@@ -83,7 +82,7 @@ namespace TF.EX
         private void RegisterAndLoad(IModuleContext context, IModContent content, ILogger logger)
         {
             InternetIcon = context.Registry.Subtextures.RegisterTexture(
-                content.Root.GetRelativePath("imgs/icons8-internet-48.png")
+                content.Root.GetRelativePath("imgs/netplay.png")
             );
 
             TF.EX.Domain.CustomComponent.MenuIcons.ConfigureOnline(() => InternetIcon.Subtexture);
