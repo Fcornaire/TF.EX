@@ -176,7 +176,7 @@ But since there is a ton of things to do, I advise either contact me directly or
 
 Distributed under the GPL-2.0 License. See `LICENSE` for more information.
 
-The netplay logo can be found at [Icones8](https://icones8.fr/)
+The netplay logo can be found at [Icones8](https://icones8.fr/) but was re drawed in pixel art.
 
 ## Contact
 

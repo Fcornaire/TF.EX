@@ -49,8 +49,10 @@ public interface IInputDisplayerApi
     void SetEnabled(bool enabled);
     void StepOpacity(float direction);
     void BeginSession(int seatCount);
-    void PushSeat(int frame, int seat, int moveX, int moveY, bool jump, bool shoot, bool altShoot, bool dodge);
+    void PushSeat(int frame, int seat, int moveX, int moveY, bool jump, bool shoot, bool altShoot, bool dodge, bool jumpPressed, bool shootPressed, bool altShootPressed, bool dodgePressed);
     void RenderAt(int frame);
     void EndSession();
 }
 ```
+
+The pressed flags are the per frame press edges, a press edge on a button that is already held (two physical bindings for example excuting a dash cancel require a second dash button) splits the history row instead of merging into one long hold.

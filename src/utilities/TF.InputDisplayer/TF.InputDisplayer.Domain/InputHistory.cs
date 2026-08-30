@@ -141,17 +141,23 @@ namespace TF.InputDisplayer.Domain
         {
             var count = 0;
             var floor = FloorFor(frame);
+            var newerPressed = false;
 
             for (int f = Math.Min(frame, _frameCount - 1); f >= floor; f--)
             {
-                var value = At(seat, f);
+                var raw = At(seat, f);
 
-                if (value == NoData)
+                if (raw == NoData)
                 {
                     break;
                 }
 
-                if (count > 0 && rows[count - 1].Packed == value)
+                var value = raw & InputPacker.DisplayMask;
+                var merge = count > 0 && !newerPressed && rows[count - 1].Packed == value;
+
+                newerPressed = raw != value;
+
+                if (merge)
                 {
                     rows[count - 1].Frames++;
                     continue;
@@ -172,17 +178,18 @@ namespace TF.InputDisplayer.Domain
 
         private void Extend(int seat, int frame)
         {
-            var value = At(seat, frame);
+            var raw = At(seat, frame);
 
-            if (value == NoData)
+            if (raw == NoData)
             {
                 _rowCount[seat] = Scan(seat, frame, _rows[seat]);
                 return;
             }
 
+            var value = raw & InputPacker.DisplayMask;
             var rows = _rows[seat];
 
-            if (rows[0].Packed == value)
+            if (raw == value && rows[0].Packed == value)
             {
                 rows[0].Frames++;
                 return;
@@ -205,9 +212,19 @@ namespace TF.InputDisplayer.Domain
 
             var from = _lastPushed * _seatCount;
 
-            for (int f = _lastPushed + 1; f <= frame; f++)
+            for (int seat = 0; seat < _seatCount; seat++)
             {
-                Array.Copy(_data, from, _data, f * _seatCount, _seatCount);
+                var value = _data[from + seat];
+
+                if (value != NoData)
+                {
+                    value &= InputPacker.DisplayMask;
+                }
+
+                for (int f = _lastPushed + 1; f <= frame; f++)
+                {
+                    _data[f * _seatCount + seat] = value;
+                }
             }
         }
 

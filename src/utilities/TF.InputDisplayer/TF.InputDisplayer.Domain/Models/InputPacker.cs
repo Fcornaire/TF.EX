@@ -1,6 +1,8 @@
 namespace TF.InputDisplayer.Domain.Models
 {
     //Qick bit recap if i ever forgot what this is
+    
+    //11..8 = press edges (mirror 3..0, stripped by DisplayMask)
     //7 6   5 4   3     2        1      0
     //MoveY MoveX Dodge AltShoot Shoot Jump
     public static class InputPacker
@@ -12,11 +14,15 @@ namespace TF.InputDisplayer.Domain.Models
 
         public const int ButtonCount = 4;
 
+        public const int DisplayMask = 0xFF;
+
         private const int MoveXShift = 4;
         private const int MoveYShift = 6;
         private const int MoveMask = 0x3;
+        private const int PressShift = 8;
 
-        public static int Pack(int moveX, int moveY, bool jump, bool shoot, bool altShoot, bool dodge)
+        public static int Pack(int moveX, int moveY, bool jump, bool shoot, bool altShoot, bool dodge,
+                               bool jumpPressed, bool shootPressed, bool altShootPressed, bool dodgePressed)
         {
             var packed = 0;
 
@@ -24,6 +30,11 @@ namespace TF.InputDisplayer.Domain.Models
             if (shoot) packed |= Shoot;
             if (altShoot) packed |= AltShoot;
             if (dodge) packed |= Dodge;
+
+            if (jumpPressed) packed |= Jump << PressShift;
+            if (shootPressed) packed |= Shoot << PressShift;
+            if (altShootPressed) packed |= AltShoot << PressShift;
+            if (dodgePressed) packed |= Dodge << PressShift;
 
             packed |= (Math.Clamp(moveX, -1, 1) + 1) << MoveXShift;
             packed |= (Math.Clamp(moveY, -1, 1) + 1) << MoveYShift;

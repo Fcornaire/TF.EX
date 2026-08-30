@@ -160,7 +160,7 @@ namespace TF.Replay.Domain.Services
             _lastFrame = Math.Max(_lastFrame, recordedFrame);
         }
 
-        private int KeyframeStride() => Math.Max(1, CurrentTickRate() / KeyframesPerSecond);
+        private int KeyframeStride() => RecordingPolicy.FullStates ? 1 : Math.Max(1, CurrentTickRate() / KeyframesPerSecond);
 
         public void RemovePredictedRecords(int frame)
         {
@@ -977,6 +977,21 @@ namespace TF.Replay.Domain.Services
 
             _currentReplayFrame = landed;
             return true;
+        }
+
+        public int PreviousStateFrame(int frame)
+        {
+            var floor = Math.Max(0, frame - 1 - StateSnapWindow);
+
+            for (int f = frame - 1; f >= floor; f--)
+            {
+                if (GetRecordAt(f)?.State != null)
+                {
+                    return f;
+                }
+            }
+
+            return Math.Max(0, frame - 1);
         }
 
         private Record NearestStateRecord(int frame)

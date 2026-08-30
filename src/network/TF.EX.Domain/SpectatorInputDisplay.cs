@@ -50,7 +50,9 @@ namespace TF.EX.Domain
 
                 api.PushSeat(frame, seat, input.move_x, input.move_y,
                              input.jump_check != 0, input.shoot_check != 0,
-                             input.alt_shoot_check != 0, input.dodge_check != 0);
+                             input.alt_shoot_check != 0, input.dodge_check != 0,
+                             input.jump_pressed != 0, input.shoot_pressed != 0,
+                             input.alt_shoot_pressed != 0, input.dodge_pressed != 0);
             }
         }
 

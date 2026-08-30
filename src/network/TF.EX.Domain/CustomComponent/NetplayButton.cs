@@ -6,10 +6,12 @@ namespace TF.EX.Domain.CustomComponent
 {
     public class NetplayButton : MainModeButton
     {
+        private const float IconSize = 60f;
+
         private readonly Image icon;
         private readonly Action onConfirm;
 
-        public override float BaseScale => 1.5f;
+        public override float BaseScale => IconSize / icon.Width;
 
         public override float ImageScale
         {

@@ -8,7 +8,7 @@ namespace TF.Replay.Domain.Interop
 
         void BeginSession(int seatCount);
 
-        void PushSeat(int frame, int seat, int moveX, int moveY, bool jump, bool shoot, bool altShoot, bool dodge);
+        void PushSeat(int frame, int seat, int moveX, int moveY, bool jump, bool shoot, bool altShoot, bool dodge, bool jumpPressed, bool shootPressed, bool altShootPressed, bool dodgePressed);
 
         void RenderAt(int frame);
 
