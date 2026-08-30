@@ -3,6 +3,7 @@ using MessagePack;
 using Microsoft.Extensions.Logging;
 using Monocle;
 using MonoMod.Utils;
+using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using TF.EX.Common.Extensions;
 using TF.EX.Domain.CustomComponent;
@@ -39,6 +40,7 @@ namespace TF.EX.Domain.Services
 
         private string pendingSpectatorNotice = string.Empty;
         private Lobby pendingRollcallLobby = null;
+        private readonly ConcurrentQueue<Action> gameThreadActions = new();
         private string pendingJoinCode = string.Empty;
         private bool pendingJoinAsPlayer = true;
         private Lobby privateJoinLobby = null;
@@ -614,7 +616,7 @@ namespace TF.EX.Domain.Services
                 var lobby = response.LobbyUpdate.Lobby;
 
                 ownLobby = lobby;
-                HandleLobbyUpdate(lobby);
+                RunOnGameThread(() => HandleLobbyUpdate(lobby));
             }
 
             if (IsServerMsg(message, "LeaveLobbyResponse"))
@@ -641,32 +643,39 @@ namespace TF.EX.Domain.Services
 
             if (IsServerMsg(message, "LeaveLobbyForce"))
             {
-                var mainMenu = new MainMenu(Context.MenuReturn.NetplayEntry ?? MainMenu.MenuState.VersusOptions);
-                Engine.Instance.Scene = mainMenu;
-                (TFGame.Instance.Scene as Level).Session.MatchSettings.LevelSystem.Dispose();
-
-                Sounds.ui_invalid.Play();
-                Notification.Create(mainMenu, "No choice made! dropped from lobby");
                 ownLobby = new Lobby();
                 matchEndReported = false;
+
+                RunOnGameThread(() =>
+                {
+                    var mainMenu = new MainMenu(Context.MenuReturn.NetplayEntry ?? MainMenu.MenuState.VersusOptions);
+                    Engine.Instance.Scene = mainMenu;
+                    (TFGame.Instance.Scene as Level).Session.MatchSettings.LevelSystem.Dispose();
+
+                    Sounds.ui_invalid.Play();
+                    Notification.Create(mainMenu, "No choice made! dropped from lobby");
+                });
             }
 
             if (IsServerMsg(message, "RematchLobby"))
             {
                 matchEndReported = false;
 
-                if (TFGame.Instance.Scene is Level)
+                RunOnGameThread(() =>
                 {
-                    if (_netplayManager.IsInit())
+                    if (TFGame.Instance.Scene is Level)
                     {
-                        _netplayManager.Reset();
-                    }
+                        if (_netplayManager.IsInit())
+                        {
+                            _netplayManager.Reset();
+                        }
 
-                    _inputService.EnableAllControllers();
-                    Sounds.ui_click.Play();
-                    Engine.Instance.Scene = new MapScene(MainMenu.RollcallModes.Versus);
-                    (TFGame.Instance.Scene as Level).Session.MatchSettings.LevelSystem.Dispose();
-                }
+                        _inputService.EnableAllControllers();
+                        Sounds.ui_click.Play();
+                        Engine.Instance.Scene = new MapScene(MainMenu.RollcallModes.Versus);
+                        (TFGame.Instance.Scene as Level).Session.MatchSettings.LevelSystem.Dispose();
+                    }
+                });
             }
 
             if (IsServerMsg(message, "StartLobby"))
@@ -693,19 +702,22 @@ namespace TF.EX.Domain.Services
                 hostStartedMatch = false;
                 matchEndReported = false;
 
-                if (TFGame.Instance.Scene is Level)
+                RunOnGameThread(() =>
                 {
-                    if (_netplayManager.IsInit())
+                    if (TFGame.Instance.Scene is Level)
                     {
-                        _netplayManager.Reset();
-                    }
+                        if (_netplayManager.IsInit())
+                        {
+                            _netplayManager.Reset();
+                        }
 
-                    _inputService.EnableAllControllers();
-                    Sounds.ui_clickBack.Play();
-                    Engine.Instance.Scene = new MainMenu(MainMenu.MenuState.Rollcall);
-                    _archerService.Reset();
-                    (TFGame.Instance.Scene as Level).Session.MatchSettings.LevelSystem.Dispose();
-                }
+                        _inputService.EnableAllControllers();
+                        Sounds.ui_clickBack.Play();
+                        Engine.Instance.Scene = new MainMenu(MainMenu.MenuState.Rollcall);
+                        _archerService.Reset();
+                        (TFGame.Instance.Scene as Level).Session.MatchSettings.LevelSystem.Dispose();
+                    }
+                });
             }
         }
 
@@ -877,6 +889,26 @@ namespace TF.EX.Domain.Services
             if (published != null)
             {
                 Task.Run(() => SendSkinBundle(published));
+            }
+        }
+
+        private void RunOnGameThread(Action action)
+        {
+            gameThreadActions.Enqueue(action);
+        }
+
+        public void DrainGameThreadActions()
+        {
+            while (gameThreadActions.TryDequeue(out var action))
+            {
+                try
+                {
+                    action();
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError<MatchmakingService>("Error while handling deferred server message", e);
+                }
             }
         }
 
@@ -1080,27 +1112,12 @@ namespace TF.EX.Domain.Services
         private async Task Update(WSAction action, Action onSuccess, Action onFail)
         {
             var actionName = action.ToString();
-            if (onResult.ContainsKey($"{actionName}-success"))
-            {
-                onResult[$"{actionName}-success"] = onSuccess;
-            }
-            else
-            {
-                onResult.Add($"{actionName}-success", onSuccess);
-            }
-
-            if (onResult.ContainsKey($"{actionName}-fail"))
-            {
-                onResult[$"{actionName}-fail"] = onFail;
-            }
-            else
-            {
-                onResult.Add($"{actionName}-fail", onFail);
-            }
+            onResult[$"{actionName}-success"] = onSuccess == null ? null : () => RunOnGameThread(onSuccess);
+            onResult[$"{actionName}-fail"] = onFail == null ? null : () => RunOnGameThread(onFail);
 
             if (!EnsureConnection())
             {
-                onFail();
+                RunOnGameThread(onFail);
                 return;
             }
 
@@ -1191,14 +1208,18 @@ namespace TF.EX.Domain.Services
 
         public async Task EnterQuickPlay(Action<int> onQueued, Action<Lobby> onMatched, Action<string> onFail)
         {
-            onQuickPlayQueued = onQueued;
-            onQuickPlayMatched = onMatched;
-            onQuickPlayFailed = onFail;
+            onQuickPlayQueued = onQueued == null ? null : count => RunOnGameThread(() => onQueued(count));
+            onQuickPlayMatched = onMatched == null ? null : lobby => RunOnGameThread(() => onMatched(lobby));
+            onQuickPlayFailed = onFail == null ? null : message => RunOnGameThread(() => onFail(message));
             searchingCount = 0;
 
             if (!EnsureConnection())
             {
-                onFail?.Invoke("Cannot reach the server");
+                if (onFail != null)
+                {
+                    RunOnGameThread(() => onFail("Cannot reach the server"));
+                }
+
                 return;
             }
 
