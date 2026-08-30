@@ -12,8 +12,10 @@ namespace TF.EX
     {
         public int InputDelay { get; set; } = 2;
         public string Name { get; set; } = "PLAYER";
+        public string Server { get; set; } = NetplayPreferences.OfficialServer;
         public string AutoAdjustInputDelay { get; set; } = "PROPOSE";
         public string CustomSkins { get; set; } = "FULL";
+        public bool AutoUpdate { get; set; } = true;
 
         private static readonly string[] AutoAdjustModes = { "DISABLED", "PROPOSE", "ENABLED" };
         private static readonly string[] CustomSkinModes = { "DISABLED", "FULL" };
@@ -28,7 +30,7 @@ namespace TF.EX
                     InputDelay = value;
                     Apply();
                 },
-                "Frames of local input delay. Raise it to smooth out a laggy connection. \n Do note that less input delay play better but rollback more. \n More input delay mean less rollback but play cluncky. \n Find the sweetspot in between",
+                "FRAMES OF LOCAL INPUT DELAY. RAISE IT TO SMOOTH OUT A LAGGY CONNECTION. \n DO NOTE THAT LESS INPUT DELAY PLAY BETTER BUT ROLLBACK MORE. \n MORE INPUT DELAY MEAN LESS ROLLBACK BUT PLAY CLUNCKY. \n FIND THE SWEETSPOT IN BETWEEN",
                 NetplayPreferences.MinInputDelay,
                 NetplayPreferences.MaxInputDelay);
 
@@ -41,7 +43,7 @@ namespace TF.EX
                     AutoAdjustInputDelay = selection.Item1;
                     Apply();
                 },
-                "Adapt the input delay to the connection when joining a lobby. \n PROPOSE suggests a value you can accept or ignore. \n Hold the button to reset. \n ENABLED applies it automatically. \n (Note: Your saved input delay is never changed)");
+                "ADAPT THE INPUT DELAY TO THE CONNECTION WHEN JOINING A LOBBY. \n PROPOSE SUGGESTS A VALUE YOU CAN ACCEPT OR IGNORE. \n HOLD THE BUTTON TO RESET. \n ENABLED APPLIES IT AUTOMATICALLY. \n (NOTE: YOUR SAVED INPUT DELAY IS NEVER CHANGED)");
 
             settings.CreateOptions(
                 "CUSTOM SKINS",
@@ -52,7 +54,7 @@ namespace TF.EX
                     CustomSkins = selection.Item1;
                     Apply();
                 },
-                "Show opponents' custom archer skins. \n Skins are visual only, streamed in memory and never saved. \n Sounds and music are omitted and re use vanilla");
+                "SHOW OPPONENTS' CUSTOM ARCHER SKINS. \n SKINS ARE VISUAL ONLY, STREAMED IN MEMORY AND NEVER SAVED. \n SOUNDS AND MUSIC ARE OMITTED AND RE USE VANILLA");
 
             settings.CreateInput(
                 "NETPLAY NAME",
@@ -62,7 +64,20 @@ namespace TF.EX
                     Name = value;
                     Apply();
                 },
-                "Your player name, shown to opponents in lobbies and matches");
+                "YOUR PLAYER NAME, SHOWN TO OPPONENTS IN LOBBIES AND MATCHES");
+
+            settings.CreateCustomOptions(() => new ServerOptionsButton(this,
+                "THE MATCHMAKING SERVER TO CONNECT TO. \n ONLY CHANGE THIS IF YOU KNOW WHAT YOU ARE DOING"));
+
+            settings.CreateOnOff(
+                "AUTO UPDATE",
+                AutoUpdate,
+                value =>
+                {
+                    AutoUpdate = value;
+                    Apply();
+                },
+                "DOWNLOAD AND APPLY THE LATEST EX VERSION AUTOMATICALLY. \n ONLINE PLAY ALWAYS REQUIRES THE LATEST VERSION");
         }
 
         public override void OnVerify()
@@ -82,6 +97,13 @@ namespace TF.EX
             }
             Name = name.Substring(0, Math.Min(name.Length, NetplayPreferences.MaxNameLength));
 
+            var server = (Server ?? "").Trim().TrimEnd('/');
+            if (server.Length == 0)
+            {
+                server = NetplayPreferences.OfficialServer;
+            }
+            Server = server;
+
             var mode = Enum.TryParse<AutoAdjustInputDelayMode>(AutoAdjustInputDelay, true, out var parsed)
                 ? parsed
                 : AutoAdjustInputDelayMode.Propose;
@@ -94,8 +116,10 @@ namespace TF.EX
 
             NetplayPreferences.InputDelay = InputDelay;
             NetplayPreferences.Name = Name;
+            NetplayPreferences.Server = Server;
             NetplayPreferences.AutoAdjustInputDelay = mode;
             NetplayPreferences.CustomSkins = skinMode;
+            NetplayPreferences.AutoUpdate = AutoUpdate;
         }
 
         private void MigrateLegacyConfig()

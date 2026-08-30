@@ -321,7 +321,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
                 }
             }
 
-            if (playerIndex == matchmakingService.GetLocalSeat())
+            if (!matchmakingService.IsSpectator() && playerIndex == matchmakingService.GetLocalSeat())
             {
                 HandleTeamSelection(__instance, dynRollcallElement, lobby);
             }

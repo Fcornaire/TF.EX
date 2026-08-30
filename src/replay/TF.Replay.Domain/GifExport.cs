@@ -59,7 +59,7 @@ namespace TF.Replay.Domain
             _frames.Clear();
         }
 
-        public static string Begin(int inFrame, int outFrame, string replayName, string folder)
+        public static string Begin(int inFrame, int outFrame, string replayName)
         {
             if (IsBusy)
             {
@@ -74,7 +74,7 @@ namespace TF.Replay.Domain
             }
 
             _frames.Clear();
-            _path = BuildPath(folder, replayName, inFrame, outFrame);
+            _path = BuildPath(replayName, inFrame, outFrame);
             _endFrame = outFrame;
             _seen = 0;
             _stallLimit = span * 3 + 600;
@@ -242,12 +242,10 @@ namespace TF.Replay.Domain
             _frames.Clear();
         }
 
-        private static string BuildPath(string folder, string replayName, int inFrame, int outFrame)
+        private static string BuildPath(string replayName, int inFrame, int outFrame)
         {
-            if (string.IsNullOrEmpty(folder))
-            {
-                folder = Path.Combine(Directory.GetCurrentDirectory(), "Replays");
-            }
+            var folder = Services.ReplayService.GifsRootFolder;
+            Directory.CreateDirectory(folder);
 
             var stem = string.IsNullOrEmpty(replayName)
                 ? "replay"

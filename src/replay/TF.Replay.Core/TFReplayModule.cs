@@ -55,6 +55,8 @@ namespace TF.Replay.Core
 
         private void Initialize(IModuleContext context, ILogger logger)
         {
+            LegacyReplayMigration.Run(logger);
+
             GetSettings<ReplaySettings>()?.Apply();
 
             new TFReplayCommands(_api).Register(context);

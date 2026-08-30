@@ -1,8 +1,6 @@
-﻿using MessagePack;
+using MessagePack;
 using Microsoft.Extensions.Logging;
 using System.IO.Compression;
-using System.Net;
-using System.Net.Http;
 using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
 using TF.EX.Common.Extensions;
@@ -16,36 +14,44 @@ namespace TF.EX.Common
         public string Name { get; set; }
     }
 
+    public enum UpdateStatus
+    {
+        Unknown,
+        UpToDate,
+        UpdateAvailable,
+    }
+
     public interface IAutoUpdater
     {
         Task CheckForUpdate();
-        bool IsUpdateAvailable();
-        bool Update();
+        bool IsStatusFresh();
+        UpdateStatus GetStatus();
         Version GetLatestVersion();
+        Version GetCurrentVersion();
+        Task<bool> DownloadAndApply(Action<string> onPhase, Action<long, long> onProgress);
     }
 
-    public class AutoUpdater : IAutoUpdater
+    public partial class AutoUpdater : IAutoUpdater
     {
-        private static readonly string[] ModFolders = { "DShad.TF.EX", "DShad.TF.Replay", "DShad.TF.State" };
+
+        [GeneratedRegex(@"v\d+\.\d+\.\d+")]
+        private static partial Regex VersionRegex();
+
+        private static readonly string[] ModFolders = { "DShad.TF.EX", "DShad.TF.Replay", "DShad.TF.State", "DShad.TF.InputDisplayer" };
+
+        //Stream.CopyToAsync's default (dotnet/runtime Stream.cs): largest 4096 multiple under the 85K large-object-heap threshold
+        private const int CopyBufferSize = 81920;
 
         private readonly ILogger _logger;
         private string DownloadPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "TF.EX", "Update");
 
-        private string ModsPath
-        {
-            get
-            {
-                var fortRise = Path.Combine(Directory.GetCurrentDirectory(), "FortRise", "Mods");
-
-                return Directory.Exists(fortRise)
-                    ? fortRise
-                    : Path.Combine(Directory.GetCurrentDirectory(), "Mods");
-            }
-        }
-
         private string ZipPath => Path.Combine(DownloadPath, "update.zip");
 
-        private bool _isUpdateAvailable = false;
+        private static readonly TimeSpan CheckTimestamp = TimeSpan.FromMinutes(5);
+
+        private UpdateStatus _status = UpdateStatus.Unknown;
+        private DateTime _lastSuccessfulCheck = DateTime.MinValue;
+        private string _downloadUrl;
 
         private Version latestVersion;
         private Version currentVersion;
@@ -55,48 +61,48 @@ namespace TF.EX.Common
             _logger = logger;
         }
 
+        private string GetModsPath()
+        {
+            var fortRise = Path.Combine(Directory.GetCurrentDirectory(), "FortRise", "Mods");
+
+            return Directory.Exists(fortRise) ? fortRise : Path.Combine(Directory.GetCurrentDirectory(), "Mods");
+        }
+
         public async Task CheckForUpdate()
         {
-            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+            if (IsStatusFresh())
+            {
+                return;
+            }
 
             try
             {
-                var meta = File.ReadAllText(Path.Combine(ModsPath, "DShad.TF.EX", "meta.json"));
+                CleanupPreviousUpdate();
+
+                var meta = File.ReadAllText(Path.Combine(GetModsPath(), "DShad.TF.EX", "meta.json"));
                 currentVersion = GetVersion(meta);
 
                 _logger.LogDebug<AutoUpdater>($"Current TF.EX version: {currentVersion}");
                 _logger.LogDebug<AutoUpdater>($"Checking latest TF.EX version");
 
-                latestVersion = await GetLatestVersion();
+                latestVersion = await FetchLatestVersion();
 
                 _logger.LogDebug<AutoUpdater>($"Latest TF.EX version: {latestVersion}");
 
-                if (latestVersion > currentVersion)
+                _downloadUrl = latestVersion > currentVersion ? await ResolveDownloadUrl($"v{latestVersion}") : null;
+
+                if (_downloadUrl != null)
                 {
-                    var hasRelease = await HasARelease($"v{latestVersion}");
-
-                    if (!hasRelease)
-                    {
-                        _logger.LogDebug<AutoUpdater>("No TF.EX Update available");
-                        return;
-                    }
-
-                    _logger.LogDebug<AutoUpdater>("TF.EX Update available!");
-                    await DownloadLatest();
-
-                    if (!ExtractUpdate())
-                    {
-                        return;
-                    }
-
-                    _logger.LogDebug<AutoUpdater>($"Donwloaded and extracted Update {latestVersion}");
-
-                    _isUpdateAvailable = true;
+                    _logger.LogDebug<AutoUpdater>($"TF.EX Update available! ({_downloadUrl})");
+                    _status = UpdateStatus.UpdateAvailable;
                 }
                 else
                 {
                     _logger.LogDebug<AutoUpdater>("No TF.EX Update available");
+                    _status = UpdateStatus.UpToDate;
                 }
+
+                _lastSuccessfulCheck = DateTime.UtcNow;
             }
             catch (Exception ex)
             {
@@ -104,49 +110,98 @@ namespace TF.EX.Common
             }
         }
 
-        private bool ExtractUpdate()
+        public bool IsStatusFresh()
+        {
+            return _status != UpdateStatus.Unknown && DateTime.UtcNow - _lastSuccessfulCheck < CheckTimestamp;
+        }
+
+        public UpdateStatus GetStatus()
+        {
+            return _status;
+        }
+
+        public Version GetLatestVersion()
+        {
+            return latestVersion;
+        }
+
+        public Version GetCurrentVersion()
+        {
+            return currentVersion;
+        }
+
+        public async Task<bool> DownloadAndApply(Action<string> onPhase, Action<long, long> onProgress)
         {
             try
             {
-                if (!Directory.Exists(DownloadPath))
-                {
-                    _logger.LogError<AutoUpdater>("No update found");
-                    return false;
-                }
+                onPhase?.Invoke($"DOWNLOADING V{latestVersion}");
+                await Download(onProgress);
 
-                if (!File.Exists(ZipPath))
-                {
-                    _logger.LogError<AutoUpdater>("No update found");
-                    return false;
-                }
+                onPhase?.Invoke("APPLYING UPDATE");
+                Extract();
+                Apply();
 
-                _logger.LogDebug<AutoUpdater>("Extracting update...");
+                Directory.Delete(DownloadPath, true);
 
-                ZipFile.ExtractToDirectory(ZipPath, DownloadPath);
-
-                if (!ModFolders.Any(folder => Directory.Exists(Path.Combine(DownloadPath, folder))))
-                {
-                    _logger.LogError<AutoUpdater>("The downloaded archive holds none of the mod folders");
-                    return false;
-                }
+                _logger.LogDebug<AutoUpdater>($"Update {latestVersion} applied, awaiting restart");
 
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError<AutoUpdater>($"Exception while trying to extract update", ex);
+                _logger.LogError<AutoUpdater>($"Exception while trying to apply update {latestVersion}", ex);
                 return false;
             }
         }
 
-        public bool Update()
+        private async Task Download(Action<long, long> onProgress)
         {
-            if (!_isUpdateAvailable)
-            {
-                _logger.LogError<AutoUpdater>("No TF.EX UPDATE AVAILABLE");
-                return false;
-            }
+            var downloadUrl = _downloadUrl;
 
+            if (Directory.Exists(DownloadPath))
+            {
+                Directory.Delete(DownloadPath, true);
+            }
+            
+            Directory.CreateDirectory(DownloadPath);
+
+            using var client = new HttpClient();
+            client.DefaultRequestHeaders.Add("User-Agent", "Towerfall");
+
+            using var response = await client.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead);
+            response.EnsureSuccessStatusCode();
+
+            var total = response.Content.Headers.ContentLength ?? -1;
+
+            using var source = await response.Content.ReadAsStreamAsync();
+            using var destination = File.Create(ZipPath);
+
+            var buffer = new byte[CopyBufferSize];
+            long copied = 0;
+            int read;
+
+            while ((read = await source.ReadAsync(buffer, 0, buffer.Length)) > 0)
+            {
+                await destination.WriteAsync(buffer, 0, read);
+                copied += read;
+                onProgress?.Invoke(copied, total);
+            }
+        }
+
+        private void Extract()
+        {
+            _logger.LogDebug<AutoUpdater>("Extracting update...");
+
+            ZipFile.ExtractToDirectory(ZipPath, DownloadPath);
+
+            if (!ModFolders.Any(folder => Directory.Exists(Path.Combine(DownloadPath, folder))))
+            {
+                throw new InvalidOperationException("The downloaded archive holds none of the mod folders ?");
+            }
+        }
+
+        private void Apply()
+        {
             foreach (var folder in ModFolders)
             {
                 var source = Path.Combine(DownloadPath, folder);
@@ -157,19 +212,64 @@ namespace TF.EX.Common
                     continue;
                 }
 
-                MoveInto(source, Path.Combine(ModsPath, folder));
+                var destination = Path.Combine(GetModsPath(), folder);
 
-                Directory.Delete(source, true);
+                ClearFolder(destination);
+                MoveInto(source, destination);
+
                 _logger.LogDebug<AutoUpdater>($"Updated {folder}");
             }
+        }
 
-            _logger.LogDebug<AutoUpdater>("Deleted Update files");
-            File.Delete(ZipPath);
-            _logger.LogDebug<AutoUpdater>("Deleted Update zip");
+        //a native (ggrs_ffi.dll for example) cannot be deleted, it will be removed by CleanupPreviousUpdate after the restart
+        private void ClearFolder(string folder)
+        {
+            if (!Directory.Exists(folder))
+            {
+                return;
+            }
 
-            _logger.LogDebug<AutoUpdater>("Update complete! Restarting TowerFall");
+            foreach (var file in Directory.GetFiles(folder, "*", SearchOption.AllDirectories))
+            {
+                try
+                {
+                    File.Delete(file);
+                }
+                catch (Exception)
+                {
+                    File.Move(file, $"{file}.{Guid.NewGuid():N}.old", true);
+                }
+            }
+        }
 
-            return true;
+        private void CleanupPreviousUpdate()
+        {
+            try
+            {
+                if (Directory.Exists(DownloadPath))
+                {
+                    Directory.Delete(DownloadPath, true);
+                }
+
+                foreach (var folder in ModFolders)
+                {
+                    var destination = Path.Combine(GetModsPath(), folder);
+
+                    if (!Directory.Exists(destination))
+                    {
+                        continue;
+                    }
+
+                    foreach (var file in Directory.GetFiles(destination, "*.old", SearchOption.AllDirectories))
+                    {
+                        File.Delete(file);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError<AutoUpdater>("Could not clean the previous update", ex);
+            }
         }
 
         private void MoveInto(string source, string destinationFolder)
@@ -180,18 +280,11 @@ namespace TF.EX.Common
 
                 Directory.CreateDirectory(Path.GetDirectoryName(destination));
 
-                if (File.Exists(destination))
-                {
-                    File.Delete(destination);
-                }
-
-                File.Move(file, destination);
-
-                _logger.LogDebug<AutoUpdater>($"Updated {Path.GetFileName(file)}");
+                File.Move(file, destination, true);
             }
         }
 
-        private async Task<Version> GetLatestVersion()
+        private async Task<Version> FetchLatestVersion()
         {
             using var client = new HttpClient();
             client.DefaultRequestHeaders.Add("User-Agent", "Towerfall");
@@ -200,43 +293,36 @@ namespace TF.EX.Common
             var bytes = MessagePackSerializer.ConvertFromJson(content);
             var tags = MessagePackSerializer.Deserialize<List<GithubTag>>(bytes);
 
-            var regex = new Regex(@"v\d+\.\d+\.\d+");
+            var regex = VersionRegex();
             var semverTags = tags.Select(t => t.Name).Where(tag => regex.IsMatch(tag)).ToList();
             var latestSemverTag = semverTags.OrderByDescending(t => new Version(t.Substring(1))).FirstOrDefault();
 
             return new Version(latestSemverTag.Substring(1));
         }
 
-        private async Task<bool> HasARelease(string tag)
+        //a release without the bundle asset (pre-1.0 naming) counts as no update
+        private async Task<string> ResolveDownloadUrl(string tag)
         {
             using var client = new HttpClient();
             client.DefaultRequestHeaders.Add("User-Agent", "Towerfall");
             var response = await client.GetAsync($"https://api.github.com/repos/fcornaire/tf.ex/releases/tags/{tag}");
-            return response.IsSuccessStatusCode;
-        }
 
-
-        private async Task DownloadLatest()
-        {
-            try
+            if (!response.IsSuccessStatusCode)
             {
-                var downloadUrl = $"https://github.com/FCornaire/TF.EX/releases/download/v{latestVersion}/DShad.TF.EX-v{latestVersion}.zip";
+                return null;
+            }
 
-                var httpClient = new HttpClient();
-                var fileBytes = await httpClient.GetByteArrayAsync(downloadUrl);
+            using var document = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync());
 
-                if (Directory.Exists(DownloadPath))
+            foreach (var asset in document.RootElement.GetProperty("assets").EnumerateArray())
+            {
+                if (asset.GetProperty("name").GetString() == $"DShad.TF.EX-{tag}.zip")
                 {
-                    Directory.Delete(DownloadPath, true);
+                    return asset.GetProperty("browser_download_url").GetString();
                 }
-                Directory.CreateDirectory(DownloadPath);
+            }
 
-                File.WriteAllBytes($"{DownloadPath}/update.zip", fileBytes);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError<AutoUpdater>($"Exception while trying to download {latestVersion}", ex);
-            }
+            return null;
         }
 
         private Version GetVersion(string jsonText)
@@ -251,16 +337,6 @@ namespace TF.EX.Common
             }
 
             throw new InvalidOperationException("Unable to get version from meta.json");
-        }
-
-        public bool IsUpdateAvailable()
-        {
-            return _isUpdateAvailable;
-        }
-
-        Version IAutoUpdater.GetLatestVersion()
-        {
-            return latestVersion;
         }
     }
 }

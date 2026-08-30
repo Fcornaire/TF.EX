@@ -303,7 +303,7 @@ namespace TF.Replay.Domain
 
             Seek(service, MarkIn.Value);
 
-            var refusal = GifExport.Begin(service.PlaybackFrame, MarkOut.Value, service.GetReplay()?.Informations?.Name, service.CurrentFolder);
+            var refusal = GifExport.Begin(service.PlaybackFrame, MarkOut.Value, service.GetReplay()?.Informations?.Name);
 
             if (refusal != null)
             {

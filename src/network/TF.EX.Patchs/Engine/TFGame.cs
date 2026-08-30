@@ -1,5 +1,4 @@
 using HarmonyLib;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Xna.Framework;
 using Monocle;
@@ -25,7 +24,12 @@ namespace TF.EX.Patchs.Engine
     [HarmonyPatch(typeof(TowerFall.TFGame))]
     public class TFGamePatch
     {
-        private static bool _shouldShowUpdateNotif = true;
+        private static bool _updateFlowStarted;
+        private static volatile bool _restartWhenReady;
+        private static volatile bool _updateFailed;
+        private static volatile bool _checkDone;
+        private static Action _pendingNetplayEntry;
+        private static UpdaterDialog _updaterDialog;
 
         private static readonly Stopwatch UpdateClock = Stopwatch.StartNew();
         private static TimeSpan LastUpdate;
@@ -48,32 +52,10 @@ namespace TF.EX.Patchs.Engine
         {
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var replayService = ServiceCollections.ResolveReplayService();
-            var autoUpdater = ServiceCollections.ResolveAutoUpdater();
 
             if (__instance.Scene is Level && netplayManager.IsServerMode())
             {
                 replayService.Export();
-            }
-
-            if (autoUpdater.IsUpdateAvailable())
-            {
-                //TODO: logger
-                //if (!FortRise.RiseCore.DebugMode)
-                //{
-                //    FortRise.Logger.AttachConsole(new FortRise.WindowConsole());
-                //}
-
-                var logger = ServiceCollections.ResolveLogger();
-                var stopWatch = new Stopwatch();
-
-                stopWatch.Start();
-                logger.LogDebug("TF.EX mod updating...");
-                autoUpdater.Update();
-                stopWatch.Stop();
-
-                var time = stopWatch.ElapsedMilliseconds / 1000 == 0 ? $"{stopWatch.ElapsedMilliseconds}ms" : $"{stopWatch.ElapsedMilliseconds / 1000}s";
-
-                logger.LogDebug($"TF.EX mod updated in {time}");
             }
         }
 
@@ -131,17 +113,6 @@ namespace TF.EX.Patchs.Engine
         {
             LastUpdate = UpdateClock.Elapsed;
             Accumulator = TimeSpan.Zero;
-
-            if (Config.SERVER.Contains(".scw.cloud")) //TODO: find a better way to detect local / production
-            {
-                Task.Run(() => AutoUpdateIfNeeded()).GetAwaiter().GetResult();
-            }
-        }
-
-        private static async Task AutoUpdateIfNeeded()
-        {
-            var autoUpdate = ServiceCollections.ServiceProvider.GetRequiredService<IAutoUpdater>();
-            await autoUpdate.CheckForUpdate();
         }
 
         [HarmonyReversePatch]
@@ -386,31 +357,13 @@ namespace TF.EX.Patchs.Engine
 
         private static void HandleMenuAction(TFGame instance, IAutoUpdater autoUpdater, IInputService inputService)
         {
+            HandleAutoUpdate(instance, autoUpdater, inputService);
+
             var scene = instance.Scene as TowerFall.MainMenu;
             switch (scene.State)
             {
                 case TowerFall.MainMenu.MenuState.PressStart:
                     UpdateClipped(instance.Commands);
-
-                    if (_shouldShowUpdateNotif)
-                    {
-                        _shouldShowUpdateNotif = false;
-
-                        if (autoUpdater.IsUpdateAvailable())
-                        {
-                            var notif = Notification.Create(instance.Scene, $"EX mod new update! Applying version {autoUpdater.GetLatestVersion()} ...", stayingDuration: 500);
-                            Sounds.ui_clickSpecial.Play(160, 5);
-                            inputService.DisableAllControllers();
-
-                            Alarm alarm = Alarm.Create(Alarm.AlarmMode.Oneshot, null, 550, true);
-                            alarm.OnComplete = instance.Exit;
-
-                            notif.Add(alarm);
-
-                            instance.Scene.Add(notif);
-                        }
-                    }
-
                     break;
                 case TowerFall.MainMenu.MenuState.VersusOptions:
                     var dynCommands = DynamicData.For(instance.Commands);
@@ -420,6 +373,113 @@ namespace TF.EX.Patchs.Engine
                 default:
                     break;
             }
+        }
+
+        private static void HandleAutoUpdate(TFGame instance, IAutoUpdater autoUpdater, IInputService inputService)
+        {
+            if (_restartWhenReady)
+            {
+                _restartWhenReady = false;
+                FortRise.RiseCore.WillRestart = true;
+                instance.Exit();
+                return;
+            }
+
+            if (_updateFailed)
+            {
+                _updateFailed = false;
+                _updateFlowStarted = false;
+                _updaterDialog?.RemoveSelf();
+                _updaterDialog = null;
+                inputService.EnableAllControllers();
+                Sounds.ui_invalid.Play();
+                Notification.Create(instance.Scene, "Update failed! Online play requires the latest version", 10, 500);
+                return;
+            }
+
+            if (_checkDone)
+            {
+                _checkDone = false;
+
+                var enter = _pendingNetplayEntry;
+                _pendingNetplayEntry = null;
+
+                instance.Scene.RemoveLoader();
+                inputService.EnableAllControllers();
+
+                ResolveNetplayEntry(instance.Scene as TowerFall.MainMenu, autoUpdater, inputService, enter);
+            }
+        }
+
+        public static void RequestNetplayEntry(TowerFall.MainMenu menu, Action enter)
+        {
+            var autoUpdater = ServiceCollections.ResolveAutoUpdater();
+            var inputService = ServiceCollections.ResolveInputService();
+
+            if (!NetplayPreferences.IsOfficialServer || autoUpdater.IsStatusFresh())
+            {
+                ResolveNetplayEntry(menu, autoUpdater, inputService, enter);
+                return;
+            }
+
+            _pendingNetplayEntry = enter;
+            menu.AddLoader("CHECKING VERSION", withFade: true);
+            inputService.DisableAllControllers();
+
+            Task.Run(async () =>
+            {
+                await autoUpdater.CheckForUpdate();
+                _checkDone = true;
+            });
+        }
+
+        private static void ResolveNetplayEntry(TowerFall.MainMenu menu, IAutoUpdater autoUpdater, IInputService inputService, Action enter)
+        {
+            if (menu == null)
+            {
+                return;
+            }
+
+            if (NetplayPreferences.IsOfficialServer && autoUpdater.GetStatus() == UpdateStatus.UpdateAvailable)
+            {
+                if (NetplayPreferences.AutoUpdate && !_updateFlowStarted)
+                {
+                    StartUpdate(menu, autoUpdater, inputService);
+                    return;
+                }
+
+                Sounds.ui_invalid.Play();
+                Notification.Create(menu, $"Online play requires version {autoUpdater.GetLatestVersion()} (current version : {autoUpdater.GetCurrentVersion()})", 10, 400);
+                return;
+            }
+
+            enter?.Invoke();
+        }
+
+        private static void StartUpdate(TowerFall.MainMenu menu, IAutoUpdater autoUpdater, IInputService inputService)
+        {
+            _updateFlowStarted = true;
+
+            var dialog = new UpdaterDialog($"NEW VERSION V{autoUpdater.GetLatestVersion()}");
+            _updaterDialog = dialog;
+            menu.Add(dialog);
+            Sounds.ui_clickSpecial.Play(160, 5);
+            inputService.DisableAllControllers();
+
+            Task.Run(async () =>
+            {
+                var ok = await autoUpdater.DownloadAndApply(dialog.SetPhase, dialog.Report);
+
+                if (ok)
+                {
+                    dialog.SetPhase("RESTARTING");
+                    _restartWhenReady = true;
+                }
+                else
+                {
+                    _updateFailed = true;
+                }
+            });
         }
 
         public static bool CanRunNetplayFrames(Monocle.Scene scene, INetplayManager netplayManager)

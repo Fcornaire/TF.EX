@@ -37,7 +37,7 @@ It let you with your mouse directly seek to the frame you want
   <img src="../../images/replay_seekbar.gif" alt="animated" />
 </p>
 
-You can also export gif : use 2 right clicks to select the frames frontier and press G to export the gif (the gif is going ro be next to your replay in the Replays folder next to your Towerfall game)
+You can also export gif : use 2 right clicks to select the frames frontier and press G to export the gif (the gif lands in `<TowerFall>/FortRise/Saves/TF.Replay/Gifs`)
 
 <p align="center">
   <img src="../../images/replay_export.gif" alt="animated" />
@@ -91,7 +91,7 @@ installed, takes over for netplay matches. Either way the replay is exported at 
 of a match, to:
 
 ```
-<TowerFall>/Replays/yyyy-MM/<timestamp>.tow
+<TowerFall>/FortRise/Saves/TF.Replay/Replays/yyyy-MM/<timestamp>.tow
 ```
 
 Monthly folders keep the list navigable
@@ -101,7 +101,7 @@ Which modes get recorded is a toggle in the mod's options page (`OPTIONS` → `M
 - `RECORD LAST MAN STANDING`
 - `RECORD HEADHUNTERS`
 - `RECORD TEAM DEATHMATCH`
-- `TRIALS`
+- `RECORD TRIALS`
 
 ## Controls
 

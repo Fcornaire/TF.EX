@@ -15,7 +15,7 @@ namespace TF.EX.Utils
     public class ReplayComparer
     {
         private readonly string _replaysFolder =
-            Path.Combine(Environment.GetEnvironmentVariable("TFPath") ?? ".", "Replays");
+            Path.Combine(Environment.GetEnvironmentVariable("TFPath") ?? ".", "FortRise", "Saves", "TF.Replay", "Replays");
 
         private static async Task<List<Record>> LoadRecords(string path)
         {

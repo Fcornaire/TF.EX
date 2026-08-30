@@ -58,7 +58,7 @@ namespace TF.Replay.Domain.Ports
         string[] GetMonths();
         void SetMonth(string month);
 
-        Task<IEnumerable<Models.Replay>> LoadAndGetReplays();
+        Task<IEnumerable<Models.Replay>> LoadAndGetReplays(Action<int, int> onProgress = null);
         Models.Replay GetReplay();
         void LoadReplay(Models.Replay replay);
     }
