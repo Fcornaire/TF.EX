@@ -150,6 +150,25 @@ namespace TF.EX.Domain.Services.TF
             }
         }
 
+        public void RemoveFakeControllers()
+        {
+            for (int seat = 0; seat < TFGame.PlayerInputs.Length; seat++)
+            {
+                if (TFGame.PlayerInputs[seat] is FakeController)
+                {
+                    TFGame.PlayerInputs[seat] = null;
+                }
+            }
+
+            for (int i = 0; i < MenuInput.MenuInputs.Length; i++)
+            {
+                if (MenuInput.MenuInputs[i] is FakeController)
+                {
+                    MenuInput.MenuInputs[i] = null;
+                }
+            }
+        }
+
         public Input GetCurrentInput(int characterIndex)
         {
             return _context.GetCurrentInput(characterIndex);

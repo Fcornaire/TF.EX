@@ -168,7 +168,7 @@ namespace TF.Replay.Patchs.Scene
 
             var classified = state.ClassifyStateDiff(live, record.State);
 
-            ServiceCollections.ResolveLogger().LogWarning("Playback diverged at frame {frame} ({kind}): {detail}",record.Frame, classified[0], classified[1]);
+            ServiceCollections.ResolveLogger().LogDebug("Playback diverged at frame {frame} ({kind}): {detail}",record.Frame, classified[0], classified[1]);
         }
 
         private static void Rearm()

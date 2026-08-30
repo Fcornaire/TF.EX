@@ -476,7 +476,7 @@ namespace TF.EX.Domain.Services
             }
             else
             {
-                _logger.LogWarning("[Replay] No round player spawner at playback start");
+                _logger.LogDebug("[Replay] No round player spawner at playback start");
             }
         }
 
@@ -486,7 +486,7 @@ namespace TF.EX.Domain.Services
 
             if (recordedState != null && !StateApi.Current.LoadGameStateBytes(recordedState))
             {
-                _logger.LogWarning("[Replay] Could not restore the first recorded frame; playback starts from the freshly loaded level");
+                _logger.LogDebug("[Replay] Could not restore the first recorded frame; playback starts from the freshly loaded level");
             }
 
             if (level != null
@@ -536,7 +536,7 @@ namespace TF.EX.Domain.Services
                 if (recordedState != null && !_primingDiffReported)
                 {
                     _primingDiffReported = true;
-                    _logger.LogWarning("[Replay] Primed state differs from its own record at frame {frame}", frame);
+                    _logger.LogDebug("[Replay] Primed state differs from its own record at frame {frame}", frame);
                 }
 
                 return 0;
@@ -547,7 +547,7 @@ namespace TF.EX.Domain.Services
                 if (recordedState != null && frame - _lastDivergenceLogFrame >= DivergenceLogInterval)
                 {
                     _lastDivergenceLogFrame = frame;
-                    Log(ServiceCollections.ResolveSkinOverlayService().HasReplaySkins, "[Replay] Playback diverged at frame {frame} ?", frame);
+                    _logger.LogDebug("[Replay] Playback diverged at frame {frame} ?", frame);
                 }
 
                 return 0;
@@ -620,7 +620,7 @@ namespace TF.EX.Domain.Services
                     return NoResync;
                 }
 
-                _logger.LogWarning("[Replay] Round start differs from the record at {frame}", frame);
+                _logger.LogDebug("[Replay] Round start differs from the record at {frame}", frame);
 
                 return 0;
             }
@@ -702,7 +702,7 @@ namespace TF.EX.Domain.Services
                     if (!_encodingDiffReported)
                     {
                         _encodingDiffReported = true;
-                        _logger.LogWarning("[Replay] Encoding-only difference at frame {frame}, states are equal but bytes are not.{detail}", frame, detail);
+                        _logger.LogDebug("[Replay] Encoding-only difference at frame {frame}, states are equal but bytes are not.{detail}", frame, detail);
                     }
 
                     return;
@@ -713,7 +713,7 @@ namespace TF.EX.Domain.Services
                     if (!_renderDiffReported)
                     {
                         _renderDiffReported = true;
-                        _logger.LogWarning("[Replay] Render-derived sprite state differs at frame {frame}: {detail}", frame, detail);
+                        _logger.LogDebug("[Replay] Render-derived sprite state differs at frame {frame}: {detail}", frame, detail);
                     }
 
                     return;
@@ -722,9 +722,7 @@ namespace TF.EX.Domain.Services
                 _divergenceReported = true;
                 _lastDivergenceLogFrame = frame;
 
-                var hasReplaySkins = ServiceCollections.ResolveSkinOverlayService().HasReplaySkins;
-
-                Log(hasReplaySkins,
+                _logger.LogDebug(
                     "[Replay] PLAYBACK DIVERGED at frame {frame} (round {round}, live len {liveLen} vs recorded {recLen}), Live vs recorded: {detail}",
                     frame, round, liveBytes.Length, recordedState.Length, detail);
 
@@ -739,30 +737,18 @@ namespace TF.EX.Domain.Services
 
                     if (StateApi.Current.StateMatchesWithFrame(neighbourState, liveBytes, frame))
                     {
-                        Log(hasReplaySkins, "[Replay] Live state actually matches record {frame} , playback is offset by {offset}, not desynced", frame + offset, offset);
+                        _logger.LogDebug("[Replay] Live state actually matches record {frame} , playback is offset by {offset}, not desynced", frame + offset, offset);
                     }
                     else
                     {
                         var neighbourDiff = StateApi.Current.ClassifyStateDiff(liveBytes, neighbourState);
-                        Log(hasReplaySkins, "[Replay] Live vs record {frame} ({kind}): {detail}", frame + offset, neighbourDiff[0], neighbourDiff[1]);
+                        _logger.LogDebug("[Replay] Live vs record {frame} ({kind}): {detail}", frame + offset, neighbourDiff[0], neighbourDiff[1]);
                     }
                 }
             }
             catch (Exception e)
             {
                 _logger.LogError(e, "[Replay] Divergence detected at frame {frame} but the diff itself failed ?", frame);
-            }
-        }
-
-        private void Log(bool quiet, string message, params object[] args)
-        {
-            if (quiet)
-            {
-                _logger.LogDebug(message, args);
-            }
-            else
-            {
-                _logger.LogWarning(message, args);
             }
         }
 

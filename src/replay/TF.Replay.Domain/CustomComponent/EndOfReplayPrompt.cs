@@ -8,7 +8,7 @@ namespace TF.Replay.Domain.CustomComponent
     {
         private const float PanelTop = 172f;
         private const float PanelWidth = 152f;
-        private const float PanelHeight = 46f;
+        private const float PanelHeight = 56f;
 
         private const float PanelCenterX = 160f;
 
@@ -34,6 +34,9 @@ namespace TF.Replay.Domain.CustomComponent
 
             Draw.OutlineTextCentered(TFGame.Font, "ESC : QUIT TO MENU",
                 new Vector2(PanelCenterX, PanelTop + 37f), Color.White, Color.Black);
+
+            Draw.OutlineTextCentered(TFGame.Font, "H : CONTROLS",
+                new Vector2(PanelCenterX, PanelTop + 47f), Color.White, Color.Black);
         }
     }
 }

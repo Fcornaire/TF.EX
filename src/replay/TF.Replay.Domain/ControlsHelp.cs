@@ -6,9 +6,8 @@ namespace TF.Replay.Domain
 {
     public static class ControlsHelp
     {
-        private const float GuideY = 8f;
-
-        private static float GuideX => 310f + Overlay.RightOffset;
+        private const float GuideY = 229f;
+        private const float GuideLeft = 10f;
 
         private static readonly (string Key, string Text, string Action)[] Rows =
         [
@@ -107,14 +106,13 @@ namespace TF.Replay.Domain
             if (icon == null)
             {
                 Draw.OutlineTextCentered(TFGame.Font, $"H : {title}",
-                    new Vector2(GuideX - titleWidth / 2f, GuideY), Color.White, Color.Black);
+                    new Vector2(GuideLeft + titleWidth / 2f, GuideY), Color.White, Color.Black);
                 return;
             }
 
-            var total = icon.Width + 4f + titleWidth;
-
-            Draw.TextureCentered(icon, new Vector2(GuideX - icon.Width / 2f, GuideY), Color.White);
-            Draw.OutlineTextCentered(TFGame.Font, title, new Vector2(GuideX - total + titleWidth / 2f, GuideY), Color.White, Color.Black);
+            Draw.TextureCentered(icon, new Vector2(GuideLeft + icon.Width / 2f, GuideY), Color.White);
+            Draw.OutlineTextCentered(TFGame.Font, title,
+                new Vector2(GuideLeft + icon.Width + 4f + titleWidth / 2f, GuideY), Color.White, Color.Black);
         }
     }
 }

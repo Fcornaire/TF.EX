@@ -93,6 +93,7 @@ namespace TF.EX.Patchs.Engine
                 if (!isReturningToLobby)
                 {
                     netplayManager.ResetMode();
+                    ServiceCollections.ResolveInputService().RemoveFakeControllers();
                 }
 
                 if (wasExDriven)

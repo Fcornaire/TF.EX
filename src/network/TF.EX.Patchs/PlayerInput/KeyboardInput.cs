@@ -350,9 +350,17 @@ namespace TF.EX.Patchs.PlayerInput
 
             if (isReplayMode)
             {
-                if (TFGame.Instance.Scene is TowerFall.Level replayLevel && replayLevel.Session?.RoundLogic?.RoundStarted == false)
+                if (TFGame.Instance.Scene is TowerFall.Level replayLevel)
                 {
-                    return ReplayIntroPacing.ConfirmLatched;
+                    if (replayLevel.Get<VersusMatchResults>() != null)
+                    {
+                        return false;
+                    }
+
+                    if (replayLevel.Session?.RoundLogic?.RoundStarted == false)
+                    {
+                        return ReplayIntroPacing.ConfirmLatched;
+                    }
                 }
 
                 return true;

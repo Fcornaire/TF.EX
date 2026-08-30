@@ -127,11 +127,11 @@ namespace TF.EX.Domain
 
         public override string ID => Guid.NewGuid().ToString();
 
-        public override Subtexture ArrowsIcon => throw new NotImplementedException();
+        public override Subtexture ArrowsIcon => TFGame.MenuAtlas["controls/xb360/y"];
 
-        public override bool MenuArrows => throw new NotImplementedException();
+        public override bool MenuArrows => false;
 
-        public override bool MenuArrowsCheck => throw new NotImplementedException();
+        public override bool MenuArrowsCheck => false;
 
         public override InputState GetState()
         {

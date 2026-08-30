@@ -356,6 +356,7 @@ namespace TF.Replay.Domain
             => State == Phase.Off
                && service?.IsPlayback == true
                && service.SeekBlockedBy == null
+               && service.PlaybackFrame <= service.LastFrame
                && (Modes)(service.GetReplay()?.Informations?.Mode ?? -1) != Modes.Trials;
 
         private static void Begin(IReplayService service)

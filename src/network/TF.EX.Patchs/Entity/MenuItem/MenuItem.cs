@@ -11,7 +11,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
         [HarmonyPatch(nameof(TowerFall.MenuItem.Update))]
         public static void MenuItem_Update(TowerFall.MenuItem __instance)
         {
-            if (MainMenu.VersusMatchSettings != null)
+            if (MainMenu.VersusMatchSettings != null && __instance.MainMenu != null)
             {
                 var currentMode = MainMenu.VersusMatchSettings.Mode;
                 var state = __instance.MainMenu.State.ToDomainModel();

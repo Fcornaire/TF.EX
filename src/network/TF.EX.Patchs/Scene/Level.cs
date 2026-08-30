@@ -153,6 +153,11 @@ namespace TF.EX.Patchs.Scene
         [HarmonyPatch("HandlePausing")]
         public static bool Level_HandlePausing(Level __instance)
         {
+            if (ServiceCollections.ResolveNetplayManager().IsReplayMode())
+            {
+                return false;
+            }
+
             var matchMakingService = ServiceCollections.ResolveMatchmakingService();
 
             var mode = TowerFall.MainMenu.VersusMatchSettings?.Mode;
@@ -229,12 +234,24 @@ namespace TF.EX.Patchs.Scene
             }
         }
 
+        private static void RestorePauseMenuMusicVolume(Monocle.Scene oldScene)
+        {
+            var pauseMenu = (oldScene as Level)?.Get<PauseMenu>();
+
+            if (pauseMenu != null)
+            {
+                Monocle.Music.MasterVolume = DynamicData.For(pauseMenu).Get<float>("oldMusicVolume");
+            }
+        }
+
         private static void SkipLevelLoaderIfNeeded()
         {
             var dynEngine = DynamicData.For(TowerFall.TFGame.Instance);
             var nextScene = dynEngine.Get<Monocle.Scene>("nextScene");
             if (nextScene is LevelLoaderXML)
             {
+                RestorePauseMenuMusicVolume(dynEngine.Get<Monocle.Scene>("scene"));
+
                 StateApi.Current.ClearSfx();
                 dynEngine.Set("scene", dynEngine.Get<Monocle.Scene>("nextScene"));
                 while (!(TFGame.Instance.Scene as LevelLoaderXML).Finished)

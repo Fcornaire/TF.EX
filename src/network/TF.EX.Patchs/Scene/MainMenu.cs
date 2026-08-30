@@ -95,6 +95,12 @@ namespace TF.EX.Patchs.Scene
                 case Domain.Models.MenuState.QuickPlaySearch:
                     HandleQuickPlaySearch(__instance, name);
                     return false;
+                case Domain.Models.MenuState.Main:
+                    if (name == "Create")
+                    {
+                        DropServerConnectionIfAny();
+                    }
+                    return true;
                 case MenuState.PressStart:
                     if (!hasShowedWarning)
                     {
@@ -693,6 +699,18 @@ namespace TF.EX.Patchs.Scene
             self.ButtonGuideC.SetDetails(MenuButtonGuide.ButtonModes.Alt, "PASTE");
 
             DynamicData.For(self).Invoke("TweenBGCameraToY", 1);
+        }
+
+        private static void DropServerConnectionIfAny()
+        {
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+
+            if (matchmakingService.IsConnectedToServer())
+            {
+                matchmakingService.DisconnectFromServer();
+                matchmakingService.ResetLobby();
+                matchmakingService.ResetPeer();
+            }
         }
 
         private static string ReadClipboard()
