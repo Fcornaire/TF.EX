@@ -564,6 +564,7 @@ namespace TF.EX.Patchs.Engine
                         StateApi.Current.SetCurrentFrame(ExFlags.CurrentFrame);
 
                         var captured = StateApi.Current.CaptureGameState();
+                        ExFlags.LastCapturedState = captured;
 
                         netplayManager.SaveGameState(captured);
 
