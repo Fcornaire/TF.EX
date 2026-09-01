@@ -98,12 +98,12 @@ namespace TF.EX.Patchs.Entity
                 }
 
                 inputService.DisableAllControllers();
+                Sounds.ui_click.Play();
 
                 Task.Run(async () =>
                 {
-                    Sounds.ui_click.Play();
                     await matchmakingService.ArcherSelectChoice();
-                    Notification.Create(TFGame.Instance.Scene, "Waiting for other players...", 10, 10, true);
+                    matchmakingService.RunOnGameThread(() => Notification.Create(TFGame.Instance.Scene, "Waiting for other players...", 10, 10, true));
                 });
 
                 return false;
@@ -130,12 +130,12 @@ namespace TF.EX.Patchs.Entity
                 }
 
                 inputService.DisableAllControllers();
+                Sounds.ui_click.Play();
 
                 Task.Run(async () =>
                 {
-                    Sounds.ui_click.Play();
                     await matchmakingService.RematchChoice();
-                    Notification.Create(TFGame.Instance.Scene, "Waiting for other players...", 10, 10, true);
+                    matchmakingService.RunOnGameThread(() => Notification.Create(TFGame.Instance.Scene, "Waiting for other players...", 10, 10, true));
                 });
 
                 return false;

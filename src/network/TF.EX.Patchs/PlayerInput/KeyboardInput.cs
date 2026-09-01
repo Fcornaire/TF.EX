@@ -222,15 +222,6 @@ namespace TF.EX.Patchs.PlayerInput
                 return;
             }
 
-            var roundStarted = level.Session.RoundLogic.RoundStarted;
-
-            if (!roundStarted && !netplayManager.IsReplayMode())
-            {
-                inputService.ResetPolledInput();
-                __result = new InputState();
-                return;
-            }
-
             var seat = inputService.GetInputIndex(__instance);
 
             if (seat == inputService.GetLocalPlayerInputIndex() && !netplayManager.IsReplayMode())
@@ -306,9 +297,13 @@ namespace TF.EX.Patchs.PlayerInput
 
             if (rollcallState.State == 0)
             {
+                if (actualResult && TF.EX.Patchs.Scene.MainMenuPatch.TryOpenLobbyEditor())
+                {
+                    return false;
+                }
+
                 return actualResult;
             }
-
 
             if (actualResult && matchmakingService.CanHostStart())
             {
@@ -412,7 +407,6 @@ namespace TF.EX.Patchs.PlayerInput
                     {
                         return actualInput;
                     }
-
 
                     if (actualInput && matchmakingService.CanHostStart())
                     {

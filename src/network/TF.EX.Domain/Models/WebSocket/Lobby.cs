@@ -95,6 +95,8 @@ namespace TF.EX.Domain.Models.WebSocket
 
         public List<string> ArcherMods { get; set; } = new List<string>();
 
+        public List<string> CustomVariants { get; set; } = new List<string>();
+
         [IgnoreMember]
         public bool HasCustomArcher => !string.IsNullOrEmpty(CustomArcherId);
 

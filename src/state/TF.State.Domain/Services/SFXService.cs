@@ -1,5 +1,4 @@
 ﻿using Microsoft.Xna.Framework.Audio;
-using System.Collections.Immutable;
 using TF.State.Domain.Context;
 using TF.State.Domain.Extensions;
 using TF.State.Domain.Models;
@@ -77,11 +76,46 @@ namespace TF.State.Domain.Services
         public void Synchronize(int currentFrame, bool isTestMode)
         {
             RemoveFinishedSfx();
-            SyncCurrentToDesired(currentFrame);
-            if (_stateContext.GetLastRollbackFrame() < currentFrame)
+
+            var desiredSfxs = _stateContext.GetDesiredSfx();
+            var currentSfxs = _stateContext.GetCurrentSfxs();
+            var lastRollbackFrame = _stateContext.GetLastRollbackFrame();
+
+            var unmatchedDesired = desiredSfxs.ToList();
+            var unmatchedCurrent = currentSfxs.ToList();
+
+            PairDesiredWithCurrent(unmatchedDesired, unmatchedCurrent);
+
+            foreach (var sfx in unmatchedDesired.OrderBy(sfx => sfx.Frame))
             {
-                RemoveNotDesiredSfx(currentFrame);
+                if (sfx.Frame >= lastRollbackFrame && sfx.Frame <= currentFrame && sfx.Data != null)
+                {
+                    var toPlay = sfx.ToSoundEffectInstance();
+
+                    currentSfxs.Add(new SoundEffectPlaying
+                    {
+                        Name = sfx.Name,
+                        Frame = sfx.Frame,
+                        SoundEffectInstance = toPlay,
+                    });
+
+                    toPlay.Play();
+                }
             }
+
+            if (lastRollbackFrame < currentFrame)
+            {
+                foreach (var sfx in unmatchedCurrent)
+                {
+                    if (currentFrame - sfx.Frame <= Constants.SFX_STATE_LIFETIME)
+                    {
+                        sfx.SoundEffectInstance.Stop();
+                        sfx.SoundEffectInstance.Dispose();
+                        currentSfxs.Remove(sfx);
+                    }
+                }
+            }
+
             UpdateLastRollbackFrame(currentFrame);
         }
 
@@ -90,19 +124,30 @@ namespace TF.State.Domain.Services
             _stateContext.UpdateLastRollbackFrame(frame);
         }
 
-        private void RemoveNotDesiredSfx(int currentFrame)
+        private static void PairDesiredWithCurrent(List<SFX> desired, List<SoundEffectPlaying> current)
         {
-            var desiredSfxs = _stateContext.GetDesiredSfx();
-            var currentSfxs = _stateContext.GetCurrentSfxs();
-            var notPresent = currentSfxs
-                .Where(sfx => currentFrame - sfx.Frame <= Constants.SFX_STATE_LIFETIME) //Older ones left the state by age
-                .Where(sfx => desiredSfxs.All(desired => desired.Name != sfx.Name)).ToList();
+            var candidates = new List<(int Distance, SFX Desired, SoundEffectPlaying Current)>();
 
-            foreach (var sfx in notPresent)
+            foreach (var sfx in desired)
             {
-                sfx.SoundEffectInstance.Stop();
-                sfx.SoundEffectInstance.Dispose();
-                currentSfxs.Remove(sfx);
+                foreach (var playing in current)
+                {
+                    var distance = Math.Abs(playing.Frame - sfx.Frame);
+
+                    if (playing.Name == sfx.Name && distance <= Constants.MAX_SFX_DELAY)
+                    {
+                        candidates.Add((distance, sfx, playing));
+                    }
+                }
+            }
+
+            foreach (var candidate in candidates.OrderBy(candidate => candidate.Distance))
+            {
+                if (desired.Contains(candidate.Desired) && current.Contains(candidate.Current))
+                {
+                    desired.Remove(candidate.Desired);
+                    current.Remove(candidate.Current);
+                }
             }
         }
 
@@ -124,47 +169,6 @@ namespace TF.State.Domain.Services
             {
                 currentSfxs.Remove(sfx);
             }
-        }
-
-        private void SyncCurrentToDesired(int currentFrame) //TODO: deal with same sfx at same frame
-        {
-            var desiredSfxs = _stateContext.GetDesiredSfx();
-            var currentSfxs = _stateContext.GetCurrentSfxs();
-
-            desiredSfxs
-                .ToList()
-                .ForEach(sfx =>
-                {
-                    if (!IsSfxSynchedToCurrent(sfx) && sfx.Frame >= _stateContext.GetLastRollbackFrame() && sfx.Frame <= currentFrame && sfx.Data != null)
-                    {
-                        var toPlay = sfx.ToSoundEffectInstance();
-
-                        currentSfxs.Add(new SoundEffectPlaying
-                        {
-                            Name = sfx.Name,
-                            Frame = sfx.Frame,
-                            SoundEffectInstance = toPlay,
-                        });
-
-                        toPlay.Play();
-
-                    }
-                });
-        }
-
-        /// <summary>
-        /// Check if the sfx is already been played
-        /// </summary>
-        private bool IsSfxSynchedToCurrent(SFX sfx)
-        {
-            var current = _stateContext.GetCurrentSfxs().Where(curr => curr.Name == sfx.Name).ToImmutableSortedDictionary(sfx => sfx.Frame, sfx => sfx).LastOrDefault().Value;
-
-            if (current == null)
-            {
-                return false;
-            }
-
-            return current.Frame + Constants.MAX_SFX_DELAY >= sfx.Frame;
         }
 
         public void Clear()

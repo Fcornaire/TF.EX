@@ -28,7 +28,7 @@ namespace TF.EX.Patchs
         [HarmonyPatch(nameof(VariantToggle.Render))]
         public static void VariantToggle_Render(VariantToggle __instance)
         {
-            if (!MatchVariantsPatchs.IsRestricted(__instance?.Variant))
+            if (!MatchVariantsPatchs.IsRestricted(__instance?.Variant) && LackingPlayerName(__instance?.Variant) == null)
             {
                 return;
             }
@@ -38,15 +38,47 @@ namespace TF.EX.Patchs
 
         private static bool CanAllow(VariantToggle toggle)
         {
-            if (!MatchVariantsPatchs.IsRestricted(toggle?.Variant))
+            if (MatchVariantsPatchs.IsRestricted(toggle?.Variant))
             {
-                return true;
+                Sounds.ui_invalid.Play();
+                Notification.Create(TFGame.Instance.Scene, $"{toggle.Variant.Title} DOES NOT SUPPORT NETPLAY", 10, 400);
+
+                return false;
             }
 
-            Sounds.ui_invalid.Play();
-            Notification.Create(TFGame.Instance.Scene, $"{toggle.Variant.Title} DOES NOT SUPPORT NETPLAY", 10, 400);
+            var lackingPlayer = LackingPlayerName(toggle?.Variant);
 
-            return false;
+            if (lackingPlayer != null)
+            {
+                Sounds.ui_invalid.Play();
+                Notification.Create(TFGame.Instance.Scene, $"{lackingPlayer} DOESN'T HAVE {toggle.Variant.Title}", 10, 400);
+
+                return false;
+            }
+
+            return true;
+        }
+
+        private static string LackingPlayerName(TowerFall.Variant variant)
+        {
+            if (variant == null || variant.Value || !TF.EX.Domain.Context.LobbyBuilderContext.IsEditing)
+            {
+                return null;
+            }
+
+            var variants = TowerFall.MainMenu.VersusMatchSettings?.Variants;
+
+            if (variants == null || !variants.CustomVariants.Any(pair => pair.Key.Contains('/') && ReferenceEquals(pair.Value, variant)))
+            {
+                return null;
+            }
+
+            var matchmakingService = TF.EX.Domain.ServiceCollections.ResolveMatchmakingService();
+            var localPeerId = matchmakingService.GetRoomPeerId();
+
+            return matchmakingService.GetOwnLobby().Players
+                .FirstOrDefault(pl => pl.RoomPeerId != localPeerId && !pl.CustomVariants.Contains(variant.Title))
+                ?.Name;
         }
     }
 }

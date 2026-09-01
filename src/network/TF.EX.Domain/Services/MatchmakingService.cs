@@ -51,6 +51,10 @@ namespace TF.EX.Domain.Services
         private int searchingCount;
         private bool isQuickPlayQueued;
 
+        private static readonly Microsoft.Xna.Framework.Color EnabledTint = new(205, 245, 205);
+        private static readonly Microsoft.Xna.Framework.Color DisabledTint = new(250, 200, 200);
+        private static readonly Microsoft.Xna.Framework.Color NeutralTint = Microsoft.Xna.Framework.Color.White;
+
         private Dictionary<string, Action> onResult = new Dictionary<string, Action>();
         private WSAction currentAction = WSAction.None;
 
@@ -158,22 +162,25 @@ namespace TF.EX.Domain.Services
 
                     if (currentAction != WSAction.None)
                     {
-                        onResult[$"{currentAction}-fail"]();
+                        onResult[$"{currentAction}-fail"]?.Invoke();
                         currentAction = WSAction.None;
                     }
                     else
                     {
-                        if (TFGame.Instance.Scene is MainMenu)
+                        RunOnGameThread(() =>
                         {
-                            var mainMenu = TFGame.Instance.Scene as MainMenu;
-                            mainMenu.ButtonGuideA.Clear();
-                            mainMenu.ButtonGuideB.Clear();
-                            mainMenu.ButtonGuideC.Clear();
-                            mainMenu.ButtonGuideD.Clear();
-                        }
+                            if (TFGame.Instance.Scene is MainMenu)
+                            {
+                                var mainMenu = TFGame.Instance.Scene as MainMenu;
+                                mainMenu.ButtonGuideA.Clear();
+                                mainMenu.ButtonGuideB.Clear();
+                                mainMenu.ButtonGuideC.Clear();
+                                mainMenu.ButtonGuideD.Clear();
+                            }
 
-                        Sounds.ui_clickSpecial.Play(160, 5);
-                        Notification.Create(TFGame.Instance.Scene, "Connection dropped");
+                            Sounds.ui_clickSpecial.Play(160, 5);
+                            Notification.Create(TFGame.Instance.Scene, "Connection dropped");
+                        });
                     }
 
                     Close();
@@ -615,8 +622,9 @@ namespace TF.EX.Domain.Services
 
                 var lobby = response.LobbyUpdate.Lobby;
 
+                var previous = ownLobby;
                 ownLobby = lobby;
-                RunOnGameThread(() => HandleLobbyUpdate(lobby));
+                RunOnGameThread(() => HandleLobbyUpdate(lobby, previous));
             }
 
             if (IsServerMsg(message, "LeaveLobbyResponse"))
@@ -765,7 +773,7 @@ namespace TF.EX.Domain.Services
             }
         }
 
-        private void HandleLobbyUpdate(Lobby lobby)
+        private void HandleLobbyUpdate(Lobby lobby, Lobby previous)
         {
             if (!string.IsNullOrEmpty(abandonedRoomId) && lobby.RoomId == abandonedRoomId)
             {
@@ -774,6 +782,15 @@ namespace TF.EX.Domain.Services
             }
 
             NormaliseSeats(lobby);
+
+            if (Context.LobbyBuilderContext.IsEditing)
+            {
+                lobby.MaxPlayers = previous.MaxPlayers;
+                lobby.GameData.MapId = previous.GameData.MapId;
+                lobby.GameData.Mode = previous.GameData.Mode;
+                lobby.GameData.MatchLength = previous.GameData.MatchLength;
+                lobby.GameData.Variants = previous.GameData.Variants;
+            }
 
             Sounds.ui_clickSpecialAsc.Play();
 
@@ -821,7 +838,16 @@ namespace TF.EX.Domain.Services
                 return;
             }
 
+            if (KickSpectatorIfMissingVariants(lobby))
+            {
+                return;
+            }
+
             ApplyTeamsToMatchSettings();
+            ApplyGameSettingsToMatch(lobby);
+
+            PublishSettingsChanges(lobby, previous);
+            UnreadyOwnRollcall(lobby, previous);
 
             var seatChanged = _inputService.EnsureLocalControllerSeat();
             var someoneLeft = lobby.Players.Count < previousPlayersCount;
@@ -892,7 +918,7 @@ namespace TF.EX.Domain.Services
             }
         }
 
-        private void RunOnGameThread(Action action)
+        public void RunOnGameThread(Action action)
         {
             gameThreadActions.Enqueue(action);
         }
@@ -912,6 +938,182 @@ namespace TF.EX.Domain.Services
             }
         }
 
+        private void ApplyGameSettingsToMatch(Lobby lobby)
+        {
+            var settings = MainMenu.VersusMatchSettings;
+
+            if (settings == null
+                || lobby.InGame
+                || lobby.IsQuickPlay
+                || Context.LobbyBuilderContext.IsEditing
+                || TFGame.Instance.Scene is not MainMenu)
+            {
+                return;
+            }
+
+            settings.Variants.ApplyVariants(lobby.GameData.Variants);
+            settings.MatchLength = (MatchSettings.MatchLengths)lobby.GameData.MatchLength;
+        }
+
+        private void PublishSettingsChanges(Lobby lobby, Lobby previous)
+        {
+            if (previous == null || previous.IsEmpty || previous.RoomId != lobby.RoomId || lobby.InGame)
+            {
+                return;
+            }
+
+            var variants = MainMenu.VersusMatchSettings?.Variants;
+
+            var added = lobby.GameData.Variants.Except(previous.GameData.Variants).ToList();
+            var removed = previous.GameData.Variants.Except(lobby.GameData.Variants).ToList();
+
+            var anyChange = added.Count > 0
+                || removed.Count > 0
+                || lobby.GameData.MapId != previous.GameData.MapId
+                || lobby.MaxPlayers != previous.MaxPlayers
+                || lobby.GameData.MatchLength != previous.GameData.MatchLength
+                || lobby.GameData.Mode != previous.GameData.Mode;
+
+            if (!anyChange)
+            {
+                return;
+            }
+
+            LobbyUpdateFeed.Push("LOBBY SETTINGS UPDATED", null, NeutralTint);
+
+            foreach (var title in added)
+            {
+                var icon = variants?.FindVariantIcon(title);
+
+                if (icon == null && variants != null && variants.MissingVariants([title]).Count > 0)
+                {
+                    LobbyUpdateFeed.Push($"MISSING {title}", null, DisabledTint);
+                    continue;
+                }
+
+                LobbyUpdateFeed.Push(title, icon, EnabledTint);
+            }
+
+            foreach (var title in removed)
+            {
+                LobbyUpdateFeed.Push(title, variants?.FindVariantIcon(title), DisabledTint);
+            }
+
+            if (lobby.GameData.MapId != previous.GameData.MapId)
+            {
+                if (lobby.GameData.MapId >= 0 && lobby.GameData.MapId < TowerFall.GameData.VersusTowers.Count)
+                {
+                    var theme = TowerFall.GameData.VersusTowers[lobby.GameData.MapId].Theme;
+
+                    LobbyUpdateFeed.Push(theme.Name, theme.Icon, NeutralTint);
+                }
+                else
+                {
+                    LobbyUpdateFeed.Push("RANDOM MAP", null, NeutralTint);
+                }
+            }
+
+            if (lobby.MaxPlayers != previous.MaxPlayers)
+            {
+                LobbyUpdateFeed.Push($"LOBBY SIZE {lobby.MaxPlayers}", null, NeutralTint);
+            }
+
+            if (lobby.GameData.MatchLength != previous.GameData.MatchLength)
+            {
+                LobbyUpdateFeed.Push($"{(MatchSettings.MatchLengths)lobby.GameData.MatchLength} MATCH".ToUpperInvariant(), null, NeutralTint);
+            }
+
+            if (lobby.GameData.Mode != previous.GameData.Mode)
+            {
+                LobbyUpdateFeed.Push(ModeName(lobby.GameData.Mode), null, NeutralTint);
+            }
+        }
+
+        private static string ModeName(int mode)
+        {
+            return (TowerFall.Modes)mode switch
+            {
+                TowerFall.Modes.LastManStanding => "LAST MAN STANDING",
+                TowerFall.Modes.HeadHunters => "HEADHUNTERS",
+                TowerFall.Modes.TeamDeathmatch => "TEAM DEATHMATCH",
+                _ => ((TowerFall.Modes)mode).ToString().ToUpperInvariant(),
+            };
+        }
+
+        private bool KickSpectatorIfMissingVariants(Lobby lobby)
+        {
+            if (lobby.InGame || !lobby.Spectators.Any(s => s.RoomPeerId == peerId))
+            {
+                return false;
+            }
+
+            var variants = MainMenu.VersusMatchSettings?.Variants;
+
+            if (variants == null)
+            {
+                return false;
+            }
+
+            var missing = variants.MissingVariants(lobby.GameData.Variants);
+
+            if (missing.Count == 0)
+            {
+                return false;
+            }
+
+            abandonedRoomId = lobby.RoomId;
+            Task.Run(SendLeaveLobby);
+            ownLobby = new Lobby();
+
+            Sounds.ui_invalid.Play();
+            Notification.Create(TFGame.Instance.Scene, $"MISSING {missing[0]} , REMOVED FROM LOBBY", 10, 450);
+
+            if (TFGame.Instance.Scene is MainMenu mainMenu)
+            {
+                mainMenu.State = Domain.Models.MenuState.LobbyBrowser.ToTFModel();
+            }
+
+            ResetPeer();
+
+            return true;
+        }
+
+        private void UnreadyOwnRollcall(Lobby lobby, Lobby previous)
+        {
+            if (TFGame.Instance.Scene is not MainMenu mainMenu || mainMenu.State != MainMenu.MenuState.Rollcall || IsSpectator())
+            {
+                return;
+            }
+
+            var ownPlayer = lobby.Players.FirstOrDefault(pl => pl.RoomPeerId == peerId);
+            var previousSelf = previous?.Players?.FirstOrDefault(pl => pl.RoomPeerId == peerId);
+
+            if (ownPlayer == null || ownPlayer.Ready || previousSelf == null || !previousSelf.Ready)
+            {
+                return;
+            }
+
+            var own = GetRollcallElements(mainMenu).FirstOrDefault(rc => DynamicData.For(rc).Get<int>("playerIndex") == ownPlayer.Seat);
+
+            if (own == null)
+            {
+                return;
+            }
+
+            var dynOwn = DynamicData.For(own);
+            var state = dynOwn.Get<Monocle.StateMachine>("state");
+
+            if (state.State != 1)
+            {
+                return;
+            }
+
+            _archerService.RemoveArcher(ownPlayer.Seat);
+            dynOwn.Get<ArcherPortrait>("portrait").Leave();
+            TFGame.Players[ownPlayer.Seat] = false;
+            state.State = 0;
+        }
+
         public void ReconcileRollcallIfPending()
         {
             if (pendingRollcallLobby == null
@@ -923,7 +1125,7 @@ namespace TF.EX.Domain.Services
 
             var rollCalls = GetRollcallElements(mainMenu);
 
-            if (!rollCalls.Any())
+            if (rollCalls.Length == 0)
             {
                 return;
             }
@@ -996,7 +1198,7 @@ namespace TF.EX.Domain.Services
                         : (0, (int)ArcherData.ArcherTypes.Normal);
 
                     var updatedPlayer = player.WithResolvedArcher(archerIndex, altIndex);
-                    
+
                     TFGame.Characters[playerIndex] = archerIndex;
                     TFGame.AltSelect[playerIndex] = (ArcherData.ArcherTypes)altIndex;
                     _archerService.AddArcher(playerIndex, updatedPlayer);
@@ -1380,6 +1582,39 @@ namespace TF.EX.Domain.Services
         public async Task RematchChoice()
         {
             await SendRematchChoice();
+        }
+
+        public bool CanEditLobbySettings()
+        {
+            return !ownLobby.IsEmpty
+                && !ownLobby.IsQuickPlay
+                && !ownLobby.InGame
+                && IsHost();
+        }
+
+        public async Task UpdateLobbySettings(int maxPlayers, Models.WebSocket.GameData gameData, ICollection<CustomMod> mods)
+        {
+            var updateMessage = new UpdateLobbySettingsMessage
+            {
+                UpdateLobbySettings = new Models.WebSocket.Client.UpdateLobbySettings
+                {
+                    MaxPlayers = maxPlayers,
+                    GameData = gameData,
+                    Mods = mods,
+                }
+            };
+
+            var bytes = MessagePackSerializer.Serialize(updateMessage);
+            var message = MessagePackSerializer.ConvertToJson(bytes);
+            await Send(message);
+        }
+
+        public void RequestRollcallReconcile()
+        {
+            if (!ownLobby.IsEmpty)
+            {
+                pendingRollcallLobby = ownLobby;
+            }
         }
 
         public void NotifyMatchEnded()

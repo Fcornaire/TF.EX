@@ -95,6 +95,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
                             player.ArcherIndex = TFGame.Characters[playerIndex];
                             player.ArcherAltIndex = (int)TFGame.AltSelect[playerIndex];
                             player.CustomArcherId = ArcherDataExtensions.GetCustomArcherId(player.ArcherIndex, player.ArcherAltIndex);
+                            player.CustomVariants = MainMenu.VersusMatchSettings.Variants.CustomVariantTitles();
                             archerService.RemoveArcher(playerIndex);
 
                             inputService.DisableAllControllers();
@@ -141,7 +142,28 @@ namespace TF.EX.Patchs.Entity.MenuItem
 
             var input = DynamicData.For(__instance).Get<TowerFall.PlayerInput>("input");
 
-            if (input == null || !input.MenuBack)
+            if (input == null)
+            {
+                return true;
+            }
+
+            if (input.MenuConfirm && playerIndex == matchmakingService.GetLocalSeat() && !matchmakingService.IsSpectator())
+            {
+                var missing = MainMenu.VersusMatchSettings.Variants.MissingVariants(lobby.GameData.Variants);
+
+                if (missing.Count > 0)
+                {
+                    var extra = missing.Count > 1 ? $" +{missing.Count - 1} MORE" : "";
+
+                    Sounds.ui_invalid.Play();
+                    Notification.Create(__instance.Scene, $"MISSING {missing[0]}{extra}", 10, 400);
+
+                    __result = 0;
+                    return false;
+                }
+            }
+
+            if (!input.MenuBack)
             {
                 return true;
             }
@@ -234,6 +256,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
                         player.ArcherIndex = TFGame.Characters[playerIndex];
                         player.ArcherAltIndex = (int)TFGame.AltSelect[playerIndex];
                         player.CustomArcherId = ArcherDataExtensions.GetCustomArcherId(player.ArcherIndex, player.ArcherAltIndex);
+                        player.CustomVariants = MainMenu.VersusMatchSettings.Variants.CustomVariantTitles();
 
                         var modCollections = ServiceCollections.ResolveModCollections();
                         player.ArcherMods = ArcherDataExtensions.GetInstalledArcherMods(mod => modCollections?.GetVersion(mod));

@@ -19,6 +19,19 @@ namespace TF.EX.Patchs.Scene
     [HarmonyPatch(typeof(MainMenu))]
     public class MainMenuPatch
     {
+        private class EditLobbyGuideEntity : Monocle.Entity
+        {
+            public EditLobbyGuideEntity() : base(-1)
+            {
+            }
+
+            public override void Update()
+            {
+                base.Update();
+
+                Visible = IsHostSeatUnjoined();
+            }
+        }
         private const string QUICKPLAY_BANNER_TITLE = "QUICK PLAY";
         private const string LOBBIES_BANNER_TITLE = "LOBBIES";
         private const string PRIVATE_BANNER_TITLE = "PRIVATE";
@@ -49,6 +62,7 @@ namespace TF.EX.Patchs.Scene
         private static Monocle.Entity spectateEntityButton = null;
         private static Monocle.Entity createEntityButton = null;
         private static Monocle.Entity copyCodeGuideEntity = null;
+        private static Monocle.Entity editLobbyGuideEntity = null;
 
         private static LobbyVersusModeButton lobbyVersusModeButton = null;
         private static LobbyVersusCoinButton lobbyVersusCoinButton = null;
@@ -227,7 +241,67 @@ namespace TF.EX.Patchs.Scene
             if (state == MainMenu.MenuState.Rollcall)
             {
                 HandleCopyCodeGuide(__instance, name);
+                HandleEditLobbyGuide(__instance, name);
             }
+        }
+
+        private static void HandleEditLobbyGuide(MainMenu self, string name)
+        {
+            if (editLobbyGuideEntity != null)
+            {
+                editLobbyGuideEntity.RemoveSelf();
+                editLobbyGuideEntity = null;
+            }
+
+            if (name != "Create" || !ServiceCollections.ResolveMatchmakingService().CanEditLobbySettings())
+            {
+                return;
+            }
+
+            editLobbyGuideEntity = new EditLobbyGuideEntity();
+            var editLobbyGuide = new MenuButtonGuide(1);
+            editLobbyGuide.SetDetails(MenuButtonGuide.ButtonModes.Start, "EDIT LOBBY");
+            editLobbyGuideEntity.Add(editLobbyGuide);
+            self.Add(editLobbyGuideEntity);
+        }
+
+
+
+        private static bool IsHostSeatUnjoined()
+        {
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+
+            if (!matchmakingService.CanEditLobbySettings()
+                || TFGame.Instance.Scene is not MainMenu menu
+                || menu.State != MainMenu.MenuState.Rollcall)
+            {
+                return false;
+            }
+
+            var seat = matchmakingService.GetLocalSeat();
+            var ownElement = menu.GetAll<RollcallElement>()
+                .FirstOrDefault(rc => DynamicData.For(rc).Get<int>("playerIndex") == seat);
+
+            return ownElement != null && DynamicData.For(ownElement).Get<Monocle.StateMachine>("state").State == 0;
+        }
+
+        public static bool TryOpenLobbyEditor()
+        {
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+
+            if (Domain.Context.LobbyBuilderContext.IsEditing
+                || !matchmakingService.CanEditLobbySettings()
+                || TFGame.Instance.Scene is not MainMenu menu
+                || menu.State != MainMenu.MenuState.Rollcall)
+            {
+                return false;
+            }
+
+            Domain.Context.LobbyBuilderContext.BeginEdit(matchmakingService.GetOwnLobby());
+            Sounds.ui_click.Play();
+            menu.State = Domain.Models.MenuState.LobbyBuilder.ToTFModel();
+
+            return true;
         }
 
         [HarmonyPostfix]
@@ -361,6 +435,34 @@ namespace TF.EX.Patchs.Scene
                         .Select(v => (v as VariantToggle).Variant.Title)
                         .ToList();
 
+                    if (Domain.Context.LobbyBuilderContext.IsEditing)
+                    {
+                        var editedLobby = matchmakingService.GetOwnLobby();
+
+                        if (Domain.Context.LobbyBuilderContext.HasChanges(editedLobby, variantsToggle))
+                        {
+                            editedLobby.GameData.Variants = variantsToggle.ToArray();
+                            CatalogLobbyMods(editedLobby, variantsToggle);
+                            AddWiderSetLobbyMod(editedLobby);
+
+                            var maxPlayers = editedLobby.MaxPlayers;
+                            var gameData = editedLobby.GameData;
+                            var mods = editedLobby.Mods.ToList();
+
+                            Task.Run(() => matchmakingService.UpdateLobbySettings(maxPlayers, gameData, mods));
+                        }
+
+                        Domain.Context.LobbyBuilderContext.EndEdit();
+
+                        Sounds.ui_click.Play();
+
+                        __instance.State = MainMenu.MenuState.Rollcall;
+                        __instance.BackState = Domain.Models.MenuState.NetplaySelect.ToTFModel();
+                        matchmakingService.RequestRollcallReconcile();
+
+                        return;
+                    }
+
                     var roomId = Guid.NewGuid().ToString();
 
                     var roomUrl = $"{NetplayPreferences.Server}/room/{roomId}";
@@ -375,21 +477,10 @@ namespace TF.EX.Patchs.Scene
                     {
                         Name = NetplayPreferences.Name,
                         Addr = string.Empty,
-                        IsHost = true
+                        IsHost = true,
+                        CustomVariants = MainMenu.VersusMatchSettings.Variants.CustomVariantTitles()
                     });
-                    var widerSetModApi = ServiceCollections.ResolveWiderSetModApi();
-                    if (widerSetModApi != null)
-                    {
-                        lobby.Mods.Add(new Domain.Models.WebSocket.CustomMod
-                        {
-                            Name = WiderSetModApiData.Name,
-                            Data = new Dictionary<string, string>
-                            {
-                                { "IsWide", widerSetModApi.IsWide.ToString() },
-                                { Domain.Models.WebSocket.CustomMod.VersionKey, ServiceCollections.ResolveModCollections()?.GetVersion(WiderSetModApiData.Name) ?? "" }
-                            }
-                        });
-                    }
+                    AddWiderSetLobbyMod(lobby);
 
                     __instance.AddLoader("CREATING LOBBY...");
                     Sounds.ui_click.Play();
@@ -858,6 +949,16 @@ namespace TF.EX.Patchs.Scene
         {
             if (name == "Destroy")
             {
+                if (Domain.Context.LobbyBuilderContext.IsEditing)
+                {
+                    var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+                    var lobby = matchmakingService.GetOwnLobby();
+
+                    Domain.Context.LobbyBuilderContext.CancelEdit(lobby);
+                    MainMenu.VersusMatchSettings?.Variants.ApplyVariants(lobby.GameData.Variants);
+                    matchmakingService.RequestRollcallReconcile();
+                }
+
                 if (lobbyVersusModeButton != null)
                 {
                     lobbyVersusModeButton.RemoveSelf();
@@ -912,9 +1013,11 @@ namespace TF.EX.Patchs.Scene
 
         private static void CreateLobbyBuilder(MainMenu self)
         {
-            self.BackState = Domain.Context.LobbyBuilderContext.IsPrivate
-                ? Domain.Models.MenuState.PrivateSelect.ToTFModel()
-                : Domain.Models.MenuState.LobbyBrowser.ToTFModel();
+            self.BackState = Domain.Context.LobbyBuilderContext.IsEditing
+                ? MainMenu.MenuState.Rollcall
+                : Domain.Context.LobbyBuilderContext.IsPrivate
+                    ? Domain.Models.MenuState.PrivateSelect.ToTFModel()
+                    : Domain.Models.MenuState.LobbyBrowser.ToTFModel();
 
             if (variants.Count == 0)
             {
@@ -964,7 +1067,9 @@ namespace TF.EX.Patchs.Scene
             {
                 createEntityButton = new Monocle.Entity();
                 var createButton = new MenuButtonGuide(4);
-                createButton.SetDetails(MenuButtonGuide.ButtonModes.Start, Domain.Context.LobbyBuilderContext.IsPrivate ? "CREATE PRIVATE LOBBY" : "CREATE LOBBY");
+                createButton.SetDetails(MenuButtonGuide.ButtonModes.Start, Domain.Context.LobbyBuilderContext.IsEditing
+                    ? "UPDATE LOBBY"
+                    : Domain.Context.LobbyBuilderContext.IsPrivate ? "CREATE PRIVATE LOBBY" : "CREATE LOBBY");
                 createEntityButton.Add(createButton);
                 self.Add(createEntityButton);
 
@@ -1067,17 +1172,17 @@ namespace TF.EX.Patchs.Scene
 
             self.BackState = Domain.Models.MenuState.NetplaySelect.ToTFModel();
 
+            var inputService = ServiceCollections.ResolveInputService();
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+
+            matchmakingService.ResetLobby();
+            inputService.DisableAllControllers();
+            matchmakingService.ResetLobbies();
+
             Task.Run(async () =>
             {
                 try
                 {
-                    var inputService = ServiceCollections.ResolveInputService();
-                    var matchmakingService = ServiceCollections.ResolveMatchmakingService();
-                    matchmakingService.ResetLobby();
-
-                    inputService.DisableAllControllers();
-
-                    matchmakingService.ResetLobbies();
                     await matchmakingService.GetLobbies(OnRetrieveSuccess, () =>
                     {
                         self.RemoveLoader();
@@ -1373,6 +1478,26 @@ namespace TF.EX.Patchs.Scene
             }
         }
 
+        private static void AddWiderSetLobbyMod(Lobby lobby)
+        {
+            var widerSetModApi = ServiceCollections.ResolveWiderSetModApi();
+
+            if (widerSetModApi == null)
+            {
+                return;
+            }
+
+            lobby.Mods.Add(new Domain.Models.WebSocket.CustomMod
+            {
+                Name = WiderSetModApiData.Name,
+                Data = new Dictionary<string, string>
+                {
+                    { "IsWide", widerSetModApi.IsWide.ToString() },
+                    { Domain.Models.WebSocket.CustomMod.VersionKey, ServiceCollections.ResolveModCollections()?.GetVersion(WiderSetModApiData.Name) ?? "" }
+                }
+            });
+        }
+
         private static void CatalogLobbyMods(Lobby lobby, ICollection<string> enabledTitles)
         {
             lobby.Mods.Clear();
@@ -1454,6 +1579,17 @@ namespace TF.EX.Patchs.Scene
             matchmakingService.UpdateOwnLobby(newLobby);
             inputService.EnableAllControllers();
             inputService.DisableAllControllerExceptLocal();
+
+            if (isPlayer)
+            {
+                var ownPlayer = newLobby.Players.FirstOrDefault(pl => pl.RoomPeerId == matchmakingService.GetRoomPeerId());
+
+                if (ownPlayer != null)
+                {
+                    ownPlayer.CustomVariants = MainMenu.VersusMatchSettings.Variants.CustomVariantTitles();
+                    Task.Run(() => matchmakingService.UpdatePlayer(ownPlayer, () => { }, () => { }));
+                }
+            }
 
             StateApi.Current.SetSeed(newLobby.GameData.Seed);
 

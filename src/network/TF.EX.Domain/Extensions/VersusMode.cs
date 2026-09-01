@@ -71,11 +71,6 @@ namespace TF.EX.Domain.Extensions
             variants.NormalizeForNetplay();
 
             variants.TournamentRules();
-            variants.Variants.First(variant => variant.Title == "FREE AIMING").Value = true;
-            if (variants.CustomVariants.TryGetValue(Models.Constants.RIGHT_STICK_VARIANT_NAME, out var rightStick))
-            {
-                rightStick.Value = true;
-            }
         }
 
         private static void RestorePerPlayerVariants(TowerFall.MatchVariants variants)
