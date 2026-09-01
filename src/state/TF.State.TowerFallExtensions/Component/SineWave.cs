@@ -17,9 +17,9 @@ namespace TF.State.TowerFallExtensions.ComponentExtensions
         {
             var dynSineWave = DynamicData.For(sineWave);
             dynSineWave.Set("Counter", toLoad.Counter);
-            dynSineWave.Set("Value", (float)Math.Sin(toLoad.Counter));
-            dynSineWave.Set("ValueOverTwo", (float)Math.Sin(toLoad.Counter / 2f));
-            dynSineWave.Set("TwoValue", (float)Math.Sin(toLoad.Counter * 2f));
+            dynSineWave.Set("Value", (float)Domain.DeterministicMath.Sin(toLoad.Counter));
+            dynSineWave.Set("ValueOverTwo", (float)Domain.DeterministicMath.Sin(toLoad.Counter / 2f));
+            dynSineWave.Set("TwoValue", (float)Domain.DeterministicMath.Sin(toLoad.Counter * 2f));
         }
     }
 }

@@ -9,9 +9,9 @@ namespace TF.State.TowerFallExtensions
             var dynSine = DynamicData.For(self);
 
             dynSine.Set("Counter", counter);
-            dynSine.Set("Value", (float)Math.Sin(counter));
-            dynSine.Set("ValueOverTwo", (float)Math.Sin(counter / 2f));
-            dynSine.Set("TwoValue", (float)Math.Sin(counter * 2f));
+            dynSine.Set("Value", (float)Domain.DeterministicMath.Sin(counter));
+            dynSine.Set("ValueOverTwo", (float)Domain.DeterministicMath.Sin(counter / 2f));
+            dynSine.Set("TwoValue", (float)Domain.DeterministicMath.Sin(counter * 2f));
         }
     }
 }
