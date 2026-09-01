@@ -151,7 +151,7 @@ namespace TF.EX.Domain.Services
             StateApi.Current.SetFrameDriver(Models.Constants.DRIVER_NAME);
 
             GGRSConfig.Name = NetplayPreferences.Name;
-            GGRSConfig.InputDelay = _sessionInputDelay ?? NetplayPreferences.InputDelay * GGRSConfig.Fps / Models.Constants.VANILLA_FPS; //preferences in 60Hz frames, override in native frames
+            GGRSConfig.InputDelay = _sessionInputDelay ?? NetplayPreferences.InputDelayFrames; //preferences in ms, override in native frames
 
             _cancellationTokenSource = new CancellationTokenSource();
             _cancellationToken = _cancellationTokenSource.Token;
