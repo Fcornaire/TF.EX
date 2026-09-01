@@ -9,13 +9,12 @@ namespace TF.EX.Domain.CustomComponent
     {
         protected Wiggler iconWiggler;
 
-        protected Lobby ownLobby;
+        protected Lobby ownLobby => ServiceCollections.ResolveMatchmakingService().GetOwnLobby();
 
         protected bool hasTweenedUICamera = false;
         public LobbyBorderButton(Vector2 position, Vector2 tweenFrom, int width, int height) : base(position, tweenFrom, width, height)
         {
             iconWiggler = Wiggler.Create(15, 6f);
-            ownLobby = ServiceCollections.ResolveMatchmakingService().GetOwnLobby();
         }
 
         public override void Update()

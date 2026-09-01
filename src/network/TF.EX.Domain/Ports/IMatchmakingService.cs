@@ -29,6 +29,9 @@ namespace TF.EX.Domain.Ports
         bool IsQuickPlayStarting();
 
         Task UpdatePlayer(Player player, Action onSucess, Action onFail);
+        Task UpdateLobbySettings(int maxPlayers, GameData gameData, ICollection<CustomMod> mods);
+        bool CanEditLobbySettings();
+        void RequestRollcallReconcile();
         void PublishCustomSkin(int archerIndex, int archerAltIndex);
         Task LeaveLobby(Action onSuccess, Action onFail);
         void ResetPeer();
@@ -44,6 +47,7 @@ namespace TF.EX.Domain.Ports
         string GetRoomPeerId();
         int GetLocalSeat();
         void ReconcileRollcallIfPending();
+        void RunOnGameThread(Action action);
         void DrainGameThreadActions();
         void ApplyTeamsToMatchSettings();
         void RestoreArchersFromLobbyIfNeeded();

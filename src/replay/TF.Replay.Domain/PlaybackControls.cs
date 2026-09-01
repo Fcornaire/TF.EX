@@ -1,8 +1,9 @@
-﻿using System.Reflection;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using Monocle;
+using System.Diagnostics;
+using System.Reflection;
 using TowerFall;
 
 namespace TF.Replay.Domain
@@ -24,10 +25,17 @@ namespace TF.Replay.Domain
         private static int? _lastSeekedFrame;
         private static bool _seekRefusalShown;
 
+        private static readonly Stopwatch _holdClock = new();
+        private static int _holdTicks;
+        private const double HOLD_REPEAT_DELAY_MS = 300;
+        private const int HOLD_REPEAT_TICKS = 2; //half speed
+
         public static void Reset()
         {
             IsPaused = false;
             _stepQueued = false;
+            _holdClock.Reset();
+            _holdTicks = 0;
             HoverFrame = null;
             MousePosition = null;
             MarkIn = null;
@@ -199,7 +207,25 @@ namespace TF.Replay.Domain
             if (MInput.Keyboard.Pressed(Keys.Left))
             {
                 IsPaused = true;
+                StartHold();
                 Seek(service, StepBackTarget(service));
+            }
+            else if (HasHoldEnough(MInput.Keyboard.Check(Keys.Left)))
+            {
+                IsPaused = true;
+                Seek(service, StepBackTarget(service));
+            }
+
+            if (MInput.Keyboard.Pressed(Keys.Right))
+            {
+                IsPaused = true;
+                StartHold();
+                _stepQueued = true;
+            }
+            else if (HasHoldEnough(MInput.Keyboard.Check(Keys.Right)))
+            {
+                IsPaused = true;
+                _stepQueued = true;
             }
 
             if (!IsPaused)
@@ -207,7 +233,7 @@ namespace TF.Replay.Domain
                 return true;
             }
 
-            if (MInput.Keyboard.Pressed(Keys.Right) || MInput.Keyboard.Check(Keys.Down))
+            if (MInput.Keyboard.Check(Keys.Down))
             {
                 _stepQueued = true;
             }
@@ -368,6 +394,30 @@ namespace TF.Replay.Domain
 
 
         private static int StepBackTarget(Ports.IReplayService service) => service.PreviousStateFrame(service.PlaybackFrame - (StandalonePlayback.IsActive ? 1 : 0));
+
+        private static void StartHold()
+        {
+            _holdClock.Restart();
+            _holdTicks = 0;
+        }
+
+        private static bool HasHoldEnough(bool held)
+        {
+            if (!held || _holdClock.ElapsedMilliseconds < HOLD_REPEAT_DELAY_MS)
+            {
+                return false;
+            }
+
+            _holdTicks++;
+
+            if (_holdTicks < HOLD_REPEAT_TICKS)
+            {
+                return false;
+            }
+
+            _holdTicks = 0;
+            return true;
+        }
 
 
         private static bool SeekingIsOff(Ports.IReplayService service)

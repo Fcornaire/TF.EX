@@ -12,8 +12,8 @@ namespace TF.Replay.Domain
         private static readonly (string Key, string Text, string Action)[] Rows =
         [
             ("Space", null, "PAUSE"),
-            ("Left", null, "STEP BACK"),
-            ("Right", null, "STEP FORWARD"),
+            ("Left", null, "STEP BACK (HOLD OK)"),
+            ("Right", null, "STEP FORWARD (HOLD OK)"),
             (null, "L-CLICK", "SEEK"),
             (null, "R-CLICK X2", "GIF IN / OUT"),
             ("G", null, "EXPORT GIF"),

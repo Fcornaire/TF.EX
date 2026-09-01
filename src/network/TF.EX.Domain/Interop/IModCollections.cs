@@ -13,5 +13,7 @@ namespace TF.EX.Domain.Interop
         IWiderSetModApi ResolveWiderSet();
 
         IInputDisplayerApi ResolveInputDisplayer();
+
+        IEnumerable<string> GetDesyncRiskMods();
     }
 }

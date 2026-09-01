@@ -40,6 +40,7 @@ namespace TF.EX.Patchs.Engine
         private const double DELAYED_CATCHUP_RATIO = 1.25;
         private const double LIVE_CATCHUP_RATIO = 8.0;
         private const int DELAYED_CATCHUP_THRESHOLD = Domain.Models.Constants.NETPLAY_FPS / 2;
+        private const float MAX_NOTIFICATION_TEXT_WIDTH = 290f; //vanilla screen minus some margin
         private static bool? _preSessionFixedStep;
 
         private static readonly MethodInfo _mInputUpdate = AccessTools.Method(typeof(MInput), "Update"); //Minput Update is an internal static method...
@@ -75,6 +76,7 @@ namespace TF.EX.Patchs.Engine
 
                 StateApi.Current.ResetRngOverride();
                 SpectatorInputDisplay.Stop();
+                Domain.CustomComponent.LightPauseMenu.ForceClose();
 
                 if (!ScenarioSweeper.IsRunning)
                 {
@@ -456,7 +458,41 @@ namespace TF.EX.Patchs.Engine
                 return;
             }
 
+            WarnAboutDesyncRiskMods(menu);
+
             enter?.Invoke();
+        }
+
+        private static void WarnAboutDesyncRiskMods(TowerFall.MainMenu menu)
+        {
+            var riskyMods = ServiceCollections.ResolveModCollections()?.GetDesyncRiskMods()
+                ?.Select(name => name.ToUpperInvariant())
+                .OrderBy(name => name)
+                .ToList();
+
+            if (riskyMods == null || riskyMods.Count == 0)
+            {
+                return;
+            }
+
+            ServiceCollections.ResolveLogger().LogWarning($"Mods with desync risk in netplay: {string.Join(", ", riskyMods)}");
+
+            var shown = 1;
+            while (shown < riskyMods.Count && TFGame.Font.MeasureString(GetDesyncRiskModsMessage(riskyMods, shown + 1)).X <= MAX_NOTIFICATION_TEXT_WIDTH)
+            {
+                shown++;
+            }
+
+            Sounds.ui_invalid.Play();
+            Notification.Create(menu, "NON-COSMETIC MODS CAN DESYNC NETPLAY", 10, 500);
+            Notification.Create(menu, GetDesyncRiskModsMessage(riskyMods, shown), 10, 500);
+        }
+
+        private static string GetDesyncRiskModsMessage(List<string> riskyMods, int count)
+        {
+            var extra = count < riskyMods.Count ? $" +{riskyMods.Count - count} MORE" : "";
+
+            return $"DETECTED: {string.Join(", ", riskyMods.Take(count))}{extra}";
         }
 
         private static void StartUpdate(TowerFall.MainMenu menu, IAutoUpdater autoUpdater, IInputService inputService)
@@ -495,7 +531,9 @@ namespace TF.EX.Patchs.Engine
         {
             if (!netplayManager.HaveRequestToHandle())
             {
-                var playerInput = inputService.GetPolledInput();
+                var playerInput = Domain.CustomComponent.LightPauseMenu.IsOpen
+                    ? new Domain.Models.Input()
+                    : inputService.GetPolledInput();
 
                 var status = netplayManager.AdvanceFrame(playerInput);
 

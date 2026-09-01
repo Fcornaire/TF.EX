@@ -1,4 +1,5 @@
-﻿using TowerFall;
+﻿using Monocle;
+using TowerFall;
 using TF.EX.Domain.Models;
 
 namespace TF.EX.Domain.Extensions
@@ -37,6 +38,29 @@ namespace TF.EX.Domain.Extensions
         public static bool ContainsCustomVariant(this MatchVariants matchVariants, IEnumerable<string> variants)
         {
             return variants.Any(variant => variant != Constants.RIGHT_STICK_VARIANT_TITLE && matchVariants.CustomVariants.Any(v => v.Value.Title == variant));
+        }
+
+        public static List<string> MissingVariants(this MatchVariants matchVariants, IEnumerable<string> variants)
+        {
+            return variants
+                .Where(title => matchVariants.Variants.All(v => v.Title != title)
+                    && matchVariants.CustomVariants.All(pair => pair.Value.Title != title))
+                .ToList();
+        }
+
+        public static List<string> CustomVariantTitles(this MatchVariants matchVariants)
+        {
+            return matchVariants.CustomVariants
+                .Where(pair => pair.Key.Contains('/'))
+                .Select(pair => pair.Value.Title)
+                .ToList();
+        }
+
+        public static Subtexture FindVariantIcon(this MatchVariants matchVariants, string title)
+        {
+            var variant = matchVariants.Variants.FirstOrDefault(v => v.Title == title) ?? matchVariants.CustomVariants.Values.FirstOrDefault(v => v.Title == title);
+
+            return variant?.Icon;
         }
 
         public static void EnableForAll(this Variant variant)

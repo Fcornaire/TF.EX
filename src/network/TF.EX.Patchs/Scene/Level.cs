@@ -169,6 +169,7 @@ namespace TF.EX.Patchs.Scene
             var lobby = matchMakingService.GetOwnLobby();
             if (lobby != null && (matchMakingService.IsLobbyReady() || !lobby.IsEmpty))
             {
+                Domain.CustomComponent.LightPauseMenu.HandleStartPress(__instance);
                 return false;
             }
 
