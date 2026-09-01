@@ -34,13 +34,21 @@ jobs:
             exit 1
           fi
 
-      - name: Download ggrs-ffi lib
+      - name: Download ggrs-ffi lib (windows)
         uses: robinraju/release-downloader@v1.11
         with:
           repository: "Fcornaire/ggrs-ffi"
           latest: true
           out-file-path: "src/network/TF.EX.Core/Unmanaged/win-x64"
           fileName: "ggrs_ffi.dll"
+
+      - name: Download ggrs-ffi lib (linux)
+        uses: robinraju/release-downloader@v1.11
+        with:
+          repository: "Fcornaire/ggrs-ffi"
+          latest: true
+          out-file-path: "src/network/TF.EX.Core/Unmanaged/linux-x64"
+          fileName: "libggrs_ffi.so"
 
       - name: Build the mods
         run: |

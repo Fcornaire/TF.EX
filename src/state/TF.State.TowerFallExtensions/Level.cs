@@ -1442,9 +1442,9 @@ namespace TF.State.TowerFallExtensions
             float counter = (initialCounter + rate * elapsedTicks) % (MathF.PI * 8f);
             var dynSine = DynamicData.For(sine);
             dynSine.Set("Counter", counter);
-            dynSine.Set("Value", (float)Math.Sin(counter));
-            dynSine.Set("ValueOverTwo", (float)Math.Sin(counter / 2f));
-            dynSine.Set("TwoValue", (float)Math.Sin(counter * 2f));
+            dynSine.Set("Value", (float)Domain.DeterministicMath.Sin(counter));
+            dynSine.Set("ValueOverTwo", (float)Domain.DeterministicMath.Sin(counter / 2f));
+            dynSine.Set("TwoValue", (float)Domain.DeterministicMath.Sin(counter * 2f));
         }
 
         private static void TransplantMiasmaSpriteState(TowerFall.Miasma from, TowerFall.Miasma to)
