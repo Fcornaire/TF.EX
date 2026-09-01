@@ -10,7 +10,7 @@ namespace TF.EX
 {
     public class NetplaySettings : ModuleSettings
     {
-        public int InputDelay { get; set; } = 2;
+        public int InputDelayMs { get; set; } = 20;
         public string Name { get; set; } = "PLAYER";
         public string Server { get; set; } = NetplayPreferences.OfficialServer;
         public string AutoAdjustInputDelay { get; set; } = "PROPOSE";
@@ -25,15 +25,16 @@ namespace TF.EX
         {
             settings.CreateNumber(
                 "INPUT DELAY",
-                InputDelay,
+                InputDelayMs,
                 value =>
                 {
-                    InputDelay = value;
+                    InputDelayMs = value;
                     Apply();
                 },
-                "FRAMES OF LOCAL INPUT DELAY. RAISE IT TO SMOOTH OUT A LAGGY CONNECTION. \n DO NOTE THAT LESS INPUT DELAY PLAY BETTER BUT ROLLBACK MORE. \n MORE INPUT DELAY MEAN LESS ROLLBACK BUT PLAY CLUNCKY. \n FIND THE SWEETSPOT IN BETWEEN",
+                "LOCAL INPUT DELAY IN MS. RAISE IT TO SMOOTH OUT A LAGGY CONNECTION. \n DO NOTE THAT LESS INPUT DELAY PLAY BETTER BUT ROLLBACK MORE. \n MORE INPUT DELAY MEAN LESS ROLLBACK BUT PLAY CLUNCKY. \n FIND THE SWEETSPOT IN BETWEEN",
                 NetplayPreferences.MinInputDelay,
-                NetplayPreferences.MaxInputDelay);
+                NetplayPreferences.MaxInputDelay,
+                NetplayPreferences.InputDelayStep);
 
             settings.CreateOptions(
                 "AUTO ADJUST INPUT DELAY",
@@ -89,7 +90,8 @@ namespace TF.EX
 
         internal void Apply()
         {
-            InputDelay = Math.Min(NetplayPreferences.MaxInputDelay, Math.Max(NetplayPreferences.MinInputDelay, InputDelay));
+            InputDelayMs = Math.Min(NetplayPreferences.MaxInputDelay, Math.Max(NetplayPreferences.MinInputDelay, InputDelayMs));
+            InputDelayMs -= InputDelayMs % NetplayPreferences.InputDelayStep;
 
             var name = (Name ?? "").Trim().ToUpperInvariant();
             if (name.Length == 0)
@@ -122,7 +124,7 @@ namespace TF.EX
             }
             PlayerId = playerId;
 
-            NetplayPreferences.InputDelay = InputDelay;
+            NetplayPreferences.InputDelay = InputDelayMs;
             NetplayPreferences.Name = Name;
             NetplayPreferences.PlayerId = PlayerId;
             NetplayPreferences.Server = Server;
@@ -142,18 +144,13 @@ namespace TF.EX
             try
             {
                 var settingsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Saves", "TF.EX", "TF.EX.settings.json");
-                if (File.Exists(settingsPath) && File.ReadAllText(settingsPath).Contains("\"InputDelay\""))
+                if (File.Exists(settingsPath) && File.ReadAllText(settingsPath).Contains("\"InputDelayMs\""))
                 {
                     File.Delete(path);
                     return;
                 }
 
                 using var document = JsonDocument.Parse(File.ReadAllText(path));
-
-                if (document.RootElement.TryGetProperty("InputDelay", out var inputDelay))
-                {
-                    InputDelay = inputDelay.GetInt32();
-                }
 
                 if (document.RootElement.TryGetProperty("Name", out var name))
                 {
