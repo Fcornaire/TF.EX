@@ -5,7 +5,9 @@ using Monocle;
 using MonoMod.Utils;
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
+using System.Security.Cryptography;
 using TF.EX.Common.Extensions;
+using TF.EX.Domain.Context;
 using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Interop;
@@ -192,6 +194,15 @@ namespace TF.EX.Domain.Services
                 }
             }, cancellationToken);
 
+            try
+            {
+                Task.Run(async () => await SendIdentity()).GetAwaiter().GetResult();
+            }
+            catch (Exception e)
+            {
+                _logger.LogError<MatchmakingService>("Error when sending identity", e);
+            }
+
             return true;
         }
 
@@ -249,6 +260,29 @@ namespace TF.EX.Domain.Services
             };
 
             var bytes = MessagePackSerializer.Serialize(joinPrivateMessage);
+            var message = MessagePackSerializer.ConvertToJson(bytes);
+            await Send(message);
+        }
+
+        private async Task SendIdentity()
+        {
+            var playerId = SteamIdentity.TryGet() ?? NetplayPreferences.PlayerId;
+
+            if (string.IsNullOrEmpty(playerId))
+            {
+                return;
+            }
+
+            var identifyMessage = new IdentifyMessage
+            {
+                Identify = new Identify
+                {
+                    PlayerId = playerId,
+                    Name = NetplayPreferences.Name
+                }
+            };
+
+            var bytes = MessagePackSerializer.Serialize(identifyMessage);
             var message = MessagePackSerializer.ConvertToJson(bytes);
             await Send(message);
         }
@@ -311,13 +345,30 @@ namespace TF.EX.Domain.Services
             await Send(message);
         }
 
-        private async Task SendMatchEnded()
+        private async Task SendMatchEnded(int winnerSeat)
         {
-            var matchEndedMessage = new MatchEndedMessage { };
+            var matchEndedMessage = new MatchEndedMessage
+            {
+                MatchEnded = new MatchEnded
+                {
+                    WinnerSeat = winnerSeat,
+                    Frame = ExFlags.CurrentFrame,
+                    Checksum = LastStateChecksum()
+                }
+            };
 
             var bytes = MessagePackSerializer.Serialize(matchEndedMessage);
             var message = MessagePackSerializer.ConvertToJson(bytes);
             await Send(message);
+        }
+
+        private static string LastStateChecksum()
+        {
+            var state = ExFlags.LastCapturedState;
+
+            return state != null
+                ? Convert.ToHexString(SHA256.HashData(state))
+                : null;
         }
 
         private async Task SendStartLobbyChoice()
@@ -1617,7 +1668,7 @@ namespace TF.EX.Domain.Services
             }
         }
 
-        public void NotifyMatchEnded()
+        public void NotifyMatchEnded(int winnerSeat)
         {
             if (ownLobby.IsEmpty || matchEndReported)
             {
@@ -1626,7 +1677,7 @@ namespace TF.EX.Domain.Services
 
             matchEndReported = true;
 
-            Task.Run(async () => await SendMatchEnded());
+            Task.Run(async () => await SendMatchEnded(winnerSeat));
         }
 
         public IEnumerable<EndGameStatus> GetEndGameStatus()

@@ -6,6 +6,8 @@ namespace TF.EX.Domain.Context
     {
         public static int CurrentFrame;
 
+        public static byte[] LastCapturedState;
+
         public static bool IsCaptureActive;
 
         public static bool IsTestMode;
@@ -36,6 +38,7 @@ namespace TF.EX.Domain.Context
         public static void Reset()
         {
             CurrentFrame = 0;
+            LastCapturedState = null;
             IsCaptureActive = false;
             IsTestMode = false;
             IsReplayMode = false;

@@ -56,10 +56,11 @@ namespace TF.EX.Patchs.Entity.HUD
                 ServiceCollections.ResolveInputService().RebindLocalInput();
 
                 var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+                var level = __instance.Scene as TowerFall.Level;
 
-                matchmakingService.NotifyMatchEnded();
+                matchmakingService.NotifyMatchEnded(level?.Session.GetWinner() ?? -1);
 
-                if (__instance.Scene is TowerFall.Level level && !matchmakingService.GetOwnLobby().IsEmpty)
+                if (level != null && !matchmakingService.GetOwnLobby().IsEmpty)
                 {
                     Domain.CustomComponent.MatchEndChoices.Create(level);
                 }

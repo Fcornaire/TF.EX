@@ -23,6 +23,7 @@ namespace TF.EX.Domain.Models
 
         public static int InputDelay = 2;
         public static string Name = "PLAYER";
+        public static string PlayerId = "";
         public static string Server = OfficialServer;
         public static AutoAdjustInputDelayMode AutoAdjustInputDelay = AutoAdjustInputDelayMode.Propose;
         public static CustomSkinMode CustomSkins = CustomSkinMode.Full;

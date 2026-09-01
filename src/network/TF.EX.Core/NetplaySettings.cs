@@ -16,6 +16,7 @@ namespace TF.EX
         public string AutoAdjustInputDelay { get; set; } = "PROPOSE";
         public string CustomSkins { get; set; } = "FULL";
         public bool AutoUpdate { get; set; } = true;
+        public string PlayerId { get; set; } = "";
 
         private static readonly string[] AutoAdjustModes = { "DISABLED", "PROPOSE", "ENABLED" };
         private static readonly string[] CustomSkinModes = { "DISABLED", "FULL" };
@@ -114,8 +115,16 @@ namespace TF.EX
                 : CustomSkinMode.Full;
             CustomSkins = skinMode.ToString().ToUpperInvariant();
 
+            var playerId = (PlayerId ?? "").Trim();
+            if (playerId.Length == 0)
+            {
+                playerId = $"local:{Guid.NewGuid()}";
+            }
+            PlayerId = playerId;
+
             NetplayPreferences.InputDelay = InputDelay;
             NetplayPreferences.Name = Name;
+            NetplayPreferences.PlayerId = PlayerId;
             NetplayPreferences.Server = Server;
             NetplayPreferences.AutoAdjustInputDelay = mode;
             NetplayPreferences.CustomSkins = skinMode;
