@@ -12,6 +12,15 @@ namespace TF.EX.Patchs.Entity
     [HarmonyPatch(typeof(PauseMenu))]
     public class PauseMenuPatch
     {
+        private static PauseMenu votedMenu;
+
+        public static bool IsVotePending()
+        {
+            return votedMenu != null
+                && ReferenceEquals(votedMenu.Scene, TFGame.Instance.Scene)
+                && !ServiceCollections.ResolveMatchmakingService().GetOwnLobby().IsEmpty;
+        }
+
         [HarmonyPostfix]
         [HarmonyPatch(nameof(PauseMenu.Update))]
         public static void PauseMenu_Update(PauseMenu __instance)
@@ -97,6 +106,12 @@ namespace TF.EX.Patchs.Entity
                     return false;
                 }
 
+                if (ReferenceEquals(votedMenu, __instance))
+                {
+                    return false;
+                }
+
+                votedMenu = __instance;
                 inputService.DisableAllControllers();
                 Sounds.ui_click.Play();
 
@@ -129,6 +144,12 @@ namespace TF.EX.Patchs.Entity
                     return false;
                 }
 
+                if (ReferenceEquals(votedMenu, __instance))
+                {
+                    return false;
+                }
+
+                votedMenu = __instance;
                 inputService.DisableAllControllers();
                 Sounds.ui_click.Play();
 

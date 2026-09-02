@@ -1,13 +1,13 @@
 {
   "name": "TF.EX",
-  "version": "1.0.0",
+  "version": "0.9.6",
   "author": "DShad",
   "description": "A Netplay (Rollback netcode) mod for Towerfall, uses TF.State for snapshots and TF.Replay for recording",
   "dll": "TF.EX.Core.dll",
   "priority": "Low",
   "dependencies": [
     { "name": "FortRise", "version": "5.4.0-rc.1" },
-    { "name": "TF.State", "version": "1.0.0" },
-    { "name": "TF.Replay", "version": "1.0.0" }
+    { "name": "TF.State", "version": "0.9.6" },
+    { "name": "TF.Replay", "version": "0.9.6" }
   ]
 }

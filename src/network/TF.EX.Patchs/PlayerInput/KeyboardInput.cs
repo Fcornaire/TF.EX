@@ -110,14 +110,14 @@ namespace TF.EX.Patchs.PlayerInput
         [HarmonyPatch("get_MenuUp")]
         public static void MenuUp_patch(ref bool __result, KeyboardInput __instance)
         {
-            if (IsForeignSeat(__instance) || SpectatorRollcallGate.IsInert()) __result = false;
+            if (IsForeignSeat(__instance) || SpectatorRollcallGate.IsInert() || ResultsVoteLock.IsActive()) __result = false;
         }
 
         [HarmonyPostfix]
         [HarmonyPatch("get_MenuDown")]
         public static void MenuDown_patch(ref bool __result, KeyboardInput __instance)
         {
-            if (IsForeignSeat(__instance) || SpectatorRollcallGate.IsInert()) __result = false;
+            if (IsForeignSeat(__instance) || SpectatorRollcallGate.IsInert() || ResultsVoteLock.IsActive()) __result = false;
         }
 
         private static bool IsForeignSeat(KeyboardInput self)
@@ -140,28 +140,28 @@ namespace TF.EX.Patchs.PlayerInput
         [HarmonyPatch("get_MenuAlt")]
         public static void MenuAlt_patch(ref bool __result, KeyboardInput __instance)
         {
-            if (IsForeignSeat(__instance) || SpectatorRollcallGate.IsInert()) __result = false;
+            if (IsForeignSeat(__instance) || SpectatorRollcallGate.IsInert() || ResultsVoteLock.IsActive()) __result = false;
         }
 
         [HarmonyPostfix]
         [HarmonyPatch("get_MenuAlt2")]
         public static void MenuAlt2_patch(ref bool __result, KeyboardInput __instance)
         {
-            if (IsForeignSeat(__instance) || SpectatorRollcallGate.IsInert()) __result = false;
+            if (IsForeignSeat(__instance) || SpectatorRollcallGate.IsInert() || ResultsVoteLock.IsActive()) __result = false;
         }
 
         [HarmonyPostfix]
         [HarmonyPatch("get_MenuAlt2Check")]
         public static void MenuAlt2Check_patch(ref bool __result, KeyboardInput __instance)
         {
-            if (IsForeignSeat(__instance) || SpectatorRollcallGate.IsInert()) __result = false;
+            if (IsForeignSeat(__instance) || SpectatorRollcallGate.IsInert() || ResultsVoteLock.IsActive()) __result = false;
         }
 
         [HarmonyPostfix]
         [HarmonyPatch("get_MenuBack")]
         public static void MenuBack_patch(ref bool __result, KeyboardInput __instance)
         {
-            if (IsForeignSeat(__instance))
+            if (IsForeignSeat(__instance) || ResultsVoteLock.IsActive())
             {
                 __result = false;
                 return;
@@ -177,28 +177,28 @@ namespace TF.EX.Patchs.PlayerInput
         [HarmonyPatch("get_MenuConfirmCheck")]
         public static void MenuConfirmCheck_patch(ref bool __result, KeyboardInput __instance)
         {
-            if (IsForeignSeat(__instance) || SpectatorRollcallGate.IsInert()) __result = false;
+            if (IsForeignSeat(__instance) || SpectatorRollcallGate.IsInert() || ResultsVoteLock.IsActive()) __result = false;
         }
 
         [HarmonyPostfix]
         [HarmonyPatch("get_MenuStartCheck")]
         public static void MenuStartCheck_patch(ref bool __result, KeyboardInput __instance)
         {
-            if (IsForeignSeat(__instance) || SpectatorRollcallGate.IsInert()) __result = false;
+            if (IsForeignSeat(__instance) || SpectatorRollcallGate.IsInert() || ResultsVoteLock.IsActive()) __result = false;
         }
 
         [HarmonyPostfix]
         [HarmonyPatch("get_MenuBackCheck")]
         public static void MenuBackCheck_patch(ref bool __result, KeyboardInput __instance)
         {
-            if (IsForeignSeat(__instance) || SpectatorRollcallGate.IsInert()) __result = false;
+            if (IsForeignSeat(__instance) || SpectatorRollcallGate.IsInert() || ResultsVoteLock.IsActive()) __result = false;
         }
 
         [HarmonyPostfix]
         [HarmonyPatch("get_MenuAltCheck")]
         public static void MenuAltCheck_patch(ref bool __result, KeyboardInput __instance)
         {
-            if (IsForeignSeat(__instance) || SpectatorRollcallGate.IsInert()) __result = false;
+            if (IsForeignSeat(__instance) || SpectatorRollcallGate.IsInert() || ResultsVoteLock.IsActive()) __result = false;
         }
 
         [HarmonyPostfix]
@@ -340,7 +340,7 @@ namespace TF.EX.Patchs.PlayerInput
 
             if (isPaused)
             {
-                return actualInput;
+                return actualInput && !ResultsVoteLock.IsActive();
             }
 
             if (isReplayMode)
@@ -367,7 +367,7 @@ namespace TF.EX.Patchs.PlayerInput
 
                 if (matchResults != null && DynamicData.For(matchResults).Get<bool>("finished"))
                 {
-                    return actualInput;
+                    return actualInput && !ResultsVoteLock.IsActive();
                 }
             }
 

@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
-		<ModVersion>1.0.0</ModVersion>
+		<ModVersion>0.9.6</ModVersion>
 		<ModName>DShad.TF.State</ModName>
 		<ModEnablePublish>true</ModEnablePublish>
 		<ModEnableZip>false</ModEnableZip>

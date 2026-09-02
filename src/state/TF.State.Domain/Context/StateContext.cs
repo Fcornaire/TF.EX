@@ -233,7 +233,7 @@ namespace TF.State.Domain.Context
         {
             ClearDesiredSfx();
             _currentSfxs.Clear();
-            _soundEffects.Clear();
+            _lastRollbackFrame = 0;
         }
 
         public string GetSoundEffectName(SoundEffect data)

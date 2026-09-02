@@ -45,5 +45,8 @@ namespace TF.State.Domain.Models
 
         [Key(10)]
         public int Frame { get; set; }
+
+        [Key(11)]
+        public Component.Counter ScreenShake { get; set; }
     }
 }

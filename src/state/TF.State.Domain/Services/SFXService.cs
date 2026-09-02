@@ -179,6 +179,7 @@ namespace TF.State.Domain.Services
         public void Reset()
         {
             _stateContext.ClearSfxs();
+            ClearSnapshots();
         }
 
         public string GetSoundEffectName(SoundEffect data)

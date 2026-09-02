@@ -121,6 +121,8 @@ namespace TF.EX.Core.RoundLogic
 
         public void SpawnRoundPlayers()
         {
+            logger.LogDebug($"Spawning players at netplay frame {TF.EX.Domain.Externals.GGRSFFI.netplay_current_frame()} (round {base.Session.RoundIndex})");
+
             if (ScenarioSweeper.IsRunning)
             {
                 SpawnRoundPlayersOnly();

@@ -1,11 +1,9 @@
-using MessagePack;
 using Microsoft.Extensions.Logging;
 using Monocle;
 using MonoMod.Utils;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
-using TF.EX.Common;
 using TF.EX.Common.Extensions;
 using TF.EX.Common.Handle;
 using TF.EX.Domain.Context;
@@ -87,6 +85,8 @@ namespace TF.EX.Domain.Services
         }
         private bool _hasFailedInitialConnection = false;
         private volatile bool _pendingAbortToVersusOptions = false;
+        private TowerFall.RoundLogic _pendingSessionRoundLogic;
+        private Stopwatch _synchronizationTimer;
 
         private const int SYNCHRONIZATION_TIMEOUT_MS = 20000;
 
@@ -148,6 +148,7 @@ namespace TF.EX.Domain.Services
             _hasFailedInitialConnection = false;
             _pendingAbortToVersusOptions = false;
 
+            StateApi.Current.ResetSfx();
             StateApi.Current.SetFrameDriver(Models.Constants.DRIVER_NAME);
 
             GGRSConfig.Name = NetplayPreferences.Name;
@@ -163,7 +164,22 @@ namespace TF.EX.Domain.Services
                 return;
             }
 
+            _pendingSessionRoundLogic = roundLogic;
+
             Task.Run(() => Connect(roundLogic), _cancellationToken);
+        }
+
+        public void EstablishSessionIfSynchronized()
+        {
+            if (_pendingSessionRoundLogic == null || !_isInit || !IsSynchronized())
+            {
+                return; //Already or not yet
+            }
+
+            var roundLogic = _pendingSessionRoundLogic;
+            _pendingSessionRoundLogic = null;
+
+            OnSessionEstablished(roundLogic);
         }
 
         private StatusImpl NativeInit()
@@ -182,7 +198,7 @@ namespace TF.EX.Domain.Services
             }
         }
 
-        private async Task Connect(TowerFall.RoundLogic roundLogic)
+        private void Connect(TowerFall.RoundLogic roundLogic)
         {
             try
             {
@@ -204,21 +220,8 @@ namespace TF.EX.Domain.Services
                 }
 
                 _logger.LogDebug<NetplayManager>("Netplay initialization succeeded");
+                _synchronizationTimer = Stopwatch.StartNew();
                 _isInit = true;
-
-                if (!await WaitForSynchronization())
-                {
-                    _logger.LogError<NetplayManager>("Failed to etablish a connection to the opponent, aborting session");
-
-                    Reset();
-
-                    _isInit = false;
-                    AbortToVersusOptions();
-
-                    return;
-                }
-
-                OnSessionEstablished(roundLogic);
             }
             catch (Exception e)
             {
@@ -227,23 +230,29 @@ namespace TF.EX.Domain.Services
             }
         }
 
-        private async Task<bool> WaitForSynchronization()
+        public void AbortIfSynchronizationFailed()
         {
-            var timer = Stopwatch.StartNew();
-
-            while (!IsSynchronized() && !_cancellationToken.IsCancellationRequested && timer.ElapsedMilliseconds < SYNCHRONIZATION_TIMEOUT_MS)
+            if (_pendingSessionRoundLogic == null || _synchronizationTimer == null || !_isInit || IsSynchronized())
             {
-                Poll();
-                await Task.Delay(TFGame.FrameTime);
+                return;
             }
 
-            timer.Stop();
+            if (!IsDisconnected() && _synchronizationTimer.ElapsedMilliseconds < SYNCHRONIZATION_TIMEOUT_MS)
+            {
+                return;
+            }
 
-            return IsSynchronized();
+            _logger.LogError<NetplayManager>("Failed to etablish a connection to the opponent, aborting session");
+
+            Reset();
+
+            _isInit = false;
+            AbortToVersusOptions();
         }
 
         private void AbortToVersusOptions()
         {
+            _pendingSessionRoundLogic = null;
             _hasFailedInitialConnection = true;
             _pendingAbortToVersusOptions = true;
         }
@@ -759,6 +768,7 @@ namespace TF.EX.Domain.Services
 
         public void Reset()
         {
+            _pendingSessionRoundLogic = null;
             StateApi.Current.SetFrameDriver(null);
 
             if (_isInit)

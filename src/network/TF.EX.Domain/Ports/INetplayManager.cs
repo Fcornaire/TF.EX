@@ -9,6 +9,10 @@ namespace TF.EX.Domain.Ports
 
         void Init(TowerFall.RoundLogic roundLogic);
 
+        void EstablishSessionIfSynchronized();
+
+        void AbortIfSynchronizationFailed();
+
         bool ConsumeAbortToVersusOptions();
 
         bool IsInit();

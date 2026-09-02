@@ -727,6 +727,7 @@ namespace TF.EX.Domain.Services
                         if (_netplayManager.IsInit())
                         {
                             _netplayManager.Reset();
+                            ServiceCollections.ResolveReplayService().Reset();
                         }
 
                         _inputService.EnableAllControllers();
@@ -752,7 +753,7 @@ namespace TF.EX.Domain.Services
 
                 if (IsHost())
                 {
-                    _netplayManager.AddLateSpectator(spectatorPeerId);
+                    RunOnGameThread(() => _netplayManager.AddLateSpectator(spectatorPeerId));
                 }
             }
 
@@ -768,6 +769,7 @@ namespace TF.EX.Domain.Services
                         if (_netplayManager.IsInit())
                         {
                             _netplayManager.Reset();
+                            ServiceCollections.ResolveReplayService().Reset();
                         }
 
                         _inputService.EnableAllControllers();
@@ -855,6 +857,7 @@ namespace TF.EX.Domain.Services
                 Sounds.ui_invalid.Play();
                 Notification.Create(TFGame.Instance.Scene, "All players left...", 10, 500);
                 Task.Run(SendLeaveLobby);
+                ServiceCollections.ResolveReplayService().Reset();
 
                 abandonedRoomId = lobby.RoomId;
                 ownLobby = new Lobby();
@@ -882,6 +885,7 @@ namespace TF.EX.Domain.Services
                 {
                     Sounds.ui_invalid.Play();
                     Notification.Create(TFGame.Instance.Scene, "Host left the game...");
+                    ServiceCollections.ResolveReplayService().Reset();
                     ownLobby = new Lobby();
                 }
 
