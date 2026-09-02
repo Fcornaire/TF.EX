@@ -188,6 +188,8 @@ namespace TF.EX.Patchs.Engine
                 Accumulator = TimeSpan.Zero;
             }
 
+            netplayManager.AbortIfSynchronizationFailed();
+
             if (netplayManager.HasFailedInitialConnection())
             {
                 if (netplayManager.ConsumeAbortToVersusOptions() && __instance.Scene is TowerFall.Level failedLevel)
@@ -198,6 +200,7 @@ namespace TF.EX.Patchs.Engine
                     matchmakingService.DisconnectFromServer();
                     matchmakingService.ResetPeer();
                     matchmakingService.UpdateOwnLobby(new Domain.Models.WebSocket.Lobby());
+                    replayService.Reset();
 
                     var menu = Domain.Extensions.LevelExtensions.GoToNetplayEntryMenu(failedLevel);
 
@@ -273,6 +276,8 @@ namespace TF.EX.Patchs.Engine
 
                     if (netplayManager.IsSynchronized() || netplayManager.GetNetplayMode().Equals(NetplayMode.Test))
                     {
+                        netplayManager.EstablishSessionIfSynchronized();
+
                         if (ScenarioSweeper.IsRunning && netplayManager.IsTestMode())
                         {
                             ScenarioSweeper.Tick(__instance.Scene as Level);

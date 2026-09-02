@@ -10,6 +10,7 @@ using TF.State.Domain.Models.Entity.LevelEntity.Arrows;
 using TF.State.Domain.Models.Entity.LevelEntity.Chest;
 using TF.State.Domain.Models.Entity.LevelEntity.Player;
 using TF.State.Domain.Models.Layer;
+using TF.State.TowerFallExtensions.ComponentExtensions;
 using TF.State.TowerFallExtensions.Entity.HUD;
 using TF.State.TowerFallExtensions.Entity.LevelEntity;
 using TF.State.TowerFallExtensions.Layer;
@@ -342,7 +343,15 @@ namespace TF.State.TowerFallExtensions
 
             var dynScene = DynamicData.For(level as Monocle.Scene);
             dynScene.Set("FrameCounter", (float)gameState.Frame);
-            level.EndScreenShake();
+
+            if (gameState.ScreenShake != null)
+            {
+                DynamicData.For(level).Get<Monocle.Counter>("shakeCounter").LoadState(gameState.ScreenShake);
+            }
+            else
+            {
+                level.EndScreenShake();
+            }
 
             level.Frozen = gameState.IsLevelFrozen;
 
@@ -998,6 +1007,7 @@ namespace TF.State.TowerFallExtensions
             gameState.RoundLogic.RoundLevels.Last = lastLevel;
 
             gameState.IsLevelFrozen = level.Frozen;
+            gameState.ScreenShake = DynamicData.For(level).Get<Monocle.Counter>("shakeCounter").GetState();
 
             var dynRoundLogic = DynamicData.For(level.Session.RoundLogic);
 
