@@ -1,6 +1,6 @@
 {
   "name": "TF.State",
-  "version": "0.9.6",
+  "version": "0.9.7",
   "displayName": "TF State",
   "description": "Game state capture and restore for TowerFall mods,exposes a byte[] snapshot API other mods build on",
   "author": "DShad",

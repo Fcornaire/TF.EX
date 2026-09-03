@@ -4,7 +4,7 @@
 	  <TargetFramework>net10.0</TargetFramework>
 	  <!--<LangVersion>11</LangVersion>-->
 	  <PackageCopyToOutput>true</PackageCopyToOutput>
-	  <ModVersion>0.9.6</ModVersion>
+	  <ModVersion>0.9.7</ModVersion>
 		<ModName>DShad.TF.EX</ModName>
   </PropertyGroup>
 
