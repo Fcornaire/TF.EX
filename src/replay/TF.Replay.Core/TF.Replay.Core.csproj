@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
-		<ModVersion>0.9.6</ModVersion>
+		<ModVersion>0.9.7</ModVersion>
 		<ModName>DShad.TF.Replay</ModName>
 		<ModEnablePublish>true</ModEnablePublish>
 		<ModEnableZip>false</ModEnableZip>

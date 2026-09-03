@@ -1,6 +1,6 @@
 {
   "name": "TF.InputDisplayer",
-  "version": "0.9.6",
+  "version": "0.9.7",
   "displayName": "TF Input Displayer",
   "description": "Fighting game style input history overlay",
   "author": "DShad",
