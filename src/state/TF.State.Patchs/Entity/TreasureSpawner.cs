@@ -14,9 +14,25 @@ namespace TF.State.Patchs.Entity
         }
 
         [HarmonyPrefix]
-        [HarmonyPatch(nameof(TreasureSpawner.GetRandomArrowType))]
-        public static bool TreasureSpawner_GetRandomArrowType_Prefix(TreasureSpawner __instance, bool includeDefaultArrows, ref ArrowTypes __result)
+        [HarmonyPatch(MethodType.Constructor, [typeof(Session), typeof(int[]), typeof(float), typeof(bool)])]
+        public static void TreasureSpawner_ctor_Prefix(out LocalSettingsGuard.Snapshot __state)
         {
+            __state = LocalSettingsGuard.Neutralize();
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch(MethodType.Constructor, [typeof(Session), typeof(int[]), typeof(float), typeof(bool)])]
+        public static void TreasureSpawner_ctor_Postfix(LocalSettingsGuard.Snapshot __state)
+        {
+            LocalSettingsGuard.Restore(__state);
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(TreasureSpawner.GetRandomArrowType))]
+        public static bool TreasureSpawner_GetRandomArrowType_Prefix(TreasureSpawner __instance, bool includeDefaultArrows, ref ArrowTypes __result, out LocalSettingsGuard.Snapshot __state)
+        {
+            __state = LocalSettingsGuard.Neutralize();
+
             if (!StateFlags.IsCaptureActive)
             {
                 return true;
@@ -39,18 +55,27 @@ namespace TF.State.Patchs.Entity
             return false;
         }
 
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(TreasureSpawner.GetRandomArrowType))]
+        public static void TreasureSpawner_GetRandomArrowType_Postfix(LocalSettingsGuard.Snapshot __state)
+        {
+            LocalSettingsGuard.Restore(__state);
+        }
+
         [HarmonyPrefix]
         [HarmonyPatch(nameof(TreasureSpawner.GetArrowShufflePickups))]
-        public static void TreasureSpawner_GetArrowShufflePickups_Prefix()
+        public static void TreasureSpawner_GetArrowShufflePickups_Prefix(out LocalSettingsGuard.Snapshot __state)
         {
+            __state = LocalSettingsGuard.Neutralize();
             Calc.CalcPatch.RegisterRng();
         }
 
         [HarmonyPostfix]
         [HarmonyPatch(nameof(TreasureSpawner.GetArrowShufflePickups))]
-        public static void TreasureSpawner_GetArrowShufflePickups_Postfix(List<Pickups> __result)
+        public static void TreasureSpawner_GetArrowShufflePickups_Postfix(List<Pickups> __result, LocalSettingsGuard.Snapshot __state)
         {
             Calc.CalcPatch.UnregisterRng();
+            LocalSettingsGuard.Restore(__state);
 
             if (!StateFlags.IsCaptureActive)
             {

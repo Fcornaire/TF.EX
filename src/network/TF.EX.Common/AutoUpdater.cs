@@ -39,10 +39,11 @@ namespace TF.EX.Common
 
         private static readonly string[] ModFolders = { "DShad.TF.EX", "DShad.TF.Replay", "DShad.TF.State", "DShad.TF.InputDisplayer" };
 
-        //Stream.CopyToAsync's default (dotnet/runtime Stream.cs): largest 4096 multiple under the 85K large-object-heap threshold
+        //Stream.CopyToAsync's default
         private const int CopyBufferSize = 81920;
 
         private readonly ILogger _logger;
+        private readonly string _modsPath;
         private string DownloadPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "TF.EX", "Update");
 
         private string ZipPath => Path.Combine(DownloadPath, "update.zip");
@@ -56,16 +57,10 @@ namespace TF.EX.Common
         private Version latestVersion;
         private Version currentVersion;
 
-        public AutoUpdater(ILogger logger)
+        public AutoUpdater(ILogger logger, string modsPath)
         {
             _logger = logger;
-        }
-
-        private string GetModsPath()
-        {
-            var fortRise = Path.Combine(Directory.GetCurrentDirectory(), "FortRise", "Mods");
-
-            return Directory.Exists(fortRise) ? fortRise : Path.Combine(Directory.GetCurrentDirectory(), "Mods");
+            _modsPath = modsPath;
         }
 
         public async Task CheckForUpdate()
@@ -79,7 +74,7 @@ namespace TF.EX.Common
             {
                 CleanupPreviousUpdate();
 
-                var meta = File.ReadAllText(Path.Combine(GetModsPath(), "DShad.TF.EX", "meta.json"));
+                var meta = File.ReadAllText(Path.Combine(_modsPath, "DShad.TF.EX", "meta.json"));
                 currentVersion = GetVersion(meta);
 
                 _logger.LogDebug<AutoUpdater>($"Current TF.EX version: {currentVersion}");
@@ -212,7 +207,7 @@ namespace TF.EX.Common
                     continue;
                 }
 
-                var destination = Path.Combine(GetModsPath(), folder);
+                var destination = Path.Combine(_modsPath, folder);
 
                 ClearFolder(destination);
                 MoveInto(source, destination);
@@ -253,7 +248,7 @@ namespace TF.EX.Common
 
                 foreach (var folder in ModFolders)
                 {
-                    var destination = Path.Combine(GetModsPath(), folder);
+                    var destination = Path.Combine(_modsPath, folder);
 
                     if (!Directory.Exists(destination))
                     {

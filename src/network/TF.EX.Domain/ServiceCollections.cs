@@ -16,8 +16,6 @@ namespace TF.EX.Domain
     {
         public static ServiceCollection ServiceCollection;
         public static IServiceProvider ServiceProvider;
-        private static HashSet<double> _cachedPickupEntries = new HashSet<double>();
-        private static CancellationTokenSource _resetCacheToken = new CancellationTokenSource();
         private static IModCollections _modCollections;
 
         public static void RegisterServices(IModuleContext context, ILogger logger)
@@ -31,7 +29,7 @@ namespace TF.EX.Domain
 
             ServiceCollection.AddLazyCache();
 
-            ServiceCollection.AddSingleton<IAutoUpdater, AutoUpdater>();
+            ServiceCollection.AddSingleton<IAutoUpdater>(_ => new AutoUpdater(logger, Path.Combine(RiseCore.GameRootPath, "Mods")));
             ServiceCollection.AddSingleton(logger);
             ServiceCollection.AddSingleton(context);
 
