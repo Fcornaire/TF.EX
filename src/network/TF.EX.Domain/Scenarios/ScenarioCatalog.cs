@@ -948,6 +948,50 @@ namespace TF.EX.Domain.Scenarios
                 Expect = level => AllOf<PlayerGhost>(level).Any(g => g.State == 3)
                     && AllOf<Player>(level).Any(p => p.PlayerIndex == 2),
             },
+            new Scenario
+            {
+                Name = "orb-cannothit-player",
+                Covers = ["Orb", "Player"],
+                Frames = 900,
+                Spawns = [(160, SpawnY), (300, SpawnY)],
+                Scripts = [Sequence(Ready(), Jump(24), Wait(40)), Still],
+                Entities = [new ScenarioEntity("Orb", 160, 168)],
+                Expect = level => AllOf<Orb>(level).Any(o =>
+                    o.CannotHit is Player && DynamicData.For(o).Get<bool>("falling")),
+            },
+            new Scenario
+            {
+                Name = "orb-cannothit-ghost",
+                Covers = ["Orb", "PlayerGhost", "Player", "PlayerCorpse", "Arrow"],
+                Variants = ["RETURN AS GHOSTS", "MAX ARROWS"],
+                Frames = 1200,
+                PlayerCount = 3,
+                Spawns = [(60, SpawnY), (140, SpawnY), (300, SpawnY)],
+                Entities =
+                [
+                    new ScenarioEntity("Orb", 176, 184),
+                    new ScenarioEntity("Orb", 190, 184),
+                    new ScenarioEntity("Orb", 204, 184),
+                ],
+                Scripts =
+                [
+                    Sequence(AimAndFire(1, 0), Wait(600)),
+                    Sequence(Wait(100), Drift(0, -1, 20), Drift(0, 1, 100), Wait(400)),
+                    Still,
+                ],
+                Expect = level => AllOf<Orb>(level).Any(o =>
+                    o.CannotHit is PlayerGhost && DynamicData.For(o).Get<bool>("falling")),
+            },
+            new Scenario
+            {
+                Name = "orb-self-hit",
+                Covers = ["Orb", "Player", "PlayerCorpse", "Arrow"],
+                Frames = 900,
+                Spawns = [(160, SpawnY), (300, SpawnY)],
+                Scripts = [Sequence(Ready(), AimAndFire(0, -1), Wait(600)), Still],
+                Entities = [new ScenarioEntity("Orb", 160, 130)],
+                Expect = level => AllOf<PlayerCorpse>(level).Any(c => c.PlayerIndex == 0),
+            },
         ];
 
         public static Scenario[] Resolve(IEnumerable<string> names)

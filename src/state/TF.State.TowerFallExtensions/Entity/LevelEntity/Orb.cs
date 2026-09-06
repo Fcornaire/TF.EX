@@ -22,8 +22,26 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             var startY = dynOrb.Get<float>("startY");
             var explodes = dynOrb.Get<bool>("explodes");
 
+            bool hasCannotHit = false;
+            bool cannotHitIsGhost = false;
+            int cannotHitPlayerIndex = -1;
+            if (entity.CannotHit is TowerFall.Player player)
+            {
+                hasCannotHit = true;
+                cannotHitPlayerIndex = player.PlayerIndex;
+            }
+            else if (entity.CannotHit is TowerFall.PlayerGhost ghost)
+            {
+                hasCannotHit = true;
+                cannotHitIsGhost = true;
+                cannotHitPlayerIndex = ghost.PlayerIndex;
+            }
+
             return new Orb
             {
+                HasCannotHit = hasCannotHit,
+                CannotHitIsGhost = cannotHitIsGhost,
+                CannotHitPlayerIndex = cannotHitPlayerIndex,
                 ActualDepth = actualDepth,
                 IsCollidable = collidable,
                 IsFalling = falling,
@@ -50,8 +68,15 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             dynOrb.Set("ownerIndex", toLoad.OwnerIndex);
             dynOrb.Set("startY", toLoad.StartY);
 
-            var playerOrCorpse = entity.Level.GetPlayerOrCorpse(toLoad.OwnerIndex);
-            entity.CannotHit = playerOrCorpse;
+            entity.CannotHit = null;
+            if (toLoad.HasCannotHit)
+            {
+                entity.CannotHit = toLoad.CannotHitIsGhost
+                    ? entity.Level[Monocle.GameTags.PlayerGhost]
+                        .OfType<TowerFall.PlayerGhost>()
+                        .FirstOrDefault(ghost => ghost.PlayerIndex == toLoad.CannotHitPlayerIndex)
+                    : entity.Level.GetPlayerOrCorpse(toLoad.CannotHitPlayerIndex);
+            }
 
             var sine = dynOrb.Get<SineWave>("sine");
             sine.UpdateAttributes(toLoad.SineCounter);

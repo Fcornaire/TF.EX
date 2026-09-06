@@ -101,6 +101,7 @@ namespace TF.EX.Common
             }
             catch (Exception ex)
             {
+                _status = UpdateStatus.Unknown;
                 _logger.LogError<AutoUpdater>($"Error while trying to check for Update", ex);
             }
         }

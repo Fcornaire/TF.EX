@@ -28,5 +28,14 @@ namespace TF.State.Domain.Models.Entity.LevelEntity
 
         [Key(9)]
         public bool Explodes { get; set; }
+
+        [Key(10)]
+        public bool HasCannotHit { get; set; }
+
+        [Key(11)]
+        public int CannotHitPlayerIndex { get; set; }
+
+        [Key(12)]
+        public bool CannotHitIsGhost { get; set; }
     }
 }
