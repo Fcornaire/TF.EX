@@ -1,4 +1,4 @@
-using HarmonyLib;
+﻿using HarmonyLib;
 using Microsoft.Extensions.Logging;
 using Microsoft.Xna.Framework;
 using Monocle;
@@ -460,6 +460,13 @@ namespace TF.EX.Patchs.Engine
 
                 Sounds.ui_invalid.Play();
                 Notification.Create(menu, $"Online play requires version {autoUpdater.GetLatestVersion()} (current version : {autoUpdater.GetCurrentVersion()})", 10, 400);
+                return;
+            }
+
+            if (NetplayPreferences.IsOfficialServer && autoUpdater.GetStatus() != UpdateStatus.UpToDate)
+            {
+                Sounds.ui_invalid.Play();
+                Notification.Create(menu, "Could not verify TF.EX version, check your connection and retry", 10, 400);
                 return;
             }
 

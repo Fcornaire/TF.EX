@@ -195,7 +195,7 @@ Add TF.State to your `meta.json` so FortRise loads it first. Use `optionalDepend
 keep working without it:
 
 ```json
-"optionalDependencies": [ { "name": "TF.State", "version": "0.9.7" } ]
+"optionalDependencies": [ { "name": "TF.State", "version": "0.9.8" } ]
 ```
 
 #### Register the custom Save/Load delegate
