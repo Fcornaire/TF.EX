@@ -347,7 +347,7 @@ namespace TF.EX.Patchs.Scene
 
             InputDelayAdvisor.Update(__instance);
 
-            if (__instance.State == MainMenu.MenuState.Rollcall && !InputDelayAdvisor.ConsumedAlt2 && Alt2Pressed())
+            if (__instance.State == MainMenu.MenuState.Rollcall && (InputDelayAdvisor.TapReleased || !InputDelayAdvisor.ConsumedAlt2 && Alt2Pressed()))
             {
                 CopyPrivateCodeToClipboard(__instance, matchmakingService);
             }

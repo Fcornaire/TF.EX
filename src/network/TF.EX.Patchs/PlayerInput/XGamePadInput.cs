@@ -448,7 +448,6 @@ namespace TF.EX.Patchs.PlayerInput
         private static bool InterceptLR(XGamepadInput self, bool actualInput)
         {
             var netplayManager = ServiceCollections.ResolveNetplayManager();
-            var inputService = ServiceCollections.ResolveInputService();
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
 
             var isNetplayInit = netplayManager.IsInit();
@@ -478,17 +477,10 @@ namespace TF.EX.Patchs.PlayerInput
                         return true;
                     }
 
-                    if (matchmakingService.IsSpectator())
+                    if (matchmakingService.IsSpectator() || InputDelayAdvisor.CapturesLeftRight(self))
                     {
                         return false;
                     }
-
-                    var rollcallElement = (TFGame.Instance.Scene as MainMenu).GetAll<RollcallElement>().First(rc =>
-                    {
-                        var index = Traverse.Create(rc).Field("playerIndex").GetValue<int>();
-
-                        return index == inputService.GetLocalPlayerInputIndex();
-                    });
 
                     return actualInput;
                 }
