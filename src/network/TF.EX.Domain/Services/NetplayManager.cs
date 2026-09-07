@@ -153,6 +153,7 @@ namespace TF.EX.Domain.Services
 
             GGRSConfig.Name = NetplayPreferences.Name;
             GGRSConfig.InputDelay = _sessionInputDelay ?? NetplayPreferences.InputDelayFrames; //preferences in ms, override in native frames
+            GGRSConfig.MaxInputDelay = NetplayPreferences.ToFrames(NetplayPreferences.MaxInputDelay);
 
             _cancellationTokenSource = new CancellationTokenSource();
             _cancellationToken = _cancellationTokenSource.Token;
@@ -530,11 +531,50 @@ namespace TF.EX.Domain.Services
                         return status;
                     }
 
-                    throw new InvalidOperationException($"AdvanceFrame error : {info}");
+                    EndMatchOnNetplayError(info);
+
+                    return status;
                 }
             }
 
             return status;
+        }
+
+        private void EndMatchOnNetplayError(string info)
+        {
+            _logger.LogError<NetplayManager>($"Unrecoverable netplay error, ending the match : {info}");
+
+            TowerFall.Sounds.ui_invalid.Play();
+
+            if (IsTestMode())
+            {
+                Reset();
+                ResetMode();
+
+                if (ScenarioSweeper.IsRunning)
+                {
+                    ScenarioSweeper.Abort(info);
+
+                    return;
+                }
+
+                TFGame.Instance.Scene = new MainMenu(MainMenu.MenuState.PressStart);
+
+                return;
+            }
+
+            Reset();
+
+            if (TFGame.Instance.Scene is Level level)
+            {
+                level.GoToNetplayEntryMenu();
+            }
+
+            var message = info.Contains("cannot roll back to frame")
+                ? "CONNECTION LOST - match ended"
+                : "NETPLAY ERROR - match ended";
+
+            Notification.Create(TFGame.Instance.Scene, message, 15, 450);
         }
 
 
