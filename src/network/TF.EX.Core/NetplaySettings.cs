@@ -11,6 +11,7 @@ namespace TF.EX
     public class NetplaySettings : ModuleSettings
     {
         public int InputDelayMs { get; set; } = 20;
+        public int AcceptedRollbackFrames { get; set; } = 2;
         public string Name { get; set; } = "PLAYER";
         public string Server { get; set; } = NetplayPreferences.OfficialServer;
         public string AutoAdjustInputDelay { get; set; } = "PROPOSE";
@@ -45,7 +46,20 @@ namespace TF.EX
                     AutoAdjustInputDelay = selection.Item1;
                     Apply();
                 },
-                "ADAPT THE INPUT DELAY TO THE CONNECTION WHEN JOINING A LOBBY. \n PROPOSE SUGGESTS A VALUE YOU CAN ACCEPT OR IGNORE. \n HOLD THE BUTTON TO RESET. \n ENABLED APPLIES IT AUTOMATICALLY. \n (NOTE: YOUR SAVED INPUT DELAY IS NEVER CHANGED)");
+                "ADAPT THE INPUT DELAY TO THE CONNECTION WHEN JOINING A LOBBY. \n PROPOSE SHOWS A SLIDER IN THE LOBBY WITH THE SUGGESTED VALUE MARKED. \n MOVE IT WITH THE MOUSE, OR HOLD THE BUTTON SHOWN NEXT TO IT AND PRESS LEFT/RIGHT. \n HOLD THAT BUTTON ALONE TO RESET. ENABLED APPLIES THE SUGGESTION AUTOMATICALLY. \n (NOTE: YOUR SAVED INPUT DELAY IS NEVER CHANGED)");
+
+            settings.CreateNumber(
+                "ACCEPTED ROLLBACK",
+                AcceptedRollbackFrames,
+                value =>
+                {
+                    AcceptedRollbackFrames = value;
+                    Apply();
+                },
+                "HOW MANY FRAMES OF ROLLBACK YOU ACCEPT (60 FPS FRAMES AS SCALE, ~17 MS).",
+                NetplayPreferences.MinAcceptedRollbackFrames,
+                NetplayPreferences.MaxAcceptedRollbackFrames,
+                1);
 
             settings.CreateOptions(
                 "CUSTOM SKINS",
@@ -93,6 +107,8 @@ namespace TF.EX
             InputDelayMs = Math.Min(NetplayPreferences.MaxInputDelay, Math.Max(NetplayPreferences.MinInputDelay, InputDelayMs));
             InputDelayMs -= InputDelayMs % NetplayPreferences.InputDelayStep;
 
+            AcceptedRollbackFrames = Math.Min(NetplayPreferences.MaxAcceptedRollbackFrames, Math.Max(NetplayPreferences.MinAcceptedRollbackFrames, AcceptedRollbackFrames));
+
             var name = (Name ?? "").Trim().ToUpperInvariant();
             if (name.Length == 0)
             {
@@ -125,6 +141,7 @@ namespace TF.EX
             PlayerId = playerId;
 
             NetplayPreferences.InputDelay = InputDelayMs;
+            NetplayPreferences.AcceptedRollbackFrames = AcceptedRollbackFrames;
             NetplayPreferences.Name = Name;
             NetplayPreferences.PlayerId = PlayerId;
             NetplayPreferences.Server = Server;

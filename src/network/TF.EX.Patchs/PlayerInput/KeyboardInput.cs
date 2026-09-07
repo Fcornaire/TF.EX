@@ -74,7 +74,7 @@ namespace TF.EX.Patchs.PlayerInput
         {
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
 
-            if (IsForeignSeat(__instance))
+            if (IsForeignSeat(__instance) || InputDelayAdvisor.CapturesLeftRight(__instance))
             {
                 __result = false;
             }
@@ -93,7 +93,7 @@ namespace TF.EX.Patchs.PlayerInput
         {
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
 
-            if (IsForeignSeat(__instance))
+            if (IsForeignSeat(__instance) || InputDelayAdvisor.CapturesLeftRight(__instance))
             {
                 __result = false;
             }
