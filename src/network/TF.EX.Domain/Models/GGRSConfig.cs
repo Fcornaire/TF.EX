@@ -3,6 +3,7 @@
     public class GGRSConfig
     {
         public int InputDelay { get; set; }
+        public int MaxInputDelay { get; set; }
         public int Fps { get; set; } = Constants.NETPLAY_FPS;
         public string Name { get; set; }
 
