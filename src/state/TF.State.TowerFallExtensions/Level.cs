@@ -910,7 +910,7 @@ namespace TF.State.TowerFallExtensions
         /// <para>From now, this is a hack about loading properly player death arrow and arrow cannot hit target</para>
         /// <para>Player need arrow loaded to set death arrow</para>
         /// <para>Arrow need player loaded to set cannot hit target</para>
-        /// <para>the hack is to let them load first normally and them finish the remaining piece (Death arrow + CannotHit + PlayerCorpse)</para>
+        /// <para>the hack is to let them load first normally and them finish the remaining piece (Death arrow + CannotHit + StuckTo + PlayerCorpse)</para>
         /// </summary>
         private static void PostLoad(this Level self, GameState gs)
         {
@@ -929,6 +929,7 @@ namespace TF.State.TowerFallExtensions
                 if (arrow != null)
                 {
                     arrow.LoadCannotHit(toLoad.HasUnhittableEntity, toLoad.PlayerIndex);
+                    arrow.LoadStuckTo(toLoad.StuckToActualDepth);
                 }
             }
 

@@ -195,14 +195,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             var fireControl = dynArrow.Get<TowerFall.FireControl>("Fire");
             fireControl.LoadState(toLoad.FireControl);
 
-            if (toLoad.StuckToActualDepth != 0)
-            {
-                dynArrow.Set("StuckTo", entity.Level.GetEntityByDepth(toLoad.StuckToActualDepth));
-            }
-            else
-            {
-                dynArrow.Set("StuckTo", null);
-            }
+            dynArrow.Set("StuckTo", null);
 
             if (!toLoad.HasUnhittableEntity)
             {
@@ -345,6 +338,15 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                     break;
             }
 
+        }
+
+        public static void LoadStuckTo(this TowerFall.Arrow self, double stuckToActualDepth)
+        {
+            var stuckTo = stuckToActualDepth != 0
+                ? self.Level.GetEntityByDepth(stuckToActualDepth) as TowerFall.Platform
+                : null;
+
+            DynamicData.For(self).Set("StuckTo", stuckTo);
         }
 
         public static void LoadCannotHit(this TowerFall.Arrow self, bool hasUnhittable, int playerIndex)

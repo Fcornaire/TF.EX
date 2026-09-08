@@ -992,6 +992,27 @@ namespace TF.EX.Domain.Scenarios
                 Entities = [new ScenarioEntity("Orb", 160, 130)],
                 Expect = level => AllOf<PlayerCorpse>(level).Any(c => c.PlayerIndex == 0),
             },
+            new Scenario
+            {
+                Name = "cracked-stuck-arrow",
+                Covers = ["CrackedWall", "Arrow", "Explosion", "Chest"],
+                Variants = ["BOMB CHESTS"],
+                Frames = 900,
+                Spawns = [(104, SpawnY), (224, SpawnY)],
+                Scripts =
+                [
+                    Sequence(Wait(20), AimAndFire(-1, 0), Wait(60), Walk(1, 25), Wait(1500)),
+                    Sequence(Wait(20), AimAndFire(-1, 0), Wait(60), Walk(1, 25), Wait(1500)),
+                ],
+                Entities =
+                [
+                    new ScenarioEntity("CrackedWall", 70, 190),
+                    new ScenarioEntity("TreasureChest", 119, SpawnY),
+                    new ScenarioEntity("CrackedWall", 190, 190),
+                    new ScenarioEntity("TreasureChest", 239, SpawnY),
+                ],
+                Expect = level => AllOf<CrackedWall>(level).Count() < 2 && AllOf<Arrow>(level).Any(),
+            },
         ];
 
         public static Scenario[] Resolve(IEnumerable<string> names)
