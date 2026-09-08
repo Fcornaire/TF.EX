@@ -1,4 +1,4 @@
-using HarmonyLib;
+﻿using HarmonyLib;
 using MessagePack;
 using Microsoft.Extensions.Logging;
 using Monocle;
@@ -727,7 +727,7 @@ namespace TF.EX.Domain.Services
                         if (_netplayManager.IsInit())
                         {
                             _netplayManager.Reset();
-                            ServiceCollections.ResolveReplayService().Reset();
+                            ServiceCollections.ResolveReplayService().Export();
                         }
 
                         _inputService.EnableAllControllers();
@@ -769,7 +769,7 @@ namespace TF.EX.Domain.Services
                         if (_netplayManager.IsInit())
                         {
                             _netplayManager.Reset();
-                            ServiceCollections.ResolveReplayService().Reset();
+                            ServiceCollections.ResolveReplayService().Export();
                         }
 
                         _inputService.EnableAllControllers();
@@ -857,7 +857,7 @@ namespace TF.EX.Domain.Services
                 Sounds.ui_invalid.Play();
                 Notification.Create(TFGame.Instance.Scene, "All players left...", 10, 500);
                 Task.Run(SendLeaveLobby);
-                ServiceCollections.ResolveReplayService().Reset();
+                ServiceCollections.ResolveReplayService().Export();
 
                 abandonedRoomId = lobby.RoomId;
                 ownLobby = new Lobby();
@@ -885,7 +885,7 @@ namespace TF.EX.Domain.Services
                 {
                     Sounds.ui_invalid.Play();
                     Notification.Create(TFGame.Instance.Scene, "Host left the game...");
-                    ServiceCollections.ResolveReplayService().Reset();
+                    ServiceCollections.ResolveReplayService().Export();
                     ownLobby = new Lobby();
                 }
 
