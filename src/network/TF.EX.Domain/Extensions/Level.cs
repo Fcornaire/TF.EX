@@ -1,4 +1,3 @@
-using TF.EX.Domain.Context;
 using TowerFall;
 
 namespace TF.EX.Domain.Extensions
@@ -9,9 +8,7 @@ namespace TF.EX.Domain.Extensions
         {
             Sounds.ui_clickBack.Play();
 
-            var state = MenuReturn.NetplayEntry ?? MainMenu.MenuState.VersusOptions;
-
-            var menu = new MainMenu(state);
+            var menu = new MainMenu(Models.MenuState.NetplaySelect.ToTFModel());
 
             TFGame.Instance.Scene = menu;
             level.Session.MatchSettings.LevelSystem.Dispose();

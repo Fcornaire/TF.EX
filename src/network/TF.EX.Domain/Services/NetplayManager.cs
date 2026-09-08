@@ -87,6 +87,7 @@ namespace TF.EX.Domain.Services
         private volatile bool _pendingAbortToVersusOptions = false;
         private TowerFall.RoundLogic _pendingSessionRoundLogic;
         private Stopwatch _synchronizationTimer;
+        private readonly List<string> _pendingLateSpectators = new List<string>();
 
         private const int SYNCHRONIZATION_TIMEOUT_MS = 20000;
 
@@ -172,6 +173,8 @@ namespace TF.EX.Domain.Services
 
         public void EstablishSessionIfSynchronized()
         {
+            FlushPendingLateSpectators();
+
             if (_pendingSessionRoundLogic == null || !_isInit || !IsSynchronized())
             {
                 return; //Already or not yet
@@ -521,7 +524,7 @@ namespace TF.EX.Domain.Services
                             await ServiceCollections.ResolveMatchmakingService().LeaveLobby(() => { }, () => { });
                         }).GetAwaiter().GetResult();
 
-                        var mainMenu = new MainMenu(Context.MenuReturn.NetplayEntry ?? MainMenu.MenuState.VersusOptions);
+                        var mainMenu = new MainMenu(Models.MenuState.NetplaySelect.ToTFModel());
                         Engine.Instance.Scene = mainMenu;
                         (TFGame.Instance.Scene as Level).Session.MatchSettings.LevelSystem.Dispose();
 
@@ -790,6 +793,7 @@ namespace TF.EX.Domain.Services
         public void Reset()
         {
             _pendingSessionRoundLogic = null;
+            _pendingLateSpectators.Clear();
             StateApi.Current.SetFrameDriver(null);
 
             if (_isInit)
@@ -1014,10 +1018,36 @@ namespace TF.EX.Domain.Services
         {
             if (GGRSFFI.IsInInit || !_isInit)
             {
-                _logger.LogDebug<NetplayManager>($"Ignoring late spectator {peerId} (no active session)");
+                if (!_pendingLateSpectators.Contains(peerId))
+                {
+                    _pendingLateSpectators.Add(peerId);
+                }
+
+                _logger.LogDebug<NetplayManager>($"Late spectator {peerId} queued until the session is up");
                 return;
             }
 
+            RegisterLateSpectator(peerId);
+        }
+
+        private void FlushPendingLateSpectators()
+        {
+            if (_pendingLateSpectators.Count == 0 || GGRSFFI.IsInInit || !_isInit)
+            {
+                return;
+            }
+
+            var pending = _pendingLateSpectators.ToList();
+            _pendingLateSpectators.Clear();
+
+            foreach (var peerId in pending)
+            {
+                RegisterLateSpectator(peerId);
+            }
+        }
+
+        private void RegisterLateSpectator(string peerId)
+        {
             var status = GGRSFFI.netplay_add_spectator(peerId).ToModelGGrsFFI();
             if (!status.IsOk)
             {

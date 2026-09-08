@@ -114,7 +114,7 @@ namespace TF.EX.Domain.Services
 
                 if (TFGame.Instance.Scene is MainMenu)
                 {
-                    (TFGame.Instance.Scene as MainMenu).State = Context.MenuReturn.NetplayEntry ?? MainMenu.MenuState.VersusOptions;
+                    (TFGame.Instance.Scene as MainMenu).State = Models.MenuState.NetplaySelect.ToTFModel();
                 }
 
                 return false;
@@ -707,7 +707,7 @@ namespace TF.EX.Domain.Services
 
                 RunOnGameThread(() =>
                 {
-                    var mainMenu = new MainMenu(Context.MenuReturn.NetplayEntry ?? MainMenu.MenuState.VersusOptions);
+                    var mainMenu = new MainMenu(Models.MenuState.NetplaySelect.ToTFModel());
                     Engine.Instance.Scene = mainMenu;
                     (TFGame.Instance.Scene as Level).Session.MatchSettings.LevelSystem.Dispose();
 

@@ -78,7 +78,7 @@ namespace TF.EX.Patchs.Entity
 
                 Sounds.ui_clickBack.Play();
 
-                TFGame.Instance.Scene = new MainMenu(Domain.Context.MenuReturn.NetplayEntry ?? MainMenu.MenuState.VersusOptions);
+                TFGame.Instance.Scene = new MainMenu(Domain.Models.MenuState.NetplaySelect.ToTFModel());
                 var dynPauseMenu = DynamicData.For(__instance);
                 Level level = dynPauseMenu.Get<Level>("level");
                 level.Session.MatchSettings.LevelSystem.Dispose();
