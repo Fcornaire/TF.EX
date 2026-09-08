@@ -7,6 +7,9 @@ namespace TF.State.Patchs.Entity.LevelEntity
     [HarmonyPatch(typeof(Arrow))]
     public class ArrowPatch
     {
+        //FieldRef here because its cheaper than allocating with DynamicData every Render
+        private static readonly AccessTools.FieldRef<Arrow, Monocle.Image[]> ArrowGraphics = AccessTools.FieldRefAccess<Arrow, Monocle.Image[]>("Graphics");
+
         //TODO: Properly track arrow decay to remove this
         [HarmonyPrefix]
         [HarmonyPatch("EnforceLimit")]
@@ -30,11 +33,43 @@ namespace TF.State.Patchs.Entity.LevelEntity
 
         [HarmonyPrefix]
         [HarmonyPatch("DoWrapRender")]
-        public static void Arrow_DoWrapRender(Arrow __instance)
+        public static void Arrow_DoWrapRender(Arrow __instance, out float[] __state)
         {
+            __state = null;
+
             if (StateFlags.IsTestMode || StateFlags.IsReplayMode)
             {
                 __instance.DebugRender();
+            }
+
+            if (!StateFlags.IsCaptureActive)
+            {
+                return;
+            }
+
+            var graphics = ArrowGraphics(__instance);
+            __state = new float[graphics.Length];
+
+            for (int i = 0; i < graphics.Length; i++)
+            {
+                __state[i] = graphics[i].Rotation;
+            }
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("DoWrapRender")]
+        public static void Arrow_DoWrapRender_Postfix(Arrow __instance, float[] __state)
+        {
+            if (__state == null)
+            {
+                return;
+            }
+
+            var graphics = ArrowGraphics(__instance);
+
+            for (int i = 0; i < graphics.Length; i++)
+            {
+                graphics[i].Rotation = __state[i];
             }
         }
 
