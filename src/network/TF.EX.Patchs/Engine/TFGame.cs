@@ -543,7 +543,11 @@ namespace TF.EX.Patchs.Engine
         {
             if (!netplayManager.HaveRequestToHandle())
             {
-                var playerInput = Domain.CustomComponent.LightPauseMenu.IsOpen
+                var shouldFeedNeutralInput = !netplayManager.IsReplayMode()
+                    && !netplayManager.IsTestMode()
+                    && VersusMatchResultsInputGate.ShouldFeedNeutralInput(level);
+
+                var playerInput = Domain.CustomComponent.LightPauseMenu.IsOpen || shouldFeedNeutralInput
                     ? new Domain.Models.Input()
                     : inputService.GetPolledInput();
 
@@ -555,6 +559,7 @@ namespace TF.EX.Patchs.Engine
                 }
 
                 inputService.ResetPolledInput();
+                VersusMatchResultsInputGate.OnFrameAdvanced(level);
                 netplayManager.UpdateNetplayRequests();
             }
 
@@ -593,6 +598,7 @@ namespace TF.EX.Patchs.Engine
                         break;
                     case NetplayRequest.LoadGameState:
                         netplayManager.SetIsRollbackFrame(true);
+                        Domain.Context.VersusMatchResultsInputGate.NotifyRollback();
                         var stateToLoad = netplayManager.LoadGameState();
 
                         netplayManager.SetIsUpdating(true);
