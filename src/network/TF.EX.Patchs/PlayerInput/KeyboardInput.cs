@@ -240,13 +240,15 @@ namespace TF.EX.Patchs.PlayerInput
 
                 if (live != null)
                 {
-                    __result = live.ToInputs()[0].ToTFInput();
+                    var liveInput = live.ToInputs()[0];
+                    __result = RightStickShot.Apply(liveInput.ToTFInput(), liveInput.aim_right_axis.ToTFVector(), level, seat);
                 }
 
                 return;
             }
 
-            __result = inputService.GetCurrentInput(seat).ToTFInput();
+            var input = inputService.GetCurrentInput(seat);
+            __result = RightStickShot.Apply(input.ToTFInput(), input.aim_right_axis.ToTFVector(), level, seat);
         }
 
         private static bool InterceptStart(KeyboardInput self, bool actualResult)

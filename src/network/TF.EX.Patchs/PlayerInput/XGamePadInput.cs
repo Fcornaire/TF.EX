@@ -1,11 +1,10 @@
 ﻿using HarmonyLib;
-using TF.EX.Domain.Interop;
 using Monocle;
 using TF.EX.Domain;
 using TF.EX.Domain.Context;
 using TF.EX.Domain.Extensions;
+using TF.EX.Domain.Interop;
 using TF.EX.Domain.Models;
-using TF.EX.Domain.Ports.TF;
 using TowerFall;
 
 namespace TF.EX.Patchs.PlayerInput
@@ -170,52 +169,51 @@ namespace TF.EX.Patchs.PlayerInput
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var inputService = ServiceCollections.ResolveInputService();
 
-            if (netplayManager.GetNetplayMode() != Domain.Models.NetplayMode.Test
-                && netplayManager.GetNetplayMode() != Domain.Models.NetplayMode.Replay
-                && !netplayManager.IsSynchronized())
+            if (TFGame.Instance.Scene is not TowerFall.Level level)
             {
                 return;
             }
 
-            var level = TFGame.Instance.Scene as TowerFall.Level;
+            var seat = inputService.GetInputIndex(__instance);
+            var rightStick = __instance.GetRightStick();
 
-            if (level == null)
+            var isNetplayInput = (netplayManager.GetNetplayMode() == Domain.Models.NetplayMode.Test
+                    || netplayManager.GetNetplayMode() == Domain.Models.NetplayMode.Replay
+                    || netplayManager.IsSynchronized())
+                && (netplayManager.IsInit() || netplayManager.IsReplayMode());
+
+            if (!isNetplayInput)
             {
+                __result = RightStickShot.Apply(__result, rightStick.AimAxis, level, seat);
                 return;
             }
 
-            if (netplayManager.IsInit() || netplayManager.IsReplayMode())
+            if (seat == inputService.GetLocalPlayerInputIndex() && !netplayManager.IsReplayMode())
             {
-                var seat = inputService.GetInputIndex(__instance);
+                inputService.UpdatePolledInput(__result, rightStick);
+            }
 
-                if (seat == inputService.GetLocalPlayerInputIndex() && !netplayManager.IsReplayMode())
+            if (netplayManager.IsReplayMode() && seat >= 0 && seat == (ReplayApi.Current?.GetTakeoverSeat() ?? -1))
+            {
+                if (ReplayApi.Current.IsTakeoverCapturing())
                 {
-                    inputService.UpdatePolledInput(__result, __instance.GetRightStick());
-                }
-
-                if (netplayManager.IsReplayMode() && seat >= 0 && seat == (ReplayApi.Current?.GetTakeoverSeat() ?? -1))
-                {
-                    if (ReplayApi.Current.IsTakeoverCapturing())
-                    {
-                        return;
-                    }
-
-                    var live = ReplayApi.Current.GetTakeoverInputFlat();
-
-                    if (live != null)
-                    {
-                        __result = live.ToInputs()[0].ToTFInput();
-                    }
-
+                    __result = RightStickShot.Apply(__result, rightStick.AimAxis, level, seat);
                     return;
                 }
 
-                __result = inputService.GetCurrentInput(seat).ToTFInput();
+                var live = ReplayApi.Current.GetTakeoverInputFlat();
+
+                if (live != null)
+                {
+                    var liveInput = live.ToInputs()[0];
+                    __result = RightStickShot.Apply(liveInput.ToTFInput(), liveInput.aim_right_axis.ToTFVector(), level, seat);
+                }
+
+                return;
             }
-            //else
-            //{
-            //    return orig(self);
-            //}
+
+            var input = inputService.GetCurrentInput(seat);
+            __result = RightStickShot.Apply(input.ToTFInput(), input.aim_right_axis.ToTFVector(), level, seat);
         }
 
         //TODO: refactor to have a unique intercept for all inputs
