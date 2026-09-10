@@ -1021,8 +1021,15 @@ namespace TF.State.TowerFallExtensions
             var spotlights = dynLightingLayer.Get<LevelEntity[]>("spotlight");
             if (spotlights != null)
             {
+                var gameplayEntities = level.GetGameplayLayer().Entities;
+
                 foreach (var spotlight in spotlights)
                 {
+                    if (!gameplayEntities.Contains(spotlight))
+                    {
+                        continue;
+                    }
+
                     var dynLevelEntity = DynamicData.For(spotlight);
                     gameState.RoundLogic.SpotlightDephts.Add(dynLevelEntity.Get<double>("actualDepth"));
                 }
