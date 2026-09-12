@@ -1,11 +1,11 @@
 {
   "name": "TF.State",
-  "version": "0.10.2",
+  "version": "0.10.3",
   "displayName": "TF State",
   "description": "Game state capture and restore for TowerFall mods,exposes a byte[] snapshot API other mods build on",
   "author": "DShad",
   "dll": "TF.State.Core.dll",
   "priority": "High",
   "tags": ["Library", "API"],
-  "dependencies": [{ "name": "FortRise", "version": "5.4.0-rc.1" }]
+  "dependencies": [{ "name": "FortRise", "version": "5.5.0-beta.1" }]
 }

@@ -1,11 +1,11 @@
 {
   "name": "TF.InputDisplayer",
-  "version": "0.10.2",
+  "version": "0.10.3",
   "displayName": "TF Input Displayer",
   "description": "Fighting game style input history overlay",
   "author": "DShad",
   "dll": "TF.InputDisplayer.Core.dll",
   "priority": "Normal",
   "tags": ["Tools"],
-  "dependencies": [{ "name": "FortRise", "version": "5.4.0-rc.1" }]
+  "dependencies": [{ "name": "FortRise", "version": "5.5.0-beta.1" }]
 }

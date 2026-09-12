@@ -1,4 +1,4 @@
-Compile-time reference assemblies for **FortRise 5.4.0-rc.1**, all libs here are stripped
+Compile-time reference assemblies for **FortRise 5.5.0-beta.1**, all libs here are stripped
 
 | File                                            | Needed for                                  |
 | ----------------------------------------------- | ------------------------------------------- |

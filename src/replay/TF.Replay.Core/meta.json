@@ -1,6 +1,6 @@
 {
   "name": "TF.Replay",
-  "version": "0.10.2",
+  "version": "0.10.3",
   "displayName": "TF Replay",
   "description": "Record and watch TowerFall matches. Fetures per-frame input recording, a replay browser, and seeking.",
   "author": "DShad",
@@ -8,7 +8,7 @@
   "priority": "Normal",
   "tags": ["Gameplay", "Tools"],
   "dependencies": [
-    { "name": "FortRise", "version": "5.4.0-rc.1" },
-    { "name": "TF.State", "version": "0.10.2" }
+    { "name": "FortRise", "version": "5.5.0-beta.1" },
+    { "name": "TF.State", "version": "0.10.3" }
   ]
 }

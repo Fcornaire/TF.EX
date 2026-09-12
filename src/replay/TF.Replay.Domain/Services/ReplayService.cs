@@ -120,7 +120,7 @@ namespace TF.Replay.Domain.Services
             if (TowerFall.TFGame.Instance != null)
             {
                 _fixedTimeStepBeforeRecording ??= TowerFall.TFGame.Instance.IsFixedTimeStep;
-                TowerFall.TFGame.Instance.IsFixedTimeStep = true;
+                TowerFall.TFGame.Instance.EnableFixedTimeStep(true);
             }
 
             _replay = new Models.Replay
@@ -243,7 +243,7 @@ namespace TF.Replay.Domain.Services
         {
             if (_fixedTimeStepBeforeRecording != null && TowerFall.TFGame.Instance != null && TowerFall.TFGame.Instance.Scene is not TowerFall.Level)
             {
-                TowerFall.TFGame.Instance.IsFixedTimeStep = _fixedTimeStepBeforeRecording.Value;
+                TowerFall.TFGame.Instance.EnableFixedTimeStep(_fixedTimeStepBeforeRecording.Value);
                 _fixedTimeStepBeforeRecording = null;
             }
         }
@@ -724,7 +724,7 @@ namespace TF.Replay.Domain.Services
 
             if (TowerFall.TFGame.Instance?.IsFixedTimeStep == true)
             {
-                TowerFall.TFGame.Instance.IsFixedTimeStep = true;
+                TowerFall.TFGame.Instance.EnableFixedTimeStep(true);
             }
         }
 
