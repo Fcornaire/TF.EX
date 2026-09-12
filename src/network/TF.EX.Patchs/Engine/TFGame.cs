@@ -694,7 +694,7 @@ namespace TF.EX.Patchs.Engine
                     if (!self.IsFixedTimeStep)
                     {
                         _preSessionFixedStep ??= false;
-                        self.IsFixedTimeStep = true;
+                        self.EnableFixedTimeStep(true);
                     }
 
                     var sessionFps = netplayManager.GetSessionFps();
@@ -718,7 +718,7 @@ namespace TF.EX.Patchs.Engine
             if (_preSessionFixedStep is bool previous)
             {
                 _preSessionFixedStep = null;
-                self.IsFixedTimeStep = previous;
+                self.EnableFixedTimeStep(previous);
             }
         }
 
