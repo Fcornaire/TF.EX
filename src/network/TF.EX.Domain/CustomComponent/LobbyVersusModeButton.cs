@@ -15,6 +15,10 @@ namespace TF.EX.Domain.CustomComponent
             TowerFall.Modes.TeamDeathmatch,
         };
 
+        private TowerFall.Modes[] AvailableModes => ownLobby.IsSeriesLobby
+            ? new[] { ownLobby.MaxPlayers == LobbyVersusSeriesButton.TEAM_PLAYERS ? TowerFall.Modes.TeamDeathmatch : TowerFall.Modes.LastManStanding }
+            : Modes;
+
         public LobbyVersusModeButton(Vector2 position, Vector2 tweenFrom) : base(position, tweenFrom, 200, 30)
         {
             if (IndexOfCurrentMode() < 0)
@@ -29,20 +33,28 @@ namespace TF.EX.Domain.CustomComponent
         {
             base.Update();
 
+            var modes = AvailableModes;
+            var index = IndexOfCurrentMode();
+
+            if (index < 0)
+            {
+                ownLobby.GameData.Mode = (int)modes[0];
+                UpdateSides();
+                return;
+            }
+
             if (!base.Selected)
             {
                 return;
             }
 
-            var index = IndexOfCurrentMode();
-
-            if (MenuInput.Right && index < Modes.Length - 1)
+            if (MenuInput.Right && index < modes.Length - 1)
             {
-                SelectMode(Modes[index + 1]);
+                SelectMode(modes[index + 1]);
             }
             else if (MenuInput.Left && index > 0)
             {
-                SelectMode(Modes[index - 1]);
+                SelectMode(modes[index - 1]);
             }
         }
 
@@ -62,7 +74,7 @@ namespace TF.EX.Domain.CustomComponent
 
         private int IndexOfCurrentMode()
         {
-            return Array.IndexOf(Modes, (TowerFall.Modes)ownLobby.GameData.Mode);
+            return Array.IndexOf(AvailableModes, (TowerFall.Modes)ownLobby.GameData.Mode);
         }
 
         private void UpdateSides()
@@ -70,7 +82,7 @@ namespace TF.EX.Domain.CustomComponent
             var index = IndexOfCurrentMode();
 
             DrawLeft = index > 0;
-            DrawRight = index < Modes.Length - 1;
+            DrawRight = index < AvailableModes.Length - 1;
         }
 
         public override void Render()

@@ -66,11 +66,13 @@ namespace TF.EX.Patchs
 
         private static int MinFrames => NetplayPreferences.ToFrames(NetplayPreferences.MinInputDelay);
         private static int MaxFrames => NetplayPreferences.ToFrames(NetplayPreferences.MaxInputDelay);
-        private static float OriginX => ServiceCollections.ResolveWiderSetModApi()?.UIXOffset ?? 0f;
-        private static float ScreenRight => 320f + OriginX * 2f;
-        private static float TrackRight => ScreenRight - TrackRightMargin;
-        private static float TrackLeft => Math.Max(OriginX + TrackMinLeft, TrackRight - TrackMaxWidth);
+        private static float WideOffset => ServiceCollections.ResolveWiderSetModApi()?.UIXOffset ?? 0f;
+        private const float ScreenRight = 320f;
+        private const float TrackRight = ScreenRight - TrackRightMargin;
+        private static float TrackLeft => Math.Max(TrackMinLeft, TrackRight - TrackMaxWidth);
         private static float TrackWidth => TrackRight - TrackLeft;
+        private static bool isSeriesLayout;
+        private static bool isLeftLayout;
 
         public static bool CapturesLeftRight(TowerFall.PlayerInput input) => displaying && input.MenuAlt2Check;
 
@@ -98,7 +100,10 @@ namespace TF.EX.Patchs
 
             var mode = NetplayPreferences.AutoAdjustInputDelay;
 
-            if (mode == AutoAdjustInputDelayMode.Disabled || matchmakingService.IsSpectator() || mainMenu.State != MainMenu.MenuState.Rollcall)
+            isSeriesLayout = (int)mainMenu.State == (int)Domain.Models.MenuState.SeriesLobby;
+            isLeftLayout = isSeriesLayout || Scene.MainMenuPatch.IsCopyCodeGuideVisible;
+
+            if (mode == AutoAdjustInputDelayMode.Disabled || matchmakingService.IsSpectator() || mainMenu.State != MainMenu.MenuState.Rollcall && !isSeriesLayout)
             {
                 ClearInteraction();
                 return;
@@ -283,7 +288,7 @@ namespace TF.EX.Patchs
                 return;
             }
 
-            var position = GameMousePosition();
+            var position = GameMousePosition() - new Vector2(WideOffset, 0f);
             cursor = position;
 
             var overTrack = TrackContains(position);
@@ -366,7 +371,7 @@ namespace TF.EX.Patchs
             {
                 if (appliedDelay != null)
                 {
-                    Draw.OutlineTextCentered(TFGame.Font, $"INPUT DELAY : {Ms(appliedDelay.Value)}", new Vector2(OriginX + 160f, 235f), Color.White, Color.Black);
+                    Draw.OutlineTextCentered(TFGame.Font, $"INPUT DELAY : {Ms(appliedDelay.Value)}", new Vector2(160f, 235f), Color.White, Color.Black);
                 }
 
                 return;
@@ -388,7 +393,7 @@ namespace TF.EX.Patchs
             var centerX = left + width / 2f;
             var progress = (float)currentDelay / MaxFrames;
 
-            Draw.OutlineTextCentered(TFGame.Font, $"DELAY : {Ms(currentDelay)}", new Vector2(centerX, LabelY), Color.White, Color.Black);
+            Draw.OutlineTextCentered(TFGame.Font, $"INPUT DELAY : {Ms(currentDelay)}", new Vector2(centerX, LabelY), Color.White, Color.Black);
 
             if (hoverDelay is int hover)
             {
@@ -440,7 +445,7 @@ namespace TF.EX.Patchs
             var ringRadius = MathF.Ceiling(Math.Max(icon.Width, icon.Height) / 2f) + RingMargin;
             var arrowsWidth = keys ? input.LeftIcon.Width + 1f + input.RightIcon.Width : ArrowSize * 2f + 1f;
             var topRowWidth = Measure("+") + 3f + arrowsWidth + 4f + Measure("ADJUST");
-            var guideX = ScreenRight - GuideRightMargin - Math.Max(topRowWidth, Measure("HOLD TO RESET"));
+            var guideX = isLeftLayout ? GuideRightMargin + ringRadius * 2f + 4f : ScreenRight - GuideRightMargin - Math.Max(topRowWidth, Measure("HOLD TO RESET"));
             var button = new Vector2(guideX - 4f - ringRadius, Math.Min(ButtonMaxY, GuideBottom - ringRadius));
             var topY = button.Y - 6f;
             var bottomY = button.Y + 7f;
@@ -536,7 +541,7 @@ namespace TF.EX.Patchs
 
         private static void RenderCursor(Vector2 at)
         {
-            if (at.X < -4f || at.X > 324f + OriginX * 2f || at.Y < -4f || at.Y > 244f)
+            if (at.X < -4f || at.X > 324f || at.Y < -4f || at.Y > 244f)
             {
                 return;
             }

@@ -20,5 +20,8 @@ namespace TF.EX.Domain.Models.WebSocket.Client
 
         [DataMember(Name = "checksum")]
         public string Checksum { get; set; }
+
+        [DataMember(Name = "scores")]
+        public List<int> Scores { get; set; }
     }
 }

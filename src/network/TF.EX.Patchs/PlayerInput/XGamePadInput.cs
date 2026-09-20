@@ -482,6 +482,11 @@ namespace TF.EX.Patchs.PlayerInput
 
                     return actualInput;
                 }
+
+                if ((int)state == (int)Domain.Models.MenuState.SeriesLobby && InputDelayAdvisor.CapturesLeftRight(self))
+                {
+                    return false;
+                }
             }
 
             if (TFGame.Instance.Scene is MapScene

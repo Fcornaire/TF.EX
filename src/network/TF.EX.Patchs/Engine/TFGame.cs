@@ -5,7 +5,6 @@ using Monocle;
 using MonoMod.Utils;
 using System.Diagnostics;
 using System.Reflection;
-using TextCopy;
 using TF.EX.Common;
 using TF.EX.Common.Extensions;
 using TF.EX.Domain;
@@ -17,6 +16,7 @@ using TF.EX.Domain.Interop;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
+using TF.EX.Domain.Services;
 using TowerFall;
 
 namespace TF.EX.Patchs.Engine
@@ -90,7 +90,9 @@ namespace TF.EX.Patchs.Engine
 
                 netplayManager.Reset();
 
-                var isReturningToLobby = (__instance.Scene as TowerFall.MainMenu).State == TowerFall.MainMenu.MenuState.Rollcall && !ServiceCollections.ResolveMatchmakingService().GetOwnLobby().IsEmpty;
+                var menuState = (__instance.Scene as TowerFall.MainMenu).State;
+                var isLobbyMenu = menuState == TowerFall.MainMenu.MenuState.Rollcall || menuState.ToDomainModel() == Domain.Models.MenuState.SeriesLobby;
+                var isReturningToLobby = isLobbyMenu && !ServiceCollections.ResolveMatchmakingService().GetOwnLobby().IsEmpty;
 
                 if (!isReturningToLobby)
                 {

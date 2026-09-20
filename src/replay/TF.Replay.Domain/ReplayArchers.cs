@@ -9,8 +9,7 @@ namespace TF.Replay.Domain
                 return null;
             }
 
-            var archers = ServiceCollections.ResolveReplayService()?.GetReplay()?.Informations?.Archers;
-            var name = archers?.ElementAtOrDefault(seat)?.NetplayName;
+            var name = ServiceCollections.ResolveReplayService()?.ArcherNamesBySeat()?.ElementAtOrDefault(seat);
 
             return string.IsNullOrWhiteSpace(name) ? null : name;
         }

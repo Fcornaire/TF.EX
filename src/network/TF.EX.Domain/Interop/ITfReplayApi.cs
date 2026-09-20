@@ -29,6 +29,7 @@ namespace TF.EX.Domain.Interop
         int RecordCount { get; }
 
         int GetLoadedReplayMode();
+        string[] GetLoadedArcherNames();
         int ConsumeNextRecordFrame();
         int[] GetInputsAtFrame(int frame);
         byte[] GetStateAtFrame(int frame);

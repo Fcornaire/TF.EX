@@ -25,7 +25,7 @@ namespace TF.State.Patchs
 
         private static int DrivenTickScale()
         {
-            if (!StateFlags.IsCaptureActive && !StateFlags.IsReplayMode && StateFlags.FrameDriverOwner == null)
+            if (StateFlags.FrameDriverOwner == null && !StateFlags.IsReplayMode)
             {
                 return 1;
             }

@@ -27,7 +27,7 @@ namespace TF.Replay.Domain.Api
         private Interop.ITfStateApi StateApi() => _modCollections?.Invoke()?.ResolveState();
 
 
-        public int ApiVersion => 1;
+        public int ApiVersion => 2;
 
         public string GetReplayFormatVersion() => ReplayVersionExtensions.GetLatest().ToString();
 
@@ -152,6 +152,8 @@ namespace TF.Replay.Domain.Api
         public int RecordCount => _replayService.RecordCount;
 
         public int GetLoadedReplayMode() => _replayService.GetReplay()?.Informations?.Mode ?? -1;
+
+        public string[] GetLoadedArcherNames() => _replayService.ArcherNamesBySeat();
 
         public int ConsumeNextRecordFrame() => _replayService.ConsumeNextRecord()?.Frame ?? -1;
 

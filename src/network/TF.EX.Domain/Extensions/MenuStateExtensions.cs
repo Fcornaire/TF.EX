@@ -19,6 +19,8 @@ namespace TF.EX.Domain.Extensions
                     return (TowerFall.MainMenu.MenuState)59;
                 case MenuState.LobbyBuilder:
                     return (TowerFall.MainMenu.MenuState)60;
+                case MenuState.SeriesLobby:
+                    return (TowerFall.MainMenu.MenuState)61;
                 case MenuState.NetplaySelect:
                     return (TowerFall.MainMenu.MenuState)62;
                 case MenuState.PrivateSelect:
@@ -47,6 +49,8 @@ namespace TF.EX.Domain.Extensions
                     return MenuState.LobbyBrowser;
                 case (TowerFall.MainMenu.MenuState)60:
                     return MenuState.LobbyBuilder;
+                case (TowerFall.MainMenu.MenuState)61:
+                    return MenuState.SeriesLobby;
                 case (TowerFall.MainMenu.MenuState)62:
                     return MenuState.NetplaySelect;
                 case (TowerFall.MainMenu.MenuState)63:

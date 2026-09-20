@@ -25,7 +25,11 @@ namespace TF.EX.Domain.CustomComponent
         {
             base.Update();
 
-            if (base.Selected)
+            if (ownLobby.IsSeriesLobby)
+            {
+                ownLobby.GameData.MapId = -1;
+            }
+            else if (base.Selected)
             {
                 var limit = Constants.NETPLAY_SAFE_MAP.Count();
 
@@ -68,8 +72,10 @@ namespace TF.EX.Domain.CustomComponent
 
         private void UpdateSide()
         {
-            DrawRight = ownLobby.GameData.MapId < Math.Min(Constants.NETPLAY_SAFE_MAP.Count() - 1, ownLobby.GameData.MapId + 1);
-            DrawLeft = ownLobby.GameData.MapId > Math.Max(-1, ownLobby.GameData.MapId - 1);
+            var locked = ownLobby.IsSeriesLobby;
+
+            DrawRight = !locked && ownLobby.GameData.MapId < Math.Min(Constants.NETPLAY_SAFE_MAP.Count() - 1, ownLobby.GameData.MapId + 1);
+            DrawLeft = !locked && ownLobby.GameData.MapId > Math.Max(-1, ownLobby.GameData.MapId - 1);
         }
 
         public override void Removed()

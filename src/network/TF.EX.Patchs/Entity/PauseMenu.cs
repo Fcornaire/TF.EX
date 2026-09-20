@@ -39,6 +39,7 @@ namespace TF.EX.Patchs.Entity
                     if (optionNames.Count > 1)
                     {
                         optionNames.Remove("REMATCH!");
+                        optionNames.Remove("CONTINUE");
                         optionNames.Remove("ARCHER SELECT");
                         dynPauseMenu.Set("optionIndex", 0);
                     }
@@ -46,6 +47,7 @@ namespace TF.EX.Patchs.Entity
                     if (selectedOptionNames.Count > 1)
                     {
                         selectedOptionNames.Remove("> REMATCH!");
+                        selectedOptionNames.Remove("> CONTINUE");
                         selectedOptionNames.Remove("> ARCHER SELECT");
                     }
 
@@ -153,9 +155,19 @@ namespace TF.EX.Patchs.Entity
                 inputService.DisableAllControllers();
                 Sounds.ui_click.Play();
 
+                var isSeries = ownLobby.IsSeriesLobby;
+
                 Task.Run(async () =>
                 {
-                    await matchmakingService.RematchChoice();
+                    if (isSeries)
+                    {
+                        await matchmakingService.SeriesContinueChoice();
+                    }
+                    else
+                    {
+                        await matchmakingService.RematchChoice();
+                    }
+
                     matchmakingService.RunOnGameThread(() => Notification.Create(TFGame.Instance.Scene, "Waiting for other players...", 10, 10, true));
                 });
 
@@ -167,7 +179,7 @@ namespace TF.EX.Patchs.Entity
 
         [HarmonyPrefix]
         [HarmonyPatch("AddItem")]
-        public static bool PauseMenu_AddItem(PauseMenu __instance, string name)
+        public static bool PauseMenu_AddItem(PauseMenu __instance, ref string name)
         {
             var logger = ServiceCollections.ResolveLogger();
             if (name == "MATCH SETTINGS" && IsNetplayEndgame(__instance))
@@ -184,6 +196,19 @@ namespace TF.EX.Patchs.Entity
 
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
             var lobby = matchmakingService.GetOwnLobby();
+
+            if (lobby.IsSeriesLobby && IsNetplayEndgame(__instance))
+            {
+                if (name == "ARCHER SELECT")
+                {
+                    return false;
+                }
+
+                if (name == "REMATCH!")
+                {
+                    name = "CONTINUE";
+                }
+            }
             if (lobby.IsEmpty && name == "REMATCH!")
             {
                 logger.LogDebug<PauseMenuPatch>("Ignore Adding REMATCH button to VersusMatchEnd menu on netplay because lobby is empty");

@@ -58,13 +58,35 @@ namespace TF.EX.Patchs.Entity.HUD
                 var matchmakingService = ServiceCollections.ResolveMatchmakingService();
                 var level = __instance.Scene as TowerFall.Level;
 
-                matchmakingService.NotifyMatchEnded(level?.Session.GetWinner() ?? -1);
+                matchmakingService.NotifyMatchEnded(WinnerSeat(level?.Session), SeatScores(level?.Session, matchmakingService.GetOwnLobby().Players.Count));
 
                 if (level != null && !matchmakingService.GetOwnLobby().IsEmpty)
                 {
                     Domain.CustomComponent.MatchEndChoices.Create(level);
                 }
             }
+        }
+
+        private static int WinnerSeat(Session session)
+        {
+            var winner = session?.GetWinner() ?? -1;
+
+            if (winner < 0 || session.MatchSettings?.TeamMode != true)
+            {
+                return winner;
+            }
+
+            return Enumerable.Range(0, TFGame.PlayerAmount).FirstOrDefault(seat => TFGame.Players[seat] && session.GetScoreIndex(seat) == winner, -1);
+        }
+
+        private static List<int> SeatScores(Session session, int seats)
+        {
+            if (session?.Scores == null)
+            {
+                return [];
+            }
+
+            return [.. Enumerable.Range(0, Math.Min(seats, TFGame.PlayerAmount)).Select(seat => session.Scores[session.GetScoreIndex(seat)])];
         }
     }
 }

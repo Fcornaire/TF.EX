@@ -61,7 +61,8 @@ namespace TF.EX.Domain.CustomComponent
                 GameData = lobby.GameData,
                 Mods = lobby.Mods,
                 InGame = lobby.InGame,
-                Kind = lobby.Kind
+                Kind = lobby.Kind,
+                Series = lobby.Series
             };
         }
 
@@ -92,7 +93,7 @@ namespace TF.EX.Domain.CustomComponent
 
         private Color BaseColor()
         {
-            return Lobby?.InGame == true ? liveTint : Color.White;
+            return Lobby?.InGame == true || Lobby?.IsSeriesInProgress == true ? liveTint : Color.White;
         }
 
         public override void Render()

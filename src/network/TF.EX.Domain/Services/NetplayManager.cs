@@ -401,6 +401,12 @@ namespace TF.EX.Domain.Services
                             ServiceCollections.ResolveMatchmakingService().LeaveLobby(() => { }, () => { });
                         }
                     }
+                    else if (IsUnfinishedTeamMatch())
+                    {
+                        ServiceCollections.ResolveReplayService().Export();
+                        ServiceCollections.ResolveMatchmakingService().LeaveLobby(() => { }, () => { });
+                        EndMatch("A PLAYER LEFT");
+                    }
                 }
 
                 foreach (var desynchString in _events.Where(s => s.Contains(Event.DesyncDetected.ToString())))
@@ -566,6 +572,11 @@ namespace TF.EX.Domain.Services
                 return;
             }
 
+            EndMatch(info.Contains("cannot roll back to frame") ? "CONNECTION LOST" : "NETPLAY ERROR");
+        }
+
+        private void EndMatch(string message)
+        {
             Reset();
 
             if (TFGame.Instance.Scene is Level level)
@@ -573,11 +584,17 @@ namespace TF.EX.Domain.Services
                 level.GoToNetplayEntryMenu();
             }
 
-            var message = info.Contains("cannot roll back to frame")
-                ? "CONNECTION LOST - match ended"
-                : "NETPLAY ERROR - match ended";
-
             Notification.Create(TFGame.Instance.Scene, message, 15, 450);
+        }
+
+        private bool IsUnfinishedTeamMatch()
+        {
+            return TFGame.Instance.Scene is Level level
+                && !IsSpectatorMode()
+                && !IsReplayMode()
+                && !IsTestMode()
+                && level.Session.MatchSettings.TeamMode
+                && level.Session.GetWinner() == -1;
         }
 
 
@@ -872,6 +889,16 @@ namespace TF.EX.Domain.Services
 
         public string GetNameForSeat(int seat)
         {
+            if (IsReplayMode())
+            {
+                var recorded = Interop.ReplayApi.Current?.GetLoadedArcherNames()?.ElementAtOrDefault(seat);
+
+                if (!string.IsNullOrWhiteSpace(recorded))
+                {
+                    return recorded;
+                }
+            }
+
             if (seat == _gameContext.GetLocalPlayerIndex())
             {
                 return NetplayPreferences.Name;

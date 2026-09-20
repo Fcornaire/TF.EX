@@ -1,14 +1,13 @@
 ﻿using HarmonyLib;
-using TF.EX.Domain.Interop;
-using TF.EX.Domain.Extensions;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
 using Monocle;
 using MonoMod.Utils;
 using System.Xml;
 using TF.EX.Domain;
 using TF.EX.Domain.Context;
+using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Externals;
+using TF.EX.Domain.Interop;
 using TowerFall;
 
 namespace TF.EX.Patchs.Scene
@@ -115,6 +114,7 @@ namespace TF.EX.Patchs.Scene
             var netplayManager = ServiceCollections.ResolveNetplayManager();
 
             ClearWaitingNotificationOnceSynchronized(__instance, netplayManager);
+            HandleSpectatorsSeriesTally(__instance);
 
             netplayManager.SetIsRollbackFrame(false); //Mark the end of the First RBF
 
@@ -174,6 +174,18 @@ namespace TF.EX.Patchs.Scene
             }
 
             return true;
+        }
+
+        private static void HandleSpectatorsSeriesTally(Level level)
+        {
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+
+            if (matchmakingService.GetOwnLobby().Series == null || !matchmakingService.IsSpectator())
+            {
+                return;
+            }
+
+            Domain.CustomComponent.SpectatorSeriesTally.Create(level);
         }
 
         private static void ClearWaitingNotificationOnceSynchronized(Level level, Domain.Ports.INetplayManager netplayManager)

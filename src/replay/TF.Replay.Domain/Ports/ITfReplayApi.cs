@@ -37,6 +37,7 @@ namespace TF.Replay.Domain.Ports
         int ConsumeNextRecordFrame();
 
         int GetLoadedReplayMode();
+        string[] GetLoadedArcherNames();
 
         int[] GetInputsAtFrame(int frame);
         byte[] GetStateAtFrame(int frame);

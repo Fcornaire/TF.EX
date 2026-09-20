@@ -22,6 +22,7 @@
         ReplaysBrowser = 58,
         LobbyBrowser = 59,
         LobbyBuilder = 60,
+        SeriesLobby = 61,
         NetplaySelect = 62,
         PrivateSelect = 63,
         PrivateJoinCode = 64,
