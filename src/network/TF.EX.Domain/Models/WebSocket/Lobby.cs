@@ -15,7 +15,7 @@ namespace TF.EX.Domain.Models.WebSocket
     {
         public string Name { get; set; } = "";
         public string RoomId { get; set; } = "";
-        public int MaxPlayers { get; set; } = 4;
+        public int MaxPlayers { get; set; } = 2;
         public ICollection<Player> Players { get; set; } = new List<Player>();
         public ICollection<Player> Spectators { get; set; } = new List<Player>();
         public GameData GameData { get; set; } = new GameData();
@@ -26,9 +26,16 @@ namespace TF.EX.Domain.Models.WebSocket
 
         public string Kind { get; set; } = nameof(LobbyKind.Standard);
         public string JoinCode { get; set; } = "";
+        public Series Series { get; set; } = null;
 
         [IgnoreMember]
         public LobbyKind KindValue => Enum.TryParse<LobbyKind>(Kind, out var kind) ? kind : LobbyKind.Standard;
+
+        [IgnoreMember]
+        public bool IsSeriesLobby => GameData.BestOf > 0;
+
+        [IgnoreMember]
+        public bool IsSeriesInProgress => Series?.IsInProgress == true;
 
         [IgnoreMember]
         public bool IsPrivate => KindValue == LobbyKind.Private;
@@ -73,6 +80,73 @@ namespace TF.EX.Domain.Models.WebSocket
         public int MatchLength { get; set; } = (int)MatchSettings.MatchLengths.Standard;
         public ICollection<string> Variants { get; set; } = new List<string>();
         public int Seed { get; set; } = 0;
+        public int BestOf { get; set; } = 0;
+    }
+
+    [MessagePackObject(keyAsPropertyName: true)]
+    public class Series
+    {
+        public const string InProgress = "InProgress";
+        public const string Finished = "Finished";
+        public const string Aborted = "Aborted";
+
+        public int BestOf { get; set; } = 0;
+        public List<List<int>> Sides { get; set; } = [];
+        public List<SeriesGame> Games { get; set; } = [];
+        public string Status { get; set; } = InProgress;
+        public int? WinnerSide { get; set; }
+        public int? PickerSide { get; set; }
+        public int? NextMapId { get; set; }
+        public string AbortReason { get; set; }
+        public bool AwaitingResult { get; set; }
+        public List<SeriesPick> Picks { get; set; } = new List<SeriesPick>();
+
+        [IgnoreMember]
+        public bool IsInProgress => Status == InProgress;
+
+        [IgnoreMember]
+        public bool IsFinished => Status == Finished;
+
+        [IgnoreMember]
+        public bool IsAborted => Status == Aborted;
+
+        [IgnoreMember]
+        public int WinsNeeded => BestOf / 2 + 1;
+
+        [IgnoreMember]
+        public IEnumerable<int> PlayedMapIds => Games.Select(game => game.MapId);
+
+        public int Wins(int side)
+        {
+            return Games.Count(game => game.WinnerSide == side);
+        }
+
+        public int? SideOfSeat(int seat)
+        {
+            var side = Sides.FindIndex(seats => seats.Contains(seat));
+
+            return side >= 0 ? side : null;
+        }
+
+        public int? PickOf(int seat)
+        {
+            return Picks.FirstOrDefault(pick => pick.Seat == seat)?.MapId;
+        }
+    }
+
+    [MessagePackObject(keyAsPropertyName: true)]
+    public class SeriesPick
+    {
+        public int Seat { get; set; }
+        public int MapId { get; set; }
+    }
+
+    [MessagePackObject(keyAsPropertyName: true)]
+    public class SeriesGame
+    {
+        public int MapId { get; set; }
+        public int WinnerSide { get; set; }
+        public List<int> Scores { get; set; } = new List<int>();
     }
 
     [MessagePackObject(keyAsPropertyName: true)]

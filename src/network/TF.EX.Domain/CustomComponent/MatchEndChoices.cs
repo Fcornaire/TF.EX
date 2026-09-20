@@ -102,7 +102,12 @@ namespace TF.EX.Domain.CustomComponent
 
         private static string Describe(string choice)
         {
-            return choice == "Rematch" ? "REMATCH" : "ARCHERS";
+            return choice switch
+            {
+                "Rematch" => "REMATCH",
+                "Continue" => "READY",
+                _ => "ARCHERS",
+            };
         }
     }
 }

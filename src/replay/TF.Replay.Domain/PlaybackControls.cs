@@ -17,13 +17,14 @@ namespace TF.Replay.Domain
         public static Vector2? MousePosition { get; private set; }
         public static int? MarkIn { get; private set; }
         public static int? MarkOut { get; private set; }
-        public static bool ShowHelp { get; private set; }
-        public static bool ShowHurtboxes { get; private set; }
+        public static bool ShouldShowHelp { get; private set; }
+        public static bool ShouldShowHurtboxes { get; private set; }
+        public static bool HideOverlay { get; private set; }
 
-        private static bool _stepQueued;
-        private static bool _pausedBeforeHelp;
+        private static bool _hasStepQueued;
+        private static bool _shouldPausedBeforeHelp;
         private static int? _lastSeekedFrame;
-        private static bool _seekRefusalShown;
+        private static bool _hasSeekRefusalShown;
 
         private static readonly Stopwatch _holdClock = new();
         private static int _holdTicks;
@@ -33,21 +34,40 @@ namespace TF.Replay.Domain
         public static void Reset()
         {
             IsPaused = false;
-            _stepQueued = false;
+            _hasStepQueued = false;
             _holdClock.Reset();
             _holdTicks = 0;
             HoverFrame = null;
             MousePosition = null;
             MarkIn = null;
             MarkOut = null;
-            ShowHelp = false;
-            ShowHurtboxes = false;
+            ShouldShowHelp = false;
+            ShouldShowHurtboxes = false;
+            HideOverlay = false;
             _lastSeekedFrame = null;
-            _pausedBeforeHelp = false;
-            _seekRefusalShown = false;
+            _shouldPausedBeforeHelp = false;
+            _hasSeekRefusalShown = false;
             GifExport.Reset();
             ControlsHelp.Reset();
             Takeover.Reset();
+        }
+
+        private static void ToggleOverlay()
+        {
+            if (!MInput.Keyboard.Pressed(Keys.F2))
+            {
+                return;
+            }
+
+            HideOverlay = !HideOverlay;
+
+            if (!HideOverlay || !ShouldShowHelp)
+            {
+                return;
+            }
+
+            ShouldShowHelp = false;
+            IsPaused = _shouldPausedBeforeHelp;
         }
 
         private static void MarkAt(Ports.IReplayService service, int frame)
@@ -116,7 +136,7 @@ namespace TF.Replay.Domain
             if (Takeover.State != Takeover.Phase.Off)
             {
                 IsPaused = false;
-                _stepQueued = false;
+                _hasStepQueued = false;
                 HoverFrame = null;
                 MousePosition = null;
 
@@ -151,8 +171,10 @@ namespace TF.Replay.Domain
 
                 if (MInput.Keyboard.Pressed(Keys.F1))
                 {
-                    ShowHurtboxes = !ShowHurtboxes;
+                    ShouldShowHurtboxes = !ShouldShowHurtboxes;
                 }
+
+                ToggleOverlay();
 
                 return !frozenByTakeover;
             }
@@ -173,24 +195,26 @@ namespace TF.Replay.Domain
                 return true;
             }
 
-            if (MInput.Keyboard.Pressed(Keys.H))
-            {
-                ShowHelp = !ShowHelp;
+            ToggleOverlay();
 
-                if (ShowHelp)
+            if (MInput.Keyboard.Pressed(Keys.H) && !HideOverlay)
+            {
+                ShouldShowHelp = !ShouldShowHelp;
+
+                if (ShouldShowHelp)
                 {
-                    _pausedBeforeHelp = IsPaused;
+                    _shouldPausedBeforeHelp = IsPaused;
                     IsPaused = true;
                 }
                 else
                 {
-                    IsPaused = _pausedBeforeHelp;
+                    IsPaused = _shouldPausedBeforeHelp;
                 }
             }
 
             if (MInput.Keyboard.Pressed(Keys.F1))
             {
-                ShowHurtboxes = !ShowHurtboxes;
+                ShouldShowHurtboxes = !ShouldShowHurtboxes;
             }
 
             if (MInput.Keyboard.Pressed(Keys.G))
@@ -201,7 +225,7 @@ namespace TF.Replay.Domain
             if (MInput.Keyboard.Pressed(Keys.Space))
             {
                 IsPaused = !IsPaused;
-                _stepQueued = false;
+                _hasStepQueued = false;
             }
 
             if (MInput.Keyboard.Pressed(Keys.Left))
@@ -220,12 +244,12 @@ namespace TF.Replay.Domain
             {
                 IsPaused = true;
                 StartHold();
-                _stepQueued = true;
+                _hasStepQueued = true;
             }
             else if (HasHoldEnough(MInput.Keyboard.Check(Keys.Right)))
             {
                 IsPaused = true;
-                _stepQueued = true;
+                _hasStepQueued = true;
             }
 
             if (!IsPaused)
@@ -235,15 +259,15 @@ namespace TF.Replay.Domain
 
             if (MInput.Keyboard.Check(Keys.Down))
             {
-                _stepQueued = true;
+                _hasStepQueued = true;
             }
 
-            if (!_stepQueued)
+            if (!_hasStepQueued)
             {
                 return false;
             }
 
-            _stepQueued = false;
+            _hasStepQueued = false;
             return true;
         }
 
@@ -345,6 +369,11 @@ namespace TF.Replay.Domain
             HoverFrame = null;
             MousePosition = null;
 
+            if (HideOverlay)
+            {
+                return;
+            }
+
             if (service == null || service.LastFrame <= 0)
             {
                 return;
@@ -429,9 +458,9 @@ namespace TF.Replay.Domain
                 return false;
             }
 
-            if (!_seekRefusalShown)
+            if (!_hasSeekRefusalShown)
             {
-                _seekRefusalShown = true;
+                _hasSeekRefusalShown = true;
                 ServiceCollections.Notify($"NO SEEKING: {blockedBy} SAVES NO STATE".ToUpperInvariant());
             }
 

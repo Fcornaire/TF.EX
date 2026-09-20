@@ -2,7 +2,6 @@ using HarmonyLib;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoMod.Utils;
-using TextCopy;
 using TF.EX.Common.Extensions;
 using TF.EX.Common.Interop;
 using TF.EX.Domain;
@@ -11,6 +10,7 @@ using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Interop;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Models.WebSocket;
+using TF.EX.Domain.Services;
 using TF.EX.Patchs.Entity.MenuItem;
 using TowerFall;
 
@@ -62,12 +62,15 @@ namespace TF.EX.Patchs.Scene
         private static Monocle.Entity spectateEntityButton = null;
         private static Monocle.Entity createEntityButton = null;
         private static Monocle.Entity copyCodeGuideEntity = null;
+        internal static bool IsCopyCodeGuideVisible => copyCodeGuideEntity != null;
         private static Monocle.Entity editLobbyGuideEntity = null;
 
         private static LobbyVersusModeButton lobbyVersusModeButton = null;
         private static LobbyVersusCoinButton lobbyVersusCoinButton = null;
         private static LobbyVersusMapButton lobbyVersusMapButton = null;
         private static LobbyVersusPlayerCountButton lobbyVersusPlayerCountButton = null;
+        private static LobbyVersusSeriesButton lobbyVersusSeriesButton = null;
+        private static SeriesScreen seriesScreen = null;
         private static LobbyVarianText lobbyVarianText = null;
         private static List<VariantItem> variants = new List<VariantItem>();
 
@@ -108,6 +111,9 @@ namespace TF.EX.Patchs.Scene
                     return false;
                 case Domain.Models.MenuState.QuickPlaySearch:
                     HandleQuickPlaySearch(__instance, name);
+                    return false;
+                case Domain.Models.MenuState.SeriesLobby:
+                    HandleSeriesLobby(__instance, name);
                     return false;
                 case Domain.Models.MenuState.Main:
                     if (name == "Create")
@@ -217,6 +223,10 @@ namespace TF.EX.Patchs.Scene
 
                 RenderWaitingForHost(matchmakingService);
                 RenderQuickPlayStarting(matchmakingService);
+                InputDelayAdvisor.Render();
+            }
+            else if (__instance.State.ToDomainModel() == Domain.Models.MenuState.SeriesLobby)
+            {
                 InputDelayAdvisor.Render();
             }
 
@@ -430,6 +440,8 @@ namespace TF.EX.Patchs.Scene
             {
                 if (MenuInput.Start)
                 {
+                    LobbyVersusSeriesButton.EnforceSeriesRules(matchmakingService.GetOwnLobby());
+
                     var variantsToggle = variants
                         .Where(v => v is VariantToggle && (v as VariantToggle).Variant.Value)
                         .Select(v => (v as VariantToggle).Variant.Title)
@@ -676,6 +688,27 @@ namespace TF.EX.Patchs.Scene
 
             self.Add(new TowerFall.MenuItem[] { create, join, banner });
             self.ToStartSelected = create;
+
+            DynamicData.For(self).Invoke("TweenBGCameraToY", 1);
+        }
+
+        private static void HandleSeriesLobby(MainMenu self, string name)
+        {
+            if (name == "Destroy")
+            {
+                seriesScreen?.RemoveSelf();
+                seriesScreen = null;
+                return;
+            }
+
+            if (name != "Create")
+            {
+                return;
+            }
+
+            self.BackState = self.State;
+            seriesScreen = new SeriesScreen(self);
+            self.Add(seriesScreen);
 
             DynamicData.For(self).Invoke("TweenBGCameraToY", 1);
         }
@@ -983,6 +1016,12 @@ namespace TF.EX.Patchs.Scene
                     lobbyVersusPlayerCountButton = null;
                 }
 
+                if (lobbyVersusSeriesButton != null)
+                {
+                    lobbyVersusSeriesButton.RemoveSelf();
+                    lobbyVersusSeriesButton = null;
+                }
+
                 if (lobbyVarianText != null)
                 {
                     lobbyVarianText.RemoveSelf();
@@ -1036,15 +1075,18 @@ namespace TF.EX.Patchs.Scene
             lobbyVersusCoinButton = new LobbyVersusCoinButton(new Vector2(160f, 220f), new Vector2(420f, 135f));
             self.Add(lobbyVersusCoinButton);
 
-            lobbyVarianText = new LobbyVarianText(new Vector2(160f, 250f), new Vector2(-120f, 135f));
+            lobbyVersusSeriesButton = new LobbyVersusSeriesButton(new Vector2(160f, 250f), new Vector2(420f, 165f));
+            self.Add(lobbyVersusSeriesButton);
+
+            lobbyVarianText = new LobbyVarianText(new Vector2(160f, 280f), new Vector2(-120f, 165f));
             self.Add(lobbyVarianText);
 
             foreach (var variant in variants)
             {
-                variant.Position.Y += 230;
+                variant.Position.Y += 260;
             }
 
-            self.MaxUICameraY += 260;
+            self.MaxUICameraY += 290;
 
             var dynMainMenu = DynamicData.For(self);
             dynMainMenu.Invoke("TweenBGCameraToY", 3);
@@ -1055,11 +1097,13 @@ namespace TF.EX.Patchs.Scene
             lobbyVersusPlayerCountButton.UpItem = lobbyVersusMapButton;
             lobbyVersusPlayerCountButton.DownItem = lobbyVersusCoinButton;
             lobbyVersusCoinButton.UpItem = lobbyVersusPlayerCountButton;
-            lobbyVersusCoinButton.DownItem = variants[0];
-            variants[0].UpItem = lobbyVersusCoinButton;
-            variants[1].UpItem = lobbyVersusCoinButton;
-            variants[2].UpItem = lobbyVersusCoinButton;
-            variants[3].UpItem = lobbyVersusCoinButton;
+            lobbyVersusCoinButton.DownItem = lobbyVersusSeriesButton;
+            lobbyVersusSeriesButton.UpItem = lobbyVersusCoinButton;
+            lobbyVersusSeriesButton.DownItem = variants[0];
+            variants[0].UpItem = lobbyVersusSeriesButton;
+            variants[1].UpItem = lobbyVersusSeriesButton;
+            variants[2].UpItem = lobbyVersusSeriesButton;
+            variants[3].UpItem = lobbyVersusSeriesButton;
 
             self.Add(variants);
 
@@ -1396,9 +1440,9 @@ namespace TF.EX.Patchs.Scene
 
                     Action onClick = () =>
                     {
-                        if (newLobby.InGame)
+                        if (newLobby.InGame || newLobby.IsSeriesInProgress)
                         {
-                            Notification.Create(self, "MATCH IN PROGRESS, SPECTATE ONLY");
+                            Notification.Create(self, newLobby.InGame ? "MATCH IN PROGRESS, SPECTATE ONLY" : "SERIES IN PROGRESS, SPECTATE ONLY");
                             TowerFall.Sounds.ui_invalid.Play();
                             return;
                         }
@@ -1559,6 +1603,13 @@ namespace TF.EX.Patchs.Scene
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
             var netplayManager = ServiceCollections.ResolveNetplayManager();
 
+            var joined = matchmakingService.GetOwnLobby();
+
+            if (!joined.IsEmpty && joined.RoomId == newLobby.RoomId)
+            {
+                newLobby = joined;
+            }
+
             self.RemoveLoader();
             Sounds.ui_click.Play();
 
@@ -1608,7 +1659,7 @@ namespace TF.EX.Patchs.Scene
                 return;
             }
 
-            self.State = MainMenu.MenuState.Rollcall;
+            self.State = !isPlayer && newLobby.IsSeriesInProgress ? Domain.Models.MenuState.SeriesLobby.ToTFModel() : MainMenu.MenuState.Rollcall;
 
             NotifyOnVersionMismatch(self, newLobby);
 

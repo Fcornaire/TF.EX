@@ -19,6 +19,7 @@ namespace TF.Replay.Domain
             ("G", null, "EXPORT GIF"),
             ("R", null, "RESTART REPLAY"),
             (null, "F1", "HURTBOXES"),
+            (null, "F2", "HIDE OR SHOW"),
             ("T", null, "START OR STOP TAKEOVER"),
             (null, "START", "START OR STOP TAKEOVER (PAD)"),
             (null, "LT/RT", "TAKEOVER SEAT (PAD)"),
@@ -67,8 +68,8 @@ namespace TF.Replay.Domain
                 return;
             }
 
-            const float rowHeight = 16f;
-            const float top = 20f;
+            const float rowHeight = 15f;
+            const float top = 18f;
             const float width = 228f;
 
             var left = 46f + Overlay.CenterOffset;

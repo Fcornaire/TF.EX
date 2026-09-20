@@ -21,5 +21,8 @@ namespace TF.EX.Domain.Models.WebSocket.Server
 
         [DataMember(Name = "room_peer_id")]
         public string RoomPeerId { get; set; }
+
+        [DataMember(Name = "lobby")]
+        public Lobby Lobby { get; set; }
     }
 }

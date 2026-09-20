@@ -48,6 +48,7 @@ namespace TF.EX.Domain.Context
                 || lobby.GameData.MapId != snapshotGameData.MapId
                 || lobby.GameData.Mode != snapshotGameData.Mode
                 || lobby.GameData.MatchLength != snapshotGameData.MatchLength
+                || lobby.GameData.BestOf != snapshotGameData.BestOf
                 || !variantTitles.OrderBy(title => title).SequenceEqual(snapshotGameData.Variants.OrderBy(title => title));
         }
 
@@ -60,6 +61,7 @@ namespace TF.EX.Domain.Context
                 MatchLength = gameData.MatchLength,
                 Variants = new List<string>(gameData.Variants),
                 Seed = gameData.Seed,
+                BestOf = gameData.BestOf,
             };
         }
     }

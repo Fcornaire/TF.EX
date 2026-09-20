@@ -18,7 +18,7 @@ namespace TF.Replay.Patchs.Layer
                 return;
             }
 
-            if (GifExport.IsCapturing)
+            if (GifExport.IsCapturing || PlaybackControls.HideOverlay)
             {
                 return;
             }
@@ -34,7 +34,7 @@ namespace TF.Replay.Patchs.Layer
                     service.LastFrame);
             }
 
-            ControlsHelp.Render(PlaybackControls.ShowHelp);
+            ControlsHelp.Render(PlaybackControls.ShouldShowHelp);
 
             TakeoverOverlay.Render();
 

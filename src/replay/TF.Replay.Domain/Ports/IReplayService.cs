@@ -62,6 +62,7 @@ namespace TF.Replay.Domain.Ports
 
         Task<IEnumerable<Models.Replay>> LoadAndGetReplays(Action<int, int> onProgress = null);
         Models.Replay GetReplay();
+        string[] ArcherNamesBySeat();
         void LoadReplay(Models.Replay replay);
     }
 

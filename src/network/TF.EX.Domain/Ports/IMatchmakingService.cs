@@ -51,9 +51,12 @@ namespace TF.EX.Domain.Ports
         void DrainGameThreadActions();
         void ApplyTeamsToMatchSettings();
         void RestoreArchersFromLobbyIfNeeded();
-        void NotifyMatchEnded(int winnerSeat);
+        void NotifyMatchEnded(int winnerSeat, IList<int> scores);
         IEnumerable<Models.WebSocket.EndGameStatus> GetEndGameStatus();
         Task RematchChoice();
         Task ArcherSelectChoice();
+        Task SeriesContinueChoice();
+        Task PickSeriesMap(int mapId);
+        bool IsSeriesPicker();
     }
 }

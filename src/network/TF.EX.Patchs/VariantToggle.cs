@@ -2,6 +2,7 @@ using HarmonyLib;
 using Microsoft.Xna.Framework;
 using Monocle;
 using TF.EX.Domain.CustomComponent;
+using TF.EX.Domain.Extensions;
 using TowerFall;
 
 namespace TF.EX.Patchs
@@ -28,12 +29,19 @@ namespace TF.EX.Patchs
         [HarmonyPatch(nameof(VariantToggle.Render))]
         public static void VariantToggle_Render(VariantToggle __instance)
         {
-            if (!MatchVariantsPatchs.IsRestricted(__instance?.Variant) && LackingPlayerName(__instance?.Variant) == null)
+            if (!MatchVariantsPatchs.IsRestricted(__instance?.Variant) && LackingPlayerName(__instance?.Variant) == null && !IsSeriesLocked())
             {
                 return;
             }
 
             Draw.Rect(__instance.X - 10f, __instance.Y - 10f, 20f, 20f, Color.Black * 0.6f * __instance.Alpha);
+        }
+
+        private static bool IsSeriesLocked()
+        {
+            return TFGame.Instance.Scene is MainMenu menu
+                && menu.State.ToDomainModel() == TF.EX.Domain.Models.MenuState.LobbyBuilder
+                && TF.EX.Domain.ServiceCollections.ResolveMatchmakingService().GetOwnLobby().IsSeriesLobby;
         }
 
         private static bool CanAllow(VariantToggle toggle)
@@ -42,6 +50,14 @@ namespace TF.EX.Patchs
             {
                 Sounds.ui_invalid.Play();
                 Notification.Create(TFGame.Instance.Scene, $"{toggle.Variant.Title} DOES NOT SUPPORT NETPLAY", 10, 400);
+
+                return false;
+            }
+
+            if (IsSeriesLocked())
+            {
+                Sounds.ui_invalid.Play();
+                Notification.Create(TFGame.Instance.Scene, "SERIES: TOURNAMENT RULES ARE LOCKED", 10, 400);
 
                 return false;
             }

@@ -28,17 +28,17 @@ namespace TF.EX.Domain.Services
         private string MATCHMAKING_URL => $"{SERVER_URL}/ws";
 
         private readonly SemaphoreSlim _sendGate = new(1, 1);
-        private HashSet<string> _skinKnownPeers = new HashSet<string>();
+        private HashSet<string> _skinKnownPeers = [];
 
         private ClientWebSocket _webSocket;
         private byte[] _buffer = new byte[1056];
 
         private ICollection<Lobby> _lobbies = null;
-        private Lobby ownLobby = new Lobby();
+        private Lobby ownLobby = new();
         private string peerId = string.Empty;
         private int previousPlayersCount = 1;
-        private bool hostStartedMatch = false;
-        private bool matchEndReported = false;
+        private bool hasHostStartedMatch = false;
+        private bool isMatchEndReported = false;
 
         private string pendingSpectatorNotice = string.Empty;
         private Lobby pendingRollcallLobby = null;
@@ -345,7 +345,7 @@ namespace TF.EX.Domain.Services
             await Send(message);
         }
 
-        private async Task SendMatchEnded(int winnerSeat)
+        private async Task SendMatchEnded(int winnerSeat, IList<int> scores)
         {
             var matchEndedMessage = new MatchEndedMessage
             {
@@ -353,11 +353,33 @@ namespace TF.EX.Domain.Services
                 {
                     WinnerSeat = winnerSeat,
                     Frame = ExFlags.CurrentFrame,
-                    Checksum = LastStateChecksum()
+                    Checksum = LastStateChecksum(),
+                    Scores = scores?.ToList()
                 }
             };
 
             var bytes = MessagePackSerializer.Serialize(matchEndedMessage);
+            var message = MessagePackSerializer.ConvertToJson(bytes);
+            await Send(message);
+        }
+
+        private async Task SendSeriesContinueChoice()
+        {
+            var continueMessage = new SeriesContinueChoiceMessage { };
+
+            var bytes = MessagePackSerializer.Serialize(continueMessage);
+            var message = MessagePackSerializer.ConvertToJson(bytes);
+            await Send(message);
+        }
+
+        private async Task SendSeriesPickMap(int mapId)
+        {
+            var pickMessage = new SeriesPickMapMessage
+            {
+                SeriesPickMap = new SeriesPickMap { MapId = mapId }
+            };
+
+            var bytes = MessagePackSerializer.Serialize(pickMessage);
             var message = MessagePackSerializer.ConvertToJson(bytes);
             await Send(message);
         }
@@ -543,6 +565,11 @@ namespace TF.EX.Domain.Services
 
                     peerId = response.JoinLobbyResponse.RoomPeerId.ToString();
 
+                    if (response.JoinLobbyResponse.Lobby != null)
+                    {
+                        UpdateOwnLobby(response.JoinLobbyResponse.Lobby);
+                    }
+
                     if (currentAction == WSAction.JoinLobby)
                     {
                         onResult["JoinLobby-success"]?.Invoke();
@@ -703,22 +730,23 @@ namespace TF.EX.Domain.Services
             if (IsServerMsg(message, "LeaveLobbyForce"))
             {
                 ownLobby = new Lobby();
-                matchEndReported = false;
+                isMatchEndReported = false;
 
                 RunOnGameThread(() =>
                 {
+                    var level = TFGame.Instance.Scene as Level;
                     var mainMenu = new MainMenu(Models.MenuState.NetplaySelect.ToTFModel());
                     Engine.Instance.Scene = mainMenu;
-                    (TFGame.Instance.Scene as Level).Session.MatchSettings.LevelSystem.Dispose();
+                    level?.Session.MatchSettings.LevelSystem.Dispose();
 
                     Sounds.ui_invalid.Play();
-                    Notification.Create(mainMenu, "No choice made! dropped from lobby");
+                    Notification.Create(mainMenu, level != null ? "No choice made! dropped from lobby" : "Not ready in time, dropped from lobby");
                 });
             }
 
             if (IsServerMsg(message, "RematchLobby"))
             {
-                matchEndReported = false;
+                isMatchEndReported = false;
 
                 RunOnGameThread(() =>
                 {
@@ -740,7 +768,7 @@ namespace TF.EX.Domain.Services
 
             if (IsServerMsg(message, "StartLobby"))
             {
-                hostStartedMatch = true;
+                hasHostStartedMatch = true;
             }
 
             if (IsServerMsg(message, "SpectatorJoined"))
@@ -759,27 +787,50 @@ namespace TF.EX.Domain.Services
 
             if (IsServerMsg(message, "ArcherSelectLobby"))
             {
-                hostStartedMatch = false;
-                matchEndReported = false;
+                hasHostStartedMatch = false;
+                isMatchEndReported = false;
 
-                RunOnGameThread(() =>
-                {
-                    if (TFGame.Instance.Scene is Level)
-                    {
-                        if (_netplayManager.IsInit())
-                        {
-                            _netplayManager.Reset();
-                            ServiceCollections.ResolveReplayService().Export();
-                        }
-
-                        _inputService.EnableAllControllers();
-                        Sounds.ui_clickBack.Play();
-                        Engine.Instance.Scene = new MainMenu(MainMenu.MenuState.Rollcall);
-                        _archerService.Reset();
-                        (TFGame.Instance.Scene as Level).Session.MatchSettings.LevelSystem.Dispose();
-                    }
-                });
+                RunOnGameThread(() => ReturnToMenu(MainMenu.MenuState.Rollcall));
             }
+
+            if (IsServerMsg(message, "SeriesLobby"))
+            {
+                hasHostStartedMatch = false;
+                isMatchEndReported = false;
+
+                RunOnGameThread(() => ReturnToMenu(Models.MenuState.SeriesLobby.ToTFModel()));
+            }
+        }
+
+        private void ReturnToMenu(MainMenu.MenuState state)
+        {
+            if (TFGame.Instance.Scene is not Level level)
+            {
+                return;
+            }
+
+            if (_netplayManager.IsInit())
+            {
+                _netplayManager.Reset();
+                ServiceCollections.ResolveReplayService().Export();
+            }
+
+            _inputService.EnableAllControllers();
+            Sounds.ui_clickBack.Play();
+            Engine.Instance.Scene = new MainMenu(state);
+            _archerService.Reset();
+            level.Session.MatchSettings.LevelSystem.Dispose();
+        }
+
+        public bool IsSeriesPicker()
+        {
+            var series = ownLobby.Series;
+
+            return series != null
+                && series.IsInProgress
+                && series.PickerSide.HasValue
+                && !IsSpectator()
+                && series.SideOfSeat(GetLocalSeat()) == series.PickerSide;
         }
 
         public void RestoreArchersFromLobbyIfNeeded()
@@ -843,6 +894,7 @@ namespace TF.EX.Domain.Services
                 lobby.GameData.Mode = previous.GameData.Mode;
                 lobby.GameData.MatchLength = previous.GameData.MatchLength;
                 lobby.GameData.Variants = previous.GameData.Variants;
+                lobby.GameData.BestOf = previous.GameData.BestOf;
             }
 
             Sounds.ui_clickSpecialAsc.Play();
@@ -898,9 +950,14 @@ namespace TF.EX.Domain.Services
                 return;
             }
 
-            ApplyTeamsToMatchSettings();
+            if (TFGame.Instance.Scene is MainMenu)
+            {
+                ApplyTeamsToMatchSettings();
+            }
+
             ApplyGameSettingsToMatch(lobby);
 
+            NotifySeriesAbort(lobby, previous);
             PublishSettingsChanges(lobby, previous);
             UnreadyOwnRollcall(lobby, previous);
 
@@ -933,7 +990,13 @@ namespace TF.EX.Domain.Services
 
             if (isSpectatorInLobby && lobby.InGame)
             {
-                hostStartedMatch = true;
+                hasHostStartedMatch = true;
+            }
+
+            if (isSpectatorInLobby && !lobby.InGame && lobby.IsSeriesInProgress
+                && TFGame.Instance.Scene is MainMenu spectatorMenu && spectatorMenu.State == MainMenu.MenuState.Rollcall)
+            {
+                spectatorMenu.State = Models.MenuState.SeriesLobby.ToTFModel();
             }
 
             if (someoneLeft)
@@ -1010,6 +1073,17 @@ namespace TF.EX.Domain.Services
             settings.MatchLength = (MatchSettings.MatchLengths)lobby.GameData.MatchLength;
         }
 
+        private void NotifySeriesAbort(Lobby lobby, Lobby previous)
+        {
+            if (lobby.Series?.IsAborted != true || previous?.Series?.IsAborted == true || previous?.RoomId != lobby.RoomId)
+            {
+                return;
+            }
+
+            Sounds.ui_invalid.Play();
+            Notification.Create(TFGame.Instance.Scene, $"SERIES ABORTED: {lobby.Series.AbortReason ?? "UNKNOWN"}", 12, 500);
+        }
+
         private void PublishSettingsChanges(Lobby lobby, Lobby previous)
         {
             if (previous == null || previous.IsEmpty || previous.RoomId != lobby.RoomId || lobby.InGame)
@@ -1027,7 +1101,8 @@ namespace TF.EX.Domain.Services
                 || lobby.GameData.MapId != previous.GameData.MapId
                 || lobby.MaxPlayers != previous.MaxPlayers
                 || lobby.GameData.MatchLength != previous.GameData.MatchLength
-                || lobby.GameData.Mode != previous.GameData.Mode;
+                || lobby.GameData.Mode != previous.GameData.Mode
+                || lobby.GameData.BestOf != previous.GameData.BestOf;
 
             if (!anyChange)
             {
@@ -1081,6 +1156,11 @@ namespace TF.EX.Domain.Services
             if (lobby.GameData.Mode != previous.GameData.Mode)
             {
                 LobbyUpdateFeed.Push(ModeName(lobby.GameData.Mode), null, NeutralTint);
+            }
+
+            if (lobby.GameData.BestOf != previous.GameData.BestOf)
+            {
+                LobbyUpdateFeed.Push(lobby.GameData.BestOf > 0 ? $"SERIES BEST OF {lobby.GameData.BestOf}" : "SERIES OFF", null, NeutralTint);
             }
         }
 
@@ -1438,7 +1518,8 @@ namespace TF.EX.Domain.Services
                 EndGameChoice = lobby.EndGameChoice,
                 Mods = lobby.Mods,
                 Kind = lobby.Kind,
-                JoinCode = lobby.JoinCode
+                JoinCode = lobby.JoinCode,
+                Series = lobby.Series
             };
         }
 
@@ -1537,10 +1618,10 @@ namespace TF.EX.Domain.Services
         {
             if (IsSpectator() && ownLobby.InGame)
             {
-                return hostStartedMatch;
+                return hasHostStartedMatch;
             }
 
-            return AreAllPlayersReady() && hostStartedMatch;
+            return AreAllPlayersReady() && hasHostStartedMatch;
         }
 
         public bool IsLobbyFull()
@@ -1560,7 +1641,7 @@ namespace TF.EX.Domain.Services
 
         private bool IsAwaitingHostStart()
         {
-            return AreAllPlayersReady() && !hostStartedMatch;
+            return AreAllPlayersReady() && !hasHostStartedMatch;
         }
 
         private bool IsHost()
@@ -1622,8 +1703,8 @@ namespace TF.EX.Domain.Services
 
         public void ResetLobby()
         {
-            hostStartedMatch = false;
-            matchEndReported = false;
+            hasHostStartedMatch = false;
+            isMatchEndReported = false;
             ownLobby = new Lobby();
             previousPlayersCount = 1;
             pendingRollcallLobby = null;
@@ -1644,6 +1725,7 @@ namespace TF.EX.Domain.Services
             return !ownLobby.IsEmpty
                 && !ownLobby.IsQuickPlay
                 && !ownLobby.InGame
+                && !ownLobby.IsSeriesInProgress
                 && IsHost();
         }
 
@@ -1672,31 +1754,40 @@ namespace TF.EX.Domain.Services
             }
         }
 
-        public void NotifyMatchEnded(int winnerSeat)
+        public void NotifyMatchEnded(int winnerSeat, IList<int> scores)
         {
-            if (ownLobby.IsEmpty || matchEndReported)
+            if (ownLobby.IsEmpty || isMatchEndReported)
             {
                 return;
             }
 
-            matchEndReported = true;
+            isMatchEndReported = true;
 
-            Task.Run(async () => await SendMatchEnded(winnerSeat));
+            Task.Run(async () => await SendMatchEnded(winnerSeat, scores));
+        }
+
+        public async Task SeriesContinueChoice()
+        {
+            await SendSeriesContinueChoice();
+        }
+
+        public async Task PickSeriesMap(int mapId)
+        {
+            await SendSeriesPickMap(mapId);
         }
 
         public IEnumerable<EndGameStatus> GetEndGameStatus()
         {
-            var votes = ownLobby.EndGameChoice ?? new List<EndGameVote>();
+            var votes = ownLobby.EndGameChoice ?? [];
 
-            return ownLobby.Players
+            return [.. ownLobby.Players
                 .OrderBy(player => player.Seat)
                 .Select(player => new EndGameStatus
                 {
                     Seat = player.Seat,
                     Name = player.Name,
                     Choice = votes.FirstOrDefault(vote => vote.Addr == player.Addr)?.Choice
-                })
-                .ToList();
+                })];
         }
 
         public async Task ArcherSelectChoice()

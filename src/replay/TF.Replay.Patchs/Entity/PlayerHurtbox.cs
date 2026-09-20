@@ -11,7 +11,7 @@ namespace TF.Replay.Patchs.Entity
         [HarmonyPatch("DoWrapRender")]
         public static void Player_DoWrapRender(Player __instance)
         {
-            if (StandalonePlayback.IsActive && PlaybackControls.ShowHurtboxes)
+            if (StandalonePlayback.IsActive && PlaybackControls.ShouldShowHurtboxes && !PlaybackControls.HideOverlay)
             {
                 __instance.DebugRender();
             }

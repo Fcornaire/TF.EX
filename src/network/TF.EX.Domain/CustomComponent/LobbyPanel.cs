@@ -33,6 +33,8 @@ namespace TF.EX.Domain.CustomComponent
 
         private OutlineText liveIndicator;
 
+        private OutlineText seriesIndicator;
+
         public LobbyPanel(float x, float y) : base(-1)
         {
             Position = new Vector2(x, y);
@@ -98,6 +100,12 @@ namespace TF.EX.Domain.CustomComponent
                 liveIndicator = null;
             }
 
+            if (seriesIndicator != null)
+            {
+                Remove(seriesIndicator);
+                seriesIndicator = null;
+            }
+
             variantsImages.Clear();
         }
 
@@ -126,9 +134,9 @@ namespace TF.EX.Domain.CustomComponent
                 return;
             }
 
-            if (lobby.InGame)
+            if (lobby.InGame || lobby.IsSeriesInProgress)
             {
-                liveIndicator = new OutlineText(TFGame.Font, "LIVE, SPECTATE ONLY")
+                liveIndicator = new OutlineText(TFGame.Font, lobby.InGame ? "LIVE, SPECTATE ONLY" : "SERIES LIVE, SPECTATE ONLY")
                 {
                     Scale = Vector2.One * 1.3f,
                     Color = Color.Yellow,
@@ -138,6 +146,19 @@ namespace TF.EX.Domain.CustomComponent
                 liveIndicator.Position.Y += 20;
 
                 Add(liveIndicator);
+            }
+
+            if (lobby.IsSeriesLobby)
+            {
+                seriesIndicator = new OutlineText(TFGame.Font, $"BEST OF {lobby.GameData.BestOf} SERIES")
+                {
+                    Color = Color.Gold,
+                    OutlineColor = Color.Black
+                };
+
+                seriesIndicator.Position.Y += 34;
+
+                Add(seriesIndicator);
             }
 
             UpdateVariant(lobby.GameData.Variants);

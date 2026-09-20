@@ -21,6 +21,11 @@ namespace TF.Replay.Domain.CustomComponent
         {
             base.Render();
 
+            if (PlaybackControls.HideOverlay)
+            {
+                return;
+            }
+
             var left = PanelCenterX - PanelWidth / 2f;
 
             Draw.Rect(left - 1f, PanelTop - 1f, PanelWidth + 2f, PanelHeight + 2f, Color.White * 0.5f);

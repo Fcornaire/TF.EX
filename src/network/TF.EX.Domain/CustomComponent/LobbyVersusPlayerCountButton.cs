@@ -7,6 +7,7 @@ namespace TF.EX.Domain.CustomComponent
     public class LobbyVersusPlayerCountButton : LobbyBorderButton
     {
         private const int MAX_PLAYERS = 4;
+        private const int DEFAULT_PLAYERS = 2;
 
         private int MinPlayers => Math.Max(
             IsTeamMode ? LobbyVersusModeButton.TEAM_MODE_MIN_PLAYERS : 2,
@@ -18,7 +19,7 @@ namespace TF.EX.Domain.CustomComponent
         {
             if (ownLobby.MaxPlayers < MinPlayers || ownLobby.MaxPlayers > MAX_PLAYERS)
             {
-                ownLobby.MaxPlayers = MAX_PLAYERS;
+                ownLobby.MaxPlayers = Math.Max(DEFAULT_PLAYERS, MinPlayers);
             }
 
             UpdateSides(ownLobby.MaxPlayers);
@@ -27,6 +28,12 @@ namespace TF.EX.Domain.CustomComponent
         public override void Update()
         {
             base.Update();
+
+            if (ownLobby.IsSeriesLobby)
+            {
+                UpdateSeriesShape();
+                return;
+            }
 
             if (!base.Selected)
             {
@@ -59,10 +66,36 @@ namespace TF.EX.Domain.CustomComponent
             DrawLeft = maxPlayers > MinPlayers;
         }
 
+        private void UpdateSeriesShape()
+        {
+            var isLocked = Context.LobbyBuilderContext.IsEditing;
+            var isTeams = ownLobby.MaxPlayers == LobbyVersusSeriesButton.TEAM_PLAYERS;
+
+            DrawLeft = !isLocked && isTeams;
+            DrawRight = !isLocked && !isTeams;
+
+            if (isLocked || !base.Selected)
+            {
+                return;
+            }
+
+            if (MenuInput.Right && !isTeams || MenuInput.Left && isTeams)
+            {
+                Sounds.ui_move2.Play();
+                ownLobby.MaxPlayers = isTeams ? LobbyVersusSeriesButton.DUEL_PLAYERS : LobbyVersusSeriesButton.TEAM_PLAYERS;
+                LobbyVersusSeriesButton.EnforceSeriesRules(ownLobby);
+                base.OnConfirm();
+            }
+        }
+
         public override void Render()
         {
+            var detail = ownLobby.IsSeriesLobby
+                ? $"{ownLobby.MaxPlayers} ARCHERS - {LobbyVersusSeriesButton.ShapeName(ownLobby)}"
+                : $"{ownLobby.MaxPlayers} ARCHERS";
+
             Draw.OutlineTextCentered(TFGame.Font, "LOBBY SIZE", Position + new Vector2(0f, -6f), base.DrawColor, 2f);
-            Draw.OutlineTextCentered(TFGame.Font, $"{ownLobby.MaxPlayers} ARCHERS", Position + new Vector2(0f, 6f), base.DrawColor, 1f);
+            Draw.OutlineTextCentered(TFGame.Font, detail, Position + new Vector2(0f, 6f), base.DrawColor, 1f);
 
             base.Render();
         }

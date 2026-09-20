@@ -560,6 +560,29 @@ namespace TF.Replay.Domain.Services
             }
         }
 
+        public string[] ArcherNamesBySeat()
+        {
+            var archers = _replay?.Informations?.Archers?.ToArray();
+
+            if (archers == null || archers.Length == 0)
+            {
+                return Array.Empty<string>();
+            }
+
+            var seats = SeatsFor(archers);
+            var names = new string[Math.Max(0, seats.Max() + 1)];
+
+            for (int i = 0; i < archers.Length && i < seats.Length; i++)
+            {
+                if (seats[i] >= 0)
+                {
+                    names[seats[i]] = archers[i].NetplayName;
+                }
+            }
+
+            return names;
+        }
+
         private int[] SeatsFor(Models.ArcherInfo[] archers)
         {
             if (archers.All(archer => archer.Seat.HasValue))
