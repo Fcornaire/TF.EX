@@ -232,12 +232,23 @@ namespace TF.EX.Patchs.Scene
 
             if (__instance.State.ToDomainModel() == Domain.Models.MenuState.QuickPlaySearch)
             {
-                var searching = ServiceCollections.ResolveMatchmakingService().GetSearchingCount();
+                var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+                var searching = matchmakingService.GetSearchingCount();
 
                 if (searching > 0)
                 {
                     var label = searching == 1 ? "1 PLAYER SEARCHING" : $"{searching} PLAYERS SEARCHING";
                     Monocle.Draw.OutlineTextCentered(TFGame.Font, label, new Vector2(160f, 160f), Color.White, Color.Black);
+                }
+
+                var (setName, setSearching) = matchmakingService.IsQuickPlayWide()
+                    ? ("STANDARD SET", matchmakingService.GetStandardSearchingCount())
+                    : ("WIDER SET", matchmakingService.GetWideSearchingCount());
+
+                if (setSearching > 0)
+                {
+                    var label = $"{setName}: {setSearching} SEARCHING";
+                    Monocle.Draw.OutlineTextJustify(TFGame.Font, label, new Vector2(8f, 8f), Color.Gray, Color.Black, new Vector2(0f, 0f));
                 }
             }
 
@@ -488,7 +499,6 @@ namespace TF.EX.Patchs.Scene
                     lobby.Players.Add(new Domain.Models.WebSocket.Player
                     {
                         Name = NetplayPreferences.Name,
-                        Addr = string.Empty,
                         IsHost = true,
                         CustomVariants = MainMenu.VersusMatchSettings.Variants.CustomVariantTitles()
                     });

@@ -61,7 +61,7 @@ namespace TF.EX.Domain.Models.WebSocket
     [MessagePackObject(keyAsPropertyName: true)]
     public class EndGameVote
     {
-        public string Addr { get; set; } = "";
+        public string RoomPeerId { get; set; } = "";
         public string Choice { get; set; } = "";
     }
 
@@ -153,7 +153,6 @@ namespace TF.EX.Domain.Models.WebSocket
     public class Player
     {
         public string Name { get; set; } = "";
-        public string Addr { get; set; } = "";
         public int ArcherIndex { get; set; } = 0;
         public int ArcherAltIndex { get; set; } = 0;
         public bool Ready { get; set; } = false;
@@ -179,7 +178,6 @@ namespace TF.EX.Domain.Models.WebSocket
             return new Player
             {
                 Name = Name,
-                Addr = Addr,
                 ArcherIndex = archerIndex,
                 ArcherAltIndex = archerAltIndex,
                 Ready = Ready,
@@ -197,7 +195,7 @@ namespace TF.EX.Domain.Models.WebSocket
     [MessagePackObject(keyAsPropertyName: true)]
     public class PlayerPing
     {
-        public string Addr { get; set; } = "";
+        public string RoomPeerId { get; set; } = "";
         public int Ping { get; set; } = 0;
     }
 

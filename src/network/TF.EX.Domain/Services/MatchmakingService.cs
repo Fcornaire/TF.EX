@@ -38,6 +38,8 @@ namespace TF.EX.Domain.Services
         private string peerId = string.Empty;
         private int previousPlayersCount = 1;
         private bool hasHostStartedMatch = false;
+        private DateTime lastStartRequestAt = DateTime.MinValue;
+        private static readonly TimeSpan StartRequestCooldown = TimeSpan.FromSeconds(1);
         private bool isMatchEndReported = false;
 
         private string pendingSpectatorNotice = string.Empty;
@@ -50,7 +52,9 @@ namespace TF.EX.Domain.Services
         private Action<int> onQuickPlayQueued;
         private Action<Lobby> onQuickPlayMatched;
         private Action<string> onQuickPlayFailed;
-        private int searchingCount;
+        private int searchingStandardCount;
+        private int searchingWideCount;
+        private bool isQuickPlayWide;
         private bool isQuickPlayQueued;
 
         private static readonly Microsoft.Xna.Framework.Color EnabledTint = new(205, 245, 205);
@@ -289,12 +293,14 @@ namespace TF.EX.Domain.Services
 
         private async Task SendEnterQuickPlay()
         {
+            isQuickPlayWide = ServiceCollections.ResolveWiderSetModApi()?.IsWide == true;
+
             var enterQuickPlayMessage = new EnterQuickPlayMessage
             {
                 EnterQuickPlay = new EnterQuickPlay
                 {
                     Name = NetplayPreferences.Name,
-                    IsWide = ServiceCollections.ResolveWiderSetModApi()?.IsWide == true
+                    IsWide = isQuickPlayWide
                 }
             };
 
@@ -620,12 +626,13 @@ namespace TF.EX.Domain.Services
                 var bytes = MessagePackSerializer.ConvertFromJson(message);
                 var response = MessagePackSerializer.Deserialize<QuickPlayStatusMessage>(bytes);
 
-                searchingCount = response.QuickPlayStatus.Searching;
+                searchingStandardCount = response.QuickPlayStatus.SearchingStandard;
+                searchingWideCount = response.QuickPlayStatus.SearchingWide;
 
                 if (response.QuickPlayStatus.Queued)
                 {
                     isQuickPlayQueued = true;
-                    onQuickPlayQueued?.Invoke(searchingCount);
+                    onQuickPlayQueued?.Invoke(GetSearchingCount());
                 }
                 else
                 {
@@ -674,7 +681,7 @@ namespace TF.EX.Domain.Services
 
                 foreach (var entry in response.PingUpdate.Pings)
                 {
-                    foreach (var player in ownLobby.Players.Concat(ownLobby.Spectators).Where(pl => pl.Addr == entry.Addr))
+                    foreach (var player in ownLobby.Players.Concat(ownLobby.Spectators).Where(pl => pl.RoomPeerId == entry.RoomPeerId))
                     {
                         player.Ping = entry.Ping;
                     }
@@ -1549,7 +1556,8 @@ namespace TF.EX.Domain.Services
             onQuickPlayQueued = onQueued == null ? null : count => RunOnGameThread(() => onQueued(count));
             onQuickPlayMatched = onMatched == null ? null : lobby => RunOnGameThread(() => onMatched(lobby));
             onQuickPlayFailed = onFail == null ? null : message => RunOnGameThread(() => onFail(message));
-            searchingCount = 0;
+            searchingStandardCount = 0;
+            searchingWideCount = 0;
 
             if (!EnsureConnection())
             {
@@ -1584,7 +1592,22 @@ namespace TF.EX.Domain.Services
 
         public int GetSearchingCount()
         {
-            return searchingCount;
+            return isQuickPlayWide ? searchingWideCount : searchingStandardCount;
+        }
+
+        public int GetStandardSearchingCount()
+        {
+            return searchingStandardCount;
+        }
+
+        public int GetWideSearchingCount()
+        {
+            return searchingWideCount;
+        }
+
+        public bool IsQuickPlayWide()
+        {
+            return isQuickPlayWide;
         }
 
         public bool IsQuickPlayStarting()
@@ -1651,6 +1674,13 @@ namespace TF.EX.Domain.Services
 
         public void RequestStart()
         {
+            var now = DateTime.UtcNow;
+            if (now - lastStartRequestAt < StartRequestCooldown)
+            {
+                return;
+            }
+
+            lastStartRequestAt = now;
             Task.Run(SendStartLobbyChoice);
         }
 
@@ -1786,7 +1816,7 @@ namespace TF.EX.Domain.Services
                 {
                     Seat = player.Seat,
                     Name = player.Name,
-                    Choice = votes.FirstOrDefault(vote => vote.Addr == player.Addr)?.Choice
+                    Choice = votes.FirstOrDefault(vote => vote.RoomPeerId == player.RoomPeerId)?.Choice
                 })];
         }
 
