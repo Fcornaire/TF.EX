@@ -26,6 +26,9 @@ namespace TF.EX.Domain.Ports
         Task ExitQuickPlay();
         bool IsSearchingQuickPlay();
         int GetSearchingCount();
+        int GetStandardSearchingCount();
+        int GetWideSearchingCount();
+        bool IsQuickPlayWide();
         bool IsQuickPlayStarting();
 
         Task UpdatePlayer(Player player, Action onSucess, Action onFail);

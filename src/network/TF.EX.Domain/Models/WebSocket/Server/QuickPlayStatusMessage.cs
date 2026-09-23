@@ -15,8 +15,11 @@ namespace TF.EX.Domain.Models.WebSocket.Server
         [DataMember(Name = "queued")]
         public bool Queued { get; set; }
 
-        [DataMember(Name = "searching")]
-        public int Searching { get; set; }
+        [DataMember(Name = "searching_standard")]
+        public int SearchingStandard { get; set; }
+
+        [DataMember(Name = "searching_wide")]
+        public int SearchingWide { get; set; }
 
         [DataMember(Name = "message")]
         public string Message { get; set; }
