@@ -4,7 +4,8 @@ namespace TF.EX.Domain.Ports
 {
     public interface IMatchmakingService
     {
-        int GetPingTo(Player player);
+        int? GetPingTo(Player player);
+        void StartOrStopPingMeasurementIfNeeded(bool inLobbyMenu);
         bool IsConnectedToServer();
         bool ConnectToServerAndListen();
 

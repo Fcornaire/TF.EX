@@ -85,5 +85,14 @@ namespace TF.EX.Domain.Externals
 
         [DllImport("ggrs_ffi")]
         public static extern int netplay_frames_behind();
+
+        [DllImport("ggrs_ffi")]
+        public static extern Status ping_measurement_start([MarshalAs(UnmanagedType.LPUTF8Str)] string roomUrl);
+
+        [DllImport("ggrs_ffi")]
+        public static extern void ping_measurement_stop();
+
+        [DllImport("ggrs_ffi")]
+        public static extern int ping_measurement_rtt([MarshalAs(UnmanagedType.LPUTF8Str)] string peerId);
     }
 }

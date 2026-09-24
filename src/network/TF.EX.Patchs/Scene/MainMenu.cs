@@ -216,9 +216,10 @@ namespace TF.EX.Patchs.Scene
                     }
 
                     var latency = matchmakingService.GetPingTo(seated);
-                    var label = $"{latency} MS";
+                    var label = latency is int ms ? $"{ms} MS" : "... MS";
+                    var color = latency is int measured ? GetPingColor(measured) : Color.LightGray;
 
-                    Monocle.Draw.OutlineTextCentered(TFGame.Font, label, RollcallLayout.PingAt(rollcallElement), GetPingColor(latency), Color.Black);
+                    Monocle.Draw.OutlineTextCentered(TFGame.Font, label, RollcallLayout.PingAt(rollcallElement), color, Color.Black);
                 }
 
                 RenderWaitingForHost(matchmakingService);

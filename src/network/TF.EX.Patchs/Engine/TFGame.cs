@@ -138,7 +138,9 @@ namespace TF.EX.Patchs.Engine
             var syncTestUtilsService = ServiceCollections.ResolveSyncTestUtilsService();
             var logger = ServiceCollections.ResolveLogger();
 
-            ServiceCollections.ResolveMatchmakingService().DrainGameThreadActions();
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+            matchmakingService.DrainGameThreadActions();
+            matchmakingService.StartOrStopPingMeasurementIfNeeded(__instance.Scene is TowerFall.MainMenu && !netplayManager.IsInit());
 
             netplayManager.PublishCaptureFlag();
 
@@ -198,7 +200,6 @@ namespace TF.EX.Patchs.Engine
                 {
                     TowerFall.Sounds.ui_invalid.Play();
 
-                    var matchmakingService = ServiceCollections.ResolveMatchmakingService();
                     matchmakingService.DisconnectFromServer();
                     matchmakingService.ResetPeer();
                     matchmakingService.UpdateOwnLobby(new Domain.Models.WebSocket.Lobby());

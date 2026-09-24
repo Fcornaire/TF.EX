@@ -158,7 +158,6 @@ namespace TF.EX.Domain.Models.WebSocket
         public bool Ready { get; set; } = false;
         public string RoomPeerId { get; set; } = "";
         public bool IsHost { get; set; }
-        public int Ping { get; set; } = 0;
 
         public int Seat { get; set; } = 0;
 
@@ -183,20 +182,12 @@ namespace TF.EX.Domain.Models.WebSocket
                 Ready = Ready,
                 RoomPeerId = RoomPeerId,
                 IsHost = IsHost,
-                Ping = Ping,
                 Seat = Seat,
                 Team = Team,
                 CustomArcherId = CustomArcherId,
                 ArcherMods = ArcherMods,
             };
         }
-    }
-
-    [MessagePackObject(keyAsPropertyName: true)]
-    public class PlayerPing
-    {
-        public string RoomPeerId { get; set; } = "";
-        public int Ping { get; set; } = 0;
     }
 
     [MessagePackObject(keyAsPropertyName: true)]

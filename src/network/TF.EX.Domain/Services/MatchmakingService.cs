@@ -10,6 +10,7 @@ using TF.EX.Common.Extensions;
 using TF.EX.Domain.Context;
 using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Extensions;
+using TF.EX.Domain.Externals;
 using TF.EX.Domain.Interop;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Models.Skin;
@@ -74,6 +75,10 @@ namespace TF.EX.Domain.Services
         private CancellationToken cancellationToken;
 
         private string abandonedRoomId = null;
+
+        private string pingMeasurementUrl = null;
+        private string measuredPingsRoomId = null;
+        private readonly Dictionary<string, int> measuredPings = new();
 
         public MatchmakingService(INetplayManager netplayManager,
             IArcherService archerService,
@@ -670,22 +675,6 @@ namespace TF.EX.Domain.Services
                 }
 
                 currentAction = WSAction.None;
-
-                return;
-            }
-
-            if (IsServerMsg(message, "PingUpdate"))
-            {
-                var bytes = MessagePackSerializer.ConvertFromJson(message);
-                var response = MessagePackSerializer.Deserialize<PingUpdateMessage>(bytes);
-
-                foreach (var entry in response.PingUpdate.Pings)
-                {
-                    foreach (var player in ownLobby.Players.Concat(ownLobby.Spectators).Where(pl => pl.RoomPeerId == entry.RoomPeerId))
-                    {
-                        player.Ping = entry.Ping;
-                    }
-                }
 
                 return;
             }
@@ -1445,12 +1434,56 @@ namespace TF.EX.Domain.Services
             return _webSocket.State == WebSocketState.Open;
         }
 
-        public int GetPingTo(Models.WebSocket.Player player)
+        public int? GetPingTo(Models.WebSocket.Player player)
         {
-            var self = ownLobby.Players.Concat(ownLobby.Spectators)
-                .FirstOrDefault(pl => pl.RoomPeerId == peerId);
+            if (pingMeasurementUrl != null)
+            {
+                var rtt = GGRSFFI.ping_measurement_rtt(player.RoomPeerId);
 
-            return (self?.Ping ?? 0) + player.Ping;
+                if (rtt >= 0)
+                {
+                    measuredPings[player.RoomPeerId] = rtt;
+                }
+            }
+
+            return measuredPings.TryGetValue(player.RoomPeerId, out var ms) ? ms : null;
+        }
+
+        public void StartOrStopPingMeasurementIfNeeded(bool inLobbyMenu)
+        {
+            var url = inLobbyMenu && IsConnectedToServer() && !string.IsNullOrEmpty(ownLobby.RoomId) && !string.IsNullOrEmpty(peerId)
+                ? $"{SERVER_URL}/ping_measurement/{ownLobby.RoomId}?peer={peerId}"
+                : null;
+
+            if (url == pingMeasurementUrl)
+            {
+                return;
+            }
+
+            if (pingMeasurementUrl != null)
+            {
+                GGRSFFI.ping_measurement_stop();
+            }
+
+            pingMeasurementUrl = url;
+
+            if (url == null)
+            {
+                return;
+            }
+
+            if (ownLobby.RoomId != measuredPingsRoomId)
+            {
+                measuredPings.Clear();
+                measuredPingsRoomId = ownLobby.RoomId;
+            }
+
+            using var status = GGRSFFI.ping_measurement_start(url).ToModelGGrsFFI();
+
+            if (!status.IsOk)
+            {
+                _logger.LogError<MatchmakingService>($"Failed to start ping measurement : {status.Info.AsString()}");
+            }
         }
 
         private async Task Update(WSAction action, Action onSuccess, Action onFail)
