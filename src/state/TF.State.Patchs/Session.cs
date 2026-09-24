@@ -19,6 +19,10 @@ namespace TF.State.Patchs
             CalcPatch.Reset();
             rngService.Reset();
 
+            ServiceCollections.ResolveStateContext().Reset();
+            ServiceCollections.ResetState();
+            ServiceCollections.PurgeCache();
+
             if (TowerFall.MainMenu.VersusMatchSettings.Mode.ToModel().IsNetplay() || StateFlags.IsTestMode)
             {
                 __instance.MatchSettings.RandomLevelSeed = rngService.GetSeed();
