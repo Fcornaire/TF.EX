@@ -87,6 +87,11 @@ namespace TF.EX.Patchs.Engine
                 {
                     StateApi.Current.PurgeCache();
                 }
+                else if (ReplayApi.Current?.IsPlayback == true)
+                {
+                    ReplayApi.Current.StopPlayback();
+                    ServiceCollections.ResolveInputService().ResetCurrentInput();
+                }
 
                 netplayManager.Reset();
 
