@@ -11,7 +11,6 @@ namespace TF.EX.Patchs
 {
     public static class InputDelayAdvisor
     {
-        private static readonly TimeSpan PingWaitTimeout = TimeSpan.FromSeconds(5);
         private static readonly TimeSpan ResetHoldDuration = TimeSpan.FromSeconds(1.5);
         private static readonly TimeSpan EnabledStabilityWindow = TimeSpan.FromSeconds(2);
         private static readonly TimeSpan StepRepeatDelay = TimeSpan.FromMilliseconds(300);
@@ -37,8 +36,6 @@ namespace TF.EX.Patchs
         private static readonly Color HoverColor = Color.LightGray;
 
         private static string roomId = "";
-        private static string ownSignature = "";
-        private static DateTime pingWaitStart;
         private static DateTime? enabledPendingSince;
         private static bool displaying;
         private static int? proposedDelay;
@@ -134,22 +131,19 @@ namespace TF.EX.Patchs
         private static void UpdateProposal(Domain.Ports.IMatchmakingService matchmakingService, Lobby lobby)
         {
             var localPeerId = matchmakingService.GetRoomPeerId();
-            var remotes = lobby.Players.Where(player => player.RoomPeerId != localPeerId).ToArray();
+            var measured = lobby.Players
+                .Where(player => player.RoomPeerId != localPeerId)
+                .Select(player => matchmakingService.GetPingTo(player))
+                .OfType<int>()
+                .ToArray();
 
-            var signature = string.Join(",", remotes.Select(player => player.RoomPeerId).OrderBy(id => id));
-            if (signature != ownSignature)
-            {
-                ownSignature = signature;
-                pingWaitStart = DateTime.UtcNow;
-            }
-
-            if (remotes.Length == 0 || remotes.Any(player => player.Ping == 0) && DateTime.UtcNow - pingWaitStart < PingWaitTimeout)
+            if (measured.Length == 0)
             {
                 proposedDelay = null;
                 return;
             }
 
-            var laggiest = remotes.Max(player => matchmakingService.GetPingTo(player));
+            var laggiest = measured.Max();
             var uncoveredMs = laggiest / 2.0 - NetplayPreferences.AcceptedRollbackFrames * NetplayPreferences.RollbackFrameMs;
 
             proposedDelay = Math.Clamp((int)Math.Ceiling(uncoveredMs / FrameMs), MinFrames, MaxFrames);
@@ -355,8 +349,6 @@ namespace TF.EX.Patchs
 
         private static void Reset(INetplayManager netplayManager)
         {
-            ownSignature = "";
-            pingWaitStart = DateTime.UtcNow;
             enabledPendingSince = null;
             proposedDelay = null;
             displaying = false;
