@@ -32,6 +32,8 @@ namespace TF.EX.Domain.Scenarios
 
         public int Frames { get; init; }
 
+        public int Rounds { get; init; } = 1;
+
         public int? Seed { get; init; }
 
         public ScriptedAct[][] Scripts { get; init; } = [];

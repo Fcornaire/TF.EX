@@ -1013,6 +1013,19 @@ namespace TF.EX.Domain.Scenarios
                 ],
                 Expect = level => AllOf<CrackedWall>(level).Count() < 2 && AllOf<Arrow>(level).Any(),
             },
+            new Scenario
+            {
+                Name = "miasma-round-carry",
+                Covers = ["Miasma", "Player", "PlayerCorpse"],
+                Variants = ["SUDDEN DEATH", "CURSED DODGES"],
+                Rounds = 2,
+                Frames = 2400,
+                Spawns = [(130, SpawnY), (190, SpawnY)],
+                Scripts = [Sequence(Wait(150), Dodge(1), Wait(3000)), Still],
+                Expect = level => level.Session.RoundIndex >= 1
+                    && AllOf<Miasma>(level).Any()
+                    && AllOf<Player>(level).Count() == 2,
+            },
         ];
 
         public static Scenario[] Resolve(IEnumerable<string> names)
