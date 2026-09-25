@@ -28,5 +28,17 @@ namespace TF.State.Patchs
                 __instance.MatchSettings.RandomLevelSeed = rngService.GetSeed();
             }
         }
+
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(Session.LevelLoadStart))]
+        public static void Session_LevelLoadStart()
+        {
+            if (StateFlags.IsRestoring)
+            {
+                return;
+            }
+
+            ServiceCollections.ResolveSessionService().GetSession().Miasma = TF.State.Domain.Models.Miasma.Default();
+        }
     }
 }

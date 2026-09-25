@@ -5,7 +5,7 @@ namespace TF.EX.Domain
 {
     public static class ScenarioSweeper
     {
-        private readonly record struct Run(string Label, Action Launch, int Frames, Func<Level, bool> Expect);
+        private readonly record struct Run(string Label, Action Launch, int Frames, Func<Level, bool> Expect, int Rounds);
 
         private const int TEARDOWN_FRAMES = 10;
 
@@ -28,14 +28,14 @@ namespace TF.EX.Domain
 
         public static bool IsRunning => _current != null;
 
-        public static void Start(IEnumerable<(string Label, Action Launch, int Frames, Func<Level, bool> Expect)> runs, int defaultFrames, Action teardown, Action onFinished)
+        public static void Start(IEnumerable<(string Label, Action Launch, int Frames, Func<Level, bool> Expect, int Rounds)> runs, int defaultFrames, Action teardown, Action onFinished)
         {
             _queue.Clear();
             _results.Clear();
 
             foreach (var run in runs)
             {
-                _queue.Enqueue(new Run(run.Label, run.Launch, run.Frames > 0 ? run.Frames : defaultFrames, run.Expect));
+                _queue.Enqueue(new Run(run.Label, run.Launch, run.Frames > 0 ? run.Frames : defaultFrames, run.Expect, Math.Max(1, run.Rounds)));
             }
 
             _teardown = teardown;
@@ -137,7 +137,8 @@ namespace TF.EX.Domain
 
         private static bool IsRoundOver(Level level)
         {
-            return level.Layers.SelectMany(layer => layer.Value.Entities).Any(e => e is VersusRoundResults);
+            return (level.Session?.RoundIndex ?? 0) >= _current.Value.Rounds - 1
+                && level.Layers.SelectMany(layer => layer.Value.Entities).Any(e => e is VersusRoundResults);
         }
 
         private static void Finish(string how)

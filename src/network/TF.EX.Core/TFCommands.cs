@@ -165,7 +165,7 @@ namespace TF.EX.Core
 
             ResetForNextRun();
 
-            var runs = new List<(string, Action, int, Func<TowerFall.Level, bool>)>();
+            var runs = new List<(string, Action, int, Func<TowerFall.Level, bool>, int)>();
 
             for (int i = 0; i < scenarios.Length; i++)
             {
@@ -189,7 +189,7 @@ namespace TF.EX.Core
                         [path],
                         TF.EX.Domain.Models.Constants.VANILLA_FPS);
                 }
-                , captured.Frames, captured.Expect));
+                , captured.Frames, captured.Expect, captured.Rounds));
             }
 
             logger.LogInformation($"[sweep] starting {runs.Count} scenarios from index {startIndex}, seed {(seedArg.HasValue ? seedArg.Value.ToString() : $"{DEFAULT_SCENARIO_SEED}")}");
