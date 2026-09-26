@@ -33,7 +33,7 @@ namespace TF.EX.Domain
                 logger,
                 RiseCore.GameRootPath,
                 metadata.Version.ToString(),
-                required => SemanticVersion.TryParse(required.AsSpan(), out var version) && version <= RiseCore.FortRiseVersion));
+                required => SemanticVersion.TryParse(required.AsSpan(), out var version) && version.IsSatisfiedBy(RiseCore.FortRiseVersion)));
             ServiceCollection.AddSingleton(logger);
             ServiceCollection.AddSingleton(context);
 
