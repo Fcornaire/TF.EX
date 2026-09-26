@@ -79,7 +79,7 @@ It fairly easy to install this mod:
    > The last supported version is [5.5.0-beta.1](https://github.com/FortRise/FortRise/releases/tag/5.5.0-beta.1), This mean the mod won't load/work on version 4.X.X and older or even beyond.
 2. Download the latest TF EX [release](https://github.com/Fcornaire/TF.EX/releases) (`DShad.TF.EX-vX.Y.Z.zip` bundles the four mods; the other zips are the standalone parts)
 3. Create a `Mods` directory in the FortRise folder downloaded
-4. Extract the zip into the `Mods` folder (you should end up with `Mods/DShad.TF.EX`, `Mods/DShad.TF.Replay`, `Mods/DShad.TF.State` and `Mods/DShad.TF.InputDisplayer`)
+4. Put the zip in the `Mods` folder as `Mods/DShad.TF.EX.zip` (no extract needed)
 5. Launch `FortRise.exe` in FortRise folder directly, it will launch and patch Towerfall directly
 
 After that first install the mod keeps itself up to date: when you enter NETPLAY it checks for a new version.

@@ -94,7 +94,7 @@ namespace TF.EX
             var commands = new TF.EX.Core.TFCommands();
             commands.Register(context);
 
-            TF.EX.Domain.ServiceCollections.RegisterServices(context, logger);
+            TF.EX.Domain.ServiceCollections.RegisterServices(context, content.Metadata, logger);
             TF.EX.Domain.ServiceCollections.Build();
 
             var mods = new TF.EX.Core.Api.ModCollections(context, logger);

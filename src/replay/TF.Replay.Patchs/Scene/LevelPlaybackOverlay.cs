@@ -1,15 +1,17 @@
 using HarmonyLib;
+using Microsoft.Xna.Framework.Graphics;
+using Monocle;
 using TF.Replay.Domain;
 using TowerFall;
 
-namespace TF.Replay.Patchs.Layer
+namespace TF.Replay.Patchs.Scene
 {
-    [HarmonyPatch(typeof(GameplayLayer))]
-    internal static class GameplayLayerPatch
+    [HarmonyPatch(typeof(Level))]
+    internal static class LevelPlaybackOverlay
     {
         [HarmonyPostfix]
-        [HarmonyPatch("BatchedRender")]
-        public static void GameplayLayer_BatchedRender()
+        [HarmonyPatch("PostScreen")]
+        public static void Level_PostScreen()
         {
             var service = ServiceCollections.ResolveReplayService();
 
@@ -23,9 +25,23 @@ namespace TF.Replay.Patchs.Layer
                 return;
             }
 
+            Draw.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, DepthStencilState.None, RasterizerState.CullNone, null, Monocle.Engine.Instance.Screen.Matrix);
+
+            try
+            {
+                Render(service);
+            }
+            finally
+            {
+                Draw.SpriteBatch.End();
+            }
+        }
+
+        private static void Render(Domain.Ports.IReplayService service)
+        {
             InputDisplayerOverlay.Render(service);
 
-            SeekBar.Render(service.PlaybackFrame, service.LastFrame,PlaybackControls.IsPaused, PlaybackControls.HoverFrame, service.SeekBlockedBy);
+            SeekBar.Render(service.PlaybackFrame, service.LastFrame, PlaybackControls.IsPaused, PlaybackControls.HoverFrame, service.SeekBlockedBy);
 
             if (Takeover.State != Takeover.Phase.Off && service.SeekBlockedBy == null)
             {

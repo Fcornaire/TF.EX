@@ -136,6 +136,7 @@ namespace TF.Replay.Domain
             if (Takeover.State != Takeover.Phase.Off)
             {
                 IsPaused = false;
+                ShouldShowHelp = false;
                 _hasStepQueued = false;
                 HoverFrame = null;
                 MousePosition = null;

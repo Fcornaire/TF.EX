@@ -18,7 +18,7 @@ namespace TF.EX.Domain
         public static IServiceProvider ServiceProvider;
         private static IModCollections _modCollections;
 
-        public static void RegisterServices(IModuleContext context, ILogger logger)
+        public static void RegisterServices(IModuleContext context, ModuleMetadata metadata, ILogger logger)
         {
             if (ServiceCollection != null)
             {
@@ -29,7 +29,11 @@ namespace TF.EX.Domain
 
             ServiceCollection.AddLazyCache();
 
-            ServiceCollection.AddSingleton<IAutoUpdater>(_ => new AutoUpdater(logger, Path.Combine(RiseCore.GameRootPath, "Mods")));
+            ServiceCollection.AddSingleton<IAutoUpdater>(_ => new AutoUpdater(
+                logger,
+                RiseCore.GameRootPath,
+                metadata.Version.ToString(),
+                required => SemanticVersion.TryParse(required.AsSpan(), out var version) && version <= RiseCore.FortRiseVersion));
             ServiceCollection.AddSingleton(logger);
             ServiceCollection.AddSingleton(context);
 
