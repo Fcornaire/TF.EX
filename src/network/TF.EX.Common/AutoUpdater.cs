@@ -1,7 +1,5 @@
-using MessagePack;
 using Microsoft.Extensions.Logging;
 using System.IO.Compression;
-using System.Runtime.Serialization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
@@ -9,13 +7,6 @@ using TF.EX.Common.Extensions;
 
 namespace TF.EX.Common
 {
-    [DataContract]
-    public class GithubTag
-    {
-        [DataMember(Name = "name")]
-        public string Name { get; set; }
-    }
-
     public enum UpdateStatus
     {
         Unknown,
@@ -37,9 +28,10 @@ namespace TF.EX.Common
     public partial class AutoUpdater(ILogger logger, string fortRisePath, string currentVersion, Func<string, bool> supportsFortRise) : IAutoUpdater
     {
 
-        [GeneratedRegex(@"v\d+\.\d+\.\d+")]
-        private static partial Regex VersionRegex();
+        [GeneratedRegex(@"/tag/v(\d+\.\d+\.\d+)$")]
+        private static partial Regex LatestTagRegex();
 
+        private const string ReleasesUrl = "https://github.com/FCornaire/TF.EX/releases";
         private const string ModName = "TF.EX";
         private const string BundleName = "DShad.TF.EX.zip";
         private const string BundleMeta = "DShad.TF.EX/meta.json";
@@ -87,15 +79,15 @@ namespace TF.EX.Common
 
                 _logger.LogDebug<AutoUpdater>($"Latest TF.EX version: {latestVersion}");
 
-                _downloadUrl = latestVersion > currentVersion ? await ResolveDownloadUrl($"v{latestVersion}") : null;
-
-                if (_downloadUrl != null)
+                if (latestVersion > currentVersion)
                 {
+                    _downloadUrl = $"{ReleasesUrl}/download/v{latestVersion}/DShad.TF.EX-v{latestVersion}.zip";
                     _logger.LogDebug<AutoUpdater>($"TF.EX Update available! ({_downloadUrl})");
                     _status = UpdateStatus.UpdateAvailable;
                 }
                 else
                 {
+                    _downloadUrl = null;
                     _logger.LogDebug<AutoUpdater>("No TF.EX Update available");
                     _status = UpdateStatus.UpToDate;
                 }
@@ -308,44 +300,23 @@ namespace TF.EX.Common
             }
         }
 
-        private async Task<Version> FetchLatestVersion()
+        private static async Task<Version> FetchLatestVersion()
         {
-            using var client = new HttpClient();
+            using var client = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false });
             client.DefaultRequestHeaders.Add("User-Agent", "Towerfall");
-            var response = await client.GetAsync("https://api.github.com/repos/fcornaire/tf.ex/tags");
-            var content = await response.Content.ReadAsStringAsync();
-            var bytes = MessagePackSerializer.ConvertFromJson(content);
-            var tags = MessagePackSerializer.Deserialize<List<GithubTag>>(bytes);
 
-            var regex = VersionRegex();
-            var semverTags = tags.Select(t => t.Name).Where(tag => regex.IsMatch(tag)).ToList();
-            var latestSemverTag = semverTags.OrderByDescending(t => new Version(t.Substring(1))).FirstOrDefault();
+            using var request = new HttpRequestMessage(HttpMethod.Head, $"{ReleasesUrl}/latest");
+            using var response = await client.SendAsync(request);
 
-            return new Version(latestSemverTag.Substring(1));
-        }
+            var location = response.Headers.Location?.OriginalString;
+            var match = location != null ? LatestTagRegex().Match(location) : null;
 
-        private async Task<string> ResolveDownloadUrl(string tag)
-        {
-            using var client = new HttpClient();
-            client.DefaultRequestHeaders.Add("User-Agent", "Towerfall");
-            var response = await client.GetAsync($"https://api.github.com/repos/fcornaire/tf.ex/releases/tags/{tag}");
-
-            if (!response.IsSuccessStatusCode)
+            if (match == null || !match.Success)
             {
-                return null;
+                throw new InvalidOperationException($"Could not resolve the latest release ({(int)response.StatusCode}, location: {location ?? "none"})");
             }
 
-            using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-
-            foreach (var asset in document.RootElement.GetProperty("assets").EnumerateArray())
-            {
-                if (asset.GetProperty("name").GetString() == $"DShad.TF.EX-{tag}.zip")
-                {
-                    return asset.GetProperty("browser_download_url").GetString();
-                }
-            }
-
-            return null;
+            return new Version(match.Groups[1].Value);
         }
     }
 }
