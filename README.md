@@ -21,8 +21,8 @@
 
 # About The Project
 
-TF EX is a mod that attempts to bring netplay to TowerFall (EX as in a Fighting game EX move). It uses [FortRise](https://github.com/Terria-K/FortRise) (the supported version is [5.5.0-beta.1
-](https://github.com/FortRise/FortRise/releases/tag/5.5.0-beta.1))+ Rollback netcode as infrastructure.
+TF EX is a mod that attempts to bring netplay to TowerFall (EX as in a Fighting game EX move). It uses [FortRise](https://github.com/Terria-K/FortRise) (the supported version is [5.5.0-beta.2
+](https://github.com/FortRise/FortRise/releases/tag/5.5.0-beta.2))+ Rollback netcode as infrastructure.
 Due to the nature of the project, the mod is also able to record + view previous matches.
 Also, this project is still WIP!
 
@@ -76,7 +76,7 @@ It fairly easy to install this mod:
 
 1. Install [FortRise](https://github.com/Terria-K/FortRise)
    > [!WARNING]  
-   > The last supported version is [5.5.0-beta.1](https://github.com/FortRise/FortRise/releases/tag/5.5.0-beta.1), This mean the mod won't load/work on version 4.X.X and older or even beyond.
+   > The last supported version is [5.5.0-beta.2](https://github.com/FortRise/FortRise/releases/tag/5.5.0-beta.2), This mean the mod won't load/work on version 4.X.X and older or even beyond.
 2. Download the latest TF EX [release](https://github.com/Fcornaire/TF.EX/releases) (`DShad.TF.EX-vX.Y.Z.zip` bundles the four mods; the other zips are the standalone parts)
 3. Create a `Mods` directory in the FortRise folder downloaded
 4. Put the zip in the `Mods` folder as `Mods/DShad.TF.EX.zip` (no extract needed)
