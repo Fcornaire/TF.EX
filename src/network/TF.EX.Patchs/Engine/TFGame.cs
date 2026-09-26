@@ -411,7 +411,7 @@ namespace TF.EX.Patchs.Engine
                 _updaterDialog = null;
                 inputService.EnableAllControllers();
                 Sounds.ui_invalid.Play();
-                Notification.Create(instance.Scene, "Update failed! Online play requires the latest version", 10, 500);
+                Notification.Create(instance.Scene, autoUpdater.GetFailureReason() ?? "Update failed! Online play requires the latest version", 10, 500);
                 return;
             }
 

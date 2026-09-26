@@ -2,6 +2,8 @@ using MessagePack;
 using Microsoft.Extensions.Logging;
 using System.IO.Compression;
 using System.Runtime.Serialization;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using TF.EX.Common.Extensions;
 
@@ -28,25 +30,34 @@ namespace TF.EX.Common
         UpdateStatus GetStatus();
         Version GetLatestVersion();
         Version GetCurrentVersion();
+        string GetFailureReason();
         Task<bool> DownloadAndApply(Action<string> onPhase, Action<long, long> onProgress);
     }
 
-    public partial class AutoUpdater : IAutoUpdater
+    public partial class AutoUpdater(ILogger logger, string fortRisePath, string currentVersion, Func<string, bool> supportsFortRise) : IAutoUpdater
     {
 
         [GeneratedRegex(@"v\d+\.\d+\.\d+")]
         private static partial Regex VersionRegex();
 
-        private static readonly string[] ModFolders = { "DShad.TF.EX", "DShad.TF.Replay", "DShad.TF.State", "DShad.TF.InputDisplayer" };
+        private const string ModName = "TF.EX";
+        private const string BundleName = "DShad.TF.EX.zip";
+        private const string BundleMeta = "DShad.TF.EX/meta.json";
+
+        private static readonly string[] LegacyFolders = { "DShad.TF.EX", "DShad.TF.Replay", "DShad.TF.State", "DShad.TF.InputDisplayer" };
 
         //Stream.CopyToAsync's default
         private const int CopyBufferSize = 81920;
 
-        private readonly ILogger _logger;
-        private readonly string _modsPath;
+        private readonly ILogger _logger = logger;
+        private readonly string _fortRisePath = fortRisePath;
+        private readonly Func<string, bool> _supportsFortRise = supportsFortRise;
         private string DownloadPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "TF.EX", "Update");
 
         private string ZipPath => Path.Combine(DownloadPath, "update.zip");
+        private string ModsPath => Path.Combine(_fortRisePath, "Mods");
+
+        private string ModUpdaterPath => Path.Combine(_fortRisePath, "ModUpdater");
 
         private static readonly TimeSpan CheckTimestamp = TimeSpan.FromMinutes(5);
 
@@ -55,13 +66,8 @@ namespace TF.EX.Common
         private string _downloadUrl;
 
         private Version latestVersion;
-        private Version currentVersion;
-
-        public AutoUpdater(ILogger logger, string modsPath)
-        {
-            _logger = logger;
-            _modsPath = modsPath;
-        }
+        private readonly Version currentVersion = new(currentVersion);
+        private string _failureReason;
 
         public async Task CheckForUpdate()
         {
@@ -73,9 +79,6 @@ namespace TF.EX.Common
             try
             {
                 CleanupPreviousUpdate();
-
-                var meta = File.ReadAllText(Path.Combine(_modsPath, "DShad.TF.EX", "meta.json"));
-                currentVersion = GetVersion(meta);
 
                 _logger.LogDebug<AutoUpdater>($"Current TF.EX version: {currentVersion}");
                 _logger.LogDebug<AutoUpdater>($"Checking latest TF.EX version");
@@ -126,16 +129,24 @@ namespace TF.EX.Common
             return currentVersion;
         }
 
+        public string GetFailureReason()
+        {
+            return _failureReason;
+        }
+
         public async Task<bool> DownloadAndApply(Action<string> onPhase, Action<long, long> onProgress)
         {
+            _failureReason = null;
+
             try
             {
                 onPhase?.Invoke($"DOWNLOADING V{latestVersion}");
                 await Download(onProgress);
 
                 onPhase?.Invoke("APPLYING UPDATE");
-                Extract();
-                Apply();
+                var requiredFortRise = Validate();
+                StageVersion(requiredFortRise);
+                RemoveLegacyFolders();
 
                 Directory.Delete(DownloadPath, true);
 
@@ -158,7 +169,7 @@ namespace TF.EX.Common
             {
                 Directory.Delete(DownloadPath, true);
             }
-            
+
             Directory.CreateDirectory(DownloadPath);
 
             using var client = new HttpClient();
@@ -184,56 +195,90 @@ namespace TF.EX.Common
             }
         }
 
-        private void Extract()
+        private string Validate()
         {
-            _logger.LogDebug<AutoUpdater>("Extracting update...");
+            using var zip = ZipFile.OpenRead(ZipPath);
 
-            ZipFile.ExtractToDirectory(ZipPath, DownloadPath);
+            var entry = zip.GetEntry(BundleMeta) ?? throw new InvalidOperationException($"The downloaded archive has no {BundleMeta}");
 
-            if (!ModFolders.Any(folder => Directory.Exists(Path.Combine(DownloadPath, folder))))
+            using var stream = entry.Open();
+            using var meta = JsonDocument.Parse(stream);
+
+            var version = new Version(meta.RootElement.GetProperty("version").GetString());
+
+            if (version != latestVersion)
             {
-                throw new InvalidOperationException("The downloaded archive holds none of the mod folders ?");
+                throw new InvalidOperationException($"The downloaded archive holds {version} instead of {latestVersion}");
             }
+
+            var requiredFortRise = meta.RootElement.GetProperty("dependencies").EnumerateArray()
+                .Where(dependency => dependency.GetProperty("name").GetString() == "FortRise")
+                .Select(dependency => dependency.GetProperty("version").GetString())
+                .FirstOrDefault();
+
+            if (requiredFortRise != null && !_supportsFortRise(requiredFortRise))
+            {
+                _failureReason = $"FortRise {requiredFortRise} is required, update FortRise first";
+                throw new InvalidOperationException(_failureReason);
+            }
+
+            return requiredFortRise;
         }
 
-        private void Apply()
+        private void StageVersion(string requiredFortRise)
         {
-            foreach (var folder in ModFolders)
-            {
-                var source = Path.Combine(DownloadPath, folder);
+            Directory.CreateDirectory(ModUpdaterPath);
 
-                if (!Directory.Exists(source))
+            var staged = Path.Combine(ModUpdaterPath, BundleName);
+            File.Copy(ZipPath, staged, true);
+
+            var listPath = Path.Combine(ModUpdaterPath, "updater.json");
+            var entries = File.Exists(listPath) && JsonNode.Parse(File.ReadAllText(listPath)) is JsonArray existing
+                ? existing
+                : [];
+
+            foreach (var previous in entries.Where(entry => entry?["ModName"]?.GetValue<string>() == ModName).ToList())
+            {
+                entries.Remove(previous);
+            }
+
+            entries.Add(new JsonObject
+            {
+                ["ModName"] = ModName,
+                ["Version"] = currentVersion.ToString(),
+                ["UpdateVersion"] = latestVersion.ToString(),
+                ["FortRiseRequiredVersion"] = requiredFortRise ?? "0.0.0",
+                ["ModPath"] = BundleName,
+                ["UpdateModPath"] = staged,
+                ["IsZipped"] = true,
+            });
+
+            File.WriteAllText(listPath, entries.ToJsonString());
+
+            _logger.LogDebug<AutoUpdater>($"Staged {latestVersion} in {staged}");
+        }
+
+        private void RemoveLegacyFolders()
+        {
+            foreach (var folder in LegacyFolders)
+            {
+                var path = Path.Combine(ModsPath, folder);
+
+                if (!Directory.Exists(path))
                 {
-                    _logger.LogDebug<AutoUpdater>($"{folder} is not part of the update, skipping");
                     continue;
                 }
 
-                var destination = Path.Combine(_modsPath, folder);
+                File.Delete(Path.Combine(path, "meta.json"));
 
-                ClearFolder(destination);
-                MoveInto(source, destination);
-
-                _logger.LogDebug<AutoUpdater>($"Updated {folder}");
-            }
-        }
-
-        //a native (ggrs_ffi.dll for example) cannot be deleted, it will be removed by CleanupPreviousUpdate after the restart
-        private void ClearFolder(string folder)
-        {
-            if (!Directory.Exists(folder))
-            {
-                return;
-            }
-
-            foreach (var file in Directory.GetFiles(folder, "*", SearchOption.AllDirectories))
-            {
                 try
                 {
-                    File.Delete(file);
+                    Directory.Delete(path, true);
+                    _logger.LogDebug<AutoUpdater>($"Removed {folder}");
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    File.Move(file, $"{file}.{Guid.NewGuid():N}.old", true);
+                    _logger.LogError<AutoUpdater>($"Could remove {folder}", ex);
                 }
             }
         }
@@ -247,36 +292,19 @@ namespace TF.EX.Common
                     Directory.Delete(DownloadPath, true);
                 }
 
-                foreach (var folder in ModFolders)
+                foreach (var folder in LegacyFolders)
                 {
-                    var destination = Path.Combine(_modsPath, folder);
+                    var path = Path.Combine(ModsPath, folder);
 
-                    if (!Directory.Exists(destination))
+                    if (Directory.Exists(path) && !File.Exists(Path.Combine(path, "meta.json")))
                     {
-                        continue;
-                    }
-
-                    foreach (var file in Directory.GetFiles(destination, "*.old", SearchOption.AllDirectories))
-                    {
-                        File.Delete(file);
+                        Directory.Delete(path, true);
                     }
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError<AutoUpdater>("Could not clean the previous update", ex);
-            }
-        }
-
-        private void MoveInto(string source, string destinationFolder)
-        {
-            foreach (var file in Directory.GetFiles(source, "*", SearchOption.AllDirectories))
-            {
-                var destination = Path.Combine(destinationFolder, Path.GetRelativePath(source, file));
-
-                Directory.CreateDirectory(Path.GetDirectoryName(destination));
-
-                File.Move(file, destination, true);
             }
         }
 
@@ -296,7 +324,6 @@ namespace TF.EX.Common
             return new Version(latestSemverTag.Substring(1));
         }
 
-        //a release without the bundle asset (pre-1.0 naming) counts as no update
         private async Task<string> ResolveDownloadUrl(string tag)
         {
             using var client = new HttpClient();
@@ -308,7 +335,7 @@ namespace TF.EX.Common
                 return null;
             }
 
-            using var document = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
 
             foreach (var asset in document.RootElement.GetProperty("assets").EnumerateArray())
             {
@@ -319,20 +346,6 @@ namespace TF.EX.Common
             }
 
             return null;
-        }
-
-        private Version GetVersion(string jsonText)
-        {
-            string pattern = "\"version\": \"(.*?)\"";
-
-            Match match = Regex.Match(jsonText, pattern);
-            if (match.Success)
-            {
-                string version = match.Groups[1].Value;
-                return new Version(version);
-            }
-
-            throw new InvalidOperationException("Unable to get version from meta.json");
         }
     }
 }

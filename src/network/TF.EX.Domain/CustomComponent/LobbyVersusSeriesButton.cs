@@ -10,7 +10,7 @@ namespace TF.EX.Domain.CustomComponent
         public const int DUEL_PLAYERS = 2;
         public const int TEAM_PLAYERS = 4;
 
-        private static readonly int[] Options = { 0, 1, 3, 5 };
+        private static readonly int[] Options = { 0, 1, 3, 5, 7 };
 
         private static bool IsLocked => Context.LobbyBuilderContext.IsEditing;
 

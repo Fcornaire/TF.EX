@@ -79,6 +79,11 @@ namespace TF.State.TowerFallExtensions
             dynTFGame.Set("TimeRate", orb.Time.EngineTimeRate);
             dynTFGame.Set("DeltaTime", (float)Engine.Instance.TargetElapsedTime.TotalSeconds * orb.Time.EngineTimeRate);
 
+            if (!orb.Time.GameRateEased)
+            {
+                ScreenEffects.Reset();
+            }
+
             var spaceCounter = dynOrb.Get<Counter>("spaceCounter");
             spaceCounter.LoadState(orb.Space.SpaceCounter);
 
