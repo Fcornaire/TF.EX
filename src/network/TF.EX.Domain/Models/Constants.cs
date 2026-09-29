@@ -10,6 +10,8 @@ namespace TF.EX.Domain.Models
         public const int MAX_PREDICTION_FRAMES = 15;
         public const int MAX_PREDICTION_TICKS = MAX_PREDICTION_FRAMES * NETPLAY_FPS / VANILLA_FPS;
 
+        public const int SPECTATOR_CATCHUP_THRESHOLD = NETPLAY_FPS / 2;
+
         public static readonly IEnumerable<string> NETPLAY_SAFE_MAP = new List<string> //Not all map are supported in netplay right now... //TODO: it actually is, remove this next time
         {
             "SACRED GROUND",

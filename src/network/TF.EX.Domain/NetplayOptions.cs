@@ -12,6 +12,15 @@ namespace TF.EX.Domain
 
         public static bool IsApplied => _applied;
 
+        public static bool UseInstantReplay
+        {
+            get
+            {
+                var replayMode = _applied ? _replayMode : SaveData.Instance?.Options?.ReplayMode;
+                return replayMode != null && replayMode != Options.ReplayModes.Off;
+            }
+        }
+
         public static void Apply()
         {
             var options = SaveData.Instance?.Options;

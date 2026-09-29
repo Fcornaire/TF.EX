@@ -460,8 +460,8 @@ namespace TF.State.TowerFallExtensions
                 dynVersusRoundResults.Set("Level", level);
 
                 var hudLayer = level.Layers.FirstOrDefault(l => l.Value.Index == versusRoundResults.LayerIndex).Value;
+                hudLayer.Entities.Insert(0, hudFade);
                 hudLayer.Entities.Add(versusRoundResults);
-                hudLayer.Entities.Add(hudFade);
                 versusRoundResults.Added();
                 hudFade.Added();
 

@@ -6,7 +6,7 @@ namespace TF.State.Patchs.Entity.LevelEntity
     //Useful to feeze untracked entity to not make them move at the speed of light during rollbak
     public static class CosmeticFreeze
     {
-        public static bool ShouldFreeze => StateFlags.IsRollbackFrame || StateFlags.HasFramesToReSimulate;
+        public static bool ShouldFreeze => StateFlags.IsCosmeticFrozen;
 
         private static readonly List<Monocle.Component> _frozen = new List<Monocle.Component>();
 

@@ -20,7 +20,7 @@ namespace TF.State.Patchs.SFX
         [HarmonyPatch("Play")]
         public static bool SFX_Play(Monocle.SFX __instance, float panX, float volume)
         {
-            if (!StateFlags.IsCaptureActive)
+            if (!StateFlags.IsCaptureActive || StateFlags.IsReplayViewing)
             {
                 return true;
             }

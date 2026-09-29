@@ -1094,7 +1094,7 @@ namespace TF.Replay.Domain.Services
         {
             var record = NearestStateRecord(frame);
 
-            return record == null || api.IsRoundStarted(record.State);
+            return record == null || (api.IsRoundStarted(record.State) && api.DescribePlayers(record.State).Length > 0);
         }
 
         public int SeekLandingFor(int frame)

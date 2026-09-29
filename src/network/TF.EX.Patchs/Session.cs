@@ -1,10 +1,9 @@
 ﻿using HarmonyLib;
-using TF.EX.Domain.Interop;
 using MonoMod.Utils;
 using TF.EX.Common.Extensions;
 using TF.EX.Domain;
-using TF.EX.Domain.Context;
 using TF.EX.Domain.Extensions;
+using TF.EX.Domain.Interop;
 using TowerFall;
 
 namespace TF.EX.Patchs
@@ -73,6 +72,52 @@ namespace TF.EX.Patchs
             }
 
             return true;
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch("EndRound")]
+        public static void Session_EndRound_Prefix(Session __instance, out ReplayRecorder __state)
+        {
+            __state = null;
+            var level = __instance.CurrentLevel;
+
+            if (!InstantReplayFootage.UsesScreenRecorder || level?.ReplayRecorder == null)
+            {
+                return;
+            }
+
+            __state = level.ReplayRecorder;
+            __state.End();
+            DynamicData.For(level).Set("ReplayRecorder", null);
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("EndRound")]
+        public static void Session_EndRound_Postfix(Session __instance, ReplayRecorder __state)
+        {
+            if (__state != null)
+            {
+                DynamicData.For(__instance.CurrentLevel).Set("ReplayRecorder", __state);
+            }
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch("StartGame")]
+        public static void Session_StartGame()
+        {
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            var isExMatch = (TowerFall.MainMenu.VersusMatchSettings?.Mode.IsNetplay() == true || netplayManager.IsTestMode()) && !netplayManager.IsReplayMode();
+
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+            var lobby = matchmakingService.GetOwnLobby();
+            var doesEveryoneUseInstantReplay = ScenarioSweeper.IsRunning
+                ? ScenarioSweeper.UseInstantReplay
+                : lobby == null || lobby.IsEmpty || matchmakingService.IsSpectator()
+                    ? NetplayOptions.UseInstantReplay
+                    : lobby.Players.All(player => player.UseInstantReplay);
+
+            StateApi.Current.SetInstantReplay(isExMatch && doesEveryoneUseInstantReplay);
+            InstantReplayFootage.ResetMatch();
         }
 
         [HarmonyPostfix]

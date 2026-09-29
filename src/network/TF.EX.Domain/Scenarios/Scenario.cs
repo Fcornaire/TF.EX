@@ -2,12 +2,12 @@
 
 namespace TF.EX.Domain.Scenarios
 {
-    public sealed record ScenarioEntity(string Name, int x, int y, string Attributes = "")
+    public record ScenarioEntity(string Name, int x, int y, string Attributes = "")
     {
         public (int X, int Y)[] Nodes { get; init; } = [];
     }
 
-    public sealed record ScriptedAct(
+    public record ScriptedAct(
         int Frames,
         int MoveX = 0,
         int MoveY = 0,
@@ -18,7 +18,7 @@ namespace TF.EX.Domain.Scenarios
         int AimY = 0,
         bool AltShoot = false);
 
-    public sealed class Scenario
+    public class Scenario
     {
         public string Name { get; init; }
 
@@ -33,6 +33,8 @@ namespace TF.EX.Domain.Scenarios
         public int Frames { get; init; }
 
         public int Rounds { get; init; } = 1;
+
+        public bool UseInstantReplay { get; init; }
 
         public int? Seed { get; init; }
 

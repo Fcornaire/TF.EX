@@ -109,7 +109,8 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                     entity.Visible = true;
                     if (toLoad.AppearTimer > 0)
                     {
-                        entity.Flash((int)toLoad.AppearTimer);
+                        entity.Flash((int)Math.Ceiling(toLoad.AppearTimer));
+                        dynTreasureChest.Set("flashCounter", toLoad.AppearTimer);
                     }
                     var appearAlarm = Alarm.Set(entity, (int)toLoad.AppearTimer, delegate
                     {

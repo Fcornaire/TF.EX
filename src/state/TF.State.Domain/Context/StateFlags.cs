@@ -20,6 +20,12 @@ namespace TF.State.Domain.Context
 
         public static bool HasFramesToReSimulate => FramesToReSimulate > 0;
 
+        public static bool IsInstantReplayBaking;
+
+        public static bool IsReplayViewing;
+
+        public static bool IsCosmeticFrozen => (IsRollbackFrame || HasFramesToReSimulate) && !IsInstantReplayBaking;
+
         public static string FrameDriverOwner;
 
         public static void Reset()
@@ -32,6 +38,7 @@ namespace TF.State.Domain.Context
             IsRestoring = false;
             IsRollbackFrame = false;
             FramesToReSimulate = 0;
+            IsInstantReplayBaking = false;
         }
     }
 }

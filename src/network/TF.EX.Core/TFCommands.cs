@@ -177,6 +177,7 @@ namespace TF.EX.Core
                 runs.Add(($"scenario {index:00} {captured.Name}", () =>
                 {
                     InputScripter.Start(captured.PlayerCount, captured.Scripts);
+                    ScenarioSweeper.UseInstantReplay = captured.UseInstantReplay;
 
                     StartTestMode(
                         captured.Mode,

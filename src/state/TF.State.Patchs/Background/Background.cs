@@ -12,7 +12,7 @@ namespace TF.State.Patchs.Background
         public static bool Background_Update(TowerFall.Background __instance)
         {
 
-            if (!StateFlags.IsRollbackFrame && !StateFlags.HasFramesToReSimulate)
+            if (!StateFlags.IsCosmeticFrozen)
             {
                 return true;
             }

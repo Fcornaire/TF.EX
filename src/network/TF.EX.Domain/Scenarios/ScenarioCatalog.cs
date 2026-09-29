@@ -1026,6 +1026,39 @@ namespace TF.EX.Domain.Scenarios
                     && AllOf<Miasma>(level).Any()
                     && AllOf<Player>(level).Count() == 2,
             },
+            new Scenario
+            {
+                Name = "instant-replay",
+                Covers = ["Player", "PlayerCorpse", "Arrow"],
+                UseInstantReplay = true,
+                Rounds = 2,
+                Frames = 3000,
+                Spawns = [(60, SpawnY), (140, SpawnY)],
+                Scripts = [Sequence(AimAndFire(1, 0), Wait(289)), Still],
+                Expect = level => level.Session.RoundIndex >= 1
+                    && InstantReplayFootage.PlayedThisMatch > 0
+                    && AllOf<Player>(level).Count() == 2,
+            },
+            new Scenario
+            {
+                Name = "shield-pickup",
+                Covers = ["Chest", "Pickup", "Player"],
+                Variants =
+                [
+                    "MAX TREASURE",
+                    "IGNORE TOWER ITEM SET",
+                    "NO EXTRA ARROWS", "NO BOMB ARROWS", "NO LASER ARROWS", "NO BRAMBLE ARROWS",
+                    "NO DRILL ARROWS", "NO BOLT ARROWS", "NO SUPER BOMB ARROWS", "NO FEATHER ARROWS",
+                    "NO TRIGGER ARROWS", "NO PRISM ARROWS",
+                    "NO WINGS", "NO SPEED BOOTS", "NO LOOKING GLASS", "NO BOMB",
+                    "NO DARK ORB", "NO TIME ORB", "NO LAVA ORB", "NO SPACE ORB",
+                ],
+                Frames = 700,
+                Spawns = [(160, SpawnY), (300, SpawnY)],
+                Scripts = [Sequence(ChestUp(), Jump(24), Wait(20), Walk(1, 50), Wait(1500)), Still],
+                Entities = [new ScenarioEntity("TreasureChest", 160, SpawnY)],
+                Expect = level => AllOf<ShieldPickup>(level).Any(shield => shield.Collidable),
+            },
         ];
 
         public static Scenario[] Resolve(IEnumerable<string> names)

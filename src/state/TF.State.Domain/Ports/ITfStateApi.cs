@@ -75,6 +75,15 @@ namespace TF.State.Domain.Ports
         void UnregisterStateEvents(string modName, string key);
         bool HasStateEvents(string id);
         bool IsTestMode();
+
+        void SetInstantReplay(bool enabled);
+        bool IsInstantReplayEnabled();
+        void SetInstantReplayBaking(bool baking);
+        int GetRoundResultsAge();
+        bool StartInstantReplay(TowerFall.ReplayData footage);
+        bool IsInstantReplayPlaying();
+        void TickInstantReplay();
+        void StopInstantReplay();
     }
 
     public static class TfStateApiData

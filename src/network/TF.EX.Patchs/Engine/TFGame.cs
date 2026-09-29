@@ -39,7 +39,6 @@ namespace TF.EX.Patchs.Engine
 
         private const double DELAYED_CATCHUP_RATIO = 1.25;
         private const double LIVE_CATCHUP_RATIO = 8.0;
-        private const int DELAYED_CATCHUP_THRESHOLD = Domain.Models.Constants.NETPLAY_FPS / 2;
         private const float MAX_NOTIFICATION_TEXT_WIDTH = 290f; //vanilla screen minus some margin
         private static bool? _preSessionFixedStep;
 
@@ -254,6 +253,11 @@ namespace TF.EX.Patchs.Engine
                 netplayManager.Poll();
             }
 
+            if (netplayManager.IsDisconnected())
+            {
+                InstantReplayFootage.Abort();
+            }
+
             if (!netplayManager.IsDisconnected())
             {
                 if (netplayManager.IsSpectatorMode())
@@ -269,7 +273,7 @@ namespace TF.EX.Patchs.Engine
                 {
                     fpsDelta *= SLOW_RATIO;
                 }
-                else if (netplayManager.IsSpectatorMode() && GGRSFFI.netplay_frames_behind() > DELAYED_CATCHUP_THRESHOLD)
+                else if (netplayManager.IsSpectatorMode() && GGRSFFI.netplay_frames_behind() > Constants.SPECTATOR_CATCHUP_THRESHOLD)
                 {
                     fpsDelta /= netplayManager.IsSpectatorCatchupEnabled() ? LIVE_CATCHUP_RATIO : DELAYED_CATCHUP_RATIO;
                 }
@@ -281,6 +285,11 @@ namespace TF.EX.Patchs.Engine
                 while (Accumulator.TotalSeconds > fpsDelta)
                 {
                     Accumulator = Accumulator.Subtract(TimeSpan.FromSeconds(fpsDelta));
+
+                    if (InstantReplayFootage.StepPause())
+                    {
+                        continue;
+                    }
 
                     if (netplayManager.IsSynchronized() || netplayManager.GetNetplayMode().Equals(NetplayMode.Test))
                     {
@@ -319,6 +328,8 @@ namespace TF.EX.Patchs.Engine
                                 }
 
                                 TFGame_Update_orig(__instance, gameTime);
+
+                                InstantReplayFootage.TryStart(__instance.Scene as Level);
                             }
                         }
                     }

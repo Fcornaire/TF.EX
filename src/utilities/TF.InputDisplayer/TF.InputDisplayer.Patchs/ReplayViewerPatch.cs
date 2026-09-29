@@ -14,15 +14,24 @@ namespace TF.InputDisplayer.Patchs
 
         private static readonly AccessTools.FieldRef<ReplayViewer, InputRenderer[]> InputRenderers = AccessTools.FieldRefAccess<ReplayViewer, InputRenderer[]>("inputRenderers");
 
-        private static readonly InputHistory _history = new InputHistory();
+        private static readonly InputHistory _history = new();
 
         private static bool _ready;
+
+        private static ReplayData _replayData;
 
         internal static bool Active => DisplayOptions.Enabled && DisplayOptions.ShowInInstantReplay;
 
         internal static void Render(ReplayViewer viewer, bool outside)
         {
-            if (!_ready || !Active)
+            if (!Active)
+            {
+                return;
+            }
+
+            Sync(viewer);
+
+            if (!_ready)
             {
                 return;
             }
@@ -54,18 +63,19 @@ namespace TF.InputDisplayer.Patchs
             }
         }
 
-        [HarmonyPostfix]
-        [HarmonyPatch("Watch")]
-        public static void ReplayViewer_Watch(ReplayViewer __instance)
+        private static void Sync(ReplayViewer viewer)
         {
-            _ready = false;
+            var data = Data(viewer);
 
-            if (!Active)
+            if (data == _replayData)
             {
                 return;
             }
 
-            var frames = Data(__instance)?.Frames;
+            _replayData = data;
+            _ready = false;
+
+            var frames = data?.Frames;
 
             if (frames == null)
             {
