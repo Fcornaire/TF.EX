@@ -26,6 +26,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             {
                 ActualDepth = actualDepth,
                 IsCollidable = collidable,
+                IsVisible = entity.Visible,
                 Position = entity.Position.ToModel(),
                 PositionCounter = positionCounter.ToModel(),
                 Shake = shakeAlarm.GetState(),
@@ -44,10 +45,18 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
         {
             var dynCrackedPlatform = DynamicData.For(entity);
 
+            var state = (TowerFall.CrackedPlatform.States)toLoad.State;
+
             entity.Collidable = toLoad.IsCollidable;
+            entity.Visible = toLoad.IsVisible ?? state is not (TowerFall.CrackedPlatform.States.Dead or TowerFall.CrackedPlatform.States.Respawning);
             entity.Position = toLoad.Position.ToTFVector();
             dynCrackedPlatform.Set("counter", toLoad.PositionCounter.ToTFVector());
-            dynCrackedPlatform.Set("state", (TowerFall.CrackedPlatform.States)toLoad.State);
+            dynCrackedPlatform.Set("state", state);
+
+            if (state != TowerFall.CrackedPlatform.States.Shaking)
+            {
+                dynCrackedPlatform.Get<Tilemap>("tiles").Position = Vector2.Zero;
+            }
 
             var shakeAlarm = dynCrackedPlatform.Get<Alarm>("shakeAlarm");
             shakeAlarm.LoadState(toLoad.Shake);
