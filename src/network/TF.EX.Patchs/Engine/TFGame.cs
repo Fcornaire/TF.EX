@@ -41,6 +41,7 @@ namespace TF.EX.Patchs.Engine
         private const double LIVE_CATCHUP_RATIO = 8.0;
         private const float MAX_NOTIFICATION_TEXT_WIDTH = 290f; //vanilla screen minus some margin
         private static bool? _preSessionFixedStep;
+        private static bool _oneFrameDelayForced;
 
         private static readonly MethodInfo _mInputUpdate = AccessTools.Method(typeof(MInput), "Update"); //Minput Update is an internal static method...
 
@@ -716,6 +717,9 @@ namespace TF.EX.Patchs.Engine
                         self.EnableFixedTimeStep(true);
                     }
 
+                    Coroutine.OneFrameDelay = false;
+                    _oneFrameDelayForced = true;
+
                     var sessionFps = netplayManager.GetSessionFps();
                     if (!netplayManager.IsReplayMode() && sessionFps != Domain.Models.Constants.NETPLAY_FPS)
                     {
@@ -738,6 +742,12 @@ namespace TF.EX.Patchs.Engine
             {
                 _preSessionFixedStep = null;
                 self.EnableFixedTimeStep(previous);
+            }
+
+            if (_oneFrameDelayForced)
+            {
+                _oneFrameDelayForced = false;
+                Coroutine.OneFrameDelay = SaveData.Instance?.Options != null && !SaveData.Instance.Options.VerticalSync;
             }
         }
 

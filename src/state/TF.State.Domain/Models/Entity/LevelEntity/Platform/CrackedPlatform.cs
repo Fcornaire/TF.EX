@@ -22,5 +22,7 @@ namespace TF.State.Domain.Models.Entity.LevelEntity.Platform
         public Alarm Respawn { get; set; }
         [Key(7)]
         public Flash Flash { get; set; }
+        [Key(8)]
+        public bool? IsVisible { get; set; }
     }
 }
