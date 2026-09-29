@@ -28,6 +28,8 @@ namespace TF.EX.Domain
 
         public static bool IsRunning => _current != null;
 
+        public static bool UseInstantReplay { get; set; }
+
         public static void Start(IEnumerable<(string Label, Action Launch, int Frames, Func<Level, bool> Expect, int Rounds)> runs, int defaultFrames, Action teardown, Action onFinished)
         {
             _queue.Clear();

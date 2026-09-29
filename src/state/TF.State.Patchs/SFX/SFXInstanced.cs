@@ -14,7 +14,7 @@ namespace TF.State.Patchs.SFX
         public static bool SFXInstanced_Play(SFXInstanced __instance, float panX, float volume)
         {
 
-            if (!StateFlags.IsCaptureActive)
+            if (!StateFlags.IsCaptureActive || StateFlags.IsReplayViewing)
             {
                 return true;
             }

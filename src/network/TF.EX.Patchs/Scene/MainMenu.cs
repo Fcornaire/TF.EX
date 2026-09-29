@@ -73,6 +73,7 @@ namespace TF.EX.Patchs.Scene
         private static SeriesScreen seriesScreen = null;
         private static LobbyVarianText lobbyVarianText = null;
         private static List<VariantItem> variants = new List<VariantItem>();
+        private static float variantsMaxY;
 
         private static DateTime nextServerPull = DateTime.UtcNow;
         private static DateTime nextJoinCodeAttempt = DateTime.UtcNow;
@@ -501,7 +502,8 @@ namespace TF.EX.Patchs.Scene
                     {
                         Name = NetplayPreferences.Name,
                         IsHost = true,
-                        CustomVariants = MainMenu.VersusMatchSettings.Variants.CustomVariantTitles()
+                        CustomVariants = MainMenu.VersusMatchSettings.Variants.CustomVariantTitles(),
+                        UseInstantReplay = NetplayOptions.UseInstantReplay
                     });
                     AddWiderSetLobbyMod(lobby);
 
@@ -1071,7 +1073,7 @@ namespace TF.EX.Patchs.Scene
 
             if (variants.Count == 0)
             {
-                variants = MainMenu.VersusMatchSettings.Variants.BuildMenu(self, out _, out self.MaxUICameraY);
+                variants = MainMenu.VersusMatchSettings.Variants.BuildMenu(self, out _, out variantsMaxY);
             }
 
             lobbyVersusModeButton = new LobbyVersusModeButton(new Vector2(160f, 90f), new Vector2(-100f, 90f));
@@ -1097,7 +1099,7 @@ namespace TF.EX.Patchs.Scene
                 variant.Position.Y += 260;
             }
 
-            self.MaxUICameraY += 290;
+            self.MaxUICameraY = variantsMaxY + 290;
 
             var dynMainMenu = DynamicData.For(self);
             dynMainMenu.Invoke("TweenBGCameraToY", 3);
@@ -1220,7 +1222,8 @@ namespace TF.EX.Patchs.Scene
 
             if (variants.Count == 0)
             {
-                variants = MainMenu.VersusMatchSettings.Variants.BuildMenu(self, out _, out self.MaxUICameraY);
+                variants = MainMenu.VersusMatchSettings.Variants.BuildMenu(self, out _, out variantsMaxY);
+                self.MaxUICameraY = variantsMaxY;
             }
 
             self.AddLoader("FINDING LOBBIES...");
@@ -1649,6 +1652,7 @@ namespace TF.EX.Patchs.Scene
                 if (ownPlayer != null)
                 {
                     ownPlayer.CustomVariants = MainMenu.VersusMatchSettings.Variants.CustomVariantTitles();
+                    ownPlayer.UseInstantReplay = NetplayOptions.UseInstantReplay;
                     Task.Run(() => matchmakingService.UpdatePlayer(ownPlayer, () => { }, () => { }));
                 }
             }

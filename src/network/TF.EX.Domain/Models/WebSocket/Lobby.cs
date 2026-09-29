@@ -169,6 +169,8 @@ namespace TF.EX.Domain.Models.WebSocket
 
         public List<string> CustomVariants { get; set; } = new List<string>();
 
+        public bool UseInstantReplay { get; set; } = false;
+
         [IgnoreMember]
         public bool HasCustomArcher => !string.IsNullOrEmpty(CustomArcherId);
 
@@ -186,6 +188,7 @@ namespace TF.EX.Domain.Models.WebSocket
                 Team = Team,
                 CustomArcherId = CustomArcherId,
                 ArcherMods = ArcherMods,
+                UseInstantReplay = UseInstantReplay,
             };
         }
     }

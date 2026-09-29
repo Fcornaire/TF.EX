@@ -18,16 +18,17 @@ namespace TF.EX.Patchs.Scene
         private const int HUD_LAYER = 4;
         private static Level clearedWaitingFor;
 
-        private static Random random = new Random();
+        private static Random random = new();
 
-        private static readonly Action<float> SetEngineTimeMult = StaticFloatSetter(nameof(Monocle.Engine.TimeMult));
-        private static readonly Action<float> SetEngineDeltaTime = StaticFloatSetter(nameof(Monocle.Engine.DeltaTime));
+        private static readonly Action<float> SetEngineTimeMult = StaticSetter<float>(nameof(Monocle.Engine.TimeMult));
+        private static readonly Action<float> SetEngineDeltaTime = StaticSetter<float>(nameof(Monocle.Engine.DeltaTime));
+        private static readonly Action<long> SetEngineDeltaTicks = StaticSetter<long>(nameof(Monocle.Engine.DeltaTicks));
 
-        private static Action<float> StaticFloatSetter(string property)
+        private static Action<T> StaticSetter<T>(string property)
         {
             var setter = AccessTools.PropertySetter(typeof(Monocle.Engine), property);
 
-            return setter == null ? null : (Action<float>)setter.CreateDelegate(typeof(Action<float>));
+            return setter?.CreateDelegate<Action<T>>();
         }
 
         [HarmonyPrefix]
@@ -50,6 +51,7 @@ namespace TF.EX.Patchs.Scene
             var mode = TowerFall.MainMenu.VersusMatchSettings?.Mode;
 
             if (__instance.ReplayRecorder != null
+                && !InstantReplayFootage.UsesScreenRecorder
                 && ((mode != null && mode.Value.IsNetplay()) || netplayManager.IsReplayMode() || netplayManager.IsTestMode()))
             {
                 DynamicData.For(__instance).Set("ReplayRecorder", null);
@@ -67,11 +69,14 @@ namespace TF.EX.Patchs.Scene
                 return false;
             }
 
+            InstantReplayFootage.Track(__instance);
+
             if (ExFlags.IsCaptureActive || ExFlags.HasFramesToReSimulate)
             {
                 var actualDelta = (float)Monocle.Engine.Instance.TargetElapsedTime.TotalSeconds * TFGame.TimeRate;
                 SetEngineTimeMult?.Invoke(actualDelta * 60f);
                 SetEngineDeltaTime?.Invoke(actualDelta);
+                SetEngineDeltaTicks?.Invoke(Monocle.Engine.Instance.TargetElapsedTime.Ticks);
             }
 
             if (ExFlags.IsCaptureActive)
@@ -110,6 +115,7 @@ namespace TF.EX.Patchs.Scene
             }
 
             Domain.CustomComponent.Notification.FlushDeferred(__instance);
+            InstantReplayFootage.HoldResults(__instance);
 
             var netplayManager = ServiceCollections.ResolveNetplayManager();
 

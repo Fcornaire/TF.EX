@@ -259,5 +259,21 @@ namespace TF.State.Core.Api
 
         public bool IsTestMode() => StateFlags.IsTestMode;
 
+        public void SetInstantReplay(bool enabled) => InstantReplay.Enabled = enabled;
+
+        public bool IsInstantReplayEnabled() => InstantReplay.Enabled;
+
+        public void SetInstantReplayBaking(bool baking) => StateFlags.IsInstantReplayBaking = baking;
+
+        public int GetRoundResultsAge() => ServiceCollections.ResolveHUDService().Get().VersusRoundResults.CoroutineState;
+
+        public bool StartInstantReplay(ReplayData footage) => TF.State.Patchs.Layer.InstantReplayViewerPatch.Start(footage);
+
+        public bool IsInstantReplayPlaying() => TF.State.Patchs.Layer.InstantReplayViewerPatch.IsPlaying();
+
+        public void TickInstantReplay() => TF.State.Patchs.Layer.InstantReplayViewerPatch.Tick();
+
+        public void StopInstantReplay() => TF.State.Patchs.Layer.InstantReplayViewerPatch.Stop();
+
     }
 }

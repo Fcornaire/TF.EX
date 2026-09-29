@@ -47,5 +47,14 @@ namespace TF.EX.Domain.Interop
 
         void ResetMatch();
         void PurgeCache();
+
+        void SetInstantReplay(bool enabled);
+        bool IsInstantReplayEnabled();
+        void SetInstantReplayBaking(bool baking);
+        int GetRoundResultsAge();
+        bool StartInstantReplay(TowerFall.ReplayData footage);
+        bool IsInstantReplayPlaying();
+        void TickInstantReplay();
+        void StopInstantReplay();
     }
 }

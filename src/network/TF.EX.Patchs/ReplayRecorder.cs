@@ -11,6 +11,11 @@ namespace TF.EX.Patchs
         [HarmonyPatch("ClearFrames")]
         public static bool ReplayRecorder_ClearFrames(ReplayRecorder __instance)
         {
+            if (TF.EX.Domain.InstantReplayFootage.UsesScreenRecorder)
+            {
+                return true;
+            }
+
             var netplayManager = TF.EX.Domain.ServiceCollections.ResolveNetplayManager();
 
             var mode = MainMenu.VersusMatchSettings?.Mode;

@@ -8,10 +8,14 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
 {
     public static class PickupExtensions
     {
+        private const int ShieldColorInterval = 12;
+
+        private static readonly Action<TowerFall.ShieldPickup> ChangeColor = HarmonyLib.AccessTools.MethodDelegate<Action<TowerFall.ShieldPickup>>(HarmonyLib.AccessTools.Method(typeof(TowerFall.ShieldPickup), "ChangeColor"));
+
         public static Pickup GetState(this TowerFall.Pickup entity)
         {
             var tween = entity.GetComponent<Tween>();
-            var alarm = entity.GetComponent<Alarm>();
+            var alarm = entity.Components.OfType<Alarm>().FirstOrDefault(component => component.Mode != Alarm.AlarmMode.Looping);
 
             var dynPickup = DynamicData.For(entity);
             var actualDepth = dynPickup.Get<double>("actualDepth");
@@ -62,6 +66,10 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
         public static void LoadState(this TowerFall.Pickup entity, Pickup toLoad)
         {
             var dynPickup = DynamicData.For(entity);
+            var liveColorCycle = entity.Components.OfType<Alarm>().FirstOrDefault(component => component.Mode == Alarm.AlarmMode.Looping)?.FramesLeft;
+            var liveColorIndex = entity is TowerFall.ShieldPickup ? dynPickup.Get<int>("colorIndex") : 0;
+            var liveColor = entity is TowerFall.ShieldPickup ? dynPickup.Get<Sprite<int>>("sprite").Color : Color.White;
+
             dynPickup.Set("Scene", TowerFall.TFGame.Instance.Scene);
             entity.Added();
 
@@ -105,7 +113,12 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             dynPickup.Set("MarkedForRemoval", toLoad.MarkedForRemoval);
 
             entity.DeleteComponent<Tween>();
-            entity.DeleteAllComponents<Alarm>(); //TODO: Prevent removing ChangeColorAlarm
+            entity.DeleteAllComponents<Alarm>();
+
+            if (entity is TowerFall.ShieldPickup shield && TowerFall.TFGame.PlayerAmount > 1)
+            {
+                RestoreColorCycle(shield, dynPickup, liveColorCycle, liveColorIndex, liveColor);
+            }
 
             if (toLoad.Type == PickupState.Shield)
             {
@@ -166,6 +179,20 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                 });
                 DynamicData.For(collidableAlarm).Set("FramesLeft", toLoad.CollidableTimer);
             }
+        }
+
+        private static void RestoreColorCycle(TowerFall.ShieldPickup shield, DynamicData dynPickup, float? liveColorCycle, int liveColorIndex, Color liveColor)
+        {
+            var colorCycle = Alarm.Set(shield, ShieldColorInterval, () => ChangeColor(shield), Alarm.AlarmMode.Looping);
+
+            if (liveColorCycle == null)
+            {
+                return;
+            }
+
+            DynamicData.For(colorCycle).Set("FramesLeft", liveColorCycle.Value);
+            dynPickup.Set("colorIndex", liveColorIndex);
+            dynPickup.Get<Sprite<int>>("sprite").Color = liveColor;
         }
     }
 }

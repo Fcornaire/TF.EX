@@ -10,7 +10,7 @@ namespace TF.State.Patchs.Layer
         [HarmonyPatch("Update")]
         public static bool LightingLayer_Update()
         {
-            if (!StateFlags.IsRollbackFrame && !StateFlags.HasFramesToReSimulate)
+            if (!StateFlags.IsCosmeticFrozen)
             {
                 return true;
             }

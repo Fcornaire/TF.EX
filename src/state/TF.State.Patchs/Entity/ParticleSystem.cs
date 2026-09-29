@@ -16,7 +16,7 @@ namespace TF.State.Patchs.Entity
         [HarmonyPatch("Update")]
         public static bool ParticleSystem_Update(ParticleSystem __instance)
         {
-            if (StateFlags.IsRollbackFrame || StateFlags.HasFramesToReSimulate)
+            if (StateFlags.IsCosmeticFrozen)
             {
                 return false;
             }
@@ -35,7 +35,7 @@ namespace TF.State.Patchs.Entity
             Vector2 positionRange,
             float direction)
         {
-            if (StateFlags.IsRollbackFrame || StateFlags.HasFramesToReSimulate)
+            if (StateFlags.IsCosmeticFrozen)
             {
                 return false;
             }
@@ -64,7 +64,7 @@ namespace TF.State.Patchs.Entity
             Vector2 position,
             Vector2 positionRange)
         {
-            if (StateFlags.IsRollbackFrame || StateFlags.HasFramesToReSimulate)
+            if (StateFlags.IsCosmeticFrozen)
             {
                 return false;
             }
