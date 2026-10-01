@@ -1,4 +1,3 @@
-using System.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.Xna.Framework;
 using Moments.Encoder;
@@ -6,17 +5,20 @@ using TowerFall;
 
 namespace TF.Replay.Domain
 {
+    public enum GifQuality { Vanilla, High }
+
     public static class GifExport
     {
         private const int Width = 320;
         private const int Height = 240;
 
-        private const int MaxFrames = 200;
-        private const int MinStride = 3;
-        private const int Quality = 10;
-        private const int Scale = 2;
+        private const int MaxFrames = 300;
+
+        private record Preset(int FrameRate, int Scale, int Quality);
 
         public enum Phase { Idle, Capturing, Encoding, Done, Failed }
+
+        public static GifQuality Quality { get; set; } = GifQuality.High;
 
         public static Phase State { get; private set; } = Phase.Idle;
         public static string Message { get; private set; }
@@ -25,10 +27,14 @@ namespace TF.Replay.Domain
         public static bool IsCapturing => State == Phase.Capturing;
         public static bool IsBusy => State == Phase.Capturing || State == Phase.Encoding;
 
-        private static readonly List<ReplayFrame> _frames = new List<ReplayFrame>();
+        private static readonly List<Color[]> _frames = [];
+        private static readonly List<int> _frameTicks = [];
 
+        private static Preset _preset = HightPreset();
         private static int _stride;
-        private static int _delayMs;
+        private static int _tickRate;
+        private static int _nextTick;
+        private static int _startFrame;
         private static int _endFrame;
         private static int _seen;
         private static int _stallLimit;
@@ -57,6 +63,7 @@ namespace TF.Replay.Domain
             Message = null;
             Progress = 0f;
             _frames.Clear();
+            _frameTicks.Clear();
         }
 
         public static string Begin(int inFrame, int outFrame, string replayName)
@@ -74,15 +81,20 @@ namespace TF.Replay.Domain
             }
 
             _frames.Clear();
+            _frameTicks.Clear();
             _path = BuildPath(replayName, inFrame, outFrame);
+            _startFrame = inFrame;
             _endFrame = outFrame;
+            _nextTick = inFrame;
             _seen = 0;
             _stallLimit = span * 3 + 600;
 
-            _stride = Math.Max(MinStride, (int)Math.Ceiling(span / (float)MaxFrames));
+            _tickRate = ServiceCollections.ResolveReplayService()?.GetReplay()?.Informations?.TickRateOrLegacy ?? Models.ReplayInfo.LegacyTickRate;
 
-            var tickRate = ServiceCollections.ResolveReplayService()?.GetReplay()?.Informations?.TickRateOrLegacy ?? Models.ReplayInfo.LegacyTickRate;
-            _delayMs = (int)Math.Round(_stride * 1000.0 / tickRate);
+            _preset = Quality == GifQuality.Vanilla ? VanillaPreset() : HightPreset();
+
+            var minStride = (int)Math.Ceiling(_tickRate / (float)_preset.FrameRate);
+            _stride = Math.Max(minStride, (int)Math.Ceiling(span / (float)MaxFrames));
 
             Progress = 0f;
             Message = "CAPTURING...";
@@ -100,7 +112,9 @@ namespace TF.Replay.Domain
 
             try
             {
-                if (_seen++ % _stride == 0 && _frames.Count < MaxFrames)
+                _seen++;
+
+                if (playbackFrame >= _nextTick && _frames.Count < MaxFrames)
                 {
                     var pixels = GrabScreen();
 
@@ -109,15 +123,12 @@ namespace TF.Replay.Domain
                         return;
                     }
 
-                    _frames.Add(new ReplayFrame
-                    {
-                        CPUData = pixels,
-                        ScreenOffset = Vector2.Zero,
-                        ScreenOffsetAdd = Vector2.Zero,
-                    });
+                    _frames.Add(pixels);
+                    _frameTicks.Add(playbackFrame);
+                    _nextTick = playbackFrame + _stride;
                 }
 
-                Progress = _frames.Count / (float)MaxFrames;
+                Progress = Math.Clamp((playbackFrame - _startFrame) / (float)(_endFrame - _startFrame), 0f, 1f);
 
                 if (playbackFrame >= _endFrame || _frames.Count >= MaxFrames || _seen > _stallLimit)
                 {
@@ -189,25 +200,56 @@ namespace TF.Replay.Domain
             Progress = 0f;
 
             var frames = _frames.ToArray();
+            var delays = FrameDelaysCentiSeconds(_frameTicks, _stride, _tickRate);
             var path = _path;
-            var delay = _delayMs;
+            var preset = _preset;
 
-            new Thread(() => Encode(frames, path, delay))
+            _frames.Clear();
+            _frameTicks.Clear();
+
+            new Thread(() => Encode(frames, delays, path, preset))
             {
                 IsBackground = true,
                 Name = "tf-replay-gif",
             }.Start();
         }
 
-        private static void Encode(ReplayFrame[] frames, string path, int delayMs)
+        private static int[] FrameDelaysCentiSeconds(List<int> ticks, int stride, int tickRate)
+        {
+            var delays = new int[ticks.Count];
+            var origin = ticks[0];
+
+            for (int i = 0; i < ticks.Count; i++)
+            {
+                var start = ticks[i] - origin;
+                var end = i + 1 < ticks.Count ? ticks[i + 1] - origin : start + stride;
+
+                delays[i] = ToCentiseconds(end, tickRate) - ToCentiseconds(start, tickRate);
+            }
+
+            return delays;
+        }
+
+        private static int ToCentiseconds(int ticks, int tickRate) => (int)Math.Round(ticks * 100.0 / tickRate);
+
+        private static Preset VanillaPreset()
+        {
+            GifExportOptions.Load();
+
+            return new Preset(GifExportOptions.FrameRate, GifExportOptions.Scale, GifExportOptions.Quality);
+        }
+
+        private static Preset HightPreset() => new(FrameRate: 25, Scale: 2, Quality: 1);
+
+        private static void Encode(Color[][] frames, int[] delaysCs, string path, Preset preset)
         {
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(path));
 
-                var encoder = new GifEncoder(0, Quality);
+                var encoder = new GifEncoder(0, preset.Quality);
 
-                encoder.SetSize(Width, Height, Scale);
+                encoder.SetSize(Width, Height, preset.Scale);
 
                 using (var stream = new FileStream(path, FileMode.Create))
                 {
@@ -215,8 +257,14 @@ namespace TF.Replay.Domain
 
                     for (int i = 0; i < frames.Length; i++)
                     {
-                        encoder.SetDelay(i == 0 ? 0 : delayMs);
-                        encoder.AddFrame(frames[i]);
+                        encoder.SetDelay(delaysCs[i] * 10);
+                        encoder.AddFrame(new ReplayFrame
+                        {
+                            CPUData = frames[i],
+                            ScreenOffset = Vector2.Zero,
+                            ScreenOffsetAdd = Vector2.Zero,
+                        });
+                        frames[i] = null;
 
                         Progress = (i + 1) / (float)frames.Length;
                     }
@@ -240,6 +288,7 @@ namespace TF.Replay.Domain
             Message = message;
             State = Phase.Failed;
             _frames.Clear();
+            _frameTicks.Clear();
         }
 
         private static string BuildPath(string replayName, int inFrame, int outFrame)
