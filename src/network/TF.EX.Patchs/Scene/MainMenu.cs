@@ -11,6 +11,7 @@ using TF.EX.Domain.Interop;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Models.WebSocket;
 using TF.EX.Domain.Services;
+using TF.EX.Domain.Utils;
 using TF.EX.Patchs.Entity.MenuItem;
 using TowerFall;
 
@@ -503,7 +504,9 @@ namespace TF.EX.Patchs.Scene
                         Name = NetplayPreferences.Name,
                         IsHost = true,
                         CustomVariants = MainMenu.VersusMatchSettings.Variants.CustomVariantTitles(),
-                        UseInstantReplay = NetplayOptions.UseInstantReplay
+                        UseInstantReplay = NetplayOptions.UseInstantReplay,
+                        HaveModifiedGameFiles = GameFilesIntegrity.IsModified,
+                        Platform = Domain.Utils.Platform.Current
                     });
                     AddWiderSetLobbyMod(lobby);
 

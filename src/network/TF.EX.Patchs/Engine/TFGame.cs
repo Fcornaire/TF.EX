@@ -491,6 +491,7 @@ namespace TF.EX.Patchs.Engine
             }
 
             WarnAboutDesyncRiskMods(menu);
+            WarnAboutModifiedGameFiles(menu);
 
             enter?.Invoke();
         }
@@ -518,6 +519,19 @@ namespace TF.EX.Patchs.Engine
             Sounds.ui_invalid.Play();
             Notification.Create(menu, "NON-COSMETIC MODS CAN DESYNC NETPLAY", 10, 500);
             Notification.Create(menu, GetDesyncRiskModsMessage(riskyMods, shown), 10, 500);
+        }
+
+        private static void WarnAboutModifiedGameFiles(TowerFall.MainMenu menu)
+        {
+            if (!Domain.Utils.GameFilesIntegrity.IsModified)
+            {
+                return;
+            }
+
+            ServiceCollections.ResolveLogger().LogWarning($"Modified game files, netplay can desync: {string.Join(", ", Domain.Utils.GameFilesIntegrity.Modified)}");
+
+            Sounds.ui_invalid.Play();
+            Notification.Create(menu, "YOUR GAME FILES ARE MODIFIED - NETPLAY MAY DESYNC", 10, 500);
         }
 
         private static string GetDesyncRiskModsMessage(List<string> riskyMods, int count)
@@ -717,7 +731,7 @@ namespace TF.EX.Patchs.Engine
                         self.EnableFixedTimeStep(true);
                     }
 
-                    Coroutine.OneFrameDelay = false;
+                    Coroutine.OneFrameDelay = true;
                     _oneFrameDelayForced = true;
 
                     var sessionFps = netplayManager.GetSessionFps();

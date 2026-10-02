@@ -2827,6 +2827,11 @@ namespace TF.State.TowerFallExtensions
 
         private static void LoadCrumbleBlocks(this GameState gameState, Level level)
         {
+            foreach (TowerFall.CrumbleBlock live in level.GetAll<TowerFall.CrumbleBlock>().ToArray())
+            {
+                ServiceCollections.AddEntityToCache(DynamicData.For(live).Get<double>("actualDepth"), live);
+            }
+
             level.DeleteAll<TowerFall.CrumbleBlock>();
 
             foreach (var toLoad in gameState.Entities.CrumbleBlocks)

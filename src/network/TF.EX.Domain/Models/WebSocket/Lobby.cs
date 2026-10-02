@@ -171,6 +171,10 @@ namespace TF.EX.Domain.Models.WebSocket
 
         public bool UseInstantReplay { get; set; } = false;
 
+        public bool HaveModifiedGameFiles { get; set; } = false;
+
+        public string Platform { get; set; } = "";
+
         [IgnoreMember]
         public bool HasCustomArcher => !string.IsNullOrEmpty(CustomArcherId);
 
@@ -189,6 +193,8 @@ namespace TF.EX.Domain.Models.WebSocket
                 CustomArcherId = CustomArcherId,
                 ArcherMods = ArcherMods,
                 UseInstantReplay = UseInstantReplay,
+                HaveModifiedGameFiles = HaveModifiedGameFiles,
+                Platform = Platform,
             };
         }
     }
