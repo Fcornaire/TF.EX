@@ -38,6 +38,8 @@ namespace TF.EX.Domain.Services
         private Lobby ownLobby = new();
         private string peerId = string.Empty;
         private int previousPlayersCount = 1;
+        private readonly HashSet<string> modifiedFilesNotified = [];
+        private readonly HashSet<string> platformNotified = [];
         private bool hasHostStartedMatch = false;
         private DateTime lastStartRequestAt = DateTime.MinValue;
         private static readonly TimeSpan StartRequestCooldown = TimeSpan.FromSeconds(1);
@@ -325,6 +327,9 @@ namespace TF.EX.Domain.Services
 
         private async Task SendUpdatePlayer(Models.WebSocket.Player player)
         {
+            player.HaveModifiedGameFiles = Utils.GameFilesIntegrity.IsModified;
+            player.Platform = Utils.Platform.Current;
+
             var updatePlayerMessage = new UpdatePlayerMessage
             {
                 UpdatePlayer = new UpdatePlayer
@@ -1295,6 +1300,18 @@ namespace TF.EX.Domain.Services
 
         private void ReconcileRollcall(Lobby lobby, RollcallElement[] rollCalls)
         {
+            foreach (var player in lobby.Players.Where(player => player.HaveModifiedGameFiles && player.RoomPeerId != peerId && modifiedFilesNotified.Add(player.RoomPeerId)))
+            {
+                Sounds.ui_invalid.Play();
+                Notification.Create(TFGame.Instance.Scene, $"{player.Name} HAS MODIFIED GAME FILES - NETPLAY MAY DESYNC".ToUpperInvariant(), 10, 500);
+            }
+
+            foreach (var player in lobby.Players.Where(player => !string.IsNullOrEmpty(player.Platform) && player.Platform != Utils.Platform.Current && player.RoomPeerId != peerId && platformNotified.Add(player.RoomPeerId)))
+            {
+                Sounds.ui_clickSpecial.Play();
+                Notification.Create(TFGame.Instance.Scene, $"{player.Name} IS PLAYING ON {player.Platform} - NETPLAY MAY DESYNC".ToUpperInvariant(), 10, 500);
+            }
+
             var seatedPlayers = lobby.Players
                 .Where(player => player.RoomPeerId != peerId)
                 .ToArray();
@@ -1771,6 +1788,8 @@ namespace TF.EX.Domain.Services
             ownLobby = new Lobby();
             previousPlayersCount = 1;
             pendingRollcallLobby = null;
+            modifiedFilesNotified.Clear();
+            platformNotified.Clear();
         }
 
         public bool IsSpectator()
