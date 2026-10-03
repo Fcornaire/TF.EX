@@ -1053,7 +1053,7 @@ namespace TF.Replay.Domain.Services
 
             var api = StateApi();
 
-            if (api == null || IsTrials || RoundHasStarted(api, target))
+            if (api == null || RoundHasStarted(api, target))
             {
                 return target;
             }
@@ -1094,7 +1094,16 @@ namespace TF.Replay.Domain.Services
         {
             var record = NearestStateRecord(frame);
 
-            return record == null || (api.IsRoundStarted(record.State) && api.DescribePlayers(record.State).Length > 0);
+            if (record == null)
+            {
+                return true;
+            }
+
+            var players = api.DescribePlayers(record.State);
+
+            return IsTrials
+                ? players.Any(player => !player.EndsWith(";" + nameof(Player.PlayerStates.Frozen)))
+                : api.IsRoundStarted(record.State) && players.Length > 0;
         }
 
         public int SeekLandingFor(int frame)
