@@ -1059,6 +1059,29 @@ namespace TF.EX.Domain.Scenarios
                 Entities = [new ScenarioEntity("TreasureChest", 160, SpawnY)],
                 Expect = level => AllOf<ShieldPickup>(level).Any(shield => shield.Collidable),
             },
+            new Scenario
+            {
+                Name = "explosion-pool",
+                Covers = ["Explosion", "Arrow"],
+                Variants = ["START WITH BOMB ARROWS", "MAX ARROWS"],
+                Frames = 600,
+                Spawns = [(160, SpawnY), (300, SpawnY)],
+                Scripts =
+                [
+                    Sequence(AimAndFire(-1, 0), Wait(30), AimAndFire(1, 0), Wait(600)),
+                    Still,
+                ],
+                Entities =
+                [
+                    new ScenarioEntity("CrackedWall", 75, 190),
+                    new ScenarioEntity("CrumbleBlock", 225, 170, "width=\"20\" height=\"40\""),
+                ],
+                Expect = level =>
+                {
+                    var explosions = AllOf<Explosion>(level).ToList();
+                    return explosions.Distinct().Count() >= 2 && explosions.Distinct().Count() == explosions.Count;
+                },
+            }
         ];
 
         public static Scenario[] Resolve(IEnumerable<string> names)

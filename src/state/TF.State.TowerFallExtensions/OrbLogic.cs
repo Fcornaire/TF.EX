@@ -94,6 +94,13 @@ namespace TF.State.TowerFallExtensions
             if (orb.Space.SpaceTweenTimer > 0)
             {
                 var spaceTween = dynOrb.Get<Tween>("spaceTween");
+                var duration = GetSpaceTweenDuration(self, orb.Space.SpaceTweenTimer);
+
+                if (spaceTween == null || spaceTween.Duration != duration)
+                {
+                    spaceTween = Tween.Create(Tween.TweenMode.Persist, Ease.CubeInOut, duration, start: true);
+                }
+
                 var dynSpaceTween = DynamicData.For(spaceTween);
 
                 dynSpaceTween.Set("FramesLeft", orb.Space.SpaceTweenTimer);
@@ -116,6 +123,11 @@ namespace TF.State.TowerFallExtensions
                     dynOrb.Set("spaceTween", null);
                 }
             }
+        }
+
+        private static int GetSpaceTweenDuration(TowerFall.OrbLogic self, float framesLeft)
+        {
+            return framesLeft <= 90 && self.Level.Session.MatchSettings.Variants.OffsetWorld ? 90 : 360;
         }
     }
 }
