@@ -2617,6 +2617,8 @@ namespace TF.State.TowerFallExtensions
 
                 level.GetGameplayLayer().Entities.Insert(0, cachedExplosion);
             }
+
+            level.DropLiveFromEntityPool<TowerFall.Explosion>();
         }
 
         private static void LoadBGTorches(this GameState gameState, Level level)
