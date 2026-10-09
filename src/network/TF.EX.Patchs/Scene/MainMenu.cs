@@ -117,6 +117,9 @@ namespace TF.EX.Patchs.Scene
                 case Domain.Models.MenuState.SeriesLobby:
                     HandleSeriesLobby(__instance, name);
                     return false;
+                case Domain.Models.MenuState.Changelog:
+                    HandleChangelog(__instance, name);
+                    return false;
                 case Domain.Models.MenuState.Main:
                     if (name == "Create")
                     {
@@ -152,6 +155,39 @@ namespace TF.EX.Patchs.Scene
                     return true;
                 default:
                     return true;
+            }
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(MainMenu.State), MethodType.Setter)]
+        public static void MainMenu_set_State(MainMenu __instance, ref MainMenu.MenuState value)
+        {
+            if (__instance.State == MainMenu.MenuState.PressStart
+                && value == MainMenu.MenuState.Main
+                && Changelog.HasPending)
+            {
+                value = Domain.Models.MenuState.Changelog.ToTFModel();
+            }
+        }
+
+        private static void HandleChangelog(MainMenu self, string name)
+        {
+            if (name == "Create")
+            {
+                self.BackState = MainMenu.MenuState.Main;
+
+                var panel = new ChangelogPanel(Changelog.Pending, () => self.State = MainMenu.MenuState.Main);
+                self.Add(panel);
+                self.ToStartSelected = panel;
+
+                self.ButtonGuideA.SetDetails(MenuButtonGuide.ButtonModes.Confirm, "CONTINUE");
+                return;
+            }
+
+            if (name == "Destroy")
+            {
+                Changelog.MarkSeen();
+                self.Add(new Saver(menu: true));
             }
         }
 

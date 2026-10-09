@@ -18,6 +18,7 @@ namespace TF.EX
         public string CustomSkins { get; set; } = "FULL";
         public bool AutoUpdate { get; set; } = true;
         public string PlayerId { get; set; } = "";
+        public string LastVersionSeen { get; set; } = "";
 
         private static readonly string[] AutoAdjustModes = { "DISABLED", "PROPOSE", "ENABLED" };
         private static readonly string[] CustomSkinModes = { "DISABLED", "FULL" };
