@@ -25,7 +25,7 @@ namespace TF.EX.Common
         Task<bool> DownloadAndApply(Action<string> onPhase, Action<long, long> onProgress);
     }
 
-    public partial class AutoUpdater(ILogger logger, string fortRisePath, string currentVersion, Func<string, bool> supportsFortRise) : IAutoUpdater
+    public partial class AutoUpdater(ILogger logger, string fortRisePath, string currentVersion, string installedZipPath, Func<string, bool> supportsFortRise) : IAutoUpdater
     {
 
         [GeneratedRegex(@"/tag/v(\d+\.\d+\.\d+)$")]
@@ -44,6 +44,7 @@ namespace TF.EX.Common
         private readonly ILogger _logger = logger;
         private readonly string _fortRisePath = fortRisePath;
         private readonly Func<string, bool> _supportsFortRise = supportsFortRise;
+        private readonly string _installedZipPath = installedZipPath;
         private string DownloadPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "TF.EX", "Update");
 
         private string ZipPath => Path.Combine(DownloadPath, "update.zip");
@@ -240,7 +241,7 @@ namespace TF.EX.Common
                 ["Version"] = currentVersion.ToString(),
                 ["UpdateVersion"] = latestVersion.ToString(),
                 ["FortRiseRequiredVersion"] = requiredFortRise ?? "0.0.0",
-                ["ModPath"] = BundleName,
+                ["ModPath"] = GetInstalledModPath(),
                 ["UpdateModPath"] = staged,
                 ["IsZipped"] = true,
             });
@@ -248,6 +249,11 @@ namespace TF.EX.Common
             File.WriteAllText(listPath, entries.ToJsonString());
 
             _logger.LogDebug<AutoUpdater>($"Staged {latestVersion} in {staged}");
+        }
+
+        private string GetInstalledModPath()
+        {
+            return string.IsNullOrEmpty(_installedZipPath) ? BundleName : Path.GetRelativePath(ModsPath, _installedZipPath);
         }
 
         private void RemoveLegacyFolders()

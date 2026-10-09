@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.19.1] - 2026-10-10
+
+### Fixed
+
+Auto update no longer leaves the previous TF.EX zip in the Mods folder, which made the game crash with two EX versions loaded
+
 ## [0.19.0] - 2026-10-09
 
 ### New
