@@ -56,6 +56,24 @@ namespace TF.EX
                 (replayFileName, currentSong) => replayService.LoadAndStart(replayFileName, currentSong).GetAwaiter().GetResult());
         }
 
+        private void ConfigureChangelog(IModContent content)
+        {
+            var settings = GetSettings<NetplaySettings>();
+
+            if (settings == null)
+            {
+                return;
+            }
+
+            var markdown = content.Root.TryGetRelativePath("CHANGELOG.md", out var file) ? file.Text : "";
+
+            TF.EX.Domain.Utils.Changelog.Configure(
+                markdown,
+                content.Metadata.Version.ToString(),
+                settings.LastVersionSeen,
+                seen => settings.LastVersionSeen = seen);
+        }
+
         public void Unload(IModuleContext context)
         {
             if (TFGame.Instance.Scene is Level && ServiceCollections.ResolveNetplayManager().IsServerMode())
@@ -106,7 +124,11 @@ namespace TF.EX
             TF.EX.Domain.Interop.ReplayApi.Configure(mods.ResolveReplay);
             TF.EX.Domain.Interop.InputDisplayerApi.Configure(mods.ResolveInputDisplayer);
 
-            OnInitialize = _ => InitializeApis();
+            OnInitialize = _ =>
+            {
+                InitializeApis();
+                ConfigureChangelog(content);
+            };
 
             context.Harmony.PatchAll(typeof(Patchs.Engine.TFGamePatch).Assembly);
 
