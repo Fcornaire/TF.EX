@@ -1,10 +1,12 @@
-﻿using TF.EX.Domain.Models.WebSocket;
+﻿using TF.EX.Domain.Models;
+using TF.EX.Domain.Models.WebSocket;
 
 namespace TF.EX.Domain.Ports
 {
     public interface IMatchmakingService
     {
         int? GetPingTo(Player player);
+        ConnectionQuality? GetConnectionQualityTo(Player player);
         void StartOrStopPingMeasurementIfNeeded(bool inLobbyMenu);
         bool IsConnectedToServer();
         bool ConnectToServerAndListen();

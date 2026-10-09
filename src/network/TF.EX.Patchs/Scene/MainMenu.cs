@@ -219,7 +219,7 @@ namespace TF.EX.Patchs.Scene
 
                     var latency = matchmakingService.GetPingTo(seated);
                     var label = latency is int ms ? $"{ms} MS" : "... MS";
-                    var color = latency is int measured ? GetPingColor(measured) : Color.LightGray;
+                    var color = matchmakingService.GetConnectionQualityTo(seated)?.ToColor() ?? Color.LightGray;
 
                     Monocle.Draw.OutlineTextCentered(TFGame.Font, label, RollcallLayout.PingAt(rollcallElement), color, Color.Black);
                 }
@@ -1328,21 +1328,6 @@ namespace TF.EX.Patchs.Scene
 
             Monocle.Draw.OutlineTextureCentered(TFGame.MenuAtlas["portraits/readyBanner"], position, Color.White);
             Monocle.Draw.OutlineTextCentered(TFGame.Font, "WAITING FOR HOST", position - Vector2.UnitY * 2f, Color.White, Color.Black);
-        }
-
-        private static Color GetPingColor(int latency)
-        {
-            switch (latency)
-            {
-                case var n when (n < 60):
-                    return Color.LightGreen;
-                case var n when (n < 120):
-                    return Color.GreenYellow;
-                case var n when (n < 150):
-                    return Color.OrangeRed;
-                default:
-                    return Color.Red;
-            }
         }
 
         // [HarmonyPostfix]

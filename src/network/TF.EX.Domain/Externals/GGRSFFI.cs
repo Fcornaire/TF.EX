@@ -54,7 +54,7 @@ namespace TF.EX.Domain.Externals
         public static extern void netplay_inputs_free(Inputs inputs);
 
         [DllImport("ggrs_ffi")]
-        public static extern Status netplay_network_stats(int playerHandle, IntPtr stats);
+        public static extern Status netplay_network_stats(int playerHandle, out NetworkStats stats);
 
         [DllImport("ggrs_ffi")]
         public static extern int netplay_frames_ahead();
@@ -93,6 +93,6 @@ namespace TF.EX.Domain.Externals
         public static extern void ping_measurement_stop();
 
         [DllImport("ggrs_ffi")]
-        public static extern int ping_measurement_rtt([MarshalAs(UnmanagedType.LPUTF8Str)] string peerId);
+        public static extern void ping_measurement_stats([MarshalAs(UnmanagedType.LPUTF8Str)] string peerId, out PingStats stats);
     }
 }

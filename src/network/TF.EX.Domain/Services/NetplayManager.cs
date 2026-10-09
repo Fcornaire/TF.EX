@@ -418,13 +418,9 @@ namespace TF.EX.Domain.Services
 
         private void UpdateNetworkStats()
         {
-            using (SafeHandle<NetworkStats> handle = new SafeHandle<NetworkStats>(new NetworkStats()))
+            if (GGRSFFI.netplay_network_stats(-1, out var stats).ToModelGGrsFFI().IsOk)
             {
-                var status_stats = GGRSFFI.netplay_network_stats(-1, handle.Ptr).ToModelGGrsFFI();
-                if (status_stats.IsOk)
-                {
-                    _networkStats = handle.Value;
-                }
+                _networkStats = stats;
             }
 
             if (!_supportsPerSeatStats)
@@ -443,11 +439,9 @@ namespace TF.EX.Domain.Services
                 {
                     var seat = GGRSFFI.netplay_remote_player_handle_at(index);
 
-                    using SafeHandle<NetworkStats> seatHandle = new SafeHandle<NetworkStats>(new NetworkStats());
-
-                    if (GGRSFFI.netplay_network_stats(seat, seatHandle.Ptr).ToModelGGrsFFI().IsOk)
+                    if (GGRSFFI.netplay_network_stats(seat, out var seatStats).ToModelGGrsFFI().IsOk)
                     {
-                        perSeat[seat] = seatHandle.Value;
+                        perSeat[seat] = seatStats;
                     }
                 }
             }

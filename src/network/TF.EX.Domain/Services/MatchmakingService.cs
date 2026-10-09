@@ -79,8 +79,8 @@ namespace TF.EX.Domain.Services
         private string abandonedRoomId = null;
 
         private string pingMeasurementUrl = null;
-        private string measuredPingsRoomId = null;
-        private readonly Dictionary<string, int> measuredPings = new();
+        private string measuredPingStatsRoomId = null;
+        private readonly Dictionary<string, PingStats> measuredPingStats = new();
 
         public MatchmakingService(INetplayManager netplayManager,
             IArcherService archerService,
@@ -1453,17 +1453,31 @@ namespace TF.EX.Domain.Services
 
         public int? GetPingTo(Models.WebSocket.Player player)
         {
-            if (pingMeasurementUrl != null)
-            {
-                var rtt = GGRSFFI.ping_measurement_rtt(player.RoomPeerId);
+            RefreshPingStats(player);
 
-                if (rtt >= 0)
-                {
-                    measuredPings[player.RoomPeerId] = rtt;
-                }
+            return measuredPingStats.TryGetValue(player.RoomPeerId, out var stats) && stats.rtt >= 0 ? stats.rtt : null;
+        }
+
+        public ConnectionQuality? GetConnectionQualityTo(Models.WebSocket.Player player)
+        {
+            RefreshPingStats(player);
+
+            return measuredPingStats.TryGetValue(player.RoomPeerId, out var stats) ? ConnectionQualities.GetQuality(stats) : null;
+        }
+
+        private void RefreshPingStats(Models.WebSocket.Player player)
+        {
+            if (pingMeasurementUrl == null)
+            {
+                return;
             }
 
-            return measuredPings.TryGetValue(player.RoomPeerId, out var ms) ? ms : null;
+            GGRSFFI.ping_measurement_stats(player.RoomPeerId, out var stats);
+
+            if (stats.samples > 0)
+            {
+                measuredPingStats[player.RoomPeerId] = stats;
+            }
         }
 
         public void StartOrStopPingMeasurementIfNeeded(bool inLobbyMenu)
@@ -1489,10 +1503,10 @@ namespace TF.EX.Domain.Services
                 return;
             }
 
-            if (ownLobby.RoomId != measuredPingsRoomId)
+            if (ownLobby.RoomId != measuredPingStatsRoomId)
             {
-                measuredPings.Clear();
-                measuredPingsRoomId = ownLobby.RoomId;
+                measuredPingStats.Clear();
+                measuredPingStatsRoomId = ownLobby.RoomId;
             }
 
             using var status = GGRSFFI.ping_measurement_start(url).ToModelGGrsFFI();

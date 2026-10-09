@@ -119,20 +119,7 @@ namespace TF.EX.Patchs.Layer
             Draw.OutlineTextCentered(TFGame.Font, value, new Vector2(x + valueWidth / 2f, y), valueColor, 1f);
         }
 
-        private static Color GetColor(uint latency)
-        {
-            switch (latency)
-            {
-                case var n when (n < 60):
-                    return Color.LightGreen;
-                case var n when (n < 120):
-                    return Color.GreenYellow;
-                case var n when (n < 150):
-                    return Color.OrangeRed;
-                default:
-                    return Color.Red;
-            }
-        }
+        private static Color GetColor(uint latency) => ConnectionQualities.GetQualityByLatency((int)latency).ToColor();
 
         private static Color GetArcherColor(int seat)
         {
