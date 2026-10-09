@@ -153,7 +153,7 @@ namespace TF.EX.Domain.Services
             StateApi.Current.SetFrameDriver(Models.Constants.DRIVER_NAME);
 
             GGRSConfig.Name = NetplayPreferences.Name;
-            GGRSConfig.InputDelay = _sessionInputDelay ?? NetplayPreferences.InputDelayFrames; //preferences in ms, override in native frames
+            GGRSConfig.InputDelay = ServiceCollections.ResolveMatchmakingService().GetOwnLobby().SeriesInputDelay ?? GetEffectiveInputDelay();
             GGRSConfig.MaxInputDelay = NetplayPreferences.ToFrames(NetplayPreferences.MaxInputDelay);
 
             _cancellationTokenSource = new CancellationTokenSource();
@@ -842,6 +842,8 @@ namespace TF.EX.Domain.Services
                 _cancellationToken = _cancellationTokenSource.Token;
             }
         }
+
+        public int GetEffectiveInputDelay() => _sessionInputDelay ?? NetplayPreferences.InputDelayFrames;
 
         public void SetSessionInputDelay(int inputDelay)
         {

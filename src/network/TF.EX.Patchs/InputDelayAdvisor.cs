@@ -41,6 +41,7 @@ namespace TF.EX.Patchs
         private static int? proposedDelay;
         private static int currentDelay;
         private static int? appliedDelay;
+        private static int? hostDelay;
 
         private static bool pressActive;
         private static bool awaitRelease;
@@ -79,6 +80,7 @@ namespace TF.EX.Patchs
             TapReleased = false;
             displaying = false;
             hoverDelay = null;
+            hostDelay = null;
 
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
             var netplayManager = ServiceCollections.ResolveNetplayManager();
@@ -100,7 +102,23 @@ namespace TF.EX.Patchs
             isSeriesLayout = (int)mainMenu.State == (int)Domain.Models.MenuState.SeriesLobby;
             isLeftLayout = isSeriesLayout || Scene.MainMenuPatch.IsCopyCodeGuideVisible;
 
-            if (mode == AutoAdjustInputDelayMode.Disabled || matchmakingService.IsSpectator() || mainMenu.State != MainMenu.MenuState.Rollcall && !isSeriesLayout)
+            var isLobbyMenu = mainMenu.State == MainMenu.MenuState.Rollcall || isSeriesLayout;
+
+            if (lobby.IsSeriesLobby && OwnPlayer(matchmakingService, lobby) is Domain.Models.WebSocket.Player own)
+            {
+                if (own.IsHost)
+                {
+                    PublishHostDelay(matchmakingService, netplayManager, lobby, own);
+                }
+                else
+                {
+                    hostDelay = isLobbyMenu ? lobby.SeriesInputDelay ?? netplayManager.GetEffectiveInputDelay() : null;
+                    ClearInteraction();
+                    return;
+                }
+            }
+
+            if (mode == AutoAdjustInputDelayMode.Disabled || matchmakingService.IsSpectator() || !isLobbyMenu)
             {
                 ClearInteraction();
                 return;
@@ -126,6 +144,21 @@ namespace TF.EX.Patchs
 
             UpdateGesture(netplayManager);
             UpdateMouse(netplayManager);
+        }
+
+        private static Domain.Models.WebSocket.Player OwnPlayer(Domain.Ports.IMatchmakingService matchmakingService, Lobby lobby)
+        {
+            var localPeerId = matchmakingService.GetRoomPeerId();
+
+            return lobby.Players.FirstOrDefault(player => player.RoomPeerId == localPeerId);
+        }
+
+        private static void PublishHostDelay(Domain.Ports.IMatchmakingService matchmakingService, INetplayManager netplayManager, Lobby lobby, Domain.Models.WebSocket.Player own)
+        {
+            if (!lobby.InGame && own.InputDelay != netplayManager.GetEffectiveInputDelay())
+            {
+                matchmakingService.PublishInputDelay();
+            }
         }
 
         private static void UpdateProposal(Domain.Ports.IMatchmakingService matchmakingService, Lobby lobby)
@@ -359,6 +392,12 @@ namespace TF.EX.Patchs
 
         public static void Render()
         {
+            if (hostDelay is int seriesDelay)
+            {
+                RenderHostDelay(seriesDelay);
+                return;
+            }
+
             if (!displaying)
             {
                 if (appliedDelay != null)
@@ -376,6 +415,14 @@ namespace TF.EX.Patchs
             {
                 RenderCursor(cursor.Value);
             }
+        }
+
+        private static void RenderHostDelay(int delay)
+        {
+            var centerX = TrackLeft + TrackWidth / 2f;
+
+            Draw.OutlineTextCentered(TFGame.Font, $"INPUT DELAY : {Ms(delay)}", new Vector2(centerX, LabelY), Color.White, Color.Black);
+            Draw.OutlineTextCentered(TFGame.Font, "SET BY HOST", new Vector2(centerX, ProposedY), ProposedColor, Color.Black);
         }
 
         private static void RenderTrack()
