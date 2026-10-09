@@ -19,6 +19,7 @@ namespace TF.Replay.Patchs.Scene
         private static LoadingGauge _loadingMsg;
         private static Text _monthMsg;
         private static bool _loading;
+        private static string _lastLaunched;
 
         private static Action _pendingBuild;
         private static MainMenu _owner;
@@ -277,18 +278,20 @@ namespace TF.Replay.Patchs.Scene
                     but.UpItem = _replays[i - 1];
                 }
 
-                if (i == 0)
-                {
-                    dynMainMenu.Set("ToStartSelected", but);
-                    but.Selected = true;
-                }
-
                 dynCamera.Invoke("Add", but, false);
 
                 maxY += 35.0f;
             }
 
             self.MaxUICameraY = maxY;
+
+            var selected = _replays.FirstOrDefault(replay => replay.OriginalName == _lastLaunched) ?? _replays.FirstOrDefault();
+
+            if (selected != null)
+            {
+                dynMainMenu.Set("ToStartSelected", selected);
+                selected.Selected = true;
+            }
 
             dynCamera.Invoke("Add", _replaysPanel, false);
             dynMainMenu.Invoke("TweenBGCameraToY", 1);
@@ -314,6 +317,8 @@ namespace TF.Replay.Patchs.Scene
             {
                 return;
             }
+
+            _lastLaunched = toLaunch.OriginalName;
 
             var currentSong = Monocle.Music.CurrentSong;
             Monocle.Music.Stop();

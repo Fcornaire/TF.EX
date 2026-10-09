@@ -293,17 +293,19 @@ namespace TF.Replay.Domain
             return false;
         }
 
-        private static void QuitToBrowser()
+        public static void QuitToBrowser()
         {
             var level = TFGame.Instance?.Scene as Level;
 
             Sounds.ui_clickBack.Play();
             ServiceCollections.ResolveApi()?.StopPlayback();
 
-            TFGame.Instance.Scene = new TowerFall.MainMenu(TowerFall.MainMenu.MenuState.Main);
+            TFGame.Instance.Scene = new TowerFall.MainMenu(Models.ReplayMenuState.ToTFModel());
 
             level?.Session?.MatchSettings?.LevelSystem?.Dispose();
         }
+
+        public static void RestartReplay() => RestartReplay(ServiceCollections.ResolveReplayService());
 
         private static void RestartReplay(Ports.IReplayService service)
         {
