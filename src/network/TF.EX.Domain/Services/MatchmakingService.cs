@@ -729,23 +729,6 @@ namespace TF.EX.Domain.Services
                 }
             }
 
-            if (IsServerMsg(message, "LeaveLobbyForce"))
-            {
-                ownLobby = new Lobby();
-                isMatchEndReported = false;
-
-                RunOnGameThread(() =>
-                {
-                    var level = TFGame.Instance.Scene as Level;
-                    var mainMenu = new MainMenu(Models.MenuState.NetplaySelect.ToTFModel());
-                    Engine.Instance.Scene = mainMenu;
-                    level?.Session.MatchSettings.LevelSystem.Dispose();
-
-                    Sounds.ui_invalid.Play();
-                    Notification.Create(mainMenu, level != null ? "No choice made! dropped from lobby" : "Not ready in time, dropped from lobby");
-                });
-            }
-
             if (IsServerMsg(message, "RematchLobby"))
             {
                 isMatchEndReported = false;

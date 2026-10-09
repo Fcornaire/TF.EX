@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Monocle;
 using MonoMod.Utils;
 using System.Diagnostics;
+using TF.EX.Domain.Context;
 using TF.EX.Domain.Externals;
 using TF.EX.Domain.Interop;
 using TF.EX.Domain.Models;
@@ -44,7 +45,7 @@ namespace TF.EX.Domain
 
         public static void Track(Level level)
         {
-            if (_isBaking || !StateApi.Current.IsInstantReplayEnabled())
+            if (_isBaking || !ExFlags.IsCaptureActive || !StateApi.Current.IsInstantReplayEnabled())
             {
                 return;
             }
@@ -214,7 +215,10 @@ namespace TF.EX.Domain
             if (IsPaused)
             {
                 Resume();
+                return;
             }
+
+            ReleaseResults();
         }
 
         private static bool IsCatchingUp()
