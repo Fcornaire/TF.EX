@@ -35,6 +35,7 @@ namespace TF.EX.Domain.Ports
         bool IsQuickPlayStarting();
 
         Task UpdatePlayer(Player player, Action onSucess, Action onFail);
+        void PublishInputDelay();
         Task UpdateLobbySettings(int maxPlayers, GameData gameData, ICollection<CustomMod> mods);
         bool CanEditLobbySettings();
         void RequestRollcallReconcile();

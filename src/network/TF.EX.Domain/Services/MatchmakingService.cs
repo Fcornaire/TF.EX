@@ -329,6 +329,7 @@ namespace TF.EX.Domain.Services
         {
             player.HaveModifiedGameFiles = Utils.GameFilesIntegrity.IsModified;
             player.Platform = Utils.Platform.Current;
+            player.InputDelay = _netplayManager.GetEffectiveInputDelay();
 
             var updatePlayerMessage = new UpdatePlayerMessage
             {
@@ -1694,6 +1695,18 @@ namespace TF.EX.Domain.Services
         public async Task UpdatePlayer(Models.WebSocket.Player player, Action onSucess, Action onFail)
         {
             await Update(WSAction.UpdatePlayer, onSucess, onFail);
+        }
+
+        public void PublishInputDelay()
+        {
+            var own = ownLobby.Players.FirstOrDefault(pl => pl.RoomPeerId == peerId);
+
+            if (own == null || !EnsureConnection())
+            {
+                return;
+            }
+
+            _ = SendUpdatePlayer(own);
         }
 
         public async Task LeaveLobby(Action onSucess, Action onFail)

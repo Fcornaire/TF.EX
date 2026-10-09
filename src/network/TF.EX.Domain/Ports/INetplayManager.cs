@@ -65,6 +65,8 @@ namespace TF.EX.Domain.Ports
         bool IsFramesAhead();
 
         void Reset();
+
+        int GetEffectiveInputDelay();
         void SetSessionInputDelay(int inputDelay);
         void ClearSessionInputDelay();
 

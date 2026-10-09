@@ -47,6 +47,9 @@ namespace TF.EX.Domain.Models.WebSocket
         public bool IsEmpty => Players.Count == 0;
 
         [IgnoreMember]
+        public int? SeriesInputDelay => IsSeriesLobby ? Players.FirstOrDefault(player => player.IsHost)?.InputDelay : null;
+
+        [IgnoreMember]
         public bool IsTeamMode => !IsEmpty && (TowerFall.Modes)GameData.Mode == TowerFall.Modes.TeamDeathmatch;
 
         [IgnoreMember]
@@ -175,6 +178,8 @@ namespace TF.EX.Domain.Models.WebSocket
 
         public string Platform { get; set; } = "";
 
+        public int? InputDelay { get; set; }
+
         [IgnoreMember]
         public bool HasCustomArcher => !string.IsNullOrEmpty(CustomArcherId);
 
@@ -195,6 +200,7 @@ namespace TF.EX.Domain.Models.WebSocket
                 UseInstantReplay = UseInstantReplay,
                 HaveModifiedGameFiles = HaveModifiedGameFiles,
                 Platform = Platform,
+                InputDelay = InputDelay,
             };
         }
     }
