@@ -4,6 +4,7 @@ using TF.EX.Common.Extensions;
 using TF.EX.Domain;
 using TF.EX.Domain.CustomComponent;
 using TF.EX.Domain.Extensions;
+using TF.EX.Domain.Interop;
 using TowerFall;
 using static TowerFall.PauseMenu;
 
@@ -64,31 +65,14 @@ namespace TF.EX.Patchs.Entity
         [HarmonyPatch("Quit")]
         public static bool PauseMenu_Quit(PauseMenu __instance)
         {
-            if (IsNetplayEndgame(__instance))
+            if (!IsNetplayEndgame(__instance) && !IsNetplayLevel())
             {
-                var matchmakingService = ServiceCollections.ResolveMatchmakingService();
-
-                var lobby = matchmakingService.GetOwnLobby();
-
-                if (!lobby.IsEmpty)
-                {
-                    Task.Run(async () =>
-                    {
-                        await matchmakingService.LeaveLobby(() => { }, () => { });
-                    });
-                }
-
-                Sounds.ui_clickBack.Play();
-
-                TFGame.Instance.Scene = new MainMenu(Domain.Models.MenuState.NetplaySelect.ToTFModel());
-                var dynPauseMenu = DynamicData.For(__instance);
-                Level level = dynPauseMenu.Get<Level>("level");
-                level.Session.MatchSettings.LevelSystem.Dispose();
-
-                return false;
+                return true;
             }
 
-            return true;
+            QuitToNetplayEntry(__instance);
+
+            return false;
         }
 
         [HarmonyPrefix]
@@ -182,7 +166,7 @@ namespace TF.EX.Patchs.Entity
         public static bool PauseMenu_AddItem(PauseMenu __instance, ref string name)
         {
             var logger = ServiceCollections.ResolveLogger();
-            if (name == "MATCH SETTINGS" && IsNetplayEndgame(__instance))
+            if (name == "MATCH SETTINGS" && (IsNetplayEndgame(__instance) || IsNetplayLevel()))
             {
                 logger.LogDebug<PauseMenuPatch>("Ignore Adding MATCH SETTINGS button to VersusMatchEnd menu on netplay");
                 return false;
@@ -229,32 +213,50 @@ namespace TF.EX.Patchs.Entity
         [HarmonyPatch("VersusMatchSettingsAndSave")]
         public static bool PauseMenu_VersusMatchSettingsAndSave(PauseMenu __instance)
         {
-            var netplayManager = ServiceCollections.ResolveNetplayManager();
-            if (netplayManager.IsReplayMode() || netplayManager.IsDisconnected())
+            if (!IsNetplayLevel())
             {
-                Sounds.ui_clickBack.Play();
-                MainMenu mainMenu = new MainMenu(MainMenu.MenuState.Main);
-                TFGame.Instance.Scene = mainMenu;
-
-                var dynPauseMenu = DynamicData.For(__instance);
-                var level = dynPauseMenu.Get<Level>("level");
-
-                level.Session.MatchSettings.LevelSystem.Dispose();
-
-                var inputService = ServiceCollections.ResolveInputService();
-                inputService.DisableAllControllers();
-                inputService.EnableAllControllers();
-
-                return false;
+                return true;
             }
 
-            return true;
+            QuitToNetplayEntry(__instance);
+
+            return false;
         }
+
+        private static void QuitToNetplayEntry(PauseMenu self)
+        {
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+
+            if (!matchmakingService.GetOwnLobby().IsEmpty)
+            {
+                Task.Run(async () => await matchmakingService.LeaveLobby(() => { }, () => { }));
+            }
+
+            DynamicData.For(self).Get<Level>("level").GoToNetplayEntryMenu();
+
+            var inputService = ServiceCollections.ResolveInputService();
+            inputService.EnableAllControllers();
+            inputService.RebindLocalInput();
+        }
+
+        private static bool IsNetplayLevel()
+        {
+            var mode = TowerFall.MainMenu.VersusMatchSettings?.Mode;
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+
+            return mode != null
+                && mode.Value.IsNetplay()
+                && !netplayManager.IsTestMode()
+                && !netplayManager.IsReplayMode()
+                && !IsReplayPlayback();
+        }
+
+        private static bool IsReplayPlayback() => ReplayApi.Current?.IsPlayback == true;
 
         private static bool IsNetplayEndgame(PauseMenu self)
         {
             var mode = TowerFall.MainMenu.VersusMatchSettings?.Mode;
-            if (mode == null || !mode.Value.IsNetplay())
+            if (mode == null || !mode.Value.IsNetplay() || IsReplayPlayback())
             {
                 return false;
             }
