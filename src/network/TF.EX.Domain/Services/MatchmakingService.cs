@@ -1769,6 +1769,44 @@ namespace TF.EX.Domain.Services
             _lobbies = null;
         }
 
+        public void ShowMatchStartWarnings(Scene scene)
+        {
+            if (ownLobby.IsEmpty)
+            {
+                return;
+            }
+
+            var reasons = ownLobby.Players
+                .Where(player => player.RoomPeerId != peerId)
+                .SelectMany(DesyncRisks)
+                .ToList();
+
+            if (reasons.Count == 0)
+            {
+                return;
+            }
+
+            Sounds.ui_clickSpecial.Play();
+
+            foreach (var reason in reasons)
+            {
+                Notification.Create(scene, $"{reason} - NETPLAY MAY DESYNC".ToUpperInvariant(), 10, 500);
+            }
+        }
+
+        private static IEnumerable<string> DesyncRisks(Models.WebSocket.Player player)
+        {
+            if (player.HaveModifiedGameFiles)
+            {
+                yield return $"{player.Name} HAS MODIFIED GAME FILES";
+            }
+
+            if (!string.IsNullOrEmpty(player.Platform) && player.Platform != Utils.Platform.Current)
+            {
+                yield return $"{player.Name} IS PLAYING ON {player.Platform}";
+            }
+        }
+
         public void QueueSpectatorNotice(string text)
         {
             pendingSpectatorNotice = text;

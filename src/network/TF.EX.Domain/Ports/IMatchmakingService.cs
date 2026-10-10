@@ -49,6 +49,7 @@ namespace TF.EX.Domain.Ports
         void RequestStart();
         void ResetLobby();
         void QueueSpectatorNotice(string text);
+        void ShowMatchStartWarnings(Monocle.Scene scene);
         void ShowPendingSpectatorNoticeIfAny();
         bool IsSpectator();
         string GetRoomPeerId();

@@ -204,6 +204,11 @@ namespace TF.EX.Patchs.Scene
             clearedWaitingFor = level;
 
             Domain.CustomComponent.Notification.Clear(level, HUD_LAYER);
+
+            if (level.Session.RoundIndex == 0)
+            {
+                ServiceCollections.ResolveMatchmakingService().ShowMatchStartWarnings(level);
+            }
         }
 
         private static void UpdateLayersEntityList(Level level)
