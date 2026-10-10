@@ -88,7 +88,7 @@ namespace TF.EX.Domain
 
             var resultsAge = StateApi.Current.GetRoundResultsAge();
 
-            if (resultsAge < Constants.MAX_PREDICTION_TICKS)
+            if (resultsAge < (UsesScreenRecorder ? 1 : Constants.MAX_PREDICTION_TICKS))
             {
                 return;
             }

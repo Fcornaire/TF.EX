@@ -5,6 +5,7 @@
         public int InputDelay { get; set; }
         public int MaxInputDelay { get; set; }
         public int Fps { get; set; } = Constants.NETPLAY_FPS;
+        public int ConnectionTimeoutMs { get; set; } = Constants.CONNECTION_TIMEOUT_MS;
         public string Name { get; set; }
 
         public NetplayConfig Netplay { get; set; }

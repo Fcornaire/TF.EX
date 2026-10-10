@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+## [0.19.2] - 2026-10-10
+
+### Changed
+
+- Connecting to an opponent now waits 30 seconds before giving up instead of 20
+- Warnings about a player with modified game files or on a different OS (Windows / Linux) are now repeated at match start (please let me breathe with desynch :/ )
+
+### Fixed
+
+- Spectating a quickplay match no longer desyncs
+- Spectators no longer freeze for a few seconds at the end of a round before the instant replay
+
 ## [0.19.1] - 2026-10-10
 
 ### Changed

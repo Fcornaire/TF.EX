@@ -89,8 +89,6 @@ namespace TF.EX.Domain.Services
         private Stopwatch _synchronizationTimer;
         private readonly List<string> _pendingLateSpectators = new List<string>();
 
-        private const int SYNCHRONIZATION_TIMEOUT_MS = 20000;
-
         private readonly IInputService _inputService;
         private readonly IGameContext _gameContext;
         private readonly IArcherService _archerService;
@@ -241,7 +239,7 @@ namespace TF.EX.Domain.Services
                 return;
             }
 
-            if (!IsDisconnected() && _synchronizationTimer.ElapsedMilliseconds < SYNCHRONIZATION_TIMEOUT_MS)
+            if (!IsDisconnected() && _synchronizationTimer.ElapsedMilliseconds < Constants.CONNECTION_TIMEOUT_MS)
             {
                 return;
             }
@@ -398,7 +396,8 @@ namespace TF.EX.Domain.Services
                         //Leave lobby if the game is not over and we are disconnected
                         if ((TFGame.Instance.Scene as TowerFall.Level).Session.GetWinner() == -1)
                         {
-                            ServiceCollections.ResolveMatchmakingService().LeaveLobby(() => { }, () => { });
+                            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+                            matchmakingService.LeaveLobby(matchmakingService.ResetLobby, matchmakingService.ResetLobby);
                         }
                     }
                     else if (IsUnfinishedTeamMatch())

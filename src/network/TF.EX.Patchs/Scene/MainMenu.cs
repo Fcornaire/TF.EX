@@ -1683,7 +1683,14 @@ namespace TF.EX.Patchs.Scene
 
             StateApi.Current.SetSeed(newLobby.GameData.Seed);
 
-            MainMenu.VersusMatchSettings.Variants.ApplyVariants(newLobby.GameData.Variants);
+            if (newLobby.IsQuickPlay)
+            {
+                MainMenu.VersusMatchSettings.Variants.ApplyNetplayVariantRules();
+            }
+            else
+            {
+                MainMenu.VersusMatchSettings.Variants.ApplyVariants(newLobby.GameData.Variants);
+            }
 
             MainMenu.VersusMatchSettings.MatchLength = (MatchSettings.MatchLengths)newLobby.GameData.MatchLength;
 
