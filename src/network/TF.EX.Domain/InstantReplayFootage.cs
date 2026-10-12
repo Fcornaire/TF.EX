@@ -311,8 +311,6 @@ namespace TF.EX.Domain
                 _isBaking = false;
             }
 
-            logger.LogInformation($"[InstantReplay] rebuilt {frames.Count} frames from {start} to {end} in {watch.ElapsedMilliseconds} ms");
-
             return frames.Count > 0 ? new ReplayData([.. frames]) : null;
         }
 

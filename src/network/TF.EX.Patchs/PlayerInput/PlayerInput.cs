@@ -50,7 +50,7 @@ namespace TF.EX.Patchs.PlayerInput
 
             var seat = ServiceCollections.ResolveInputService().GetInputIndex(self);
 
-            if (seat < 0 || seat >= lobby.Players.Count)
+            if (seat < 0 || seat >= lobby.SessionPlayers.Count)
             {
                 return false;
             }

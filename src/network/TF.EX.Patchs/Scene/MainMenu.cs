@@ -256,11 +256,19 @@ namespace TF.EX.Patchs.Scene
                     var latency = matchmakingService.GetPingTo(seated);
                     var label = latency is int ms ? $"{ms} MS" : "... MS";
                     var color = matchmakingService.GetConnectionQualityTo(seated)?.ToColor() ?? Color.LightGray;
+                    var pingAt = RollcallLayout.PingAt(rollcallElement);
 
-                    Monocle.Draw.OutlineTextCentered(TFGame.Font, label, RollcallLayout.PingAt(rollcallElement), color, Color.Black);
+                    Monocle.Draw.OutlineTextCentered(TFGame.Font, label, pingAt, color, Color.Black);
+
+                    if (matchmakingService.IsRelayedWith(seated) is bool isRelayed)
+                    {
+                        var iconLeft = pingAt.X - TFGame.Font.MeasureString(label).X / 2f - ConnectionIcon.Size - 3f;
+                        ConnectionIcon.Render(new Vector2(MathF.Floor(iconLeft), MathF.Floor(pingAt.Y - ConnectionIcon.Size / 2f)), isRelayed, color);
+                    }
                 }
 
                 RenderWaitingForHost(matchmakingService);
+                RenderCheckingConnections(matchmakingService);
                 RenderQuickPlayStarting(matchmakingService);
                 InputDelayAdvisor.Render();
             }
@@ -1305,10 +1313,7 @@ namespace TF.EX.Patchs.Scene
                 return;
             }
 
-            var position = new Vector2(160f, 225f);
-
-            Monocle.Draw.OutlineTextureCentered(TFGame.MenuAtlas["portraits/readyBanner"], position, Color.White);
-            Monocle.Draw.OutlineTextCentered(TFGame.Font, "MATCH STARTING...", position - Vector2.UnitY * 2f, Color.White, Color.Black);
+            RenderBannerWithDots("MATCH STARTING");
         }
 
         private static bool Alt2Pressed()
@@ -1351,6 +1356,29 @@ namespace TF.EX.Patchs.Scene
                 logger.LogError<MainMenuPatch>("Failed to copy join code to clipboard", ex);
                 TowerFall.Sounds.ui_invalid.Play();
             }
+        }
+
+        private static void RenderCheckingConnections(Domain.Ports.IMatchmakingService matchmakingService)
+        {
+            if (!matchmakingService.IsCheckingConnections())
+            {
+                return;
+            }
+
+            RenderBannerWithDots("CHECKING CONNECTIONS");
+        }
+
+        private static void RenderBannerWithDots(string label)
+        {
+            const long dotStepMs = 400;
+
+            var position = new Vector2(160f, 225f);
+            var text = $"{label} ";
+            var dots = (int)(Environment.TickCount64 / dotStepMs % 3) + 1;
+            var left = MathF.Floor(position.X - TFGame.Font.MeasureString($"{text}...").X / 2f);
+
+            Monocle.Draw.OutlineTextureCentered(TFGame.MenuAtlas["portraits/readyBanner"], position, Color.White);
+            Monocle.Draw.OutlineTextJustify(TFGame.Font, text + new string('.', dots), new Vector2(left, position.Y - 2f), Color.White, Color.Black, new Vector2(0f, 0.5f));
         }
 
         private static void RenderWaitingForHost(Domain.Ports.IMatchmakingService matchmakingService)

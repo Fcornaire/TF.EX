@@ -17,6 +17,7 @@ namespace TF.EX.Patchs
         private static readonly TimeSpan StepRepeatInterval = TimeSpan.FromMilliseconds(50);
         private static readonly TimeSpan CursorLinger = TimeSpan.FromSeconds(2);
         private const double FrameMs = 1000.0 / Constants.NETPLAY_FPS;
+        private const int RelayRollbackFactor = 2;
 
         private const float LabelY = 7f;
         private const float ProposedY = 16f;
@@ -166,8 +167,8 @@ namespace TF.EX.Patchs
             var localPeerId = matchmakingService.GetRoomPeerId();
             var measured = lobby.Players
                 .Where(player => player.RoomPeerId != localPeerId)
-                .Select(player => matchmakingService.GetPingTo(player))
-                .OfType<int>()
+                .Select(player => (Ping: matchmakingService.GetPingTo(player), IsRelayed: matchmakingService.IsRelayedWith(player) == true))
+                .Where(opponent => opponent.Ping.HasValue)
                 .ToArray();
 
             if (measured.Length == 0)
@@ -176,8 +177,9 @@ namespace TF.EX.Patchs
                 return;
             }
 
-            var laggiest = measured.Max();
-            var uncoveredMs = laggiest / 2.0 - NetplayPreferences.AcceptedRollbackFrames * NetplayPreferences.RollbackFrameMs;
+            var hasDirectOpponent = measured.Any(opponent => !opponent.IsRelayed);
+            var acceptedMs = NetplayPreferences.AcceptedRollbackFrames * NetplayPreferences.RollbackFrameMs;
+            var uncoveredMs = measured.Max(opponent => opponent.Ping.Value / 2.0 - (opponent.IsRelayed && hasDirectOpponent ? RelayRollbackFactor * acceptedMs : acceptedMs));
 
             proposedDelay = Math.Clamp((int)Math.Ceiling(uncoveredMs / FrameMs), MinFrames, MaxFrames);
         }

@@ -6,13 +6,13 @@ namespace TF.EX.Patchs.Entity.MenuItem
 {
     internal static class RollcallLayout
     {
-        private static readonly Vector2 PING = new Vector2(0f, -66f);
-        private static readonly Vector2 NAME = new Vector2(0f, 105f);
-        private static readonly Vector2 TEAM = new Vector2(0f, 114f);
+        private static readonly Vector2 PING = new(0f, -66f);
+        private static readonly Vector2 NAME = new(0f, 105f);
+        private static readonly Vector2 TEAM = new(0f, 114f);
 
-        private static readonly Vector2 WIDE_PING = new Vector2(-16f, -40f);
-        private static readonly Vector2 WIDE_NAME = new Vector2(0f, 40f);
-        private static readonly Vector2 WIDE_TEAM = new Vector2(0f, -20f);
+        private static readonly Vector2 WIDE_PING = new(-16f, -40f);
+        private static readonly Vector2 WIDE_NAME = new(0f, 40f);
+        private static readonly Vector2 WIDE_TEAM = new(0f, -20f);
 
         public static bool IsWide => ServiceCollections.ResolveWiderSetModApi()?.IsWide ?? false;
 

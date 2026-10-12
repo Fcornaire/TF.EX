@@ -64,6 +64,10 @@ one to read.
   <img src="images/joiningAPrivateLobby.gif" alt="joining private lobby" />
 </p>
 
+- Connections through the server
+
+  Players who can't reach each other directly (strict NAT, firewall , ...) still play together: only those pairs go through the server (Relayed), the others stay direct
+
 - Replays (via **[TF.Replay](src/replay/README.md)** )
 
   <p align="center">

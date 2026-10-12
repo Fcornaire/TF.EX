@@ -2,6 +2,25 @@
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-10-12
+
+### Added
+
+- Players who can't connect directly to each other can now still play together: only the pairs that can't connect go through the server (Relayed), everyone else stays connected directly
+- Connections between players are checked before a match starts to route properly depending on their connection
+- An icon next to each ping shows how you reach that player: a plug for a direct connection or a server for a connection through the TF.EX server
+- Spectators who can't reach the host directly watch through the TF.EX server (2 per lobby because thats CPU intensive, still uncapped when direct connection work )
+
+### Changed
+
+- Late spectators catch up much faster
+- The in game pings fade out while an archer or an flying arrow passes behind them
+
+### Fixed
+
+- Spectating a match after a player left it (3 or 4 players) no longer gets stuck before the match start
+- The instant replay now replays the screen shift of the space orb and the scrolling variants
+
 ## [0.19.2] - 2026-10-10
 
 ### Changed

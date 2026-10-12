@@ -64,7 +64,7 @@ namespace TF.EX.Domain.Services
         private static readonly Microsoft.Xna.Framework.Color DisabledTint = new(250, 200, 200);
         private static readonly Microsoft.Xna.Framework.Color NeutralTint = Microsoft.Xna.Framework.Color.White;
 
-        private Dictionary<string, Action> onResult = new Dictionary<string, Action>();
+        private Dictionary<string, Action> onResult = [];
         private WSAction currentAction = WSAction.None;
 
         private readonly INetplayManager _netplayManager;
@@ -79,8 +79,11 @@ namespace TF.EX.Domain.Services
         private string abandonedRoomId = null;
 
         private string pingMeasurementUrl = null;
+        private string relayPingMeasurementUrl = null;
         private string measuredPingStatsRoomId = null;
-        private readonly Dictionary<string, PingStats> measuredPingStats = new();
+        private readonly Dictionary<string, bool> measuredPingStatsRelayed = [];
+        private readonly Dictionary<string, PingStats> measuredPingStats = [];
+        private readonly HashSet<string> reportedMeasuredPeers = [];
 
         public MatchmakingService(INetplayManager netplayManager,
             IArcherService archerService,
@@ -415,6 +418,18 @@ namespace TF.EX.Domain.Services
             var startLobbyMessage = new StartLobbyChoiceMessage { };
 
             var bytes = MessagePackSerializer.Serialize(startLobbyMessage);
+            var message = MessagePackSerializer.ConvertToJson(bytes);
+            await Send(message);
+        }
+
+        private async Task SendPeerMeasured(string roomPeerId)
+        {
+            var peerMeasuredMessage = new PeerMeasuredMessage
+            {
+                PeerMeasured = new PeerMeasured { RoomPeerId = roomPeerId }
+            };
+
+            var bytes = MessagePackSerializer.Serialize(peerMeasuredMessage);
             var message = MessagePackSerializer.ConvertToJson(bytes);
             await Send(message);
         }
@@ -778,6 +793,17 @@ namespace TF.EX.Domain.Services
                 RunOnGameThread(() => ReturnToMenu(MainMenu.MenuState.Rollcall));
             }
 
+            if (IsServerMsg(message, "KickedFromLobby"))
+            {
+                var bytes = MessagePackSerializer.ConvertFromJson(message);
+                var response = MessagePackSerializer.Deserialize<KickedFromLobbyMessage>(bytes);
+                var reason = response.KickedFromLobby.Reason;
+
+                _logger.LogDebug<MatchmakingService>($"Removed from the lobby : {reason}");
+
+                RunOnGameThread(() => HandleKickedFromLobby(reason));
+            }
+
             if (IsServerMsg(message, "SeriesLobby"))
             {
                 hasHostStartedMatch = false;
@@ -807,6 +833,21 @@ namespace TF.EX.Domain.Services
             level.Session.MatchSettings.LevelSystem.Dispose();
         }
 
+        private void HandleKickedFromLobby(string reason)
+        {
+            abandonedRoomId = ownLobby.RoomId;
+            ResetLobby();
+            ResetPeer();
+
+            Sounds.ui_invalid.Play();
+            Notification.Create(TFGame.Instance.Scene, $"{reason} - REMOVED FROM LOBBY".ToUpperInvariant(), 10, 500);
+
+            if (TFGame.Instance.Scene is MainMenu mainMenu)
+            {
+                mainMenu.State = Domain.Models.MenuState.NetplaySelect.ToTFModel();
+            }
+        }
+
         public bool IsSeriesPicker()
         {
             var series = ownLobby.Series;
@@ -829,7 +870,7 @@ namespace TF.EX.Domain.Services
 
             var resolvedArchers = ArcherDataExtensions.ResolveArchers(ownLobby);
 
-            foreach (var player in ownLobby.Players.OrderBy(entry => entry.Seat))
+            foreach (var player in ownLobby.SessionPlayers.OrderBy(entry => entry.Seat))
             {
                 if (player.Seat < 0 || player.Seat >= TFGame.Characters.Length)
                 {
@@ -847,9 +888,9 @@ namespace TF.EX.Domain.Services
             }
         }
 
-        private static void NormaliseSeats(Lobby lobby)
+        private static void NormaliseSeats(ICollection<Models.WebSocket.Player> seated)
         {
-            var players = lobby.Players.ToArray();
+            var players = seated.ToArray();
 
             if (players.Select(player => player.Seat).Distinct().Count() == players.Length)
             {
@@ -870,7 +911,8 @@ namespace TF.EX.Domain.Services
                 return;
             }
 
-            NormaliseSeats(lobby);
+            NormaliseSeats(lobby.Players);
+            NormaliseSeats(lobby.MatchPlayers);
 
             if (Context.LobbyBuilderContext.IsEditing)
             {
@@ -943,6 +985,7 @@ namespace TF.EX.Domain.Services
             ApplyGameSettingsToMatch(lobby);
 
             NotifySeriesAbort(lobby, previous);
+            NotifyConnectionUpdate(lobby, previous);
             PublishSettingsChanges(lobby, previous);
             UnreadyOwnRollcall(lobby, previous);
 
@@ -1067,6 +1110,16 @@ namespace TF.EX.Domain.Services
 
             Sounds.ui_invalid.Play();
             Notification.Create(TFGame.Instance.Scene, $"SERIES ABORTED: {lobby.Series.AbortReason ?? "UNKNOWN"}", 12, 500);
+        }
+
+        private void NotifyConnectionUpdate(Lobby lobby, Lobby previous)
+        {
+            if (previous?.RoomId != lobby.RoomId || lobby.InGame || IsSpectator() || GetRelayedPeersFrom(lobby).SetEquals(GetRelayedPeersFrom(previous)))
+            {
+                return;
+            }
+
+            Notification.Create(TFGame.Instance.Scene, "CONNECTION UPDATED", 10, 300);
         }
 
         private void PublishSettingsChanges(Lobby lobby, Lobby previous)
@@ -1268,7 +1321,7 @@ namespace TF.EX.Domain.Services
 
             for (int seat = 0; seat < 4; seat++)
             {
-                var player = ownLobby.Players.FirstOrDefault(entry => entry.Seat == seat);
+                var player = ownLobby.SessionPlayers.FirstOrDefault(entry => entry.Seat == seat);
 
                 settings.Teams[seat] = player == null ? Allegiance.Neutral : (Allegiance)player.Team;
             }
@@ -1276,10 +1329,9 @@ namespace TF.EX.Domain.Services
 
         private static RollcallElement[] GetRollcallElements(Monocle.Scene scene)
         {
-            return scene.Layers
+            return [.. scene.Layers
                 .SelectMany(layer => layer.Value.Entities)
-                .OfType<RollcallElement>()
-                .ToArray();
+                .OfType<RollcallElement>()];
         }
 
         private void ReconcileRollcall(Lobby lobby, RollcallElement[] rollCalls)
@@ -1449,14 +1501,46 @@ namespace TF.EX.Domain.Services
             return measuredPingStats.TryGetValue(player.RoomPeerId, out var stats) ? ConnectionQualities.GetQuality(stats) : null;
         }
 
+        public bool? IsRelayedWith(Models.WebSocket.Player player)
+        {
+            if (IsSpectator() || string.IsNullOrEmpty(peerId))
+            {
+                return null;
+            }
+
+            return GetRelayedPeersFrom(ownLobby).Contains(player.RoomPeerId);
+        }
+
+        public List<string> GetRelayedPeers()
+        {
+            return [.. GetRelayedPeersFrom(ownLobby)];
+        }
+
+        private HashSet<string> GetRelayedPeersFrom(Lobby lobby)
+        {
+            return [.. lobby.RelayedPairs
+                .Where(pair => pair.Contains(peerId))
+                .SelectMany(pair => pair)
+                .Where(peer => peer != peerId)];
+        }
+
         private void RefreshPingStats(Models.WebSocket.Player player)
         {
-            if (pingMeasurementUrl == null)
+            var isRelayed = IsRelayedWith(player) == true;
+
+            if (measuredPingStatsRelayed.TryGetValue(player.RoomPeerId, out var wasRelayed) && wasRelayed != isRelayed)
+            {
+                measuredPingStats.Remove(player.RoomPeerId);
+            }
+
+            measuredPingStatsRelayed[player.RoomPeerId] = isRelayed;
+
+            if ((isRelayed ? relayPingMeasurementUrl : pingMeasurementUrl) == null)
             {
                 return;
             }
 
-            GGRSFFI.ping_measurement_stats(player.RoomPeerId, out var stats);
+            GGRSFFI.ping_measurement_stats(player.RoomPeerId, isRelayed, out var stats);
 
             if (stats.samples > 0)
             {
@@ -1466,38 +1550,77 @@ namespace TF.EX.Domain.Services
 
         public void StartOrStopPingMeasurementIfNeeded(bool inLobbyMenu)
         {
-            var url = inLobbyMenu && IsConnectedToServer() && !string.IsNullOrEmpty(ownLobby.RoomId) && !string.IsNullOrEmpty(peerId)
-                ? $"{SERVER_URL}/ping_measurement/{ownLobby.RoomId}?peer={peerId}"
-                : null;
+            var isMeasuring = inLobbyMenu && IsConnectedToServer() && !string.IsNullOrEmpty(ownLobby.RoomId) && !string.IsNullOrEmpty(peerId);
 
-            if (url == pingMeasurementUrl)
-            {
-                return;
-            }
-
-            if (pingMeasurementUrl != null)
-            {
-                GGRSFFI.ping_measurement_stop();
-            }
-
-            pingMeasurementUrl = url;
-
-            if (url == null)
-            {
-                return;
-            }
-
-            if (ownLobby.RoomId != measuredPingStatsRoomId)
+            if (isMeasuring && ownLobby.RoomId != measuredPingStatsRoomId)
             {
                 measuredPingStats.Clear();
+                measuredPingStatsRelayed.Clear();
+                reportedMeasuredPeers.Clear();
                 measuredPingStatsRoomId = ownLobby.RoomId;
             }
 
-            using var status = GGRSFFI.ping_measurement_start(url).ToModelGGrsFFI();
+            var url = isMeasuring ? $"{SERVER_URL}/ping_measurement/{ownLobby.RoomId}?peer={peerId}" : null;
+            var relayUrl = isMeasuring && GetRelayedPeers().Count > 0 ? $"{SERVER_URL}/relay/ping_measurement/{ownLobby.RoomId}?peer={peerId}" : null;
+
+            pingMeasurementUrl = SwitchPingMeasurement(pingMeasurementUrl, url, false);
+            relayPingMeasurementUrl = SwitchPingMeasurement(relayPingMeasurementUrl, relayUrl, true);
+
+            ReportMeasuredPeers();
+        }
+
+        private string SwitchPingMeasurement(string currentUrl, string url, bool isRelay)
+        {
+            if (url == currentUrl)
+            {
+                return currentUrl;
+            }
+
+            if (currentUrl != null)
+            {
+                GGRSFFI.ping_measurement_stop(isRelay);
+            }
+
+            if (url == null)
+            {
+                return null;
+            }
+
+            using var status = GGRSFFI.ping_measurement_start(url, isRelay).ToModelGGrsFFI();
 
             if (!status.IsOk)
             {
                 _logger.LogError<MatchmakingService>($"Failed to start ping measurement : {status.Info.AsString()}");
+            }
+
+            return url;
+        }
+
+        private void ReportMeasuredPeers()
+        {
+            if (pingMeasurementUrl == null || IsSpectator())
+            {
+                return;
+            }
+
+            foreach (var player in ownLobby.Players)
+            {
+                if (player.RoomPeerId == peerId || reportedMeasuredPeers.Contains(player.RoomPeerId))
+                {
+                    continue;
+                }
+
+                GGRSFFI.ping_measurement_stats(player.RoomPeerId, false, out var stats);
+
+                if (stats.rtt < 0)
+                {
+                    continue;
+                }
+
+                reportedMeasuredPeers.Add(player.RoomPeerId);
+
+                var roomPeerId = player.RoomPeerId;
+                Task.Run(() => SendPeerMeasured(roomPeerId));
             }
         }
 
@@ -1560,7 +1683,8 @@ namespace TF.EX.Domain.Services
         {
             abandonedRoomId = null;
 
-            NormaliseSeats(lobby);
+            NormaliseSeats(lobby.Players);
+            NormaliseSeats(lobby.MatchPlayers);
 
             ownLobby = new Lobby
             {
@@ -1574,7 +1698,10 @@ namespace TF.EX.Domain.Services
                 Mods = lobby.Mods,
                 Kind = lobby.Kind,
                 JoinCode = lobby.JoinCode,
-                Series = lobby.Series
+                Series = lobby.Series,
+                RelayedPairs = lobby.RelayedPairs,
+                MatchPlayers = lobby.MatchPlayers,
+                IsCheckingConnections = lobby.IsCheckingConnections
             };
         }
 
@@ -1675,6 +1802,11 @@ namespace TF.EX.Domain.Services
             return peerId;
         }
 
+        public string GetRelayUrl()
+        {
+            return $"{SERVER_URL}/relay/room/{ownLobby.RoomId}?peer={peerId}";
+        }
+
         public async Task UpdatePlayer(Models.WebSocket.Player player, Action onSucess, Action onFail)
         {
             await Update(WSAction.UpdatePlayer, onSucess, onFail);
@@ -1722,9 +1854,14 @@ namespace TF.EX.Domain.Services
             return !ownLobby.IsQuickPlay && IsAwaitingHostStart() && !IsHost();
         }
 
+        public bool IsCheckingConnections()
+        {
+            return AreAllPlayersReady() && !hasHostStartedMatch && ownLobby.IsCheckingConnections;
+        }
+
         private bool IsAwaitingHostStart()
         {
-            return AreAllPlayersReady() && !hasHostStartedMatch;
+            return AreAllPlayersReady() && !hasHostStartedMatch && !ownLobby.IsCheckingConnections;
         }
 
         private bool IsHost()
