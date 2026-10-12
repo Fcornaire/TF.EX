@@ -7,6 +7,8 @@ namespace TF.EX.Domain.Ports
     {
         int? GetPingTo(Player player);
         ConnectionQuality? GetConnectionQualityTo(Player player);
+        bool? IsRelayedWith(Player player);
+        List<string> GetRelayedPeers();
         void StartOrStopPingMeasurementIfNeeded(bool inLobbyMenu);
         bool IsConnectedToServer();
         bool ConnectToServerAndListen();
@@ -46,6 +48,7 @@ namespace TF.EX.Domain.Ports
         bool IsLobbyFull();
         bool CanHostStart();
         bool IsWaitingForHostStart();
+        bool IsCheckingConnections();
         void RequestStart();
         void ResetLobby();
         void QueueSpectatorNotice(string text);
@@ -53,6 +56,7 @@ namespace TF.EX.Domain.Ports
         void ShowPendingSpectatorNoticeIfAny();
         bool IsSpectator();
         string GetRoomPeerId();
+        string GetRelayUrl();
         int GetLocalSeat();
         void ReconcileRollcallIfPending();
         void RunOnGameThread(Action action);

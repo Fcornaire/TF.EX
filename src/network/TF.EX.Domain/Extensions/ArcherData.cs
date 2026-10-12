@@ -102,7 +102,7 @@ namespace TF.EX.Domain.Extensions
         public static Dictionary<int, (int Index, int Alt)> ResolveArchers(Lobby lobby)
         {
             var result = new Dictionary<int, (int, int)>();
-            var players = lobby.Players.OrderBy(player => player.Seat).ToList();
+            var players = lobby.SessionPlayers.OrderBy(player => player.Seat).ToList();
             var usedVanilla = new HashSet<int>();
 
             foreach (var player in players)

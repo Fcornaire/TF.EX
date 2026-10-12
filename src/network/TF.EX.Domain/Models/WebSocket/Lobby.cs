@@ -16,17 +16,20 @@ namespace TF.EX.Domain.Models.WebSocket
         public string Name { get; set; } = "";
         public string RoomId { get; set; } = "";
         public int MaxPlayers { get; set; } = 2;
-        public ICollection<Player> Players { get; set; } = new List<Player>();
-        public ICollection<Player> Spectators { get; set; } = new List<Player>();
+        public ICollection<Player> Players { get; set; } = [];
+        public ICollection<Player> Spectators { get; set; } = [];
         public GameData GameData { get; set; } = new GameData();
-        public ICollection<EndGameVote> EndGameChoice { get; set; } = new List<EndGameVote>();
-        public ICollection<CustomMod> Mods { get; set; } = new List<CustomMod>();
+        public ICollection<EndGameVote> EndGameChoice { get; set; } = [];
+        public ICollection<CustomMod> Mods { get; set; } = [];
 
         public bool InGame { get; set; } = false;
 
         public string Kind { get; set; } = nameof(LobbyKind.Standard);
         public string JoinCode { get; set; } = "";
         public Series Series { get; set; } = null;
+        public ICollection<string[]> RelayedPairs { get; set; } = [];
+        public bool IsCheckingConnections { get; set; } = false;
+        public ICollection<Player> MatchPlayers { get; set; } = [];
 
         [IgnoreMember]
         public LobbyKind KindValue => Enum.TryParse<LobbyKind>(Kind, out var kind) ? kind : LobbyKind.Standard;
@@ -36,6 +39,9 @@ namespace TF.EX.Domain.Models.WebSocket
 
         [IgnoreMember]
         public bool IsSeriesInProgress => Series?.IsInProgress == true;
+
+        [IgnoreMember]
+        public ICollection<Player> SessionPlayers => MatchPlayers.Count > 0 ? MatchPlayers : Players;
 
         [IgnoreMember]
         public bool IsPrivate => KindValue == LobbyKind.Private;
@@ -58,7 +64,7 @@ namespace TF.EX.Domain.Models.WebSocket
         [IgnoreMember]
         public string CanNotJoinReason { get; set; } = "";
 
-        public List<string> MissingVariants { get; set; } = new List<string>();
+        public List<string> MissingVariants { get; set; } = [];
     }
 
     [MessagePackObject(keyAsPropertyName: true)]
@@ -81,7 +87,7 @@ namespace TF.EX.Domain.Models.WebSocket
         public int MapId { get; set; } = -1;
         public int Mode { get; set; } = (int)TowerFall.Modes.LastManStanding;
         public int MatchLength { get; set; } = (int)MatchSettings.MatchLengths.Standard;
-        public ICollection<string> Variants { get; set; } = new List<string>();
+        public ICollection<string> Variants { get; set; } = [];
         public int Seed { get; set; } = 0;
         public int BestOf { get; set; } = 0;
     }
@@ -102,7 +108,7 @@ namespace TF.EX.Domain.Models.WebSocket
         public int? NextMapId { get; set; }
         public string AbortReason { get; set; }
         public bool AwaitingResult { get; set; }
-        public List<SeriesPick> Picks { get; set; } = new List<SeriesPick>();
+        public List<SeriesPick> Picks { get; set; } = [];
 
         [IgnoreMember]
         public bool IsInProgress => Status == InProgress;
@@ -149,7 +155,7 @@ namespace TF.EX.Domain.Models.WebSocket
     {
         public int MapId { get; set; }
         public int WinnerSide { get; set; }
-        public List<int> Scores { get; set; } = new List<int>();
+        public List<int> Scores { get; set; } = [];
     }
 
     [MessagePackObject(keyAsPropertyName: true)]
@@ -168,9 +174,9 @@ namespace TF.EX.Domain.Models.WebSocket
 
         public string CustomArcherId { get; set; } = "";
 
-        public List<string> ArcherMods { get; set; } = new List<string>();
+        public List<string> ArcherMods { get; set; } = [];
 
-        public List<string> CustomVariants { get; set; } = new List<string>();
+        public List<string> CustomVariants { get; set; } = [];
 
         public bool UseInstantReplay { get; set; } = false;
 

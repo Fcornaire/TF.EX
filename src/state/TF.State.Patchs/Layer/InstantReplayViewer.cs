@@ -13,6 +13,7 @@ namespace TF.State.Patchs.Layer
         private static readonly AccessTools.FieldRef<ReplayViewer, ReplayData> Data = AccessTools.FieldRefAccess<ReplayViewer, ReplayData>("data");
         private static readonly AccessTools.FieldRef<ReplayViewer, Action> OnComplete = AccessTools.FieldRefAccess<ReplayViewer, Action>("onComplete");
         private static readonly AccessTools.FieldRef<ReplayViewer, Coroutine> Routine = AccessTools.FieldRefAccess<ReplayViewer, Coroutine>("coroutine");
+        private static readonly AccessTools.FieldRef<ReplayViewer, int> FrameMarker = AccessTools.FieldRefAccess<ReplayViewer, int>("frameMarker");
         private static readonly Func<ReplayViewer, IEnumerator> Rewind = AccessTools.MethodDelegate<Func<ReplayViewer, IEnumerator>>(AccessTools.Method(typeof(ReplayViewer), "Rewind"));
         private static readonly Action<ReplayViewer, int> SetFrame = AccessTools.MethodDelegate<Action<ReplayViewer, int>>(AccessTools.Method(typeof(ReplayViewer), "SetFrame"));
 
@@ -42,6 +43,30 @@ namespace TF.State.Patchs.Layer
         }
 
         public static bool IsPlaying() => Engine.Instance?.Scene is Level level && level.ReplayViewer.Visible;
+
+        internal static bool TryGetReplayOffset(out Vector2 offset, out Vector2 offsetAdd)
+        {
+            offset = Vector2.Zero;
+            offsetAdd = Vector2.Zero;
+
+            if (!InstantReplay.Enabled || Engine.Instance?.Scene is not Level level || !level.ReplayViewer.Visible)
+            {
+                return false;
+            }
+
+            var frames = Data(level.ReplayViewer)?.Frames;
+            var marker = FrameMarker(level.ReplayViewer);
+
+            if (frames == null || marker < 0 || marker >= frames.Length)
+            {
+                return false;
+            }
+
+            offset = frames[marker].ScreenOffset;
+            offsetAdd = frames[marker].ScreenOffsetAdd;
+
+            return true;
+        }
 
         public static void Tick()
         {
@@ -136,6 +161,45 @@ namespace TF.State.Patchs.Layer
             }
 
             SaveData.Instance.Options.CanSkipReplays = _canSkip;
+        }
+    }
+
+    [HarmonyPatch(typeof(Monocle.Screen))]
+    internal static class InstantReplayScreenPatch
+    {
+        private static Vector2 _liveOffset;
+        private static Vector2 _liveOffsetAdd;
+        private static bool _isSwapped;
+
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(Monocle.Screen.Render))]
+        public static void Screen_Render_Prefix(Monocle.Screen __instance)
+        {
+            _isSwapped = InstantReplayViewerPatch.TryGetReplayOffset(out var offset, out var offsetAdd);
+
+            if (!_isSwapped)
+            {
+                return;
+            }
+
+            _liveOffset = __instance.Offset;
+            _liveOffsetAdd = __instance.OffsetAdd;
+            __instance.Offset = offset;
+            __instance.OffsetAdd = offsetAdd;
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(Monocle.Screen.Render))]
+        public static void Screen_Render_Postfix(Monocle.Screen __instance)
+        {
+            if (!_isSwapped)
+            {
+                return;
+            }
+
+            __instance.Offset = _liveOffset;
+            __instance.OffsetAdd = _liveOffsetAdd;
+            _isSwapped = false;
         }
     }
 

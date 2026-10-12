@@ -69,8 +69,8 @@
     public class NetplayConfig
     {
         public int NumPlayers { get; set; }
-        public ICollection<string> Spectators { get; set; } = new List<string>();
-        public ICollection<string> Players { get; set; } = new List<string>();
+        public ICollection<string> Spectators { get; set; } = [];
+        public ICollection<string> Players { get; set; } = [];
         public string LocalPeerId { get; set; } = "";
         public NetplayLocalConfig LocalConf { get; set; }
         public NetplayServerConfig ServerConf { get; set; }
@@ -90,6 +90,10 @@
         public string RoomUrl { get; set; }
 
         public bool IsHost { get; set; }
+
+        public string RelayUrl { get; set; }
+
+        public List<string> RelayPeers { get; set; } = [];
     }
 
     public class TestConfig
@@ -102,5 +106,7 @@
         public string RoomUrl { get; set; }
 
         public string ToSpectate { get; set; }
+
+        public string RelayUrl { get; set; }
     }
 }

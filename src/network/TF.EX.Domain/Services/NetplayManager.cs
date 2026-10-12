@@ -84,6 +84,7 @@ namespace TF.EX.Domain.Services
             }
         }
         private bool _hasFailedInitialConnection = false;
+        private string _failedConnectionMessage = "";
         private volatile bool _pendingAbortToVersusOptions = false;
         private TowerFall.RoundLogic _pendingSessionRoundLogic;
         private Stopwatch _synchronizationTimer;
@@ -166,7 +167,32 @@ namespace TF.EX.Domain.Services
 
             _pendingSessionRoundLogic = roundLogic;
 
+            ApplyRelay();
+
             Task.Run(() => Connect(roundLogic), _cancellationToken);
+        }
+
+        private void ApplyRelay()
+        {
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+            var relayPeers = matchmakingService.GetRelayedPeers();
+            var relayUrl = matchmakingService.GetRelayUrl();
+
+            if (GGRSConfig.Netplay.ServerConf != null)
+            {
+                GGRSConfig.Netplay.ServerConf.RelayUrl = relayUrl;
+                GGRSConfig.Netplay.ServerConf.RelayPeers = relayPeers;
+            }
+
+            if (GGRSConfig.Netplay.SpectatorConf != null)
+            {
+                GGRSConfig.Netplay.SpectatorConf.RelayUrl = relayUrl;
+            }
+
+            if (relayPeers.Count > 0)
+            {
+                _logger.LogDebug<NetplayManager>("Relay session starting");
+            }
         }
 
         public void EstablishSessionIfSynchronized()
@@ -216,7 +242,7 @@ namespace TF.EX.Domain.Services
                     }
 
                     _logger.LogError<NetplayManager>($"Failed to initialize netplay session : {info}");
-                    AbortToVersusOptions();
+                    AbortToVersusOptions(info);
 
                     return;
                 }
@@ -252,11 +278,22 @@ namespace TF.EX.Domain.Services
             AbortToVersusOptions();
         }
 
-        private void AbortToVersusOptions()
+        private void AbortToVersusOptions(string info = "")
         {
+            _failedConnectionMessage = FailedConnectionMessage(info);
             _pendingSessionRoundLogic = null;
             _hasFailedInitialConnection = true;
             _pendingAbortToVersusOptions = true;
+        }
+
+        private string FailedConnectionMessage(string info)
+        {
+            if (!IsSpectatorMode())
+            {
+                return "Connection to the other players failed";
+            }
+
+            return info.Contains("no spectator slot left") ? "No more spectators allowed in this lobby" : "Connection failed, check your firewall";
         }
 
         public bool ConsumeAbortToVersusOptions()
@@ -953,6 +990,11 @@ namespace TF.EX.Domain.Services
         public bool HasFailedInitialConnection()
         {
             return _hasFailedInitialConnection;
+        }
+
+        public string GetFailedConnectionMessage()
+        {
+            return _failedConnectionMessage;
         }
 
         public ICollection<Models.ArcherSeatInfo> GetArchersInfo()

@@ -29,8 +29,8 @@ namespace TF.EX.Patchs.Scene
             matchmakingService.RestoreArchersFromLobbyIfNeeded();
 
             var lobby = matchmakingService.GetOwnLobby();
-            netplayManager.UpdatePlayers(lobby.Players, lobby.Spectators);
-            netplayManager.UpdateNumPlayers(lobby.Players.Count);
+            netplayManager.UpdatePlayers(lobby.SessionPlayers, lobby.Spectators);
+            netplayManager.UpdateNumPlayers(lobby.SessionPlayers.Count);
 
             if (lobby.IsEmpty)
             {
@@ -55,7 +55,7 @@ namespace TF.EX.Patchs.Scene
             var inputService = ServiceCollections.ResolveInputService();
 
             StateApi.Current.ResetRng();
-            inputService.EnsureRemoteController(Math.Max(2, ServiceCollections.ResolveMatchmakingService().GetOwnLobby().Players.Count));
+            inputService.EnsureRemoteController(Math.Max(2, ServiceCollections.ResolveMatchmakingService().GetOwnLobby().SessionPlayers.Count));
             inputService.EnsureEveryControllerSlot();
             StateApi.Current.PurgeCache();
         }

@@ -87,12 +87,12 @@ namespace TF.EX.Domain.Externals
         public static extern int netplay_frames_behind();
 
         [DllImport("ggrs_ffi")]
-        public static extern Status ping_measurement_start([MarshalAs(UnmanagedType.LPUTF8Str)] string roomUrl);
+        public static extern Status ping_measurement_start([MarshalAs(UnmanagedType.LPUTF8Str)] string roomUrl, [MarshalAs(UnmanagedType.U1)] bool isRelay);
 
         [DllImport("ggrs_ffi")]
-        public static extern void ping_measurement_stop();
+        public static extern void ping_measurement_stop([MarshalAs(UnmanagedType.U1)] bool isRelay);
 
         [DllImport("ggrs_ffi")]
-        public static extern void ping_measurement_stats([MarshalAs(UnmanagedType.LPUTF8Str)] string peerId, out PingStats stats);
+        public static extern void ping_measurement_stats([MarshalAs(UnmanagedType.LPUTF8Str)] string peerId, [MarshalAs(UnmanagedType.U1)] bool isRelay, out PingStats stats);
     }
 }

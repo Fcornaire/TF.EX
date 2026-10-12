@@ -88,6 +88,7 @@ namespace TF.EX.Domain.Ports
         void SetReplayMode();
 
         bool HasFailedInitialConnection();
+        string GetFailedConnectionMessage();
         ICollection<Models.ArcherSeatInfo> GetArchersInfo();
         bool IsServerMode();
         void SetSpectatorMode(string roomUrl, string hostPeerId);

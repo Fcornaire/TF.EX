@@ -215,7 +215,7 @@ namespace TF.EX.Patchs.Engine
                     inputService.EnableAllControllers();
                     inputService.RebindLocalInput();
 
-                    Notification.Create(menu, "Connection to the other players failed", 10, 450);
+                    Notification.Create(menu, netplayManager.GetFailedConnectionMessage(), 10, 450);
                 }
 
                 TFGame_Update_orig(__instance, gameTime);
