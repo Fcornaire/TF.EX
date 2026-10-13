@@ -1701,7 +1701,8 @@ namespace TF.EX.Domain.Services
                 Series = lobby.Series,
                 RelayedPairs = lobby.RelayedPairs,
                 MatchPlayers = lobby.MatchPlayers,
-                IsCheckingConnections = lobby.IsCheckingConnections
+                IsCheckingConnections = lobby.IsCheckingConnections,
+                IsReportEnabled = lobby.IsReportEnabled
             };
         }
 

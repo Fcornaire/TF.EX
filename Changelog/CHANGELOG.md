@@ -10,6 +10,7 @@
 - Connections between players are checked before a match starts to route properly depending on their connection
 - An icon next to each ping shows how you reach that player: a plug for a direct connection or a server for a connection through the TF.EX server
 - Spectators who can't reach the host directly watch through the TF.EX server (2 per lobby because thats CPU intensive, still uncapped when direct connection work )
+- Temporarily, a match that desyncs, ends early or crashes will send appropriate metrics (logs + replays) to help fix the issue. This will be removed at some point (unless you want to pay me for storage ?)
 
 ### Changed
 

@@ -110,6 +110,10 @@ namespace TF.EX.Core.RoundLogic
 
                 var lobby = matchmakingService.GetOwnLobby();
                 replayService.Initialize(lobby.GameData, lobby.Mods);
+                if (lobby.IsReportEnabled)
+                {
+                    MatchReport.Begin(netplayManager.IsServerMode() ? lobby.SessionPlayers : null);
+                }
 
                 TowerFall.TFGame.ConsoleEnabled = false;
             }

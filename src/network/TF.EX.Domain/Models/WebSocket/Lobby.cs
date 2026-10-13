@@ -29,6 +29,7 @@ namespace TF.EX.Domain.Models.WebSocket
         public Series Series { get; set; } = null;
         public ICollection<string[]> RelayedPairs { get; set; } = [];
         public bool IsCheckingConnections { get; set; } = false;
+        public bool IsReportEnabled { get; set; } = false;
         public ICollection<Player> MatchPlayers { get; set; } = [];
 
         [IgnoreMember]

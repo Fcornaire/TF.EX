@@ -2,9 +2,6 @@
 
 namespace TF.EX.Domain.Ports
 {
-    /// <summary>
-    /// EX's view of replay
-    /// </summary>
     public interface IReplayService
     {
         void RegisterPlaybackCallbacks();
@@ -14,7 +11,7 @@ namespace TF.EX.Domain.Ports
         void AddRecord(byte[] state, int frame);
 
         void RemovePredictedRecords(int frame);
-        void Export();
+        string Export();
         void Reset();
 
         Task<string> LoadAndStart(string replayFilename, string currentSong = "");
