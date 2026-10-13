@@ -1,7 +1,6 @@
 using Monocle;
-using TowerFall;
-
 using TF.State.Domain.Ports;
+using TowerFall;
 namespace TF.State.Domain
 {
     public static class VersusLevelSystemExtensions
@@ -14,7 +13,9 @@ namespace TF.State.Domain
             IRngService rngService
             )
         {
-            var levels = versusTowerData.GetLevels(matchSettings);
+            var levels = SortByFolderAndName(versusTowerData.GetLevels(matchSettings))
+                .Select(level => level.Replace('/', '\\'))
+                .ToList();
 
             //useful for debug only
             // for (int i = 0; i < levels.Count; i++)
@@ -39,6 +40,15 @@ namespace TF.State.Domain
             }
 
             return levels;
+        }
+
+        private static List<string> SortByFolderAndName(List<string> levels)
+        {
+            var folders = levels.Select(level => Path.GetDirectoryName(level)).Distinct().ToList();
+
+            return [.. levels
+                .OrderBy(level => folders.IndexOf(Path.GetDirectoryName(level)))
+                .ThenBy(level => Path.GetFileName(level), StringComparer.OrdinalIgnoreCase)];
         }
     }
 }

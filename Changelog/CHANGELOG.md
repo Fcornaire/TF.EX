@@ -21,6 +21,8 @@
 
 - Spectating a match after a player left it (3 or 4 players) no longer gets stuck before the match start
 - The instant replay now replays the screen shift of the space orb and the scrolling variants
+- [State] Linux players should no longer get the tower's levels in a different order than their opponent
+- [State] Levels should now be seeded the same way on Linux and Windows, removing one potential cause of desync between the 2 OS (Need testing pls)
 
 ## [0.19.2] - 2026-10-10
 
