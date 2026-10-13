@@ -60,6 +60,26 @@ namespace TF.EX.Patchs.Engine
             }
         }
 
+        [HarmonyFinalizer]
+        [HarmonyPatch("Update")]
+        public static void TFGame_Update_Finalizer(Exception __exception)
+        {
+            if (__exception != null && ServiceCollections.ResolveMatchmakingService().GetOwnLobby().IsReportEnabled)
+            {
+                MatchReport.OnCrash(__exception);
+            }
+        }
+
+        [HarmonyFinalizer]
+        [HarmonyPatch("Draw")]
+        public static void TFGame_Draw_Finalizer(Exception __exception)
+        {
+            if (__exception != null && ServiceCollections.ResolveMatchmakingService().GetOwnLobby().IsReportEnabled)
+            {
+                MatchReport.OnCrash(__exception);
+            }
+        }
+
         [HarmonyPostfix]
         [HarmonyPatch("OnSceneTransition")]
         public static void TFGame_OnSceneTransition(TFGame __instance)

@@ -448,6 +448,7 @@ namespace TF.EX.Domain.Services
                 foreach (var desynchString in _events.Where(s => s.Contains(Event.DesyncDetected.ToString())))
                 {
                     _logger.LogWarning<NetplayManager>(desynchString);
+                    MatchReport.MarkDesync();
                 }
             }
         }

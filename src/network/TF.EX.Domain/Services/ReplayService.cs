@@ -117,7 +117,7 @@ namespace TF.EX.Domain.Services
             return teams;
         }
 
-        public void Export()
+        public string Export()
         {
             ReplayApi.Current.SetLocalSeat(_netplayManager.LocalSeat);
             ReplayApi.Current.SetSeed(StateApi.Current.GetSeed());
@@ -137,7 +137,11 @@ namespace TF.EX.Domain.Services
 
             ReplayApi.Current.SetArcherTeams(CurrentTeams());
 
-            ReplayApi.Current.Export();
+            var replayPath = ReplayApi.Current.Export();
+
+            MatchReport.OnReplayExported(replayPath);
+
+            return replayPath;
         }
 
         public void Reset()
