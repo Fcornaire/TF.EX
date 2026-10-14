@@ -14,6 +14,7 @@ namespace TF.EX.Domain
     public static class InstantReplayFootage
     {
         private const int KeyframeStride = 60;
+        private const int RoundEndToleranceTicks = 60;
         private const int FootageFrames = ReplayRecorder.RECORD_FRAMES;
         private const float TickSeconds = 1f / Constants.NETPLAY_FPS;
         private const float FootageSeconds = FootageFrames * (ReplayRecorder.TIME_BETWEEN_FRAMES + TickSeconds);
@@ -36,8 +37,11 @@ namespace TF.EX.Domain
         private static bool _isHolding;
         private static bool _isMusicHeld;
         private static bool _hasStartedLive;
+        private static int _blockedRoundEndFrame = -1;
 
         public static bool IsPaused { get; private set; }
+
+        public static bool IsBaking => _isBaking;
 
         public static int PlayedThisMatch { get; private set; }
 
@@ -266,6 +270,7 @@ namespace TF.EX.Domain
             ReleasePool();
 
             _isBaking = true;
+            _blockedRoundEndFrame = -1;
             netplayManager.UpdateFramesToReSimulate(1);
             StateApi.Current.SetInstantReplayBaking(true);
 
@@ -283,6 +288,12 @@ namespace TF.EX.Domain
                     dynScene.Set("FrameCounter", (float)frame);
                     level.Update();
 
+                    if (TFGame.Instance.Scene != level)
+                    {
+                        logger.LogWarning($"[InstantReplay] scene changed during bake at frame {frame}");
+                        break;
+                    }
+
                     elapsed += Engine.DeltaTime;
 
                     if (elapsed >= ReplayRecorder.TIME_BETWEEN_FRAMES)
@@ -290,6 +301,11 @@ namespace TF.EX.Domain
                         frames.Add(Capture(level, frames.Count % FootageFrames, elapsed, _inputs[frame]));
                         elapsed = 0f;
                     }
+                }
+
+                if (_blockedRoundEndFrame >= 0 && _blockedRoundEndFrame < end - RoundEndToleranceTicks)
+                {
+                    logger.LogWarning($"[InstantReplay] rebuild ended the round {end - _blockedRoundEndFrame} ?");
                 }
 
                 if (frames.Count > FootageFrames)
@@ -312,6 +328,14 @@ namespace TF.EX.Domain
             }
 
             return frames.Count > 0 ? new ReplayData([.. frames]) : null;
+        }
+
+        public static void NotifyRoundEndBlocked(int frame)
+        {
+            if (_blockedRoundEndFrame < 0)
+            {
+                _blockedRoundEndFrame = frame;
+            }
         }
 
         private static ReplayFrame Capture(Level level, int index, float elapsed, Input[] inputs)
