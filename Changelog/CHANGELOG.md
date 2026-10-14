@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [0.20.1] - 2026-10-14
+
+### Fixed
+
+- Fixed a 0 frame delay input that could start a match without archers
+- The instant replay no longer freezes the game and shows a broken replay in some conditions
+
 ## [0.20.0] - 2026-10-12
 
 ### Added

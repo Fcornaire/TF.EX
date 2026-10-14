@@ -167,6 +167,8 @@ namespace TF.EX.Domain.Services
 
             _pendingSessionRoundLogic = roundLogic;
 
+            _inputService.ResetPolledInput();
+
             ApplyRelay();
 
             Task.Run(() => Connect(roundLogic), _cancellationToken);

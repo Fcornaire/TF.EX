@@ -186,6 +186,7 @@ namespace TF.EX.Domain.CustomComponent
                 level.GoToNetplayEntryMenu();
 
                 var inputService = ServiceCollections.ResolveInputService();
+                inputService.ResetPolledInput();
                 inputService.EnableAllControllers();
                 inputService.RebindLocalInput();
             });

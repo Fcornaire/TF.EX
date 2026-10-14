@@ -19,7 +19,7 @@ namespace TF.EX.Patchs
         [HarmonyPatch("GotoNextRound")]
         public static bool Session_GotoNextRound(Session __instance)
         {
-            if (ReplayApi.Current?.IsTakeoverInProgress() == true)
+            if (InstantReplayFootage.IsBaking || ReplayApi.Current?.IsTakeoverInProgress() == true)
             {
                 return false;
             }
@@ -72,6 +72,19 @@ namespace TF.EX.Patchs
             }
 
             return true;
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch("EndRound")]
+        public static bool Session_EndRound_SkipWhileBaking(Session __instance)
+        {
+            if (!InstantReplayFootage.IsBaking)
+            {
+                return true;
+            }
+
+            InstantReplayFootage.NotifyRoundEndBlocked((int)__instance.CurrentLevel.FrameCounter);
+            return false;
         }
 
         [HarmonyPrefix]
