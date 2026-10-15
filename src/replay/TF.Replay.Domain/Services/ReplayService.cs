@@ -18,6 +18,7 @@ namespace TF.Replay.Domain.Services
         private ITfStateApi StateApi() => _modCollections?.Invoke()?.ResolveState();
 
         private Models.Replay _replay;
+        private Dictionary<int, Record> _recordsIndexes;
         private int _currentReplayFrame;
         private int _lastFrame;
         private bool _isPlayback;
@@ -231,6 +232,7 @@ namespace TF.Replay.Domain.Services
             RestoreTickRateOverride();
 
             _replay = null;
+            _recordsIndexes = null;
             _currentReplayFrame = 0;
             _lastFrame = 0;
             _isPlayback = false;
@@ -682,6 +684,7 @@ namespace TF.Replay.Domain.Services
             _currentReplayFrame = 0;
 
             _replay = null;
+            _recordsIndexes = null;
             _fromFile = false;
             _lastFrame = 0;
             SeekBlockedBy = null;
@@ -966,6 +969,11 @@ namespace TF.Replay.Domain.Services
 
         public Record GetRecordAt(int frame)
         {
+            if (_recordsIndexes != null)
+            {
+                return _recordsIndexes.TryGetValue(frame, out var record) ? record : null;
+            }
+
             return _replay?.Record.Find(rec => rec.Frame == frame);
         }
 
@@ -976,7 +984,7 @@ namespace TF.Replay.Domain.Services
                 return null;
             }
 
-            var record = _replay.Record.Find(rec => rec.Frame == _currentReplayFrame);
+            var record = GetRecordAt(_currentReplayFrame);
 
             _currentReplayFrame++;
 
@@ -1135,14 +1143,32 @@ namespace TF.Replay.Domain.Services
         {
             _replay = replay;
             _fromFile = true;
-            _lastFrame = replay != null && replay.Record.Any() ? replay.Record.Max(rec => rec.Frame) : 0;
+            _lastFrame = replay != null && replay.Record.Count != 0 ? replay.Record.Max(rec => rec.Frame) : 0;
+            _recordsIndexes = BuildRecordIndexes(replay);
+        }
+
+        private static Dictionary<int, Record> BuildRecordIndexes(Models.Replay replay)
+        {
+            if (replay == null)
+            {
+                return null;
+            }
+
+            var index = new Dictionary<int, Record>(replay.Record.Count);
+
+            foreach (var record in replay.Record)
+            {
+                index.TryAdd(record.Frame, record);
+            }
+
+            return index;
         }
 
         public async Task<IEnumerable<Models.Replay>> LoadAndGetReplays(Action<int, int> onProgress = null)
         {
             if (!Directory.Exists(ReplaysFolder))
             {
-                return Enumerable.Empty<Models.Replay>();
+                return [];
             }
 
             var files = Directory.EnumerateFiles(ReplaysFolder, "*.tow").ToList();

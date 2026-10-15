@@ -2,9 +2,12 @@
 
 ## [Unreleased]
 
+## [0.21.1] - 2026-10-15
+
 ### Fixed
 
 - [State] Fixed a desync warning when brambles disappear, their sound now should plays after a rollback
+- [Replay] Long replays no longer slow down when watching or seeking near the last rounds
 
 ## [0.21.0] - 2026-10-15
 
