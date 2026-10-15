@@ -62,7 +62,12 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
 
             if (!falling)
             {
-                if (toLoad.ChainActualDepth != 0)
+                if (dynLantern.Get("homeChain") is TowerFall.Chain homeChain)
+                {
+                    dynLantern.Set("Chain", homeChain);
+                    homeChain.Holding = entity;
+                }
+                else if (toLoad.ChainActualDepth != 0)
                 {
                     var chain = entity.Level.GetEntityByDepth(toLoad.ChainActualDepth) as TowerFall.Chain;
                     if (chain != null)

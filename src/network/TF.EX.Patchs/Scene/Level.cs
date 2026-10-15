@@ -139,6 +139,11 @@ namespace TF.EX.Patchs.Scene
                 UpdateLayersEntityList(__instance);
             }
 
+            if (ExFlags.IsCaptureActive)
+            {
+                TF.EX.Patchs.Entity.LevelEntity.PlayerPatch.RefreshSprites(__instance);
+            }
+
             if (ExFlags.IsReplayMode)
             {
                 netplayManager.UpdateFramesToReSimulate(0);

@@ -32,6 +32,15 @@ namespace TF.EX.Domain.Scenarios
 
         private static ScriptedAct[] AltFire() => [new ScriptedAct(1, AltShoot: true)];
 
+        private static ScriptedAct[] RapidFire(int aimX, int aimY, int shots) =>
+        [
+            .. Enumerable.Range(0, shots).SelectMany(_ => new ScriptedAct[]
+            {
+                new ScriptedAct(1, AimX: aimX, AimY: aimY, Shoot: true),
+                new ScriptedAct(1, AimX: aimX, AimY: aimY),
+            }),
+        ];
+
         private static ScriptedAct[] Ready() => [new ScriptedAct(READY_FRAMES)];
 
         private static ScriptedAct[] ChestUp() => [new ScriptedAct(180)];
@@ -1081,6 +1090,55 @@ namespace TF.EX.Domain.Scenarios
                     var explosions = AllOf<Explosion>(level).ToList();
                     return explosions.Distinct().Count() >= 2 && explosions.Distinct().Count() == explosions.Count;
                 },
+            },
+            new Scenario
+            {
+                Name = "lantern-swing-fall",
+                Covers = ["Chain", "Lantern"],
+                Frames = 600,
+                Platforms = [(40, 140, 40)],
+                Spawns = [(60, 130), (195, SpawnY)],
+                Scripts = [Sequence(Wait(60), AimAndFire(1, 0), Wait(600)), Still],
+                Entities =
+                [
+                    new ScenarioEntity("Chain", 160, 20, "height=\"180\""),
+                    new ScenarioEntity("Lantern", 160, 200, "Dead=\"False\""),
+                ],
+                Expect = level => AllOf<Lantern>(level)
+                    .Any(l => DynamicData.For(l).Get<bool>("falling") || DynamicData.For(l).Get<bool>("dead")),
+            },
+            new Scenario
+            {
+                Name = "catch-full-quiver",
+                Covers = ["Player", "Arrow"],
+                Variants = ["MAX ARROWS"],
+                Frames = 600,
+                Spawns = [(60, SpawnY), (140, SpawnY)],
+                Scripts =
+                [
+                    Sequence(AimAndFire(1, 0), Wait(40), Walk(1, 80), Wait(600)),
+                    Sequence(Wait(24), Dodge(-1), Wait(600)),
+                ],
+                Expect = level => AllOf<Player>(level).Any(p => p.PlayerIndex == 0 && p.X > 80 && p.Arrows.Count == 6)
+                    && AllOf<Player>(level).Any(p => p.PlayerIndex == 1),
+            },
+            new Scenario
+            {
+                Name = "dead-owner-arrow",
+                Covers = ["Arrow", "Player", "PlayerCorpse"],
+                Variants = ["MAX ARROWS"],
+                Frames = 600,
+                CheckDistance = 7,
+                Spawns = [(60, SpawnY), (140, SpawnY)],
+                Scripts =
+                [
+                    Sequence(Wait(19), RapidFire(-1, 0, 6), Wait(600)),
+                    Sequence(AimAndFire(-1, 0), Wait(600)),
+                ],
+                Expect = level => AllOf<PlayerCorpse>(level).Any(c => c.PlayerIndex == 0
+                    && AllOf<Arrow>(level).Any(a => a.PlayerIndex == 0
+                        && a.State == Arrow.ArrowStates.Shooting
+                        && Microsoft.Xna.Framework.Vector2.DistanceSquared(a.Position, c.Position) < 400f)),
             }
         ];
 

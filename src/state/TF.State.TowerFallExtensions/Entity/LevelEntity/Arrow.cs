@@ -49,7 +49,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                 FlashCounter = flashCounter,
                 FlashInterval = flashInterval
             });
-            builder.WithHasUnhittableEntity(entity.CannotHit != null);
+            builder.WithHasUnhittableEntity(entity.CannotHit != null && entity.CannotHit is not TowerFall.Player { Dead: true });
             builder.WithBuriedIn(buriedIn?.GetState());
             builder.WithTravelFrames(entity.TravelFrames);
             builder.WithIsSquished(dynArrow.Get<bool>("squished"));

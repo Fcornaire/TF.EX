@@ -143,16 +143,18 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                 HatState = (int)entity.HatState,
                 DodgeCurseSatisfied = dynPlayer.Get<bool>("dodgeCurseSatisfied"),
                 DodgeSpeed = dynPlayer.Get<Vector2>("dodgeSpeed").ToModel(),
-                LastCaughtArrowDepth = GetLastCaughtArrowDepth(dynPlayer),
+                LastCaughtArrowDepth = GetLastCaughtArrowDepth(entity, dynPlayer),
                 InvisOpacity = dynPlayer.Get<float>("InvisOpacity"),
             };
         }
 
-        private static double GetLastCaughtArrowDepth(DynamicData dynPlayer)
+        private static double GetLastCaughtArrowDepth(TowerFall.Player entity, DynamicData dynPlayer)
         {
             var lastCaught = dynPlayer.Get<TowerFall.Arrow>("lastCaught");
 
-            return lastCaught != null ? DynamicData.For(lastCaught).Get<double>("actualDepth") : 0;
+            return lastCaught != null && entity.Level.GetAll<TowerFall.Arrow>().Contains(lastCaught)
+                ? DynamicData.For(lastCaught).Get<double>("actualDepth")
+                : 0;
         }
 
         public static void LoadState(this TowerFall.Player entity, Player toLoad)
