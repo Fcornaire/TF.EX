@@ -179,9 +179,9 @@ But since there is a ton of things to do, I advise either contact me directly or
 
 ## License
 
-Distributed under the GNU General Public License, version 3 or (at your option) any later version. See `LICENSE` for the full text.
+Distributed under the GNU General Public License, version 3 or any later version. See `LICENSE` for the full text.
 
-The netplay logo can be found at [Icones8](https://icones8.fr/) but was re drawed in pixel art.
+The original netplay logo can be found at [Icones8](https://icones8.fr/) but was re drawed in pixel art.
 
 ## Contact
 

@@ -35,37 +35,43 @@ namespace TF.EX.Patchs.Entity.LevelEntity
         public static void Player_Update_Postfix(TowerFall.Player __instance)
         {
             var inputService = ServiceCollections.ResolveInputService();
-            var logger = ServiceCollections.ResolveLogger();
 
             PlayerInput.RightStickShot.UpdateIsAimingRight(__instance);
 
-            if (ExFlags.IsCaptureActive)
+            // Kill a deconnected playe
+            if (ExFlags.IsCaptureActive && inputService.GetCurrentInput(__instance.PlayerIndex).disconnected != 0 && !__instance.Dead)
             {
-                // Kill a deconnected playe
-                if (inputService.GetCurrentInput(__instance.PlayerIndex).disconnected != 0 && !__instance.Dead)
-                {
-                    __instance.Die(DeathCause.Curse, -1);
-                    return;
-                }
+                __instance.Die(DeathCause.Curse, -1);
+            }
+        }
 
-                // Sprite update are done in the DoWrapRender method, so we manually call it here to have it in the game state
-                var gameplayLayer = __instance.Level.GetGameplayLayer();
-                var blendState = gameplayLayer.BlendState;
-                var samplerState = gameplayLayer.SamplerState;
-                var effect = gameplayLayer.Effect;
-                var cameraMultiplier = gameplayLayer.CameraMultiplier;
+        public static void RefreshSprites(TowerFall.Level level)
+        {
+            var players = level.Players.OfType<TowerFall.Player>().ToList();
 
-                Draw.SpriteBatch.Begin(SpriteSortMode.Deferred, blendState, samplerState, DepthStencilState.None, RasterizerState.CullNone, effect, Matrix.Lerp(Matrix.Identity, __instance.Scene.Camera.Matrix, cameraMultiplier));
+            if (players.Count == 0)
+            {
+                return;
+            }
+
+            var logger = ServiceCollections.ResolveLogger();
+            var gameplayLayer = level.GetGameplayLayer();
+
+            Draw.SpriteBatch.Begin(SpriteSortMode.Deferred, gameplayLayer.BlendState, gameplayLayer.SamplerState, DepthStencilState.None, RasterizerState.CullNone, gameplayLayer.Effect, Matrix.Lerp(Matrix.Identity, level.Camera.Matrix, gameplayLayer.CameraMultiplier));
+
+            foreach (var player in players)
+            {
                 try
                 {
-                    __instance.DoWrapRender();
+                    player.DoWrapRender();
                 }
                 catch (Exception e)
                 {
                     logger.LogDebug<PlayerPatch>($"Error when rendering player (may not cause issue ?) : {e.Message} => {e.StackTrace}");
                 }
-                Draw.SpriteBatch.End();
             }
+
+            Draw.SpriteBatch.End();
         }
 
         [HarmonyPrefix]

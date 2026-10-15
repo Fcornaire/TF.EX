@@ -184,7 +184,7 @@ namespace TF.EX.Core
                         0,
                         0,
                         runSeed,
-                        2,
+                        captured.CheckDistance,
                         [.. captured.Variants],
                         captured.PlayerCount,
                         [path],

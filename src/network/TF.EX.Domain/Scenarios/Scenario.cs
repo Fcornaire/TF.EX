@@ -36,6 +36,8 @@ namespace TF.EX.Domain.Scenarios
 
         public bool UseInstantReplay { get; init; }
 
+        public int CheckDistance { get; init; } = 2;
+
         public int? Seed { get; init; }
 
         public ScriptedAct[][] Scripts { get; init; } = [];
