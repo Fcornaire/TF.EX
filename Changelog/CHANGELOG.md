@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- [State] Fixed a desync warning when brambles disappear, their sound now should plays after a rollback
+
 ## [0.21.0] - 2026-10-15
 
 ### Added

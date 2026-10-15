@@ -1139,6 +1139,16 @@ namespace TF.EX.Domain.Scenarios
                     && AllOf<Arrow>(level).Any(a => a.PlayerIndex == 0
                         && a.State == Arrow.ArrowStates.Shooting
                         && Microsoft.Xna.Framework.Vector2.DistanceSquared(a.Position, c.Position) < 400f)),
+            },
+            new Scenario
+            {
+                Name = "bramble-tween-out",
+                Covers = ["Brambles", "Arrow"],
+                Variants = ["START WITH BRAMBLE ARROWS"],
+                Frames = 1200,
+                Spawns = [(60, SpawnY), (20, SpawnY)],
+                Scripts = [Sequence(AimAndFire(1, 0), Wait(1200)), Still],
+                Expect = level => AllOf<Brambles>(level).Any(b => DynamicData.For(b).Get<bool>("soundPlayed")),
             }
         ];
 
