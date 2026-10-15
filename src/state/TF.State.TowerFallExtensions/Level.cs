@@ -830,8 +830,14 @@ namespace TF.State.TowerFallExtensions
             //Drop pending adds/removes queued by Added()
             dynGameplayLayer = DynamicData.For(level.GetGameplayLayer());
             dynGameplayLayer.Get<List<Monocle.Entity>>("toAdd").Clear();
-            dynGameplayLayer.Get<HashSet<Monocle.Entity>>("toRemove").Clear();
+            var toRemove = dynGameplayLayer.Get<HashSet<Monocle.Entity>>("toRemove");
+            toRemove.Clear();
             dynGameplayLayer.Get<HashSet<Monocle.Entity>>("toRemoveCache").Clear();
+
+            foreach (var pending in level.GetGameplayLayer().Entities.Where(entity => entity.MarkedForRemoval))
+            {
+                toRemove.Add(pending);
+            }
 
             var liveEntities = new HashSet<Monocle.Entity>();
             foreach (var liveLayer in level.Layers.Values)

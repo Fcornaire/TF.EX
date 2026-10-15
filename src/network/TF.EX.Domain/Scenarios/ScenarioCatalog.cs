@@ -1149,6 +1149,23 @@ namespace TF.EX.Domain.Scenarios
                 Spawns = [(60, SpawnY), (20, SpawnY)],
                 Scripts = [Sequence(AimAndFire(1, 0), Wait(1200)), Still],
                 Expect = level => AllOf<Brambles>(level).Any(b => DynamicData.For(b).Get<bool>("soundPlayed")),
+            },
+            new Scenario
+            {
+                Name = "bolt-catch-shock",
+                Covers = ["Arrow", "Player"],
+                Variants = ["START WITH BOLT ARROWS"],
+                Frames = 600,
+                Spawns = [(60, SpawnY), (140, SpawnY)],
+                Scripts =
+                [
+                    Sequence(AimAndFire(1, 0), Wait(2), RapidFire(1, 0, 1), Wait(600)),
+                    Sequence(Wait(24), Dodge(-1), Wait(600)),
+                ],
+                Expect = level => level.Session.MatchStats[1].ArrowsCaught == 1
+                    && AllOf<ShockCircle>(level).Any()
+                    && !AllOf<Arrow>(level).Any()
+                    && AllOf<Player>(level).Count() == 2,
             }
         ];
 
