@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-10-15
+
+### Added
+
+- Online play now requires the Dark World DLC
+
+### Changed
+
+- Improvement on sent network packets which should help a bit for unstable connection (pls, use an ethernet cable)
+
 ## [0.20.1] - 2026-10-14
 
 ### Fixed

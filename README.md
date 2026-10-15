@@ -15,7 +15,7 @@
 [![Forks][forks-shield]][forks-url]
 [![Stargazers][stars-shield]][stars-url]
 [![Issues][issues-shield]][issues-url]
-[![MIT License][license-shield]][license-url]
+[![GPL-3.0 License][license-shield]][license-url]
 
 <!-- ABOUT THE PROJECT -->
 
@@ -179,7 +179,7 @@ But since there is a ton of things to do, I advise either contact me directly or
 
 ## License
 
-Distributed under the GPL-2.0 License. See `LICENSE` for more information.
+Distributed under the GNU General Public License, version 3 or (at your option) any later version. See `LICENSE` for the full text.
 
 The netplay logo can be found at [Icones8](https://icones8.fr/) but was re drawed in pixel art.
 
@@ -203,4 +203,4 @@ Discord : dshad (was DShad#4670)
 [license-shield]: https://img.shields.io/github/license/Fcornaire/TF.EX.svg?style=for-the-badge
 [download-shield]: https://img.shields.io/github/downloads/Fcornaire/TF.EX/total?style=for-the-badge
 [download-url]: https://github.com/Fcornaire/TF.EX/releases
-[license-url]: https://github.com/Fcornaire/TF.EX/blob/master/LICENSE.txt
+[license-url]: https://github.com/Fcornaire/TF.EX/blob/main/LICENSE
