@@ -43,7 +43,7 @@ namespace TF.State.Patchs
             return snapshot;
         }
 
-        private static bool IsExSession()
+        internal static bool IsExSession()
         {
             if (StateFlags.IsTestMode || StateFlags.IsReplayMode)
             {

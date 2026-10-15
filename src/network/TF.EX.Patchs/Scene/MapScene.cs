@@ -60,6 +60,43 @@ namespace TF.EX.Patchs.Scene
             StateApi.Current.PurgeCache();
         }
 
+        [HarmonyPrefix]
+        [HarmonyPatch("InitVersusButtons")]
+        public static void InitVersusButtons_Prefix(out bool[] __state)
+        {
+            __state = null;
+
+            var mode = MainMenu.VersusMatchSettings?.Mode;
+            if (mode == null || !mode.Value.IsNetplay())
+            {
+                return;
+            }
+
+            var unlocks = SaveData.Instance.Unlocks;
+            __state = [unlocks.SunkenCity, unlocks.Moonstone, unlocks.TowerForge, unlocks.Ascension];
+
+            unlocks.SunkenCity = true;
+            unlocks.Moonstone = true;
+            unlocks.TowerForge = true;
+            unlocks.Ascension = true;
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("InitVersusButtons")]
+        public static void InitVersusButtons_Postfix(bool[] __state)
+        {
+            if (__state == null)
+            {
+                return;
+            }
+
+            var unlocks = SaveData.Instance.Unlocks;
+            unlocks.SunkenCity = __state[0];
+            unlocks.Moonstone = __state[1];
+            unlocks.TowerForge = __state[2];
+            unlocks.Ascension = __state[3];
+        }
+
         [HarmonyPostfix]
         [HarmonyPatch("Begin")]
         public static void Begin_Postfix(MapScene __instance)

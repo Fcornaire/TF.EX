@@ -845,6 +845,7 @@ namespace TF.EX.Domain.Services
             _pendingSessionRoundLogic = null;
             _pendingLateSpectators.Clear();
             StateApi.Current.SetFrameDriver(null);
+            TowerFall.MapScene.NoRandom.Clear();
 
             if (_isInit)
             {

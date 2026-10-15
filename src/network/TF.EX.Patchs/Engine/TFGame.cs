@@ -521,6 +521,8 @@ namespace TF.EX.Patchs.Engine
             WarnAboutDesyncRiskMods(menu);
             WarnAboutModifiedGameFiles(menu);
 
+            TowerFall.MapScene.NoRandom.Clear();
+
             enter?.Invoke();
         }
 

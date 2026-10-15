@@ -11,13 +11,16 @@
 ### Changed
 
 - Improvement on sent network packets which should help a bit for unstable connection (pls, use an ethernet cable)
+- Excluding a tower from the random pick is disabled online
 
 ### Fixed
 
-- Fixed a desync warning after a stomp or a bump between archers
+- Fixed a desync warning tied with archer render
+- Players who haven't unlocked Sunken City, Moonstone, TowerForge or Ascension should no longer end up on a different tower than the others
 - [State] A swinging lantern that falls during a rollback no longer stays frozen in the air for one player
 - [State] Fixed a potential desync after catching an arrow with a full quiver once that arrow is picked up
 - [State] Fixed a potential desync when an archer dies right after shooting
+- [State] Unlock events (Purple Archer, Moonstone moon) should no longer start during an online match
 
 ## [0.20.1] - 2026-10-14
 
