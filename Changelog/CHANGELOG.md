@@ -8,6 +8,7 @@
 
 - [State] Fixed a desync warning when brambles disappear, their sound now should plays after a rollback
 - [Replay] Long replays no longer slow down when watching or seeking near the last rounds
+- [State] A bolt arrow destroyed by a bolt catch shock should no longer come back after a rollback
 
 ## [0.21.0] - 2026-10-15
 
