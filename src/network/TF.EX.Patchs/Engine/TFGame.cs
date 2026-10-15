@@ -463,6 +463,14 @@ namespace TF.EX.Patchs.Engine
 
         public static void RequestNetplayEntry(TowerFall.MainMenu menu, Action enter)
         {
+            if (!TowerFall.GameData.DarkWorldDLC)
+            {
+                ServiceCollections.ResolveLogger().LogWarning("Dark World DLC not detected");
+                Sounds.ui_invalid.Play();
+                Notification.Create(menu, "ONLINE PLAY REQUIRES THE DARK WORLD DLC", 10, 500);
+                return;
+            }
+
             var autoUpdater = ServiceCollections.ResolveAutoUpdater();
             var inputService = ServiceCollections.ResolveInputService();
 
