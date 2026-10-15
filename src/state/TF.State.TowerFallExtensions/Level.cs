@@ -2759,6 +2759,11 @@ namespace TF.State.TowerFallExtensions
                     RestoreBrambleColors(level, cachedBramble);
                 }
             }
+
+            foreach (var id in gameState.Entities.Brambles.Select(bramble => bramble.Id).Distinct())
+            {
+                BrambleSpreadController.SetBrothers(level, id);
+            }
         }
 
         private static void RestoreBrambleColors(Level level, TowerFall.Brambles brambles)

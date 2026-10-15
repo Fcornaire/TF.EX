@@ -111,7 +111,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             return false;
         }
 
-        private static void SetBrothers(Level level, int id)
+        internal static void SetBrothers(Level level, int id)
         {
             var brothers = level.GetAll<TowerFall.Brambles>().Where(b => b.ID == id).ToList();
             foreach (var bramble in brothers)
