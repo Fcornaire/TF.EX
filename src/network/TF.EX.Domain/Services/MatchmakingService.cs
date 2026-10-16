@@ -26,7 +26,7 @@ namespace TF.EX.Domain.Services
     public class MatchmakingService : IMatchmakingService
     {
         private static string SERVER_URL => NetplayPreferences.Server;
-        private string MATCHMAKING_URL => $"{SERVER_URL}/ws";
+        private string MATCHMAKING_URL => $"{SERVER_URL}/ws?version={ServiceCollections.ResolveAutoUpdater().GetCurrentVersion()}";
 
         private readonly SemaphoreSlim _sendGate = new(1, 1);
         private HashSet<string> _skinKnownPeers = [];
@@ -126,10 +126,13 @@ namespace TF.EX.Domain.Services
                     Close();
                 }
 
-                if (TFGame.Instance.Scene is MainMenu)
+                RunOnGameThread(() =>
                 {
-                    (TFGame.Instance.Scene as MainMenu).State = Models.MenuState.NetplaySelect.ToTFModel();
-                }
+                    if (TFGame.Instance.Scene is MainMenu mainMenu)
+                    {
+                        mainMenu.State = Models.MenuState.NetplaySelect.ToTFModel();
+                    }
+                });
 
                 return false;
             }
@@ -804,6 +807,26 @@ namespace TF.EX.Domain.Services
                 RunOnGameThread(() => HandleKickedFromLobby(reason));
             }
 
+            if (IsServerMsg(message, "Notice"))
+            {
+                var bytes = MessagePackSerializer.ConvertFromJson(message);
+                var notice = MessagePackSerializer.Deserialize<NoticeMessage>(bytes).Notice.Text;
+
+                _logger.LogDebug<MatchmakingService>($"Server notice : {notice}");
+
+                RunOnGameThread(() => Notification.Create(TFGame.Instance.Scene, notice, 10, 600));
+            }
+
+            if (IsServerMsg(message, "UpdateRequired"))
+            {
+                var bytes = MessagePackSerializer.ConvertFromJson(message);
+                var version = MessagePackSerializer.Deserialize<UpdateRequiredMessage>(bytes).UpdateRequired.Version;
+
+                _logger.LogDebug<MatchmakingService>($"Server requires TF.EX {version}");
+
+                RunOnGameThread(() => HandleUpdateRequired(version));
+            }
+
             if (IsServerMsg(message, "SeriesLobby"))
             {
                 hasHostStartedMatch = false;
@@ -845,6 +868,33 @@ namespace TF.EX.Domain.Services
             if (TFGame.Instance.Scene is MainMenu mainMenu)
             {
                 mainMenu.State = Domain.Models.MenuState.NetplaySelect.ToTFModel();
+            }
+        }
+
+        private void HandleUpdateRequired(string version)
+        {
+            ResetLobby();
+            ResetPeer();
+            onQuickPlayQueued = null;
+            onQuickPlayMatched = null;
+            onQuickPlayFailed = null;
+            isQuickPlayQueued = false;
+            currentAction = WSAction.None;
+
+            if (Version.TryParse(version, out var required))
+            {
+                UpdateRequest.RequiredVersion = required;
+            }
+            else
+            {
+                Sounds.ui_invalid.Play();
+                Notification.Create(TFGame.Instance.Scene, $"ONLINE PLAY REQUIRES TF.EX {version}", 10, 500);
+            }
+
+            if (TFGame.Instance.Scene is MainMenu mainMenu)
+            {
+                mainMenu.RemoveLoader();
+                mainMenu.State = MainMenu.MenuState.Main;
             }
         }
 

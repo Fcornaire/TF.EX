@@ -85,6 +85,11 @@ namespace TF.EX.Patchs.Scene
         [HarmonyPatch("CallStateFunc")]
         public static bool MainMenu_CallStateFunc(MainMenu __instance, string name, MainMenu.MenuState state)
         {
+            if (name == "Create")
+            {
+                RemoveStaleMenuItems(__instance, state);
+            }
+
             switch (state.ToDomainModel())
             {
                 case Domain.Models.MenuState.LobbyBrowser:
@@ -155,6 +160,17 @@ namespace TF.EX.Patchs.Scene
                     return true;
                 default:
                     return true;
+            }
+        }
+
+        private static void RemoveStaleMenuItems(MainMenu self, MainMenu.MenuState state)
+        {
+            foreach (var item in self.Layers[-1].GetList<TowerFall.MenuItem>())
+            {
+                if (item.CreatedState == state)
+                {
+                    self.Remove(item);
+                }
             }
         }
 
