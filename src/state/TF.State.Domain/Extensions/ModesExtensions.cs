@@ -17,10 +17,12 @@ namespace TF.State.Domain.Extensions
 
         public static Modes ToModel(this TowerFall.Modes mode)
         {
-            return FortRise.GameModeRegistry.ModesToVersusGameMode.TryGetValue(mode, out var entry)
-                   && entry.VersusGameMode?.Name?.ToUpperInvariant() == "NETPLAY"
-                ? Modes.Netplay
-                : (Modes)mode;
+            if (FortRise.GameModeRegistry.ModesToVersusGameMode.TryGetValue(mode, out var entry))
+            {
+                return entry.Name?.EndsWith("/Netplay", System.StringComparison.OrdinalIgnoreCase) == true ? Modes.Netplay : Modes.Custom;
+            }
+
+            return (int)mode >= (int)Modes.Custom ? Modes.Custom : (Modes)mode;
         }
 
         public static TowerFall.Modes ToTF(this Modes modes)

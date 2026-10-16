@@ -13,9 +13,9 @@ namespace TF.State.Patchs.Entity.LevelEntity
             __state = LocalSettingsGuard.Neutralize();
         }
 
-        [HarmonyPostfix]
+        [HarmonyFinalizer]
         [HarmonyPatch(nameof(OrbPickup.OnPlayerCollide))]
-        public static void OrbPickup_OnPlayerCollide_Postfix(LocalSettingsGuard.Snapshot __state)
+        public static void OrbPickup_OnPlayerCollide_Finalizer(LocalSettingsGuard.Snapshot __state)
         {
             LocalSettingsGuard.Restore(__state);
         }

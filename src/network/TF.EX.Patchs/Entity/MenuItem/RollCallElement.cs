@@ -318,7 +318,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
                             matchmakingService.ResetPeer();
                         }, () =>
                         {
-                            (TFGame.Instance.Scene as MainMenu).State = MainMenu.MenuState.VersusOptions;
+                            (TFGame.Instance.Scene as MainMenu).State = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
                         });
                     }).GetAwaiter().GetResult();
 

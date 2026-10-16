@@ -1,5 +1,4 @@
 ﻿using HarmonyLib;
-using System.Linq;
 using TF.EX.Domain;
 using TF.EX.Domain.Extensions;
 using TowerFall;
@@ -26,6 +25,16 @@ namespace TF.EX.Patchs.PlayerInput
             }
 
             return TFGame.PlayerInputs.All(input => input == null);
+        }
+
+        public static bool IsSaveReplayBlocked()
+        {
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+
+            return TowerFall.MainMenu.VersusMatchSettings?.Mode.IsNetplay() == true
+                || netplayManager.IsInit()
+                || netplayManager.IsReplayMode()
+                || netplayManager.IsTestMode();
         }
 
         public static bool TryGetNetplayName(TowerFall.PlayerInput self, out string name)

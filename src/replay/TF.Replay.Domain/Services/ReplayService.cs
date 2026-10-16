@@ -362,6 +362,13 @@ namespace TF.Replay.Domain.Services
                     return PlaybackStartResult.Fail($"{missingMod} IS MISSING");
                 }
 
+                if (!HasTower(replay.Informations))
+                {
+                    _logger?.LogWarning("{file} is on tower {id} which is not installed", replayFilename, replay.Informations.Id);
+
+                    return PlaybackStartResult.Fail("TOWER IS MISSING");
+                }
+
                 var missingVariants = GetMissingVariants(replay.Informations);
 
                 if (missingVariants.Count > 0)
@@ -378,6 +385,11 @@ namespace TF.Replay.Domain.Services
                 if (SeekBlockedBy != null)
                 {
                     _logger?.LogInformation("{file} uses {source}, which registered no state events: seeking is off", replayFilename, SeekBlockedBy);
+                }
+
+                if (!_isPlayback)
+                {
+                    SaveProgressGuard.Snapshot();
                 }
 
                 LoadReplay(replay);
@@ -423,9 +435,22 @@ namespace TF.Replay.Domain.Services
             catch (Exception e)
             {
                 _logger?.LogError(e, "Error while loading replay {name}", replayFilename);
-                _isPlayback = false;
+                StopPlayback();
                 return PlaybackStartResult.Fail("FAILED TO LOAD REPLAY");
             }
+        }
+
+        public static bool HasTower(ReplayInfo informations)
+        {
+            if ((Modes)informations.Mode == Modes.Trials)
+            {
+                var levels = GameData.TrialsLevels;
+
+                return informations.Id >= 0 && informations.Id < levels.GetLength(0)
+                    && informations.TrialsLevelY >= 0 && informations.TrialsLevelY < levels.GetLength(1);
+            }
+
+            return informations.Id >= 0 && informations.Id < GameData.VersusTowers.Count;
         }
 
         private static MatchSettings BuildMatchSettings(ReplayInfo informations)
@@ -692,6 +717,8 @@ namespace TF.Replay.Domain.Services
             RemovePlaybackControllers();
 
             RestoreSelection();
+
+            SaveProgressGuard.Restore();
         }
 
         private static void RemovePlaybackControllers()

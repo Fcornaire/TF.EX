@@ -55,6 +55,11 @@ namespace TF.EX.Patchs.PlayerInput
         [HarmonyPatch("get_MenuSaveReplay")]
         public static void MenuSaveReplay_patch(ref bool __result)
         {
+            if (!PlayerInputPatch.IsSaveReplayBlocked())
+            {
+                return;
+            }
+
             if (TFGame.Instance.Scene is not MainMenu || TFGame.Instance.Scene is MainMenu mainMenu && mainMenu.State != MainMenu.MenuState.Rollcall)
             {
                 __result = false;
@@ -63,10 +68,7 @@ namespace TF.EX.Patchs.PlayerInput
 
         [HarmonyPrefix]
         [HarmonyPatch("get_MenuSaveReplayCheck")]
-        public static bool MenuSaveReplayCheck_patch()
-        {
-            return false;
-        }
+        public static bool MenuSaveReplayCheck_patch() => !PlayerInputPatch.IsSaveReplayBlocked();
 
         [HarmonyPostfix]
         [HarmonyPatch("get_MenuLeft")]

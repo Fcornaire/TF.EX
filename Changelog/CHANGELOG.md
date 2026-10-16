@@ -9,6 +9,14 @@
 - [State] Fixed a desync warning when brambles disappear, their sound now should plays after a rollback
 - [Replay] Long replays no longer slow down when watching or seeking near the last rounds
 - [State] A bolt arrow destroyed by a bolt catch shock should no longer come back after a rollback
+- Co-op and other local modes no longer try to play online after visiting the online menus
+- Gamepads no longer instantly skip the instant replay in local matches
+- Failing to leave a lobby now brings you back to the lobby browser
+- [Replay] Recording a match on a procedural tower keeps the seed you picked
+- [Replay] Watching a replay should no longer count in your stats, Trials medals or Steam achievements
+- [Replay] A replay that fails to start should no longer leave the game stuck in replay mode or unable to record
+- [Replay] A replay whose tower is not installed now shows TOWER IS MISSING
+- [Replay] Matches on Workshop towers are no longer recorded since they can't be replayed yet
 
 ## [0.21.0] - 2026-10-15
 

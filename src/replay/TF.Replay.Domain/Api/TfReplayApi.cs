@@ -170,41 +170,50 @@ namespace TF.Replay.Domain.Api
                 return result.FailureReason ?? "FAILED TO START REPLAY";
             }
 
-            if ((TowerFall.Modes)(_replayService.GetReplay()?.Informations?.Mode ?? -1) == TowerFall.Modes.Trials)
+            try
             {
-                TowerFall.RoundLogic.Restarted = true;
-            }
-
-            if (PlaybackStarted != null)
-            {
-                PlaybackStarted(result.LocalSeat);
-            }
-            else
-            {
-                //Standalone
-                StateApi()?.SetDriverFlags(0, true, false, true, false, 0);
-                StateApi()?.SetFrameDriver("TF.Replay");
-
-                _fixedTimeStepBeforePlayback = TowerFall.TFGame.Instance.IsFixedTimeStep;
-                TowerFall.TFGame.Instance.EnableFixedTimeStep(true);
-
-                ServiceCollections.SetInputEnabled(true);
-
-                for (int seat = 0; seat < TowerFall.TFGame.Players.Length
-                     && seat < TowerFall.TFGame.PlayerInputs.Length; seat++)
+                if ((TowerFall.Modes)(_replayService.GetReplay()?.Informations?.Mode ?? -1) == TowerFall.Modes.Trials)
                 {
-                    if (TowerFall.TFGame.Players[seat])
+                    TowerFall.RoundLogic.Restarted = true;
+                }
+
+                if (PlaybackStarted != null)
+                {
+                    PlaybackStarted(result.LocalSeat);
+                }
+                else
+                {
+                    //Standalone
+                    StateApi()?.SetDriverFlags(0, true, false, true, false, 0);
+                    StateApi()?.SetFrameDriver("TF.Replay");
+
+                    _fixedTimeStepBeforePlayback = TowerFall.TFGame.Instance.IsFixedTimeStep;
+                    TowerFall.TFGame.Instance.EnableFixedTimeStep(true);
+
+                    ServiceCollections.SetInputEnabled(true);
+
+                    for (int seat = 0; seat < TowerFall.TFGame.Players.Length
+                         && seat < TowerFall.TFGame.PlayerInputs.Length; seat++)
                     {
-                        TowerFall.TFGame.PlayerInputs[seat] ??= new PlaybackController(seat);
+                        if (TowerFall.TFGame.Players[seat])
+                        {
+                            TowerFall.TFGame.PlayerInputs[seat] ??= new PlaybackController(seat);
+                        }
                     }
                 }
+
+                _replayService.ApplyRecordedVariants();
+
+                StandalonePlayback.BeginSession();
+
+                _replayService.StartSession();
             }
-
-            _replayService.ApplyRecordedVariants();
-
-            StandalonePlayback.BeginSession();
-
-            _replayService.StartSession();
+            catch (Exception e)
+            {
+                ServiceCollections.ResolveLogger().LogError(e, "Error while starting replay {name}", replayFileName);
+                StopPlayback();
+                return "FAILED TO START REPLAY";
+            }
 
             return null;
         }

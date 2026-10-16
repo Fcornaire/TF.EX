@@ -20,9 +20,9 @@ namespace TF.State.Patchs.Entity
             __state = LocalSettingsGuard.Neutralize();
         }
 
-        [HarmonyPostfix]
+        [HarmonyFinalizer]
         [HarmonyPatch(MethodType.Constructor, [typeof(Session), typeof(int[]), typeof(float), typeof(bool)])]
-        public static void TreasureSpawner_ctor_Postfix(LocalSettingsGuard.Snapshot __state)
+        public static void TreasureSpawner_ctor_Finalizer(LocalSettingsGuard.Snapshot __state)
         {
             LocalSettingsGuard.Restore(__state);
         }
@@ -55,9 +55,9 @@ namespace TF.State.Patchs.Entity
             return false;
         }
 
-        [HarmonyPostfix]
+        [HarmonyFinalizer]
         [HarmonyPatch(nameof(TreasureSpawner.GetRandomArrowType))]
-        public static void TreasureSpawner_GetRandomArrowType_Postfix(LocalSettingsGuard.Snapshot __state)
+        public static void TreasureSpawner_GetRandomArrowType_Finalizer(LocalSettingsGuard.Snapshot __state)
         {
             LocalSettingsGuard.Restore(__state);
         }
@@ -72,17 +72,22 @@ namespace TF.State.Patchs.Entity
 
         [HarmonyPostfix]
         [HarmonyPatch(nameof(TreasureSpawner.GetArrowShufflePickups))]
-        public static void TreasureSpawner_GetArrowShufflePickups_Postfix(List<Pickups> __result, LocalSettingsGuard.Snapshot __state)
+        public static void TreasureSpawner_GetArrowShufflePickups_Postfix(List<Pickups> __result)
         {
-            Calc.CalcPatch.UnregisterRng();
-            LocalSettingsGuard.Restore(__state);
-
             if (!StateFlags.IsCaptureActive)
             {
                 return;
             }
 
             __result.RemoveAll(pickup => !IsModuleSafe(PickupsRegistry.GetPickup(pickup)));
+        }
+
+        [HarmonyFinalizer]
+        [HarmonyPatch(nameof(TreasureSpawner.GetArrowShufflePickups))]
+        public static void TreasureSpawner_GetArrowShufflePickups_Finalizer(LocalSettingsGuard.Snapshot __state)
+        {
+            Calc.CalcPatch.UnregisterRng();
+            LocalSettingsGuard.Restore(__state);
         }
 
         private static bool IsModuleSafe(IPickupEntry entry)
@@ -104,9 +109,9 @@ namespace TF.State.Patchs.Entity
             Calc.CalcPatch.RegisterRng();
         }
 
-        [HarmonyPostfix]
+        [HarmonyFinalizer]
         [HarmonyPatch("GetChestSpawnsForLevel")]
-        public static void TreasureSpawner_GetChestSpawnsForLevel_Postfix()
+        public static void TreasureSpawner_GetChestSpawnsForLevel_Finalizer()
         {
             Calc.CalcPatch.UnregisterRng();
 
