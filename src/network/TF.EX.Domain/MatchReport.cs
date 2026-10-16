@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO.Compression;
 using System.Text;
 using TF.EX.Domain.Models;
@@ -149,9 +150,9 @@ namespace TF.EX.Domain
                 return null;
             }
 
-            var started = Process.GetCurrentProcess().StartTime.ToUniversalTime();
+            var started = Process.GetCurrentProcess().StartTime.AddSeconds(-1);
             var files = new DirectoryInfo(folder).GetFiles("*.txt");
-            var current = files.Where(file => file.CreationTimeUtc >= started).MinBy(file => file.CreationTimeUtc)
+            var current = files.Where(file => GetOpenedTime(file) >= started).MinBy(GetOpenedTime)
                 ?? files.MaxBy(file => file.LastWriteTimeUtc);
 
             if (current == null)
@@ -167,6 +168,13 @@ namespace TF.EX.Domain
             stream.ReadExactly(bytes);
 
             return bytes;
+        }
+
+        private static DateTime GetOpenedTime(FileInfo file)
+        {
+            return DateTime.TryParseExact(Path.GetFileNameWithoutExtension(file.Name), "yyyy-MM-dd_HH-mm-ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var opened)
+                ? opened
+                : DateTime.MinValue;
         }
 
         private static string ToHttpUrl(string server)
