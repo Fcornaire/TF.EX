@@ -105,8 +105,10 @@ namespace TF.State.Patchs.Layer
 
         [HarmonyPrefix]
         [HarmonyPatch("Update")]
-        public static bool ReplayViewer_Update_Prefix()
+        public static bool ReplayViewer_Update_Prefix(out bool __state)
         {
+            __state = false;
+
             if (!InstantReplay.Enabled)
             {
                 return true;
@@ -120,15 +122,16 @@ namespace TF.State.Patchs.Layer
             _offset = Engine.Instance.Screen.Offset;
             _offsetAdd = Engine.Instance.Screen.OffsetAdd;
             IsViewerUpdating = true;
+            __state = true;
 
             return true;
         }
 
-        [HarmonyPostfix]
+        [HarmonyFinalizer]
         [HarmonyPatch("Update")]
-        public static void ReplayViewer_Update_Postfix(bool __runOriginal)
+        public static void ReplayViewer_Update_Finalizer(bool __state)
         {
-            if (!InstantReplay.Enabled || !__runOriginal)
+            if (!__state)
             {
                 return;
             }
@@ -151,9 +154,9 @@ namespace TF.State.Patchs.Layer
             SaveData.Instance.Options.CanSkipReplays = false;
         }
 
-        [HarmonyPostfix]
+        [HarmonyFinalizer]
         [HarmonyPatch("PostScreenRender")]
-        public static void ReplayViewer_PostScreenRender_Postfix()
+        public static void ReplayViewer_PostScreenRender_Finalizer()
         {
             if (!InstantReplay.Enabled)
             {
@@ -188,9 +191,9 @@ namespace TF.State.Patchs.Layer
             __instance.OffsetAdd = offsetAdd;
         }
 
-        [HarmonyPostfix]
+        [HarmonyFinalizer]
         [HarmonyPatch(nameof(Monocle.Screen.Render))]
-        public static void Screen_Render_Postfix(Monocle.Screen __instance)
+        public static void Screen_Render_Finalizer(Monocle.Screen __instance)
         {
             if (!_isSwapped)
             {

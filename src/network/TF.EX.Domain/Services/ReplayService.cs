@@ -167,6 +167,11 @@ namespace TF.EX.Domain.Services
             {
                 failure = ReplayApi.Current.StartPlayback(replayFilename);
             }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "[Replay] Failed to start {replay}", replayFilename);
+                failure = "Check log";
+            }
             finally
             {
                 CustomComponent.Notification.IsDeferedOn = false;
@@ -174,12 +179,27 @@ namespace TF.EX.Domain.Services
 
             if (failure != null)
             {
+                AbortPlayback();
                 CustomComponent.Notification.ClearDeferred();
                 Monocle.Music.Play(currentSong);
                 return failure;
             }
 
             return await Task.FromResult<string>(null);
+        }
+
+        private void AbortPlayback()
+        {
+            if (ReplayApi.Current?.IsPlayback == true)
+            {
+                ReplayApi.Current.StopPlayback();
+            }
+
+            if (_netplayManager.IsReplayMode())
+            {
+                _netplayManager.ResetMode();
+                ReplayIntroPacing.Reset();
+            }
         }
 
         private void OnPlaybackStarting(int localSeat)

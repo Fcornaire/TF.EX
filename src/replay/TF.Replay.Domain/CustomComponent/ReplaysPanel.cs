@@ -168,6 +168,12 @@ namespace TF.Replay.Domain.CustomComponent
 
             var trial = TrialOf(replayInfo);
 
+            if (!Services.ReplayService.HasTower(replayInfo))
+            {
+                _logger.LogWarning("Replay {name} is on tower {id} which is not installed", replayInfo.Name, replayInfo.Id);
+                return;
+            }
+
             UpdateMapIcon(replayInfo.Id, trial);
             UpdateTitle(replayInfo, trial);
             UpdateMode((Modes)replayInfo.Mode);

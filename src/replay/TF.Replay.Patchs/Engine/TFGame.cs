@@ -16,9 +16,8 @@ namespace TF.Replay.Patchs.Engine
                 if (StandaloneRecorder.ExportPending || __instance.Scene is not LevelLoaderXML)
                 {
                     StandaloneRecorder.Finish();
+                    ServiceCollections.ResolveReplayService().RestorePendingTimeStep();
                 }
-
-                ServiceCollections.ResolveReplayService().RestorePendingTimeStep();
             }
 
             if (__instance.Scene is TowerFall.MainMenu)

@@ -91,6 +91,11 @@ namespace TF.State.Patchs.Entity.LevelEntity
         [HarmonyPatch("Init", [typeof(TowerFall.LevelEntity), typeof(Microsoft.Xna.Framework.Vector2), typeof(float)])]
         public static void Arrow_Init_Postfix(Arrow __instance)
         {
+            if (!StateFlags.IsCaptureActive)
+            {
+                return;
+            }
+
             MonoMod.Utils.DynamicData.For(__instance).Set("counter", Microsoft.Xna.Framework.Vector2.Zero);
         }
 

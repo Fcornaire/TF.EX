@@ -82,7 +82,13 @@ namespace TF.Replay.Domain
                 return;
             }
 
-            var seed = Environment.TickCount;
+            if (settings.LevelSystem is CustomLevelSystem)
+            {
+                ServiceCollections.ResolveLogger().LogDebug("Workshop towers cannot be replayed for now");
+                return;
+            }
+
+            var seed = settings.LevelSystem?.Procedural == true ? settings.RandomLevelSeed : Random.Shared.Next(1000000000);
 
             state.SetSeed(seed);
             settings.RandomLevelSeed = seed;

@@ -209,6 +209,22 @@ namespace TF.EX.Patchs.Scene
                     widerSetModApi.IsWide = false;
                 }
             }
+
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            var wasNetplay = TowerFall.MainMenu.VersusMatchSettings?.Mode.IsNetplay() == true || netplayManager.HasSetMode();
+
+            TowerFall.MainMenu.VersusMatchSettings.ClearNetplayMode();
+            NetplayOptions.Restore();
+
+            if (netplayManager.HasSetMode())
+            {
+                netplayManager.ResetMode();
+            }
+
+            if (wasNetplay)
+            {
+                TFGameExtensions.ResetVersusChoices();
+            }
         }
 
         [HarmonyPostfix]

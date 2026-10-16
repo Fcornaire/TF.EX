@@ -77,13 +77,23 @@ namespace TF.EX.Patchs.PlayerInput
         [HarmonyPatch("get_MenuSkipReplay")]
         public static void MenuSkipReplay_patch(ref bool __result)
         {
-            __result = true;
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+
+            if (netplayManager.IsInit() || netplayManager.IsReplayMode())
+            {
+                __result = true;
+            }
         }
 
         [HarmonyPostfix]
         [HarmonyPatch("get_MenuSaveReplay")]
         public static void MenuSaveReplay_patch(ref bool __result)
         {
+            if (!PlayerInputPatch.IsSaveReplayBlocked())
+            {
+                return;
+            }
+
             if (TFGame.Instance.Scene is not MainMenu || TFGame.Instance.Scene is MainMenu mainMenu && mainMenu.State != MainMenu.MenuState.Rollcall)
             {
                 __result = false;
@@ -92,10 +102,7 @@ namespace TF.EX.Patchs.PlayerInput
 
         [HarmonyPrefix]
         [HarmonyPatch("get_MenuSaveReplayCheck")]
-        public static bool MenuSaveReplayCheck_patch()
-        {
-            return false;
-        }
+        public static bool MenuSaveReplayCheck_patch() => !PlayerInputPatch.IsSaveReplayBlocked();
 
         private static bool IsForeignSeat(XGamepadInput self)
         {
