@@ -18,6 +18,7 @@ namespace TF.EX.Common
     {
         Task CheckForUpdate();
         bool IsStatusFresh();
+        void Invalidate();
         UpdateStatus GetStatus();
         Version GetLatestVersion();
         Version GetCurrentVersion();
@@ -105,6 +106,11 @@ namespace TF.EX.Common
         public bool IsStatusFresh()
         {
             return _status != UpdateStatus.Unknown && DateTime.UtcNow - _lastSuccessfulCheck < CheckTimestamp;
+        }
+
+        public void Invalidate()
+        {
+            _status = UpdateStatus.Unknown;
         }
 
         public UpdateStatus GetStatus()

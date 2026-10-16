@@ -29,6 +29,7 @@ namespace TF.EX.Patchs.Engine
         private static volatile bool _updateFailed;
         private static volatile bool _checkDone;
         private static Action _pendingNetplayEntry;
+        private static Version _requiredVersion;
         private static UpdaterDialog _updaterDialog;
 
         private static readonly Stopwatch UpdateClock = Stopwatch.StartNew();
@@ -244,6 +245,7 @@ namespace TF.EX.Patchs.Engine
 
             if (netplayManager.IsDisconnected())
             {
+                InstantReplayFootage.Abort();
                 TFGame_Update_orig(__instance, gameTime);
                 return false;
             }
@@ -447,6 +449,13 @@ namespace TF.EX.Patchs.Engine
                 return;
             }
 
+            if (UpdateRequest.RequiredVersion is Version required && instance.Scene is TowerFall.MainMenu { State: TowerFall.MainMenu.MenuState.Main } menu)
+            {
+                UpdateRequest.RequiredVersion = null;
+                RequestRequiredUpdate(menu, required, autoUpdater, inputService);
+                return;
+            }
+
             if (_checkDone)
             {
                 _checkDone = false;
@@ -456,6 +465,12 @@ namespace TF.EX.Patchs.Engine
 
                 instance.Scene.RemoveLoader();
                 inputService.EnableAllControllers();
+
+                if (_requiredVersion != null)
+                {
+                    ResolveRequiredUpdate(instance.Scene as TowerFall.MainMenu, autoUpdater, inputService);
+                    return;
+                }
 
                 ResolveNetplayEntry(instance.Scene as TowerFall.MainMenu, autoUpdater, inputService, enter);
             }
@@ -489,6 +504,56 @@ namespace TF.EX.Patchs.Engine
                 await autoUpdater.CheckForUpdate();
                 _checkDone = true;
             });
+        }
+
+        private static void RequestRequiredUpdate(TowerFall.MainMenu menu, Version required, IAutoUpdater autoUpdater, IInputService inputService)
+        {
+            _requiredVersion = required;
+            _pendingNetplayEntry = null;
+            autoUpdater.Invalidate();
+
+            menu.AddLoader("CHECKING VERSION", withFade: true);
+            inputService.DisableAllControllers();
+
+            Task.Run(async () =>
+            {
+                await autoUpdater.CheckForUpdate();
+                _checkDone = true;
+            });
+        }
+
+        private static void ResolveRequiredUpdate(TowerFall.MainMenu menu, IAutoUpdater autoUpdater, IInputService inputService)
+        {
+            var required = _requiredVersion;
+            _requiredVersion = null;
+
+            if (menu == null)
+            {
+                return;
+            }
+
+            if (autoUpdater.GetStatus() == UpdateStatus.Unknown)
+            {
+                Sounds.ui_invalid.Play();
+                Notification.Create(menu, "Could not verify TF.EX version, check your connection and retry", 10, 400);
+                return;
+            }
+
+            if (autoUpdater.GetLatestVersion() < required)
+            {
+                Sounds.ui_invalid.Play();
+                Notification.Create(menu, $"TF.EX {required} is not released yet, try again soon", 10, 500);
+                return;
+            }
+
+            if (NetplayPreferences.AutoUpdate && !_updateFlowStarted)
+            {
+                StartUpdate(menu, autoUpdater, inputService);
+                return;
+            }
+
+            Sounds.ui_invalid.Play();
+            Notification.Create(menu, $"Online play requires version {required} (current version : {autoUpdater.GetCurrentVersion()})", 10, 400);
         }
 
         private static void ResolveNetplayEntry(TowerFall.MainMenu menu, IAutoUpdater autoUpdater, IInputService inputService, Action enter)
