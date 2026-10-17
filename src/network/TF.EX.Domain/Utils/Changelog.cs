@@ -21,11 +21,16 @@ namespace TF.EX.Domain.Utils
 
         public static bool HasPending => Pending.Count > 0;
 
+        public static IReadOnlyList<ChangelogRelease> Releases { get; private set; } = [];
+
         public static void Configure(string markdown, string currentVersion, string lastSeenVersion, Action<string> markSeen)
         {
             _currentVersion = currentVersion;
             _markSeen = markSeen;
-            Pending = SelectUnseen(Parse(markdown ?? ""), currentVersion, lastSeenVersion);
+
+            var releases = Parse(markdown ?? "");
+            Releases = SelectReleased(releases, currentVersion);
+            Pending = SelectUnseen(releases, currentVersion, lastSeenVersion);
 
             if (!HasPending && lastSeenVersion != currentVersion)
             {
@@ -42,6 +47,15 @@ namespace TF.EX.Domain.Utils
 
             Pending = [];
             _markSeen?.Invoke(_currentVersion);
+        }
+
+        public static List<ChangelogRelease> SelectReleased(IEnumerable<ChangelogRelease> releases, string currentVersion)
+        {
+            var hasCurrent = TryParseVersion(currentVersion, out var current);
+
+            return [.. releases
+                .Where(release => !hasCurrent || release.Version <= current)
+                .OrderByDescending(release => release.Version)];
         }
 
         public static List<ChangelogRelease> SelectUnseen(IEnumerable<ChangelogRelease> releases, string currentVersion, string lastSeenVersion)

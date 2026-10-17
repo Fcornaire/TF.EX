@@ -22,7 +22,8 @@ namespace TF.EX.Patchs.Entity
         public static bool ScreenTitle_ChangeState(ScreenTitle __instance, MainMenu.MenuState state)
         {
             var currentState = state.ToDomainModel();
-            if (currentState == Domain.Models.MenuState.Changelog)
+            if (currentState == Domain.Models.MenuState.Changelog
+                || currentState == Domain.Models.MenuState.ChangelogHistory)
             {
                 Traverse.Create(__instance).Field("targetTexture").SetValue(null);
 

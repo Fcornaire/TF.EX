@@ -28,5 +28,6 @@
         PrivateJoinCode = 64,
         QuickPlaySearch = 65,
         Changelog = 66,
+        ChangelogHistory = 67,
     }
 }

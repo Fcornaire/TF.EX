@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-10-17
+
+### Seamless server updates
+
+- Server updates no longer end matches in progress
+- Players in match will get a notice telling them how long they have left
+- A match still running when that time is up gets disconnected
+
+### New
+
+- Every past changelog can now be read from the new CHANGELOG button in the netplay menu
+
+### Fixed
+
+- The instant replay should no longer freeze after a disconnect
+
 ## [0.21.1] - 2026-10-15
 
 ### Fixed
