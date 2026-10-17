@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [0.22.1] - 2026-10-18
+
+### Fixed
+
+- [State] Fixed a desync when an archer gets stomped right after being hit by an arrow
+- A spectator who never synchronize for whatever reason no longer stops a match from starting
+
 ## [0.22.0] - 2026-10-17
 
 ### Seamless server updates

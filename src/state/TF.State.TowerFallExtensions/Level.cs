@@ -901,6 +901,7 @@ namespace TF.State.TowerFallExtensions
 
             level.SortGamePlayLayer(CompareDepth);
             level.SortHUDLayer(CompareDepth);
+            level[GameTags.Player]?.Sort(CompareDepth);
         }
 
         private static int CompareDepth(Monocle.Entity a, Monocle.Entity b)
