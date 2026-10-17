@@ -51,6 +51,8 @@ namespace TF.EX.Domain.Scenarios
 
         private static ScriptedAct[] Jump(int frames) => [new ScriptedAct(frames, Jump: true)];
 
+        private static ScriptedAct[] DuckSlide() => [new ScriptedAct(6, MoveY: 1), new ScriptedAct(1, Dodge: true)];
+
         private static ScriptedAct[] Flap(int times) =>
         [
             .. Enumerable.Range(0, times).SelectMany(_ => new ScriptedAct[]
@@ -1166,6 +1168,27 @@ namespace TF.EX.Domain.Scenarios
                     && AllOf<ShockCircle>(level).Any()
                     && !AllOf<Arrow>(level).Any()
                     && AllOf<Player>(level).Count() == 2,
+            },
+            new Scenario
+            {
+                Name = "crawlspace-restore",
+                Covers = ["Player", "Session"],
+                Frames = 900,
+                CheckDistance = 7,
+                Spawns = [(32, SpawnY), (260, SpawnY)],
+                Platforms =
+                [
+                    (170, 190, 70),
+                    (0, 180, 10), (0, 190, 10), (0, 200, 10),
+                    (310, 180, 10), (310, 190, 10), (310, 200, 10),
+                ],
+                Scripts =
+                [
+                    Sequence(Wait(10), DuckSlide(), Wait(40), AimAndFire(1, 0), Wait(600)),
+                    Sequence(Wait(10), DuckSlide(), Wait(40), AimAndFire(1, 0), Wait(600)),
+                ],
+                Expect = level => AllOf<Player>(level)
+                    .Any(p => p.State == Player.PlayerStates.Dying && p.X > 166f && p.X < 244f),
             }
         ];
 
