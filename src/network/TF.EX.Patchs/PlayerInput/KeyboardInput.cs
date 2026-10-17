@@ -135,7 +135,7 @@ namespace TF.EX.Patchs.PlayerInput
             }
 
             return inputService.IsInputLocked()
-                || inputService.GetInputIndex(self) != inputService.GetLocalPlayerInputIndex();
+                || !inputService.IsLocalInput(self);
         }
 
         [HarmonyPostfix]
@@ -226,9 +226,9 @@ namespace TF.EX.Patchs.PlayerInput
 
             var seat = inputService.GetInputIndex(__instance);
 
-            if (seat == inputService.GetLocalPlayerInputIndex() && !netplayManager.IsReplayMode())
+            if (inputService.IsLocalPlayerIndex(seat) && !netplayManager.IsReplayMode())
             {
-                inputService.UpdatePolledInput(__result);
+                inputService.UpdatePolledInput(__result, default, seat);
             }
 
             if (netplayManager.IsReplayMode() && seat >= 0 && seat == (ReplayApi.Current?.GetTakeoverSeat() ?? -1))
@@ -270,7 +270,7 @@ namespace TF.EX.Patchs.PlayerInput
                 return actualResult;
             }
 
-            if (inputService.GetInputIndex(self) != inputService.GetLocalPlayerInputIndex())
+            if (!inputService.IsLocalInput(self))
             {
                 return false;
             }
@@ -292,10 +292,15 @@ namespace TF.EX.Patchs.PlayerInput
                 return false;
             }
 
-            var rollcallElement = (TFGame.Instance.Scene as MainMenu).GetAll<RollcallElement>().First(rc =>
+            var rollcallElement = (TFGame.Instance.Scene as MainMenu).GetAll<RollcallElement>().FirstOrDefault(rc =>
             {
-                return DynamicData.For(rc).Get<int>("playerIndex") == inputService.GetLocalPlayerInputIndex();
+                return DynamicData.For(rc).Get<int>("playerIndex") == inputService.GetInputIndex(self);
             });
+
+            if (rollcallElement == null)
+            {
+                return actualResult;
+            }
 
             var rollcallState = DynamicData.For(rollcallElement).Get<StateMachine>("state");
 
@@ -397,13 +402,18 @@ namespace TF.EX.Patchs.PlayerInput
                         return false;
                     }
 
-                    var rollcallElement = (TFGame.Instance.Scene as MainMenu).GetAll<RollcallElement>().First(rc =>
+                    var rollcallElement = (TFGame.Instance.Scene as MainMenu).GetAll<RollcallElement>().FirstOrDefault(rc =>
                     {
                         var dyn = DynamicData.For(rc);
                         var index = dyn.Get<int>("playerIndex");
 
-                        return index == inputService.GetLocalPlayerInputIndex();
+                        return index == inputService.GetInputIndex(self);
                     });
+
+                    if (rollcallElement == null)
+                    {
+                        return actualInput;
+                    }
 
                     var dynRollcallElement = DynamicData.For(rollcallElement);
                     StateMachine rollcallState = dynRollcallElement.Get<StateMachine>("state");

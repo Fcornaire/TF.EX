@@ -58,6 +58,14 @@ namespace TF.EX.Domain.Ports
         string GetRoomPeerId();
         string GetRelayUrl();
         int GetLocalSeat();
+
+        bool IsLocalSeat(int seat);
+
+        IReadOnlyList<int> GetLocalSeats();
+
+        Task AddLocalPlayer();
+
+        Task RemoveLocalPlayer(int seat);
         void ReconcileRollcallIfPending();
         void RunOnGameThread(Action action);
         void DrainGameThreadActions();
