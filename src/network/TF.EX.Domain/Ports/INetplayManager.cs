@@ -17,6 +17,8 @@ namespace TF.EX.Domain.Ports
 
         bool IsInit();
 
+        bool HasSessionDisconnected();
+
         void PublishCaptureFlag();
 
         StatusImpl AdvanceFrame(Input input);

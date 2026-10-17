@@ -160,6 +160,11 @@ namespace TF.EX.Domain.Extensions
             return altIndex >= 0 && altIndex <= (int)ArcherData.ArcherTypes.Secret;
         }
 
+        public static bool StartsWithoutHat(int archerIndex, int altIndex)
+        {
+            return ArcherData.Get(archerIndex, (ArcherData.ArcherTypes)altIndex)?.StartNoHat == true;
+        }
+
         public static (int, int) PickUnusedVanilla(int requestedAlt, ISet<int> usedVanilla)
         {
             if (!IsValidAlt(requestedAlt))

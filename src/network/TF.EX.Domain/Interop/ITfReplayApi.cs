@@ -22,6 +22,7 @@ namespace TF.EX.Domain.Interop
         void SetArchersFlat(int[] seats, int[] indexes, int[] types, bool[] hasWon, int[] scores, string[] names);
         void SetArcherCustomIds(string[] customArcherIds);
         void SetArcherSkinIds(string[] skinArcherIds);
+        void SetArcherStartsWithoutHat(bool?[] startsWithoutHat);
         void SetArcherTeams(int[] teams);
 
         bool IsPlayback { get; }

@@ -496,6 +496,8 @@ namespace TF.Replay.Domain.Services
 
         private void ApplyRecordedArchers()
         {
+            StateApi()?.SetSpawnHatRules(null);
+
             var archers = _replay?.Informations?.Archers?.ToArray();
 
             if (archers == null || archers.Length == 0)
@@ -527,6 +529,7 @@ namespace TF.Replay.Domain.Services
 
             var skinSeats = new List<int>();
             var skinIds = new List<string>();
+            var startsWithoutHat = new bool?[TFGame.Characters.Length];
 
             for (int i = 0; i < archers.Length; i++)
             {
@@ -542,6 +545,7 @@ namespace TF.Replay.Domain.Services
                 TFGame.Characters[seat] = archerIndex;
                 TFGame.AltSelect[seat] = (ArcherData.ArcherTypes)altIndex;
                 TFGame.Players[seat] = true;
+                startsWithoutHat[seat] = archers[i].StartsWithoutHat;
 
                 var skinId = string.IsNullOrEmpty(archers[i].SkinArcherId) ? archers[i].CustomArcherId : archers[i].SkinArcherId;
 
@@ -551,6 +555,8 @@ namespace TF.Replay.Domain.Services
                     skinIds.Add(skinId);
                 }
             }
+
+            StateApi()?.SetSpawnHatRules(startsWithoutHat);
 
             SetReplaySkinSeats(skinSeats.ToArray(), skinIds.ToArray());
         }
@@ -704,6 +710,8 @@ namespace TF.Replay.Domain.Services
         public void StopPlayback()
         {
             RestoreTickRateOverride();
+
+            StateApi()?.SetSpawnHatRules(null);
 
             _isPlayback = false;
             _currentReplayFrame = 0;

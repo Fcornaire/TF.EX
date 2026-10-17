@@ -1,4 +1,5 @@
 ﻿using TF.EX.Domain.Context;
+using TF.EX.Domain.Interop;
 using TF.EX.Domain.Models.WebSocket;
 using TF.EX.Domain.Ports;
 using ArcherData = TowerFall.ArcherData;
@@ -62,6 +63,18 @@ namespace TF.EX.Domain.Services
                 TFGame.AltSelect[handle] = alt;
                 TFGame.Players[handle] = true;
             }
+
+            var startsWithoutHat = new bool?[TFGame.Players.Length];
+
+            foreach ((var handle, var player) in _gameContext.GetPlayers())
+            {
+                if (handle >= 0 && handle < startsWithoutHat.Length)
+                {
+                    startsWithoutHat[handle] = player.StartsWithoutHat;
+                }
+            }
+
+            StateApi.Current.SetSpawnHatRules(startsWithoutHat);
         }
 
         public void RemoveArcher(int playerIndex)

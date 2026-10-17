@@ -102,6 +102,10 @@ namespace TF.EX.Core.RoundLogic
 
                 return;
             }
+            if (netplayManager.HasSessionDisconnected())
+            {
+                return;
+            }
 
             if (!netplayManager.IsInit())
             {

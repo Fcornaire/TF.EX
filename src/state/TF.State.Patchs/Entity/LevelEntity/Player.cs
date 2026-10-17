@@ -13,10 +13,30 @@ namespace TF.State.Patchs.Entity.LevelEntity
         [HarmonyPostfix]
         [HarmonyPatch(MethodType.Constructor)]
         [HarmonyPatch([typeof(int), typeof(Vector2), typeof(Allegiance), typeof(Allegiance), typeof(PlayerInventory), typeof(HatStates), typeof(bool), typeof(bool), typeof(bool)])]
-        public static void Player_ctor(Player __instance)
+        public static void Player_ctor(Player __instance, HatStates hatState)
         {
             var dynPlayer = DynamicData.For(__instance);
             dynPlayer.Add("isAimingRight", false);
+
+            ApplySpawnHatRule(__instance, dynPlayer, hatState);
+        }
+
+        private static void ApplySpawnHatRule(Player player, DynamicData dynPlayer, HatStates requested)
+        {
+            var startsWithoutHat = SpawnHatRules.Get(player.PlayerIndex);
+
+            if (requested != HatStates.Normal || startsWithoutHat == null)
+            {
+                return;
+            }
+
+            var target = startsWithoutHat.Value ? HatStates.NoHat : HatStates.Normal;
+
+            if (player.HatState != target)
+            {
+                dynPlayer.Set("HatState", target);
+                dynPlayer.Invoke("InitHead");
+            }
         }
 
         [HarmonyPrefix]

@@ -118,6 +118,9 @@ namespace TF.Replay.Domain.Models
 
         [Key(7)]
         public string SkinArcherId { get; set; } = "";
+
+        [Key(8)]
+        public bool? StartsWithoutHat { get; set; }
     }
 
     [MessagePackObject]

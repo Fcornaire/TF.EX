@@ -18,6 +18,7 @@
 
 - The instant replay should no longer freeze after a disconnect
 - [State] A round should no longer end early after a rollback when an archer dies ducked under a low ceiling
+- Custom archers without a hat should now spawn hatless for every player, even those without the mod
 
 ## [0.21.1] - 2026-10-15
 

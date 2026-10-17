@@ -142,6 +142,16 @@ namespace TF.Replay.Domain.Api
             FlushArchers();
         }
 
+        public void SetArcherStartsWithoutHat(bool?[] startsWithoutHat)
+        {
+            for (int i = 0; i < (startsWithoutHat?.Length ?? 0) && i < _archers.Count; i++)
+            {
+                _archers[i].StartsWithoutHat = startsWithoutHat[i];
+            }
+
+            FlushArchers();
+        }
+
         public void SetArcherTeams(int[] teams) => _replayService.SetTeams(teams);
 
         private void FlushArchers() => _replayService.SetArchers(_archers);
