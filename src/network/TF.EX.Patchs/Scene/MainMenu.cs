@@ -41,6 +41,9 @@ namespace TF.EX.Patchs.Scene
 
         private const float BANNER_Y = 185f;
 
+        private const float CHANGELOG_X = 310f;
+        private const float CHANGELOG_Y = 20f;
+
         private const float NETPLAY_X = 220f;
         private const float NETPLAY_Y = 140f;
         private const float COOP_X = 290f;
@@ -85,7 +88,7 @@ namespace TF.EX.Patchs.Scene
         [HarmonyPatch("CallStateFunc")]
         public static bool MainMenu_CallStateFunc(MainMenu __instance, string name, MainMenu.MenuState state)
         {
-            if (name == "Create")
+            if (name == "Create" && __instance.OldState != MainMenu.MenuState.None)
             {
                 RemoveStaleMenuItems(__instance, state);
             }
@@ -124,6 +127,12 @@ namespace TF.EX.Patchs.Scene
                     return false;
                 case Domain.Models.MenuState.Changelog:
                     HandleChangelog(__instance, name);
+                    return false;
+                case Domain.Models.MenuState.ChangelogHistory:
+                    if (name == "Create")
+                    {
+                        CreateChangelogHistory(__instance);
+                    }
                     return false;
                 case Domain.Models.MenuState.Main:
                     if (name == "Create")
@@ -192,7 +201,7 @@ namespace TF.EX.Patchs.Scene
             {
                 self.BackState = MainMenu.MenuState.Main;
 
-                var panel = new ChangelogPanel(Changelog.Pending, () => self.State = MainMenu.MenuState.Main);
+                var panel = new ChangelogPanel(Changelog.Pending, "WHAT'S NEW IN EX", () => self.State = MainMenu.MenuState.Main);
                 self.Add(panel);
                 self.ToStartSelected = panel;
 
@@ -205,6 +214,20 @@ namespace TF.EX.Patchs.Scene
                 Changelog.MarkSeen();
                 self.Add(new Saver(menu: true));
             }
+        }
+
+        private static void CreateChangelogHistory(MainMenu self)
+        {
+            var netplaySelect = Domain.Models.MenuState.NetplaySelect.ToTFModel();
+            self.BackState = netplaySelect;
+
+            var panel = new ChangelogPanel(Changelog.Releases, "EX CHANGELOG", () => self.State = netplaySelect);
+            self.Add(panel);
+            self.ToStartSelected = panel;
+
+            self.ButtonGuideB.SetDetails(MenuButtonGuide.ButtonModes.Back, "BACK");
+
+            DynamicData.For(self).Invoke("TweenBGCameraToY", 1);
         }
 
         [HarmonyPostfix]
@@ -752,6 +775,21 @@ namespace TF.EX.Patchs.Scene
 
             self.Add(new TowerFall.MenuItem[] { quickPlay, lobbyList, privateMatch, banner });
             self.ToStartSelected = quickPlay;
+
+            if (Changelog.Releases.Count > 0)
+            {
+                var changelog = new ChangelogButton(new Vector2(CHANGELOG_X, CHANGELOG_Y), new Vector2(CHANGELOG_X + 120f, CHANGELOG_Y), () =>
+                {
+                    self.State = Domain.Models.MenuState.ChangelogHistory.ToTFModel();
+                });
+                changelog.LinkItems(quickPlay, lobbyList, privateMatch);
+                self.Add(changelog);
+
+                if (self.OldState.ToDomainModel() == Domain.Models.MenuState.ChangelogHistory)
+                {
+                    self.ToStartSelected = changelog;
+                }
+            }
 
             DynamicData.For(self).Invoke("TweenBGCameraToY", 1);
         }

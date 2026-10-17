@@ -24,6 +24,7 @@ namespace TF.EX.Domain.CustomComponent
         private const float ReleaseGap = 12f;
         private const float BulletX = ContentLeft + 4f;
         private const float EntryX = ContentLeft + 12f;
+        private const float ArrowGap = 7f;
 
         private static readonly Color TitleColor = Calc.HexToColor("FFDC6B");
         private static readonly Color SectionColor = Calc.HexToColor("8FD3FF");
@@ -34,16 +35,22 @@ namespace TF.EX.Domain.CustomComponent
         private sealed record Line(float Gap, Segment[] Segments, bool IsUnderlined = false);
 
         private readonly List<Line> lines = [];
+        private readonly List<int> releaseStarts = [];
+        private readonly string title;
         private readonly Action onClose;
         private readonly int maxScroll;
+        private readonly SineWave arrowWave;
         private int scroll;
 
-        public ChangelogPanel(IReadOnlyList<ChangelogRelease> releases, Action onClose) : base(new Vector2(160f, PanelY))
+        public ChangelogPanel(IReadOnlyList<ChangelogRelease> releases, string title, Action onClose) : base(new Vector2(160f, PanelY))
         {
+            this.title = title;
             this.onClose = onClose;
 
             foreach (var release in releases)
             {
+                releaseStarts.Add(lines.Count);
+
                 lines.Add(new Line(
                     lines.Count > 0 ? ReleaseGap : 0f,
                     [
@@ -64,6 +71,9 @@ namespace TF.EX.Domain.CustomComponent
             }
 
             maxScroll = ComputeMaxScroll();
+
+            arrowWave = new SineWave(80);
+            Add(arrowWave);
         }
 
         private void AddEntry(ChangelogEntry entry)
@@ -148,14 +158,26 @@ namespace TF.EX.Domain.CustomComponent
 
             if (MenuInput.Up && scroll > 0)
             {
-                scroll--;
-                Sounds.ui_move1.Play();
+                ScrollTo(scroll - 1);
             }
             else if (MenuInput.Down && scroll < maxScroll)
             {
-                scroll++;
-                Sounds.ui_move1.Play();
+                ScrollTo(scroll + 1);
             }
+            else if (MenuInput.Left && scroll > 0)
+            {
+                ScrollTo(releaseStarts.LastOrDefault(start => start < scroll));
+            }
+            else if (MenuInput.Right && scroll < maxScroll)
+            {
+                ScrollTo(Math.Min(maxScroll, releaseStarts.FirstOrDefault(start => start > scroll, maxScroll)));
+            }
+        }
+
+        private void ScrollTo(int line)
+        {
+            scroll = line;
+            Sounds.ui_move1.Play();
         }
 
         protected override void OnConfirm()
@@ -168,7 +190,7 @@ namespace TF.EX.Domain.CustomComponent
         {
             base.Render();
 
-            Draw.OutlineTextCentered(TFGame.Font, "WHAT'S NEW IN EX", new Vector2(160f, 18f), TitleColor, Color.Black);
+            Draw.OutlineTextCentered(TFGame.Font, title, new Vector2(160f, 12f), TitleColor, Color.Black);
 
             MenuPanel.DrawPanel(PanelX, PanelY, PanelWidth, PanelHeight);
 
@@ -188,14 +210,26 @@ namespace TF.EX.Domain.CustomComponent
                 y += LineHeight;
             }
 
+            var canJump = releaseStarts.Count > 1;
+
             if (scroll > 0)
             {
-                DrawArrow(PanelY + 3f, -1);
+                DrawArrow(new Vector2(160f, PanelY - ArrowGap), -MathHelper.PiOver2);
+
+                if (canJump)
+                {
+                    DrawArrow(new Vector2(PanelX - ArrowGap, PanelY + PanelHeight / 2f), MathHelper.Pi);
+                }
             }
 
             if (scroll < maxScroll)
             {
-                DrawArrow(PanelY + PanelHeight - 3f, 1);
+                DrawArrow(new Vector2(160f, PanelY + PanelHeight + ArrowGap), MathHelper.PiOver2);
+
+                if (canJump)
+                {
+                    DrawArrow(new Vector2(PanelX + PanelWidth + ArrowGap, PanelY + PanelHeight / 2f), 0f);
+                }
             }
         }
 
@@ -215,21 +249,11 @@ namespace TF.EX.Domain.CustomComponent
             }
         }
 
-        private static void DrawArrow(float tipY, int direction)
+        private void DrawArrow(Vector2 center, float angle)
         {
-            const int Rows = 4;
+            var bob = Calc.AngleToVector(angle, arrowWave.Value * 2f);
 
-            for (int row = 0; row < Rows; row++)
-            {
-                var y = tipY - direction * row;
-                Draw.Rect(160f - row - 1f, y - 1f, row * 2f + 3f, 3f, Color.Black);
-            }
-
-            for (int row = 0; row < Rows; row++)
-            {
-                var y = tipY - direction * row;
-                Draw.Rect(160f - row, y, row * 2f + 1f, 1f, TitleColor);
-            }
+            Draw.Texture(TFGame.MenuAtlas["portraits/arrow"], center + bob, TitleColor, new Vector2(5f, 5f), 1f, angle);
         }
 
         public override void TweenIn()
