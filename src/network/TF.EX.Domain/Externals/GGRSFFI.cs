@@ -8,6 +8,29 @@ namespace TF.EX.Domain.Externals
     {
         public static bool IsInInit = false;
 
+        private static bool? _supportsLocalPlayers;
+
+        /// <summary>
+        /// Whether this ggrs_ffi takes several local players (netplay_set_local_inputs)
+        /// </summary>
+        public static bool SupportsLocalPlayers()
+        {
+            if (_supportsLocalPlayers == null)
+            {
+                try
+                {
+                    netplay_set_local_inputs([], 0);
+                    _supportsLocalPlayers = true;
+                }
+                catch (EntryPointNotFoundException)
+                {
+                    _supportsLocalPlayers = false;
+                }
+            }
+
+            return _supportsLocalPlayers.Value;
+        }
+
         [DllImport("ggrs_ffi")]
         public static extern Status netplay_init(SafeBytesFFI netplay_conf);
 
@@ -34,6 +57,9 @@ namespace TF.EX.Domain.Externals
 
         [DllImport("ggrs_ffi")]
         public static extern Status netplay_set_test_inputs(Input[] inputs, int len);
+
+        [DllImport("ggrs_ffi")]
+        public static extern Status netplay_set_local_inputs(Input[] inputs, int len);
 
         [DllImport("ggrs_ffi")]
         public static extern NetplayRequets netplay_get_requests();
@@ -73,6 +99,12 @@ namespace TF.EX.Domain.Externals
 
         [DllImport("ggrs_ffi")]
         public static extern int netplay_remote_player_handle();
+
+        [DllImport("ggrs_ffi")]
+        public static extern int netplay_local_player_handle_count();
+
+        [DllImport("ggrs_ffi")]
+        public static extern int netplay_local_player_handle_at(int index);
 
         [DllImport("ggrs_ffi")]
         public static extern int netplay_remote_player_handle_count();

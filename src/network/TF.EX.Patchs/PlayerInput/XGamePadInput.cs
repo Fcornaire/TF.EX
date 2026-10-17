@@ -117,7 +117,7 @@ namespace TF.EX.Patchs.PlayerInput
             }
 
             return inputService.IsInputLocked()
-                || inputService.GetInputIndex(self) != inputService.GetLocalPlayerInputIndex();
+                || !inputService.IsLocalInput(self);
         }
 
         [HarmonyPostfix]
@@ -195,9 +195,9 @@ namespace TF.EX.Patchs.PlayerInput
                 return;
             }
 
-            if (seat == inputService.GetLocalPlayerInputIndex() && !netplayManager.IsReplayMode())
+            if (inputService.IsLocalPlayerIndex(seat) && !netplayManager.IsReplayMode())
             {
-                inputService.UpdatePolledInput(__result, rightStick);
+                inputService.UpdatePolledInput(__result, rightStick, seat);
             }
 
             if (netplayManager.IsReplayMode() && seat >= 0 && seat == (ReplayApi.Current?.GetTakeoverSeat() ?? -1))
@@ -303,12 +303,17 @@ namespace TF.EX.Patchs.PlayerInput
                         return false;
                     }
 
-                    var rollcallElement = (TFGame.Instance.Scene as MainMenu).GetAll<RollcallElement>().First(rc =>
+                    var rollcallElement = (TFGame.Instance.Scene as MainMenu).GetAll<RollcallElement>().FirstOrDefault(rc =>
                     {
                         var index = Traverse.Create(rc).Field("playerIndex").GetValue<int>();
 
-                        return index == inputService.GetLocalPlayerInputIndex();
+                        return index == inputService.GetInputIndex(self);
                     });
+
+                    if (rollcallElement == null)
+                    {
+                        return actualInput;
+                    }
 
                     var rollcallState = Traverse.Create(rollcallElement).Field("state").GetValue<StateMachine>();
                     if (rollcallState.State == 0)
@@ -368,12 +373,17 @@ namespace TF.EX.Patchs.PlayerInput
                         return false;
                     }
 
-                    var rollcallElement = (TFGame.Instance.Scene as MainMenu).GetAll<RollcallElement>().First(rc =>
+                    var rollcallElement = (TFGame.Instance.Scene as MainMenu).GetAll<RollcallElement>().FirstOrDefault(rc =>
                     {
                         var index = Traverse.Create(rc).Field("playerIndex").GetValue<int>();
 
-                        return index == inputService.GetLocalPlayerInputIndex();
+                        return index == inputService.GetInputIndex(self);
                     });
+
+                    if (rollcallElement == null)
+                    {
+                        return actualResult;
+                    }
 
                     var rollcallState = Traverse.Create(rollcallElement).Field("state").GetValue<StateMachine>();
 

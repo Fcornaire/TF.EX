@@ -55,6 +55,7 @@ namespace TF.EX.Patchs.Scene
             var inputService = ServiceCollections.ResolveInputService();
 
             StateApi.Current.ResetRng();
+            inputService.PlaceLocalPlayersInputs();
             inputService.EnsureRemoteController(Math.Max(2, ServiceCollections.ResolveMatchmakingService().GetOwnLobby().SessionPlayers.Count));
             inputService.EnsureEveryControllerSlot();
             StateApi.Current.PurgeCache();

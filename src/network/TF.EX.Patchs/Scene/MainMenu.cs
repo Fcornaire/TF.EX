@@ -443,6 +443,11 @@ namespace TF.EX.Patchs.Scene
             {
                 matchmakingService.ReconcileRollcallIfPending();
                 matchmakingService.ShowPendingSpectatorNoticeIfAny();
+
+                if (__instance.State == MainMenu.MenuState.Rollcall)
+                {
+                    inputService.UpdateLocalPlayers();
+                }
             }
 
             InputDelayAdvisor.Update(__instance);
