@@ -1,6 +1,7 @@
 using HarmonyLib;
 using Microsoft.Xna.Framework;
 using MonoMod.Utils;
+using TF.State.Domain.Context;
 using TowerFall;
 using static TowerFall.Player;
 
@@ -44,6 +45,13 @@ namespace TF.State.Patchs.Entity.LevelEntity
         public static void Player_LoseHat_Postfix()
         {
             Calc.CalcPatch.UnregisterRng();
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch("SpawnedInsideSolidCheck")]
+        public static bool Player_SpawnedInsideSolidCheck_Prefix()
+        {
+            return !StateFlags.IsRestoring;
         }
     }
 }

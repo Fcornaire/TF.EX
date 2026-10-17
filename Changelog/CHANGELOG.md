@@ -17,6 +17,7 @@
 ### Fixed
 
 - The instant replay should no longer freeze after a disconnect
+- [State] A round should no longer end early after a rollback when an archer dies ducked under a low ceiling
 
 ## [0.21.1] - 2026-10-15
 
