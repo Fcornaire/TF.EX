@@ -1,7 +1,7 @@
 namespace TF.EX.Domain.Models
 {
     /// <summary>
-    /// EX's own copy of the flat seat-major input layout TF.Replay stores
+    /// EX's own copy of the flat seat major input layout TF.Replay stores
     /// </para>
     /// </summary>
     public static class InputCodec
@@ -45,5 +45,6 @@ namespace TF.EX.Domain.Models
         public string NetplayName { get; set; }
         public string CustomArcherId { get; set; } = "";
         public string SkinArcherId { get; set; } = "";
+        public bool? StartsWithoutHat { get; set; }
     }
 }

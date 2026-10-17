@@ -134,6 +134,7 @@ namespace TF.EX.Domain.Services
 
             ReplayApi.Current.SetArcherCustomIds(archers.Select(a => a.CustomArcherId ?? "").ToArray());
             ReplayApi.Current.SetArcherSkinIds(archers.Select(a => a.SkinArcherId ?? "").ToArray());
+            ReplayApi.Current.SetArcherStartsWithoutHat(archers.Select(a => a.StartsWithoutHat).ToArray());
 
             ReplayApi.Current.SetArcherTeams(CurrentTeams());
 

@@ -70,6 +70,7 @@ namespace TF.State.Domain.Ports
         void ResetRound();
         void ResetMatch();
         void PurgeCache();
+        void SetSpawnHatRules(bool?[] startsWithoutHat);
 
         void RegisterStateEvents(string modName, string key, Func<byte[]> onSaveState, Action<byte[]> onLoadState);
         void UnregisterStateEvents(string modName, string key);

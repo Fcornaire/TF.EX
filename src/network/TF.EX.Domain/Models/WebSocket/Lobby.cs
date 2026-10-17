@@ -177,6 +177,8 @@ namespace TF.EX.Domain.Models.WebSocket
 
         public List<string> ArcherMods { get; set; } = [];
 
+        public bool? StartsWithoutHat { get; set; }
+
         public List<string> CustomVariants { get; set; } = [];
 
         public bool UseInstantReplay { get; set; } = false;
@@ -204,6 +206,7 @@ namespace TF.EX.Domain.Models.WebSocket
                 Team = Team,
                 CustomArcherId = CustomArcherId,
                 ArcherMods = ArcherMods,
+                StartsWithoutHat = StartsWithoutHat,
                 UseInstantReplay = UseInstantReplay,
                 HaveModifiedGameFiles = HaveModifiedGameFiles,
                 Platform = Platform,

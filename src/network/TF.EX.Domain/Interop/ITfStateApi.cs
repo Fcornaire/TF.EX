@@ -47,6 +47,7 @@ namespace TF.EX.Domain.Interop
 
         void ResetMatch();
         void PurgeCache();
+        void SetSpawnHatRules(bool?[] startsWithoutHat);
 
         void SetInstantReplay(bool enabled);
         bool IsInstantReplayEnabled();

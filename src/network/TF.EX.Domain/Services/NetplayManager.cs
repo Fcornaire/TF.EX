@@ -761,6 +761,11 @@ namespace TF.EX.Domain.Services
             return _isInit && !IsDisconnected();
         }
 
+        public bool HasSessionDisconnected()
+        {
+            return _isInit && IsDisconnected();
+        }
+
         public void PublishCaptureFlag()
         {
             ExFlags.IsCaptureActive = _netplayModeInternal == NetplayMode.Replay || (_netplayModeInternal != NetplayMode.Uninitialized && !(_isInitInternal && IsDisconnected()));
@@ -845,6 +850,7 @@ namespace TF.EX.Domain.Services
             _pendingSessionRoundLogic = null;
             _pendingLateSpectators.Clear();
             StateApi.Current.SetFrameDriver(null);
+            StateApi.Current.SetSpawnHatRules(null);
             if (_isInit || HasSetMode())
             {
                 TowerFall.MapScene.NoRandom.Clear();
@@ -1040,6 +1046,7 @@ namespace TF.EX.Domain.Services
                         ? owner.CustomArcherId ?? ""
                         : "",
                     SkinArcherId = players.TryGetValue(seat, out var skinOwner) ? skinOwner.CustomArcherId ?? "" : "",
+                    StartsWithoutHat = players.TryGetValue(seat, out var hatOwner) ? hatOwner.StartsWithoutHat : null,
                 });
             }
 

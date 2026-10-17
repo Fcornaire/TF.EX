@@ -313,6 +313,7 @@ namespace TF.EX.Domain.CustomComponent
             own.ArcherIndex = archerIndex;
             own.ArcherAltIndex = altIndex;
             own.CustomArcherId = ArcherDataExtensions.GetCustomArcherId(archerIndex, altIndex);
+            own.StartsWithoutHat = ArcherDataExtensions.StartsWithoutHat(archerIndex, altIndex);
             own.Ready = ready;
 
             busyUntil = DateTime.UtcNow.AddSeconds(3);

@@ -95,6 +95,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
                             player.ArcherIndex = TFGame.Characters[playerIndex];
                             player.ArcherAltIndex = (int)TFGame.AltSelect[playerIndex];
                             player.CustomArcherId = ArcherDataExtensions.GetCustomArcherId(player.ArcherIndex, player.ArcherAltIndex);
+                            player.StartsWithoutHat = ArcherDataExtensions.StartsWithoutHat(player.ArcherIndex, player.ArcherAltIndex);
                             player.CustomVariants = MainMenu.VersusMatchSettings.Variants.CustomVariantTitles();
                             player.UseInstantReplay = NetplayOptions.UseInstantReplay;
                             archerService.RemoveArcher(playerIndex);
@@ -257,6 +258,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
                         player.ArcherIndex = TFGame.Characters[playerIndex];
                         player.ArcherAltIndex = (int)TFGame.AltSelect[playerIndex];
                         player.CustomArcherId = ArcherDataExtensions.GetCustomArcherId(player.ArcherIndex, player.ArcherAltIndex);
+                        player.StartsWithoutHat = ArcherDataExtensions.StartsWithoutHat(player.ArcherIndex, player.ArcherAltIndex);
                         player.CustomVariants = MainMenu.VersusMatchSettings.Variants.CustomVariantTitles();
                         player.UseInstantReplay = NetplayOptions.UseInstantReplay;
 

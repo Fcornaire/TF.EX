@@ -34,6 +34,8 @@ namespace TF.Replay.Domain.Interop
         void SetSeed(int seed);
         int GetSeed();
 
+        void SetSpawnHatRules(bool?[] startsWithoutHat);
+
         void StepOwnedControllers();
 
         long GetTrialsTime();
