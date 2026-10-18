@@ -43,6 +43,7 @@ namespace TF.EX.Patchs.Engine
         private const float MAX_NOTIFICATION_TEXT_WIDTH = 290f; //vanilla screen minus some margin
         private static bool? _preSessionFixedStep;
         private static bool _oneFrameDelayForced;
+        internal static bool IsRunningUnsynchronizedUpdate;
 
         private static readonly MethodInfo _mInputUpdate = AccessTools.Method(typeof(MInput), "Update"); //Minput Update is an internal static method...
 
@@ -252,7 +253,17 @@ namespace TF.EX.Patchs.Engine
 
             if (!CanRunNetplayFrames(__instance.Scene, netplayManager))
             {
-                TFGame_Update_orig(__instance, gameTime);
+                IsRunningUnsynchronizedUpdate = true;
+
+                try
+                {
+                    TFGame_Update_orig(__instance, gameTime);
+                }
+                finally
+                {
+                    IsRunningUnsynchronizedUpdate = false;
+                }
+
                 return false;
             }
 

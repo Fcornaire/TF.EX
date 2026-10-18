@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.22.2] - 2026-10-18
+
+### Fixed
+
+- A match should no longer start slightly desynced on one side on specific maps
+
 ## [0.22.1] - 2026-10-18
 
 ### Fixed
