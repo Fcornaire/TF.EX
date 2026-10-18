@@ -98,7 +98,7 @@ namespace TF.EX.Patchs.Scene
 
             var netplayManager = ServiceCollections.ResolveNetplayManager();
 
-            return !netplayManager.IsSynchronized()
+            return (TF.EX.Patchs.Engine.TFGamePatch.IsRunningUnsynchronizedUpdate || !netplayManager.IsSynchronized())
                 && !netplayManager.IsReplayMode()
                 && !netplayManager.IsTestMode()
                 && !netplayManager.HasFailedInitialConnection()
