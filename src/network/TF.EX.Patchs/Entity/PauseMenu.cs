@@ -37,6 +37,13 @@ namespace TF.EX.Patchs.Entity
                     List<string> selectedOptionNames = dynPauseMenu.Get<List<string>>("selectedOptionNames");
                     List<Action> optionActions = dynPauseMenu.Get<List<Action>>("optionActions");
 
+                    if (!optionNames.Contains("QUIT"))
+                    {
+                        optionNames.Add("QUIT");
+                        selectedOptionNames.Add("> QUIT");
+                        optionActions.Add(() => QuitToNetplayEntry(__instance));
+                    }
+
                     if (optionNames.Count > 1)
                     {
                         optionNames.Remove("REMATCH!");
@@ -191,6 +198,11 @@ namespace TF.EX.Patchs.Entity
                 if (name == "REMATCH!")
                 {
                     name = "CONTINUE";
+                }
+
+                if (name == "QUIT" && lobby.IsRanked)
+                {
+                    return false;
                 }
             }
             if (lobby.IsEmpty && name == "REMATCH!")

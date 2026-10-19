@@ -10,6 +10,7 @@ using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Interop;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Models.WebSocket;
+using TF.EX.Domain.Ports;
 using TF.EX.Domain.Services;
 using TF.EX.Domain.Utils;
 using TF.EX.Patchs.Entity.MenuItem;
@@ -33,11 +34,15 @@ namespace TF.EX.Patchs.Scene
                 Visible = IsHostSeatUnjoined();
             }
         }
+
         private const string QUICKPLAY_BANNER_TITLE = "QUICK PLAY";
         private const string LOBBIES_BANNER_TITLE = "LOBBIES";
         private const string PRIVATE_BANNER_TITLE = "PRIVATE";
         private const string PRIVATE_CREATE_BANNER_TITLE = "CREATE";
         private const string PRIVATE_JOIN_BANNER_TITLE = "JOIN";
+        private const string RANKED_BANNER_TITLE = "RANKED";
+        private const string RANKED_QUEUE_BANNER_TITLE = "QUEUE";
+        private const string LEADERBOARD_BANNER_TITLE = "LEADERBOARD";
 
         private const float BANNER_Y = 185f;
 
@@ -56,6 +61,9 @@ namespace TF.EX.Patchs.Scene
         private static readonly string[] PRIVATE_BANNER_LINES = { "LOCKED LOBBY, JOINABLE", "ONLY WITH A CODE." };
         private static readonly string[] PRIVATE_CREATE_BANNER_LINES = { "HOST A PRIVATE LOBBY AND", "SHARE ITS CODE WITH FRIENDS." };
         private static readonly string[] PRIVATE_JOIN_BANNER_LINES = { "ENTER A CODE TO JOIN", "A FRIEND'S PRIVATE LOBBY." };
+        private static readonly string[] RANKED_BANNER_LINES = { "1V1 BEST OF 3 SERIES", "CLIMB TO THE TOP!" };
+        private static readonly string[] RANKED_QUEUE_BANNER_LINES = { "FIND AN OPPONENT CLOSE", "TO YOUR RANKING." };
+        private static readonly string[] LEADERBOARD_BANNER_LINES = { "TOP ARCHERS", "AND YOUR OWN RANK." };
 
         private static bool hasShowedWarning = false;
 
@@ -133,6 +141,21 @@ namespace TF.EX.Patchs.Scene
                     {
                         CreateChangelogHistory(__instance);
                     }
+                    return false;
+                case Domain.Models.MenuState.RankedSelect:
+                    if (name == "Create")
+                    {
+                        CreateRankedSelect(__instance);
+                    }
+                    return false;
+                case Domain.Models.MenuState.Leaderboard:
+                    if (name == "Create")
+                    {
+                        CreateLeaderboard(__instance);
+                    }
+                    return false;
+                case Domain.Models.MenuState.RankedSearch:
+                    HandleRankedSearch(__instance, name);
                     return false;
                 case Domain.Models.MenuState.Main:
                     if (name == "Create")
@@ -332,29 +355,33 @@ namespace TF.EX.Patchs.Scene
                 InputDelayAdvisor.Render();
             }
 
-            if (__instance.State.ToDomainModel() == Domain.Models.MenuState.QuickPlaySearch)
+            if (__instance.State.ToDomainModel() is Domain.Models.MenuState.QuickPlaySearch or Domain.Models.MenuState.RankedSearch)
             {
-                var matchmakingService = ServiceCollections.ResolveMatchmakingService();
-                var searching = matchmakingService.GetSearchingCount();
-
-                if (searching > 0)
-                {
-                    var label = searching == 1 ? "1 PLAYER SEARCHING" : $"{searching} PLAYERS SEARCHING";
-                    Monocle.Draw.OutlineTextCentered(TFGame.Font, label, new Vector2(160f, 160f), Color.White, Color.Black);
-                }
-
-                var (setName, setSearching) = matchmakingService.IsQuickPlayWide()
-                    ? ("STANDARD SET", matchmakingService.GetStandardSearchingCount())
-                    : ("WIDER SET", matchmakingService.GetWideSearchingCount());
-
-                if (setSearching > 0)
-                {
-                    var label = $"{setName}: {setSearching} SEARCHING";
-                    Monocle.Draw.OutlineTextJustify(TFGame.Font, label, new Vector2(8f, 8f), Color.Gray, Color.Black, new Vector2(0f, 0f));
-                }
+                RenderSearchingCounts(ServiceCollections.ResolveMatchmakingService());
             }
 
             Monocle.Draw.SpriteBatch.End();
+        }
+
+        private static void RenderSearchingCounts(IMatchmakingService matchmakingService)
+        {
+            var searching = matchmakingService.GetSearchingCount();
+
+            if (searching > 0)
+            {
+                var label = searching == 1 ? "1 PLAYER SEARCHING" : $"{searching} PLAYERS SEARCHING";
+                Monocle.Draw.OutlineTextCentered(TFGame.Font, label, new Vector2(160f, 160f), Color.White, Color.Black);
+            }
+
+            var (setName, setSearching) = matchmakingService.IsSearchWide()
+                ? ("STANDARD SET", matchmakingService.GetStandardSearchingCount())
+                : ("WIDER SET", matchmakingService.GetWideSearchingCount());
+
+            if (setSearching > 0)
+            {
+                var label = $"{setName}: {setSearching} SEARCHING";
+                Monocle.Draw.OutlineTextJustify(TFGame.Font, label, new Vector2(8f, 8f), Color.Gray, Color.Black, new Vector2(0f, 0f));
+            }
         }
 
         [HarmonyPostfix]
@@ -748,33 +775,53 @@ namespace TF.EX.Patchs.Scene
             Domain.Context.LobbyBuilderContext.IsPrivate = false;
             self.BackState = Domain.Context.MenuReturn.NetplayEntry ?? MainMenu.MenuState.Main;
 
-            var quickPlay = new NetplayMenuButton(new Vector2(65f, 90f), new Vector2(-160f, 120f), "QUICK PLAY", "2-4 ARCHERS", TFGame.MenuAtlas["GoldenArrow"], () =>
+            var quickPlay = new NetplayMenuButton(new Vector2(55f, 90f), new Vector2(-160f, 120f), "QUICK PLAY", "2-4 ARCHERS", TFGame.MenuAtlas["GoldenArrow"], () =>
             {
                 self.State = Domain.Models.MenuState.QuickPlaySearch.ToTFModel();
-            });
+            })
+            {
+                TitleScale = 1f
+            };
 
-            var lobbyList = new NetplayMenuButton(new Vector2(175f, 90f), new Vector2(160f, -80f), "LOBBIES", "BROWSE GAMES", TFGame.MenuAtlas["browseWorkshopButton"], () =>
+            var ranked = new NetplayMenuButton(new Vector2(125f, 90f), new Vector2(125f, -80f), "RANKED", "1V1 SERIES", TFGame.MenuAtlas["teamA"], () =>
+            {
+                self.State = Domain.Models.MenuState.RankedSelect.ToTFModel();
+            })
+            {
+                TitleScale = 1f
+            };
+
+            var lobbyList = new NetplayMenuButton(new Vector2(195f, 90f), new Vector2(195f, -80f), "LOBBIES", "BROWSE GAMES", TFGame.MenuAtlas["browseWorkshopButton"], () =>
             {
                 self.State = Domain.Models.MenuState.LobbyBrowser.ToTFModel();
-            });
+            })
+            {
+                TitleScale = 1f
+            };
 
             var privateMatch = new NetplayMenuButton(new Vector2(265f, 90f), new Vector2(560f, 120f), "PRIVATE", "INVITE ONLY", TFGame.MenuAtlas["map/towerLock"], () =>
             {
                 self.State = Domain.Models.MenuState.PrivateSelect.ToTFModel();
-            });
+            })
+            {
+                TitleScale = 1f
+            };
 
-            quickPlay.RightItem = lobbyList;
-            lobbyList.LeftItem = quickPlay;
+            quickPlay.RightItem = ranked;
+            ranked.LeftItem = quickPlay;
+            ranked.RightItem = lobbyList;
+            lobbyList.LeftItem = ranked;
             lobbyList.RightItem = privateMatch;
             privateMatch.LeftItem = lobbyList;
 
             var banner = BuildVersusSelectBanner();
             banner.Track(() => quickPlay.Selected, QUICKPLAY_BANNER_TITLE, QUICKPLAY_BANNER_LINES);
+            banner.Track(() => ranked.Selected, RANKED_BANNER_TITLE, RANKED_BANNER_LINES);
             banner.Track(() => lobbyList.Selected, LOBBIES_BANNER_TITLE, LOBBIES_BANNER_LINES);
             banner.Track(() => privateMatch.Selected, PRIVATE_BANNER_TITLE, PRIVATE_BANNER_LINES);
 
-            self.Add(new TowerFall.MenuItem[] { quickPlay, lobbyList, privateMatch, banner });
-            self.ToStartSelected = quickPlay;
+            self.Add(new TowerFall.MenuItem[] { quickPlay, ranked, lobbyList, privateMatch, banner });
+            self.ToStartSelected = self.OldState.ToDomainModel() == Domain.Models.MenuState.RankedSelect ? ranked : quickPlay;
 
             if (Changelog.Releases.Count > 0)
             {
@@ -782,7 +829,7 @@ namespace TF.EX.Patchs.Scene
                 {
                     self.State = Domain.Models.MenuState.ChangelogHistory.ToTFModel();
                 });
-                changelog.LinkItems(quickPlay, lobbyList, privateMatch);
+                changelog.LinkItems(quickPlay, ranked, lobbyList, privateMatch);
                 self.Add(changelog);
 
                 if (self.OldState.ToDomainModel() == Domain.Models.MenuState.ChangelogHistory)
@@ -818,6 +865,49 @@ namespace TF.EX.Patchs.Scene
 
             self.Add(new TowerFall.MenuItem[] { create, join, banner });
             self.ToStartSelected = create;
+
+            DynamicData.For(self).Invoke("TweenBGCameraToY", 1);
+        }
+
+        private static void CreateRankedSelect(MainMenu self)
+        {
+            self.BackState = Domain.Models.MenuState.NetplaySelect.ToTFModel();
+
+            var queue = new NetplayMenuButton(new Vector2(100f, 90f), new Vector2(-160f, 120f), "QUEUE", "FIND A MATCH", TFGame.MenuAtlas["trialsMode"], () =>
+            {
+                self.State = Domain.Models.MenuState.RankedSearch.ToTFModel();
+            });
+
+            var leaderboard = new NetplayMenuButton(new Vector2(220f, 90f), new Vector2(560f, 120f), "LEADERBOARD", "TOP ARCHERS", TFGame.MenuAtlas["archivesButton"], () =>
+            {
+                self.State = Domain.Models.MenuState.Leaderboard.ToTFModel();
+            });
+
+            queue.RightItem = leaderboard;
+            leaderboard.LeftItem = queue;
+
+            var banner = BuildVersusSelectBanner();
+            banner.Track(() => queue.Selected, RANKED_QUEUE_BANNER_TITLE, RANKED_QUEUE_BANNER_LINES);
+            banner.Track(() => leaderboard.Selected, LEADERBOARD_BANNER_TITLE, LEADERBOARD_BANNER_LINES);
+
+            self.Add(new TowerFall.MenuItem[] { queue, leaderboard, banner });
+            self.ToStartSelected = self.OldState.ToDomainModel() == Domain.Models.MenuState.Leaderboard ? leaderboard : queue;
+
+            DynamicData.For(self).Invoke("TweenBGCameraToY", 1);
+        }
+
+        private static void CreateLeaderboard(MainMenu self)
+        {
+            self.BackState = Domain.Models.MenuState.RankedSelect.ToTFModel();
+
+            var panel = new LeaderboardPanel();
+            self.Add(panel);
+            self.ToStartSelected = panel;
+
+            self.ButtonGuideB.SetDetails(MenuButtonGuide.ButtonModes.Back, "BACK");
+
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+            Task.Run(() => matchmakingService.RequestLeaderboard(panel.OnLoaded, panel.OnFailed));
 
             DynamicData.For(self).Invoke("TweenBGCameraToY", 1);
         }
@@ -868,6 +958,11 @@ namespace TF.EX.Patchs.Scene
                 lobby => OnQuickPlayMatched(self, lobby),
                 message =>
                 {
+                    if (self.State.ToDomainModel() != Domain.Models.MenuState.QuickPlaySearch)
+                    {
+                        return;
+                    }
+
                     self.RemoveLoader();
                     TowerFall.Sounds.ui_invalid.Play();
                     Notification.Create(self, message, 10, 300);
@@ -878,8 +973,6 @@ namespace TF.EX.Patchs.Scene
         private static void OnQuickPlayMatched(MainMenu self, Lobby lobby)
         {
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
-            var netplayManager = ServiceCollections.ResolveNetplayManager();
-            var inputService = ServiceCollections.ResolveInputService();
 
             if (self.State.ToDomainModel() != Domain.Models.MenuState.QuickPlaySearch)
             {
@@ -890,6 +983,17 @@ namespace TF.EX.Patchs.Scene
             self.RemoveLoader();
             Sounds.ui_click.Play();
             Notification.Create(self, "OPPONENT FOUND", 10, 200);
+
+            PrepareMatchmadeLobby(lobby);
+
+            self.State = MainMenu.MenuState.Rollcall;
+        }
+
+        private static void PrepareMatchmadeLobby(Lobby lobby)
+        {
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+            var netplayManager = ServiceCollections.ResolveNetplayManager();
+            var inputService = ServiceCollections.ResolveInputService();
 
             var localPeerId = matchmakingService.GetRoomPeerId();
             var isHost = lobby.Players.Any(pl => pl.IsHost && pl.RoomPeerId == localPeerId);
@@ -909,8 +1013,113 @@ namespace TF.EX.Patchs.Scene
 
             MainMenu.VersusMatchSettings.Variants.ApplyNetplayVariantRules();
             MainMenu.VersusMatchSettings.MatchLength = (MatchSettings.MatchLengths)lobby.GameData.MatchLength;
+        }
 
-            self.State = MainMenu.MenuState.Rollcall;
+        private static void HandleRankedSearch(MainMenu self, string name)
+        {
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+
+            if (name == "Destroy")
+            {
+                self.RemoveLoader();
+
+                if (self.State.ToDomainModel() == Domain.Models.MenuState.SeriesLobby)
+                {
+                    return;
+                }
+
+                Task.Run(matchmakingService.ExitRanked);
+                ServiceCollections.ResolveInputService().EnableAllControllers();
+
+                if (matchmakingService.GetOwnLobby().IsRanked)
+                {
+                    if (matchmakingService.IsConnectedToServer())
+                    {
+                        Task.Run(() => matchmakingService.LeaveLobby(() => { }, () => { }));
+                    }
+
+                    matchmakingService.ResetPeer();
+                    matchmakingService.ResetLobby();
+                }
+
+                return;
+            }
+
+            if (name != "Create")
+            {
+                return;
+            }
+
+            ShowRankedSearching(self);
+
+            Task.Run(() => matchmakingService.EnterRanked(
+                lobby => OnRankedMatched(self, lobby),
+                () => OnRankedReady(self),
+                message => OnRankedRequeued(self, message),
+                message =>
+                {
+                    if (self.State.ToDomainModel() != Domain.Models.MenuState.RankedSearch)
+                    {
+                        return;
+                    }
+
+                    self.RemoveLoader();
+                    TowerFall.Sounds.ui_invalid.Play();
+                    Notification.Create(self, message, 10, 300);
+                    self.State = Domain.Models.MenuState.RankedSelect.ToTFModel();
+                }));
+        }
+
+        private static void ShowRankedSearching(MainMenu self)
+        {
+            self.BackState = Domain.Models.MenuState.RankedSelect.ToTFModel();
+            self.AddLoader("SEARCHING FOR AN OPPONENT...");
+            self.ButtonGuideB.SetDetails(MenuButtonGuide.ButtonModes.Back, "CANCEL");
+        }
+
+        private static void OnRankedMatched(MainMenu self, Lobby lobby)
+        {
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+
+            if (self.State.ToDomainModel() != Domain.Models.MenuState.RankedSearch)
+            {
+                Task.Run(() => matchmakingService.LeaveLobby(matchmakingService.ResetLobby, matchmakingService.ResetLobby));
+                return;
+            }
+
+            Sounds.ui_click.Play();
+
+            self.BackState = self.State;
+            self.ButtonGuideB.Clear();
+            self.AddLoader("OPPONENT FOUND, CHECKING CONNECTION...");
+
+            PrepareMatchmadeLobby(lobby);
+        }
+
+        private static void OnRankedReady(MainMenu self)
+        {
+            if (self.State.ToDomainModel() != Domain.Models.MenuState.RankedSearch)
+            {
+                return;
+            }
+
+            self.RemoveLoader();
+            Sounds.ui_click.Play();
+            self.State = Domain.Models.MenuState.SeriesLobby.ToTFModel();
+        }
+
+        private static void OnRankedRequeued(MainMenu self, string message)
+        {
+            if (self.State.ToDomainModel() != Domain.Models.MenuState.RankedSearch)
+            {
+                return;
+            }
+
+            ServiceCollections.ResolveInputService().EnableAllControllers();
+
+            TowerFall.Sounds.ui_invalid.Play();
+            Notification.Create(self, message, 10, 300);
+            ShowRankedSearching(self);
         }
 
         //Just to prevent scrolling to

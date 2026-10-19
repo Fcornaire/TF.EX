@@ -23,7 +23,8 @@ namespace TF.EX.Patchs.Entity
         {
             var currentState = state.ToDomainModel();
             if (currentState == Domain.Models.MenuState.Changelog
-                || currentState == Domain.Models.MenuState.ChangelogHistory)
+                || currentState == Domain.Models.MenuState.ChangelogHistory
+                || currentState == Domain.Models.MenuState.Leaderboard)
             {
                 Traverse.Create(__instance).Field("targetTexture").SetValue(null);
 
@@ -37,6 +38,8 @@ namespace TF.EX.Patchs.Entity
                 || currentState == Domain.Models.MenuState.PrivateSelect
                 || currentState == Domain.Models.MenuState.PrivateJoinCode
                 || currentState == Domain.Models.MenuState.QuickPlaySearch
+                || currentState == Domain.Models.MenuState.RankedSelect
+                || currentState == Domain.Models.MenuState.RankedSearch
                 || currentState == Domain.Models.MenuState.SeriesLobby)
             {
                 Traverse.Create(__instance).Field("targetTexture").SetValue(TFGame.MenuAtlas["menuTitles/fight"]);

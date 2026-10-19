@@ -8,6 +8,7 @@ namespace TF.EX.Domain.CustomComponent
     public class MatchEndChoices : Entity
     {
         private const int CHOICE_SECONDS = 30;
+        private const int RANKED_CHOICE_SECONDS = 10;
         private const int HUD_LAYER = 4;
 
         private const float MARGIN = 2f;
@@ -17,12 +18,15 @@ namespace TF.EX.Domain.CustomComponent
 
         private static readonly Vector2 LeftAligned = new Vector2(0f, 0.5f);
 
-        private readonly DateTime deadline = DateTime.UtcNow.AddSeconds(CHOICE_SECONDS);
+        private readonly DateTime deadline;
 
         private MatchEndChoices() : base(HUD_LAYER)
         {
             Position = Vector2.Zero;
             Depth = -2000000;
+
+            var isRanked = ServiceCollections.ResolveMatchmakingService().GetOwnLobby().IsRanked;
+            deadline = DateTime.UtcNow.AddSeconds(isRanked ? RANKED_CHOICE_SECONDS : CHOICE_SECONDS);
         }
 
         public static void Create(Level level)

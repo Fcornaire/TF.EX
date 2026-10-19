@@ -37,18 +37,19 @@ namespace TF.InputDisplayer.Domain
 
         private static float _countWidth;
         private static int _frame;
+        private static float _shift;
 
-        public static void RenderInside(InputHistory history, int frame)
+        public static void RenderInside(InputHistory history, int frame, float shift = 0f)
         {
-            Render(history, frame, outside: false);
+            Render(history, frame, outside: false, shift);
         }
 
         public static void RenderOutside(InputHistory history, int frame)
         {
-            Render(history, frame, outside: true);
+            Render(history, frame, outside: true, 0f);
         }
 
-        private static void Render(InputHistory history, int frame, bool outside)
+        private static void Render(InputHistory history, int frame, bool outside, float shift)
         {
             if (history == null || !DisplayOptions.Enabled || !InputIcons.Ready())
             {
@@ -58,6 +59,7 @@ namespace TF.InputDisplayer.Domain
             EnsureMetrics();
 
             _frame = frame;
+            _shift = shift;
 
             RenderSide(history, frame, 0, 2, mirrored: false, outside);
             RenderSide(history, frame, 1, 3, mirrored: true, outside);
@@ -146,7 +148,7 @@ namespace TF.InputDisplayer.Domain
 
         private static void DrawInside(int columns, float width, bool mirrored)
         {
-            var x = mirrored ? ScreenBounds.Right - width : ScreenBounds.Left;
+            var x = (mirrored ? ScreenBounds.Right - width : ScreenBounds.Left) + _shift;
 
             if (columns == 1)
             {

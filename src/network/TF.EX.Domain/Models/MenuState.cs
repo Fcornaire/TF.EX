@@ -29,5 +29,8 @@
         QuickPlaySearch = 65,
         Changelog = 66,
         ChangelogHistory = 67,
+        RankedSelect = 68,
+        Leaderboard = 69,
+        RankedSearch = 70,
     }
 }

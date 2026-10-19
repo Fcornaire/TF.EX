@@ -40,14 +40,6 @@ namespace TF.EX.Patchs.Entity.HUD
             var dynVersusPlayerMatchResults = DynamicData.For(__instance);
             var gem = dynVersusPlayerMatchResults.Get<Sprite<string>>("gem");
 
-            // custom win/lose portraits can be larger than the vanilla 50px cell
-            var portrait = dynVersusPlayerMatchResults.Get<Image>("portrait");
-
-            if (portrait != null && portrait.Width > 50f)
-            {
-                portrait.Scale = Vector2.One * (50f / portrait.Width);
-            }
-
             var playerName = netplayManager.GetNameForSeat(playerIndex);
 
             var playerNameText = new OutlineText(TFGame.Font, playerName, gem.Position + Vector2.UnitY * 15);

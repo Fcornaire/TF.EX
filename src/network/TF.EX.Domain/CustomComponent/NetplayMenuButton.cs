@@ -9,6 +9,10 @@ namespace TF.EX.Domain.CustomComponent
         private readonly Image icon;
         private readonly Action onConfirm;
 
+        public float TitleScale { get; set; } = 2f;
+
+        public override float BaseTextScale => TitleScale;
+
         public override float BaseScale => 1f;
 
         public override float ImageScale

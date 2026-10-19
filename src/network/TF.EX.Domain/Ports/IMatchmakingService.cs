@@ -1,5 +1,6 @@
 ﻿using TF.EX.Domain.Models;
 using TF.EX.Domain.Models.WebSocket;
+using TF.EX.Domain.Models.WebSocket.Server;
 
 namespace TF.EX.Domain.Ports
 {
@@ -29,11 +30,14 @@ namespace TF.EX.Domain.Ports
         Task JoinPrivate(string code, bool asPlayer, Action<Lobby> onSuccess, Action onFail);
         Task EnterQuickPlay(Action<int> onQueued, Action<Lobby> onMatched, Action<string> onFail);
         Task ExitQuickPlay();
+        Task RequestLeaderboard(Action<LeaderboardData> onResult, Action onFail);
+        Task EnterRanked(Action<Lobby> onMatched, Action onReady, Action<string> onRequeued, Action<string> onFail);
+        Task ExitRanked();
         bool IsSearchingQuickPlay();
         int GetSearchingCount();
         int GetStandardSearchingCount();
         int GetWideSearchingCount();
-        bool IsQuickPlayWide();
+        bool IsSearchWide();
         bool IsQuickPlayStarting();
 
         Task UpdatePlayer(Player player, Action onSucess, Action onFail);

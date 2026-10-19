@@ -15,6 +15,7 @@ namespace TF.EX.Domain.CustomComponent
         private const float LINE_HEIGHT = 12f;
 
         private static readonly string[] Options = { "RESUME", "QUIT" };
+        private static readonly string[] RankedOptions = { "RESUME", "FORFEIT" };
         private static readonly Vector2 JustifyVec = new(0.5f, 0.5f);
 
         private int selectedIndex;
@@ -141,15 +142,17 @@ namespace TF.EX.Domain.CustomComponent
 
             DrawCentered("PAUSE", new Vector2(centerX, TOP), Color.White);
 
-            for (int index = 0; index < Options.Length; index++)
+            var options = ServiceCollections.ResolveMatchmakingService().GetOwnLobby().IsRanked ? RankedOptions : Options;
+
+            for (int index = 0; index < options.Length; index++)
             {
                 var selected = index == selectedIndex;
-                var label = selected ? "> " + Options[index] + " <" : Options[index];
+                var label = selected ? "> " + options[index] + " <" : options[index];
 
                 DrawCentered(label, new Vector2(centerX, TOP + 14f + index * LINE_HEIGHT), selected ? Color.Gold : Color.LightGray);
             }
 
-            DrawCentered("GAME KEEPS RUNNING", new Vector2(centerX, TOP + 14f + Options.Length * LINE_HEIGHT + 4f), Color.Gray);
+            DrawCentered("GAME KEEPS RUNNING", new Vector2(centerX, TOP + 14f + options.Length * LINE_HEIGHT + 4f), Color.Gray);
         }
 
         private void Close()

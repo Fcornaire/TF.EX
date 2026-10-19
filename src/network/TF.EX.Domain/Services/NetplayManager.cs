@@ -605,6 +605,7 @@ namespace TF.EX.Domain.Services
                 return;
             }
 
+            LeaveLobbyAfterError();
             EndMatch(info.Contains("cannot roll back to frame") ? "CONNECTION LOST" : "NETPLAY ERROR");
         }
 
@@ -618,6 +619,16 @@ namespace TF.EX.Domain.Services
             }
 
             Notification.Create(TFGame.Instance.Scene, message, 15, 450);
+        }
+
+        private static void LeaveLobbyAfterError()
+        {
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+
+            if (!matchmakingService.GetOwnLobby().IsEmpty)
+            {
+                matchmakingService.LeaveLobby(matchmakingService.ResetLobby, matchmakingService.ResetLobby);
+            }
         }
 
         private bool IsUnfinishedTeamMatch()
