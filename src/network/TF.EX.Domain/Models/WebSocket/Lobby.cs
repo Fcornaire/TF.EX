@@ -8,6 +8,7 @@ namespace TF.EX.Domain.Models.WebSocket
         Standard,
         QuickPlay,
         Private,
+        Ranked,
     }
 
     [MessagePackObject(keyAsPropertyName: true)]
@@ -31,6 +32,7 @@ namespace TF.EX.Domain.Models.WebSocket
         public bool IsCheckingConnections { get; set; } = false;
         public bool IsReportEnabled { get; set; } = false;
         public ICollection<Player> MatchPlayers { get; set; } = [];
+        public List<RankedSeat> RankedSeats { get; set; } = [];
 
         [IgnoreMember]
         public LobbyKind KindValue => Enum.TryParse<LobbyKind>(Kind, out var kind) ? kind : LobbyKind.Standard;
@@ -49,6 +51,9 @@ namespace TF.EX.Domain.Models.WebSocket
 
         [IgnoreMember]
         public bool IsQuickPlay => KindValue == LobbyKind.QuickPlay;
+
+        [IgnoreMember]
+        public bool IsRanked => KindValue == LobbyKind.Ranked;
 
         [IgnoreMember]
         public bool IsEmpty => Players.Count == 0;
@@ -75,6 +80,15 @@ namespace TF.EX.Domain.Models.WebSocket
         public string Choice { get; set; } = "";
     }
 
+    [MessagePackObject(keyAsPropertyName: true)]
+    public class RankedSeat
+    {
+        public int Seat { get; set; }
+        public int Rating { get; set; }
+        public bool Provisional { get; set; }
+        public int? Delta { get; set; }
+    }
+
     public class EndGameStatus
     {
         public int Seat { get; set; }
@@ -99,6 +113,7 @@ namespace TF.EX.Domain.Models.WebSocket
         public const string InProgress = "InProgress";
         public const string Finished = "Finished";
         public const string Aborted = "Aborted";
+        public const string OpponentLeft = "OPPONENT LEFT";
 
         public int BestOf { get; set; } = 0;
         public List<List<int>> Sides { get; set; } = [];
@@ -110,6 +125,7 @@ namespace TF.EX.Domain.Models.WebSocket
         public string AbortReason { get; set; }
         public bool AwaitingResult { get; set; }
         public List<SeriesPick> Picks { get; set; } = [];
+        public int? ForfeitSide { get; set; }
 
         [IgnoreMember]
         public bool IsInProgress => Status == InProgress;

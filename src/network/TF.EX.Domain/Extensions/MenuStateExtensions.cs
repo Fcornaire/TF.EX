@@ -33,6 +33,12 @@ namespace TF.EX.Domain.Extensions
                     return (TowerFall.MainMenu.MenuState)66;
                 case MenuState.ChangelogHistory:
                     return (TowerFall.MainMenu.MenuState)67;
+                case MenuState.RankedSelect:
+                    return (TowerFall.MainMenu.MenuState)68;
+                case MenuState.Leaderboard:
+                    return (TowerFall.MainMenu.MenuState)69;
+                case MenuState.RankedSearch:
+                    return (TowerFall.MainMenu.MenuState)70;
                 default:
                     throw new System.NotImplementedException("MenuState not found");
             }
@@ -67,6 +73,12 @@ namespace TF.EX.Domain.Extensions
                     return MenuState.Changelog;
                 case (TowerFall.MainMenu.MenuState)67:
                     return MenuState.ChangelogHistory;
+                case (TowerFall.MainMenu.MenuState)68:
+                    return MenuState.RankedSelect;
+                case (TowerFall.MainMenu.MenuState)69:
+                    return MenuState.Leaderboard;
+                case (TowerFall.MainMenu.MenuState)70:
+                    return MenuState.RankedSearch;
                 default:
                     return MenuState.Unknown;
             }

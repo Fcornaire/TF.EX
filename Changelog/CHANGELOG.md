@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-10-20
+
+### Ranked
+
+- New RANKED mode in the netplay menu using Glicko-2 algorithm
+- A ranked match is a best of 3 series that starts right away
+- Wider Set players are only matched with other Wider Set players
+- The series result moves your rating
+- Your rating shows as ? until it has settled after a few series
+- Leaving before the first game is a dodge: after two warnings, ranked gets locked for a while
+- Leaving once a game has started forfeits the series
+- New LeaderBoard in the ranked menu with the top 100 and your own rank
+
+### Fixed
+
+- After a netplay error you should now properly leave the lobby instead of staying in it
+- [InputDisplayer] Inputs should now show at the right place in the instant replay with the Wider Set
+
 ## [0.22.2] - 2026-10-18
 
 ### Fixed

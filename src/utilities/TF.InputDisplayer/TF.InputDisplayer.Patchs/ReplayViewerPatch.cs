@@ -42,7 +42,7 @@ namespace TF.InputDisplayer.Patchs
             }
             else
             {
-                InputDisplay.RenderInside(_history, FrameMarker(viewer));
+                InputDisplay.RenderInside(_history, FrameMarker(viewer), -(ScreenBounds.WideOffset?.Invoke() ?? 0f));
             }
         }
 

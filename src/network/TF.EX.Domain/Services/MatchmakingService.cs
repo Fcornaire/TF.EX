@@ -54,11 +54,23 @@ namespace TF.EX.Domain.Services
 
         private Action<int> onQuickPlayQueued;
         private Action<Lobby> onQuickPlayMatched;
+        private const string CONNECTION_LOST_MESSAGE = "Lost connection to the server";
+
         private Action<string> onQuickPlayFailed;
         private int searchingStandardCount;
         private int searchingWideCount;
-        private bool isQuickPlayWide;
+        private bool isSearchWide;
         private bool isQuickPlayQueued;
+
+        private Action<Lobby> onRankedMatched;
+        private Action onRankedReady;
+        private Action<string> onRankedRequeued;
+        private Action<string> onRankedFailed;
+
+        private static readonly TimeSpan LeaderboardCacheDuration = TimeSpan.FromSeconds(60);
+        private Action<LeaderboardData> onLeaderboard;
+        private LeaderboardData cachedLeaderboard;
+        private DateTime cachedLeaderboardAt = DateTime.MinValue;
 
         private static readonly Microsoft.Xna.Framework.Color EnabledTint = new(205, 245, 205);
         private static readonly Microsoft.Xna.Framework.Color DisabledTint = new(250, 200, 200);
@@ -153,6 +165,7 @@ namespace TF.EX.Domain.Services
                                 if (result.MessageType == WebSocketMessageType.Close)
                                 {
                                     Close();
+                                    RunOnGameThread(() => FailSearch());
                                     return;
                                 }
 
@@ -188,6 +201,11 @@ namespace TF.EX.Domain.Services
                     {
                         RunOnGameThread(() =>
                         {
+                            if (FailSearch())
+                            {
+                                return;
+                            }
+
                             if (TFGame.Instance.Scene is MainMenu)
                             {
                                 var mainMenu = TFGame.Instance.Scene as MainMenu;
@@ -306,14 +324,14 @@ namespace TF.EX.Domain.Services
 
         private async Task SendEnterQuickPlay()
         {
-            isQuickPlayWide = ServiceCollections.ResolveWiderSetModApi()?.IsWide == true;
+            isSearchWide = ServiceCollections.ResolveWiderSetModApi()?.IsWide == true;
 
             var enterQuickPlayMessage = new EnterQuickPlayMessage
             {
                 EnterQuickPlay = new EnterQuickPlay
                 {
                     Name = NetplayPreferences.Name,
-                    IsWide = isQuickPlayWide
+                    IsWide = isSearchWide
                 }
             };
 
@@ -327,6 +345,42 @@ namespace TF.EX.Domain.Services
             var exitQuickPlayMessage = new ExitQuickPlayMessage { };
 
             var bytes = MessagePackSerializer.Serialize(exitQuickPlayMessage);
+            var message = MessagePackSerializer.ConvertToJson(bytes);
+            await Send(message);
+        }
+
+        private async Task SendEnterRanked()
+        {
+            isSearchWide = ServiceCollections.ResolveWiderSetModApi()?.IsWide == true;
+
+            var enterRankedMessage = new EnterRankedMessage
+            {
+                EnterRanked = new EnterRanked
+                {
+                    Name = NetplayPreferences.Name,
+                    IsWide = isSearchWide
+                }
+            };
+
+            var bytes = MessagePackSerializer.Serialize(enterRankedMessage);
+            var message = MessagePackSerializer.ConvertToJson(bytes);
+            await Send(message);
+        }
+
+        private async Task SendExitRanked()
+        {
+            var exitRankedMessage = new ExitRankedMessage { };
+
+            var bytes = MessagePackSerializer.Serialize(exitRankedMessage);
+            var message = MessagePackSerializer.ConvertToJson(bytes);
+            await Send(message);
+        }
+
+        private async Task SendGetLeaderboard()
+        {
+            var getLeaderboardMessage = new GetLeaderboardMessage();
+
+            var bytes = MessagePackSerializer.Serialize(getLeaderboardMessage);
             var message = MessagePackSerializer.ConvertToJson(bytes);
             await Send(message);
         }
@@ -557,6 +611,21 @@ namespace TF.EX.Domain.Services
                 return;
             }
 
+            if (IsServerMsg(message, "Leaderboard"))
+            {
+                var bytes = MessagePackSerializer.ConvertFromJson(message);
+                var response = MessagePackSerializer.Deserialize<LeaderboardMessage>(bytes);
+
+                cachedLeaderboard = response.Leaderboard;
+                cachedLeaderboardAt = DateTime.UtcNow;
+
+                var callback = onLeaderboard;
+                onLeaderboard = null;
+                callback?.Invoke(cachedLeaderboard);
+
+                return;
+            }
+
             if (IsServerMsg(message, "GetLobbiesResponse"))
             {
                 var bytes = MessagePackSerializer.ConvertFromJson(message);
@@ -672,6 +741,62 @@ namespace TF.EX.Domain.Services
                         _logger.LogDebug<MatchmakingService>($"Quickplay refused : {response.QuickPlayStatus.Message}");
                         onQuickPlayFailed?.Invoke(response.QuickPlayStatus.Message);
                     }
+                }
+
+                return;
+            }
+
+            if (IsServerMsg(message, "RankedMatchFound"))
+            {
+                var bytes = MessagePackSerializer.ConvertFromJson(message);
+                var response = MessagePackSerializer.Deserialize<RankedMatchFoundMessage>(bytes);
+                searchingStandardCount = 0;
+                searchingWideCount = 0;
+
+                if (onRankedMatched == null)
+                {
+                    await SendLeaveLobby();
+                    return;
+                }
+
+                _logger.LogDebug<MatchmakingService>("Ranked opponent found, checking the connection");
+
+                peerId = response.RankedMatchFound.RoomPeerId.ToString();
+
+                UpdateOwnLobby(response.RankedMatchFound.Lobby);
+
+                onRankedMatched?.Invoke(GetOwnLobby());
+
+                return;
+            }
+
+            if (IsServerMsg(message, "RankedReady"))
+            {
+                onRankedReady?.Invoke();
+
+                return;
+            }
+
+            if (IsServerMsg(message, "RankedStatus"))
+            {
+                var bytes = MessagePackSerializer.ConvertFromJson(message);
+                var status = MessagePackSerializer.Deserialize<RankedStatusMessage>(bytes).RankedStatus;
+                searchingStandardCount = status.SearchingStandard;
+                searchingWideCount = status.SearchingWide;
+
+                if (status.Queued && !string.IsNullOrEmpty(status.Message))
+                {
+                    RunOnGameThread(() =>
+                    {
+                        ResetLobby();
+                        ResetPeer();
+                    });
+                    onRankedRequeued?.Invoke(status.Message);
+                }
+                else if (!status.Queued && !string.IsNullOrEmpty(status.Message))
+                {
+                    _logger.LogDebug<MatchmakingService>($"Ranked refused : {status.Message}");
+                    onRankedFailed?.Invoke(status.Message);
                 }
 
                 return;
@@ -858,6 +983,7 @@ namespace TF.EX.Domain.Services
 
         private void HandleKickedFromLobby(string reason)
         {
+            var wasRanked = ownLobby.IsRanked;
             abandonedRoomId = ownLobby.RoomId;
             ResetLobby();
             ResetPeer();
@@ -867,7 +993,7 @@ namespace TF.EX.Domain.Services
 
             if (TFGame.Instance.Scene is MainMenu mainMenu)
             {
-                mainMenu.State = Domain.Models.MenuState.NetplaySelect.ToTFModel();
+                mainMenu.State = (wasRanked ? Domain.Models.MenuState.RankedSelect : Domain.Models.MenuState.NetplaySelect).ToTFModel();
             }
         }
 
@@ -879,6 +1005,10 @@ namespace TF.EX.Domain.Services
             onQuickPlayMatched = null;
             onQuickPlayFailed = null;
             isQuickPlayQueued = false;
+            onRankedMatched = null;
+            onRankedReady = null;
+            onRankedRequeued = null;
+            onRankedFailed = null;
             currentAction = WSAction.None;
 
             if (Version.TryParse(version, out var required))
@@ -1141,6 +1271,7 @@ namespace TF.EX.Domain.Services
             if (settings == null
                 || lobby.InGame
                 || lobby.IsQuickPlay
+                || lobby.IsRanked
                 || Context.LobbyBuilderContext.IsEditing
                 || TFGame.Instance.Scene is not MainMenu)
             {
@@ -1153,13 +1284,23 @@ namespace TF.EX.Domain.Services
 
         private void NotifySeriesAbort(Lobby lobby, Lobby previous)
         {
+            if (TFGame.Instance.Scene is MainMenu menu && menu.State.ToDomainModel() == Models.MenuState.RankedSearch)
+            {
+                return;
+            }
+
             if (lobby.Series?.IsAborted != true || previous?.Series?.IsAborted == true || previous?.RoomId != lobby.RoomId)
             {
                 return;
             }
 
             Sounds.ui_invalid.Play();
-            Notification.Create(TFGame.Instance.Scene, $"SERIES ABORTED: {lobby.Series.AbortReason ?? "UNKNOWN"}", 12, 500);
+
+            var text = lobby.IsRanked && lobby.Series.AbortReason == Models.WebSocket.Series.OpponentLeft
+                ? "YOUR OPPONENT LEFT"
+                : $"SERIES ABORTED: {lobby.Series.AbortReason ?? "UNKNOWN"}";
+
+            Notification.Create(TFGame.Instance.Scene, text, 12, 500);
         }
 
         private void NotifyConnectionUpdate(Lobby lobby, Lobby previous)
@@ -1537,6 +1678,18 @@ namespace TF.EX.Domain.Services
             return _webSocket.State == WebSocketState.Open;
         }
 
+        private bool FailSearch()
+        {
+            var state = (TFGame.Instance.Scene as MainMenu)?.State.ToDomainModel();
+            var onFail = state == Models.MenuState.QuickPlaySearch
+                ? onQuickPlayFailed
+                : state == Models.MenuState.RankedSearch ? onRankedFailed : null;
+
+            onFail?.Invoke(CONNECTION_LOST_MESSAGE);
+
+            return onFail != null;
+        }
+
         public int? GetPingTo(Models.WebSocket.Player player)
         {
             RefreshPingStats(player);
@@ -1752,7 +1905,8 @@ namespace TF.EX.Domain.Services
                 RelayedPairs = lobby.RelayedPairs,
                 MatchPlayers = lobby.MatchPlayers,
                 IsCheckingConnections = lobby.IsCheckingConnections,
-                IsReportEnabled = lobby.IsReportEnabled
+                IsReportEnabled = lobby.IsReportEnabled,
+                RankedSeats = lobby.RankedSeats,
             };
         }
 
@@ -1811,6 +1965,65 @@ namespace TF.EX.Domain.Services
             }
         }
 
+        public async Task EnterRanked(Action<Lobby> onMatched, Action onReady, Action<string> onRequeued, Action<string> onFail)
+        {
+            onRankedMatched = onMatched == null ? null : lobby => RunOnGameThread(() => onMatched(lobby));
+            onRankedReady = onReady == null ? null : () => RunOnGameThread(onReady);
+            onRankedRequeued = onRequeued == null ? null : message => RunOnGameThread(() => onRequeued(message));
+            onRankedFailed = onFail == null ? null : message => RunOnGameThread(() => onFail(message));
+            searchingStandardCount = 0;
+            searchingWideCount = 0;
+
+            if (!EnsureConnection())
+            {
+                onRankedFailed?.Invoke("Cannot reach the server");
+                return;
+            }
+
+            await SendEnterRanked();
+        }
+
+        public async Task ExitRanked()
+        {
+            onRankedMatched = null;
+            onRankedReady = null;
+            onRankedRequeued = null;
+            onRankedFailed = null;
+            searchingStandardCount = 0;
+            searchingWideCount = 0;
+
+            if (IsConnectedToServer())
+            {
+                await SendExitRanked();
+            }
+        }
+
+        public async Task RequestLeaderboard(Action<LeaderboardData> onResult, Action onFail)
+        {
+            if (cachedLeaderboard != null && DateTime.UtcNow - cachedLeaderboardAt < LeaderboardCacheDuration)
+            {
+                var cached = cachedLeaderboard;
+                RunOnGameThread(() => onResult?.Invoke(cached));
+                return;
+            }
+
+            onLeaderboard = onResult == null ? null : data => RunOnGameThread(() => onResult(data));
+
+            if (!EnsureConnection())
+            {
+                onLeaderboard = null;
+
+                if (onFail != null)
+                {
+                    RunOnGameThread(onFail);
+                }
+
+                return;
+            }
+
+            await SendGetLeaderboard();
+        }
+
         public bool IsSearchingQuickPlay()
         {
             return isQuickPlayQueued;
@@ -1818,7 +2031,7 @@ namespace TF.EX.Domain.Services
 
         public int GetSearchingCount()
         {
-            return isQuickPlayWide ? searchingWideCount : searchingStandardCount;
+            return isSearchWide ? searchingWideCount : searchingStandardCount;
         }
 
         public int GetStandardSearchingCount()
@@ -1831,9 +2044,9 @@ namespace TF.EX.Domain.Services
             return searchingWideCount;
         }
 
-        public bool IsQuickPlayWide()
+        public bool IsSearchWide()
         {
-            return isQuickPlayWide;
+            return isSearchWide;
         }
 
         public bool IsQuickPlayStarting()
@@ -1897,12 +2110,12 @@ namespace TF.EX.Domain.Services
 
         public bool CanHostStart()
         {
-            return !ownLobby.IsQuickPlay && IsAwaitingHostStart() && IsHost();
+            return !ownLobby.IsQuickPlay && !ownLobby.IsRanked && IsAwaitingHostStart() && IsHost();
         }
 
         public bool IsWaitingForHostStart()
         {
-            return !ownLobby.IsQuickPlay && IsAwaitingHostStart() && !IsHost();
+            return !ownLobby.IsQuickPlay && !ownLobby.IsRanked && IsAwaitingHostStart() && !IsHost();
         }
 
         public bool IsCheckingConnections()
@@ -2042,6 +2255,7 @@ namespace TF.EX.Domain.Services
         {
             return !ownLobby.IsEmpty
                 && !ownLobby.IsQuickPlay
+                && !ownLobby.IsRanked
                 && !ownLobby.InGame
                 && !ownLobby.IsSeriesInProgress
                 && IsHost();

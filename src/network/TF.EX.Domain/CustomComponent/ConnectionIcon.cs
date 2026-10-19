@@ -1,7 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Monocle;
 
-namespace TF.EX.Patchs
+namespace TF.EX.Domain.CustomComponent
 {
     public static class ConnectionIcon
     {
