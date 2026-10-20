@@ -5,7 +5,7 @@ namespace TF.State.Domain.Services
 {
     public class APIManager : IAPIManager
     {
-        private ConcurrentDictionary<string, IStateEvents> stateEvents = new ConcurrentDictionary<string, IStateEvents>();
+        private ConcurrentDictionary<string, IStateEvents> stateEvents = new();
 
         public Dictionary<string, string> GetStates(TowerFall.MatchVariants variants)
         {

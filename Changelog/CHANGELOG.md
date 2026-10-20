@@ -19,6 +19,7 @@
 
 - After a netplay error you should now properly leave the lobby instead of staying in it
 - [InputDisplayer] Inputs should now show at the right place in the instant replay with the Wider Set
+- [State] Bramble arrows should no longer introduce a potential desync when a player had used brambles outside netplay before a match
 
 ## [0.22.2] - 2026-10-18
 
