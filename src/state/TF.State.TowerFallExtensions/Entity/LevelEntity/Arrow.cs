@@ -150,6 +150,16 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                     builder.WithBuriedSprite(prismBuriedSprite.GetState());
 
                     break;
+                case TowerFall.ArrowTypes.Trigger:
+                    var dynTriggerArrow = DynamicData.For((TowerFall.TriggerArrow)entity);
+                    Sprite<int> triggerNormalSprite = dynTriggerArrow.Get<Sprite<int>>("normalSprite");
+                    Alarm primedAlarm = dynTriggerArrow.Get<Alarm>("primed");
+
+                    builder.WithNormalSprite(triggerNormalSprite.GetState());
+                    builder.WithPrimedAlarm(primedAlarm.GetState());
+                    builder.WithIsLightVisible(entity.LightVisible);
+
+                    break;
             }
 
             return builder.Build();
@@ -334,6 +344,25 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
 
                     var prismBuriedSprite = dynPrismArrow.Get<Sprite<int>>("buriedSprite");
                     prismBuriedSprite.LoadState(toLoadPrismArrow.BuriedSprite);
+
+                    break;
+                case ArrowTypes.Trigger:
+                    var toLoadTriggerArrow = (TriggerArrow)toLoad;
+
+                    if (toLoadTriggerArrow.NormalSprite == null)
+                    {
+                        break;
+                    }
+
+                    var dynLoadTriggerArrow = DynamicData.For((TowerFall.TriggerArrow)entity);
+
+                    var triggerNormalSprite = dynLoadTriggerArrow.Get<Sprite<int>>("normalSprite");
+                    triggerNormalSprite.LoadState(toLoadTriggerArrow.NormalSprite);
+
+                    var primedAlarm = dynLoadTriggerArrow.Get<Alarm>("primed");
+                    primedAlarm.LoadState(toLoadTriggerArrow.PrimedAlarm);
+
+                    entity.LightVisible = toLoadTriggerArrow.IsLightVisible;
 
                     break;
             }
