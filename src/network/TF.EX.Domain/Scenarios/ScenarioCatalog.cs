@@ -1189,6 +1189,22 @@ namespace TF.EX.Domain.Scenarios
                 ],
                 Expect = level => AllOf<Player>(level)
                     .Any(p => p.State == Player.PlayerStates.Dying && p.X > 166f && p.X < 244f),
+            },
+            new Scenario
+            {
+                Name = "prism-ownerless-arrows",
+                Covers = ["Arrow", "PlayerCorpse", "Prism", "Player"],
+                Variants = ["START WITH PRISM ARROWS"],
+                Frames = 900,
+                Spawns = [(60, SpawnY), (140, SpawnY)],
+                Scripts =
+                [
+                    Sequence(AimAndFire(0, -1), Wait(43), AimAndFire(1, 0), Wait(900)),
+                    Still,
+                ],
+                Expect = level => AllOf<Arrow>(level).Any()
+                    && !AllOf<Player>(level).Any()
+                    && !AllOf<PlayerCorpse>(level).Any(),
             }
         ];
 
