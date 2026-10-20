@@ -631,26 +631,11 @@ namespace TF.State.TowerFallExtensions
 
                 foreach (TF.State.Domain.Models.Entity.LevelEntity.Arrows.Arrow toLoad in gameState.Entities.Arrows.ToArray())
                 {
-                    TowerFall.LevelEntity entityHavingArrow = level.GetPlayerOrCorpse(toLoad.PlayerIndex);
-                    if (entityHavingArrow == null)
-                    {
-                        var players = level[GameTags.Player];
-                        var corpses = level[GameTags.Corpse];
-                        if (players != null && players.Count > 0)
-                        {
-                            entityHavingArrow = players[0] as TowerFall.LevelEntity;
-                        }
-                        else if (corpses != null && corpses.Count > 0)
-                        {
-                            entityHavingArrow = corpses[0] as TowerFall.LevelEntity;
-                        }
-                    }
-                    if (entityHavingArrow == null)
-                    {
-                        throw new InvalidOperationException("Can't find the original player that shoot the current arrow being loaded");
-                    }
+                    var owner = level.GetPlayerOrCorpse(toLoad.PlayerIndex);
+                    var arrow = owner != null
+                        ? TowerFall.Arrow.Create(toLoad.ArrowType.ToTFModel(), owner, toLoad.Position.ToTFVector(), toLoad.Direction)
+                        : CreateOwnerlessArrow(level, toLoad);
 
-                    var arrow = TowerFall.Arrow.Create(toLoad.ArrowType.ToTFModel(), entityHavingArrow, toLoad.Position.ToTFVector(), toLoad.Direction);
                     arrow.LoadState(toLoad);
 
                     level.GetGameplayLayer().Entities.Insert(0, arrow);
@@ -902,6 +887,17 @@ namespace TF.State.TowerFallExtensions
             level.SortGamePlayLayer(CompareDepth);
             level.SortHUDLayer(CompareDepth);
             level[GameTags.Player]?.Sort(CompareDepth);
+        }
+
+        private static TowerFall.Arrow CreateOwnerlessArrow(Level level, TF.State.Domain.Models.Entity.LevelEntity.Arrows.Arrow toLoad)
+        {
+            var arrow = TowerFall.Arrow.Create(toLoad.ArrowType.ToTFModel(), level.Tiles, toLoad.Position.ToTFVector(), toLoad.Direction, overridePlayerIndex: toLoad.PlayerIndex);
+            var allegiance = toLoad.PlayerIndex >= 0 ? level.Session.MatchSettings.GetPlayerAllegiance(toLoad.PlayerIndex) : TowerFall.Allegiance.Neutral;
+
+            arrow.Allegiance = allegiance;
+            DynamicData.For(arrow).Set("TeamColor", allegiance);
+
+            return arrow;
         }
 
         private static int CompareDepth(Monocle.Entity a, Monocle.Entity b)
