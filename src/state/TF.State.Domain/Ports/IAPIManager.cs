@@ -2,7 +2,7 @@
 {
     public interface IAPIManager
     {
-        Dictionary<string, string> GetStates();
+        Dictionary<string, string> GetStates(TowerFall.MatchVariants variants);
         void LoadStates(Dictionary<string, string> state);
 
         bool HasStateEvents(string id);
@@ -13,6 +13,7 @@
 
     public interface IStateEvents
     {
+        string GetVariantId();
         string OnSaveState();
         void OnLoadState(string toLoad);
     }

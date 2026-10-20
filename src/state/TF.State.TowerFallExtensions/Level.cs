@@ -228,7 +228,7 @@ namespace TF.State.TowerFallExtensions
             gameState.AddExplosions(self);
             gameState.AddBGMushrooms(self);
 
-            gameState.AdditionnalData = TF.State.Domain.ServiceCollections.ResolveAPIManager().GetStates();
+            gameState.AdditionnalData = TF.State.Domain.ServiceCollections.ResolveAPIManager().GetStates(self.Session.MatchSettings.Variants);
 
             return gameState;
         }

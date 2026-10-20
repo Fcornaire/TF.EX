@@ -7,12 +7,17 @@ namespace TF.State.Domain.Services
     {
         private ConcurrentDictionary<string, IStateEvents> stateEvents = new ConcurrentDictionary<string, IStateEvents>();
 
-        public Dictionary<string, string> GetStates()
+        public Dictionary<string, string> GetStates(TowerFall.MatchVariants variants)
         {
             var state = new Dictionary<string, string>();
 
             foreach (var pair in stateEvents.OrderBy(pair => pair.Key, StringComparer.Ordinal))
             {
+                if (variants.CustomVariants.TryGetValue(pair.Value.GetVariantId(), out var variant) && !variant.Value)
+                {
+                    continue;
+                }
+
                 state.Add(pair.Key, pair.Value.OnSaveState());
             }
 
@@ -47,7 +52,7 @@ namespace TF.State.Domain.Services
         public void RegisterStateEvents(string modName, string key, Func<byte[]> onSaveState, Action<byte[]> onLoadState)
         {
             var id = $"{modName}-{key}";
-            stateEvents.TryAdd(id, new ByteStateEvents(onSaveState, onLoadState));
+            stateEvents.TryAdd(id, new ByteStateEvents($"{modName}/{key}", onSaveState, onLoadState));
         }
 
         public void UnregisterStateEvents(string modName, string key)
@@ -55,31 +60,27 @@ namespace TF.State.Domain.Services
             stateEvents.TryRemove($"{modName}-{key}", out _);
         }
 
-        private sealed class ByteStateEvents : IStateEvents
+        private class ByteStateEvents(string variantId, Func<byte[]> onSave, Action<byte[]> onLoad) : IStateEvents
         {
-            private readonly Func<byte[]> _onSave;
-            private readonly Action<byte[]> _onLoad;
-
-            public ByteStateEvents(Func<byte[]> onSave, Action<byte[]> onLoad)
-            {
-                _onSave = onSave;
-                _onLoad = onLoad;
-            }
-
             public string OnSaveState()
             {
-                var bytes = _onSave?.Invoke();
+                var bytes = onSave?.Invoke();
                 return bytes == null ? string.Empty : Convert.ToBase64String(bytes);
             }
 
             public void OnLoadState(string toLoad)
             {
-                if (_onLoad == null)
+                if (onLoad == null)
                 {
                     return;
                 }
 
-                _onLoad(string.IsNullOrEmpty(toLoad) ? Array.Empty<byte>() : Convert.FromBase64String(toLoad));
+                onLoad(string.IsNullOrEmpty(toLoad) ? Array.Empty<byte>() : Convert.FromBase64String(toLoad));
+            }
+
+            public string GetVariantId()
+            {
+                return variantId;
             }
         }
     }
