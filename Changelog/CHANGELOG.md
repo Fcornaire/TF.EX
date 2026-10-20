@@ -21,6 +21,7 @@
 - [InputDisplayer] Inputs should now show at the right place in the instant replay with the Wider Set
 - [State] Bramble arrows should no longer introduce a potential desync when a player had used brambles outside netplay before a match
 - [State] The game should no longer crash at the end of a round where every archer was killed by a prism arrow
+- [State] Trigger arrows no longer lose their eye after a rollback
 
 ## [0.22.2] - 2026-10-18
 

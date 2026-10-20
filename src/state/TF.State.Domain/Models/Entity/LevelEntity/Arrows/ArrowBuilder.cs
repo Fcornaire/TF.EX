@@ -31,6 +31,10 @@ namespace TF.State.Domain.Models.Entity.LevelEntity.Arrows
             public Counter CanTurnCounter { get; set; }
             public int Turns { get; set; }
 
+            public Alarm PrimedAlarm { get; set; }
+
+            public bool IsLightVisible { get; set; }
+
             public IntermediateArrow()
             {
                 ArrowType = ArrowTypes.Normal;
@@ -292,6 +296,16 @@ namespace TF.State.Domain.Models.Entity.LevelEntity.Arrows
             arrow.Turns = turns;
         }
 
+        public void WithPrimedAlarm(Alarm primedAlarm)
+        {
+            arrow.PrimedAlarm = primedAlarm;
+        }
+
+        public void WithIsLightVisible(bool isLightVisible)
+        {
+            arrow.IsLightVisible = isLightVisible;
+        }
+
         public Arrow Build()
         {
             Arrow built;
@@ -417,6 +431,13 @@ namespace TF.State.Domain.Models.Entity.LevelEntity.Arrows
                 superBombArrow.CanExplode = arrow.CanExplode;
                 superBombArrow.ExplodeAlarm = arrow.ExplodeAlarm;
                 superBombArrow.NormalSprite = arrow.NormalSprite;
+            }
+
+            if (built is TriggerArrow triggerArrow)
+            {
+                triggerArrow.NormalSprite = arrow.NormalSprite;
+                triggerArrow.PrimedAlarm = arrow.PrimedAlarm;
+                triggerArrow.IsLightVisible = arrow.IsLightVisible;
             }
 
             return built;
