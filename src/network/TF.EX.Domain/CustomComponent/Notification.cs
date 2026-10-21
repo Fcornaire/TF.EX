@@ -35,7 +35,7 @@ namespace TF.EX.Domain.CustomComponent
 
         private bool leaving;
 
-        private Notification(string text, int layer, float yOffset, int appearDuration = 20, int stayingDuration = 250, bool isSticky = false, bool withoutAnimation = false) : base(layer)
+        private Notification(string text, int layer, int appearDuration = 20, int stayingDuration = 250, bool isSticky = false, bool withoutAnimation = false) : base(layer)
         {
             this.isSticky = isSticky;
             description = text.ToUpper();
@@ -43,7 +43,7 @@ namespace TF.EX.Domain.CustomComponent
 
             restingX = Math.Max(0f, CenterX(layer) - length * 10f / 2f);
 
-            baseY = 10 + yOffset;
+            baseY = 10;
 
             initialTweenPosition = new Vector2(-length * 10, baseY);
             initialPosition = initialTweenPosition;
@@ -58,7 +58,7 @@ namespace TF.EX.Domain.CustomComponent
             }
             else
             {
-                Position = new Vector2(restingX, 10 + yOffset);
+                Position = new Vector2(restingX, baseY);
             }
 
             this.appearDuration = appearDuration;
@@ -126,12 +126,10 @@ namespace TF.EX.Domain.CustomComponent
 
         public static Notification Create(Scene scene, string text, int appearDuration = 20, int stayingDuration = 250, bool isSticky = false, bool withoutAnimation = false)
         {
-            var layerIndex = scene is MainMenu ? -1 : 4;
+            var layerIndex = scene is MainMenu ? 0 : 4;
             RemoveSameText(scene, layerIndex, text.ToUpper());
 
-            var yOffset = scene is MainMenu menu ? menu.UILayer.Camera.Y : 0f;
-
-            var notification = new Notification(text, layerIndex, yOffset, appearDuration, stayingDuration, isSticky, withoutAnimation);
+            var notification = new Notification(text, layerIndex, appearDuration, stayingDuration, isSticky, withoutAnimation);
 
             switch (scene)
             {

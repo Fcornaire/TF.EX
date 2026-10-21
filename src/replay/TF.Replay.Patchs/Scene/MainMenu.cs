@@ -2,6 +2,7 @@ using HarmonyLib;
 using Microsoft.Extensions.Logging;
 using Microsoft.Xna.Framework;
 using MonoMod.Utils;
+using System.Diagnostics;
 using TF.Replay.Domain;
 using TF.Replay.Domain.CustomComponent;
 using TF.Replay.Domain.Extensions;
@@ -13,29 +14,43 @@ namespace TF.Replay.Patchs.Scene
     [HarmonyPatch(typeof(MainMenu))]
     public class MainMenuPatch
     {
-        private static List<ReplayInfos> _replays = new List<ReplayInfos>();
+        private static readonly TimeSpan FolderGraceWindow = TimeSpan.FromMilliseconds(120);
+
+        private static List<ReplayInfos> _replays = [];
         private static ReplaysPanel _replaysPanel = null;
+        private static ReplayBrowserHud _hud;
+        private static ConfirmDialog _deleteDialog;
+        private static ReplayInfos _deleteTarget;
         private static Text _noMsg;
         private static LoadingGauge _loadingMsg;
         private static Text _monthMsg;
         private static bool _loading;
         private static string _lastLaunched;
+        private static long _totalSize;
+        private static int _pendingFolderStep;
+        private static long _pendingFolderStepAt;
 
-        private static Action _pendingBuild;
+        private static Task<Action> _loadTask;
         private static MainMenu _owner;
-        private static int _generation;
 
         [HarmonyPostfix]
         [HarmonyPatch("Update")]
         public static void MainMenu_Update(MainMenu __instance)
         {
-            if ((int)__instance.State == ReplayMenuState.ReplaysBrowser)
+            if ((int)__instance.State == ReplayMenuState.ReplaysBrowser && _loadTask is { IsCompleted: true } loaded)
             {
-                Interlocked.Exchange(ref _pendingBuild, null)?.Invoke();
+                _loadTask = null;
+                loaded.Result.Invoke();
             }
 
             if ((int)__instance.State != ReplayMenuState.ReplaysBrowser || _loading)
             {
+                return;
+            }
+
+            if (_deleteDialog != null)
+            {
+                UpdateDeleteDialog(__instance);
                 return;
             }
 
@@ -45,17 +60,67 @@ namespace TF.Replay.Patchs.Scene
                 DynamicData.For(__instance).Set("ToStartSelected", _replays[0]);
             }
 
-            var step = MenuInput.Alt ? -1 : MenuInput.Alt2 ? 1 : 0;
-
-            if (step == 0)
+            if (!CanUseBrowserKeys(__instance))
             {
                 return;
             }
 
+            if (ReplayBrowserKeys.IsFavoritePressed())
+            {
+                ToggleFavorite(__instance);
+                return;
+            }
+
+            if (ReplayBrowserKeys.IsDeletePressed())
+            {
+                OpenDeleteDialog(__instance);
+                return;
+            }
+
+            UpdateFolderSwitch(__instance);
+        }
+
+        private static bool CanUseBrowserKeys(MainMenu self)
+            => !self.Transitioning
+               && MenuInput.MenuInputs.Any(input => input != null)
+               && !MenuInput.Confirm
+               && !MenuInput.Back;
+
+        private static void UpdateFolderSwitch(MainMenu self)
+        {
             var service = ServiceCollections.ResolveReplayService();
+
+            if ((MenuInput.Alt || MenuInput.Alt2) && MenuInput.AltCheck && MenuInput.Alt2Check)
+            {
+                _pendingFolderStep = 0;
+
+                if (!service.IsInFavorites())
+                {
+                    service.OpenFavorites();
+                    Reload(self);
+                }
+
+                return;
+            }
+
+            if (MenuInput.Alt || MenuInput.Alt2)
+            {
+                _pendingFolderStep = MenuInput.Alt ? -1 : 1;
+                _pendingFolderStepAt = Stopwatch.GetTimestamp();
+                return;
+            }
+
+            if (_pendingFolderStep == 0 || Stopwatch.GetElapsedTime(_pendingFolderStepAt) < FolderGraceWindow)
+            {
+                return;
+            }
+
+            var step = _pendingFolderStep;
+            _pendingFolderStep = 0;
+
             var months = service.GetMonths();
 
-            if (months.Length < 2)
+            if (!months.Any(month => month != service.CurrentMonth))
             {
                 return;
             }
@@ -64,25 +129,127 @@ namespace TF.Replay.Patchs.Scene
             var next = ((index < 0 ? 0 : index) + step + months.Length) % months.Length;
 
             service.SetMonth(months[next]);
-            Sounds.ui_click.Play();
-
-            HandleReplayBrowser(__instance, "Destroy");
-            CreateReplay(__instance);
+            Reload(self);
         }
 
-        private static string MonthLabel(string month)
-            => string.IsNullOrEmpty(month) ? "UNSORTED" : month;
+        private static void Reload(MainMenu self)
+        {
+            Sounds.ui_click.Play();
 
-        private static void SetGuides(MainMenu self, bool canSwitchMonth)
+            HandleReplayBrowser(self, "Destroy");
+            CreateReplay(self);
+        }
+
+        private static void ToggleFavorite(MainMenu self)
+        {
+            _pendingFolderStep = 0;
+
+            var selected = _replays.FirstOrDefault(replay => replay.Selected);
+
+            if (selected == null)
+            {
+                return;
+            }
+
+            var service = ServiceCollections.ResolveReplayService();
+            var wasInFavorites = service.IsInFavorites();
+
+            if (!service.ToggleFavorite(selected.Replay))
+            {
+                Sounds.ui_invalid.Play();
+                ServiceCollections.Notify("COULD NOT MOVE THE REPLAY");
+                return;
+            }
+
+            Sounds.ui_clickSpecial.Play();
+            ServiceCollections.Notify(wasInFavorites ? "REMOVED FROM FAVORITES" : "ADDED TO FAVORITES");
+
+            RemoveFromBrowser(self, selected);
+        }
+
+        private static void OpenDeleteDialog(MainMenu self)
+        {
+            _pendingFolderStep = 0;
+            _deleteTarget = _replays.FirstOrDefault(replay => replay.Selected);
+
+            if (_deleteTarget == null)
+            {
+                return;
+            }
+
+            Sounds.ui_click.Play();
+
+            _deleteDialog = new ConfirmDialog("DELETE?", _deleteTarget.DisplayName, "DELETE");
+            self.Add(_deleteDialog);
+        }
+
+        private static void UpdateDeleteDialog(MainMenu self)
+        {
+            if (_deleteDialog.IsCancelled)
+            {
+                Sounds.ui_clickBack.Play();
+                CloseDeleteDialog();
+                return;
+            }
+
+            if (!_deleteDialog.IsConfirmed)
+            {
+                return;
+            }
+
+            var target = _deleteTarget;
+            CloseDeleteDialog();
+
+            if (!ServiceCollections.ResolveReplayService().DeleteReplay(target.Replay))
+            {
+                Sounds.ui_invalid.Play();
+                ServiceCollections.Notify("COULD NOT DELETE THE REPLAY");
+                return;
+            }
+
+            Sounds.ui_clickSpecial.Play();
+            ServiceCollections.Notify("REPLAY DELETED");
+
+            _totalSize -= target.Replay.FileSize;
+            RemoveFromBrowser(self, target);
+        }
+
+        private static void CloseDeleteDialog()
+        {
+            _deleteDialog?.Close();
+            _deleteDialog = null;
+            _deleteTarget = null;
+        }
+
+        private static void RemoveFromBrowser(MainMenu self, ReplayInfos removed)
+        {
+            var index = _replays.IndexOf(removed);
+            var neighbor = _replays.ElementAtOrDefault(index + 1) ?? _replays.ElementAtOrDefault(index - 1);
+            var remaining = _replays.Where(replay => replay != removed).Select(replay => replay.Replay).ToArray();
+            var service = ServiceCollections.ResolveReplayService();
+            var canSwitchFolder = service.GetMonths().Any(month => month != service.CurrentMonth);
+
+            ClearBrowser(self);
+            PopulateBrowser(self, remaining, canSwitchFolder, neighbor?.FileName, ServiceCollections.ResolveLogger());
+            SetGuides(self, canSwitchFolder);
+        }
+
+        private static string MonthLabel(string month) => string.IsNullOrEmpty(month) ? "UNSORTED" : month;
+
+        private static void SetGuides(MainMenu self, bool canSwitchFolder)
         {
             self.ButtonGuideA.SetDetails(MenuButtonGuide.ButtonModes.Confirm, "LAUNCH");
             self.ButtonGuideB.SetDetails(MenuButtonGuide.ButtonModes.Back, "EXIT");
 
-            if (canSwitchMonth)
+            if (canSwitchFolder)
             {
                 self.ButtonGuideC.SetDetails(MenuButtonGuide.ButtonModes.Alt, "PREV MONTH");
                 self.ButtonGuideD.SetDetails(MenuButtonGuide.ButtonModes.Alt2, "NEXT MONTH");
+                return;
             }
+
+            self.ButtonGuideC.Clear();
+            self.ButtonGuideD.Clear();
         }
 
         [HarmonyPrefix]
@@ -125,33 +292,17 @@ namespace TF.Replay.Patchs.Scene
         {
             if (name == "Destroy")
             {
-                Interlocked.Increment(ref _generation);
-                Interlocked.Exchange(ref _pendingBuild, null);
+                _loadTask = null;
 
-                self.DeleteAll<ReplayInfos>();
+                CloseDeleteDialog();
+                ClearBrowser(self);
 
-                if (_replaysPanel != null)
-                {
-                    _replaysPanel.RemoveSelf();
-                    _replaysPanel = null;
-                }
-
-                _replays.Clear();
-
-                if (_noMsg != null)
-                {
-                    _noMsg.RemoveSelf();
-                    _noMsg = null;
-                }
-
-                if (_monthMsg != null)
-                {
-                    _monthMsg.RemoveSelf();
-                    _monthMsg = null;
-                }
+                _monthMsg?.RemoveSelf();
+                _monthMsg = null;
 
                 HideLoading();
                 _loading = false;
+                _pendingFolderStep = 0;
 
                 return;
             }
@@ -159,7 +310,23 @@ namespace TF.Replay.Patchs.Scene
             CreateReplay(self);
         }
 
-        private static void ForgetDeadBrowser(MainMenu self)
+        private static void ClearBrowser(MainMenu self)
+        {
+            self.DeleteAll<ReplayInfos>();
+
+            _replaysPanel?.RemoveSelf();
+            _replaysPanel = null;
+
+            _replays.Clear();
+
+            _noMsg?.RemoveSelf();
+            _noMsg = null;
+
+            _hud?.RemoveSelf();
+            _hud = null;
+        }
+
+        private static void ResetBrowser(MainMenu self)
         {
             if (_owner == self)
             {
@@ -167,21 +334,22 @@ namespace TF.Replay.Patchs.Scene
             }
 
             _owner = self;
+            _loadTask = null;
 
-            Interlocked.Increment(ref _generation);
-            Interlocked.Exchange(ref _pendingBuild, null);
-
+            CloseDeleteDialog();
             _replays.Clear();
             _replaysPanel = null;
+            _hud = null;
             _noMsg = null;
             _monthMsg = null;
             _loadingMsg = null;
             _loading = false;
+            _pendingFolderStep = 0;
         }
 
         private static void CreateReplay(MainMenu self)
         {
-            ForgetDeadBrowser(self);
+            ResetBrowser(self);
 
             var replayService = ServiceCollections.ResolveReplayService();
             var logger = ServiceCollections.ResolveLogger();
@@ -199,65 +367,86 @@ namespace TF.Replay.Patchs.Scene
                 replayService.SetMonth(months[0]);
             }
 
-            _monthMsg = new Text($"< {MonthLabel(replayService.CurrentMonth)} >");
-            _monthMsg.Position = new Vector2(-70f, -36f);
+            var canSwitchFolder = months.Any(month => month != replayService.CurrentMonth);
+
+            _monthMsg = new Text($"< {MonthLabel(replayService.CurrentMonth)} >")
+            {
+                Position = new Vector2(-70f, -36f)
+            };
             self.Add(_monthMsg);
 
-            var generation = Interlocked.Increment(ref _generation);
             var gauge = _loadingMsg;
 
-            Task.Run(async () =>
+            _loadTask = Task.Run<Action>(async () =>
             {
                 try
                 {
                     var replays = (await replayService.LoadAndGetReplays(gauge.Report)).ToArray();
+                    var totalSize = replayService.GetTotalSize();
 
-                    Publish(generation, () => BuildBrowser(self, replays, months.Length > 1, logger));
+                    return () => BuildBrowser(self, replays, totalSize, canSwitchFolder, logger);
                 }
                 catch (Exception ex)
                 {
                     logger.LogError("Error when loading replays: {error}", ex);
 
-                    Publish(generation, GiveUpLoading);
+                    return StopLoading;
                 }
             });
         }
 
-        private static void Publish(int generation, Action build)
+        private static void BuildBrowser(MainMenu self, Domain.Models.Replay[] replays, long totalSize, bool canSwitchFolder, ILogger logger)
         {
-            if (Volatile.Read(ref _generation) != generation)
+            _totalSize = totalSize;
+
+            PopulateBrowser(self, replays, canSwitchFolder, _lastLaunched, logger);
+            StopLoading();
+            SetGuides(self, canSwitchFolder);
+
+            if (_replays.Count == 0)
             {
                 return;
             }
 
-            Interlocked.Exchange(ref _pendingBuild, build);
+            DynamicData.For(self).Invoke("TweenBGCameraToY", 1);
+            Sounds.ui_startGame.Play();
         }
 
-        private static void BuildBrowser(MainMenu self, TF.Replay.Domain.Models.Replay[] replays,
-                                         bool severalMonths, Microsoft.Extensions.Logging.ILogger logger)
+        private static void PopulateBrowser(MainMenu self, Domain.Models.Replay[] replays, bool canSwitchFolder, string selectFileName, ILogger logger)
         {
+            var service = ServiceCollections.ResolveReplayService();
             var dynMainMenu = DynamicData.For(self);
             var dynCamera = DynamicData.For(self.UILayer);
 
             _replays.Clear();
 
-            var maxY = 50.0f;
+            _hud = new ReplayBrowserHud
+            {
+                FolderSize = replays.Sum(replay => replay?.FileSize ?? 0),
+                TotalSize = _totalSize,
+                HasReplays = replays.Length > 0,
+                IsInFavorites = service.IsInFavorites(),
+            };
+            self.Add(_hud);
 
             if (replays.Length == 0)
             {
-                _noMsg = new Text(severalMonths
-                    ? "NOTHING THIS MONTH - ALT TO SWITCH"
-                    : "PLAY SOME GAMES FIRST!");
-                _noMsg.Position = new Vector2(100, 100);
+                _noMsg = new Text(service.IsInFavorites()
+                    ? "NO FAVORITES YET"
+                    : canSwitchFolder
+                        ? "NOTHING THIS MONTH"
+                        : "PLAY SOME GAMES FIRST!")
+                {
+                    Position = new Vector2(100, 100)
+                };
                 self.Add(_noMsg);
-
-                GiveUpLoading();
-                SetGuides(self, severalMonths);
 
                 return;
             }
 
-            _replaysPanel = new ReplaysPanel(225, 88);
+            var maxY = 50.0f;
+
+            _replaysPanel = new ReplaysPanel(225, 88 + self.UILayer.Camera.Y);
 
             for (int i = 0; i < replays.Length; i++)
             {
@@ -285,7 +474,7 @@ namespace TF.Replay.Patchs.Scene
 
             self.MaxUICameraY = maxY;
 
-            var selected = _replays.FirstOrDefault(replay => replay.OriginalName == _lastLaunched) ?? _replays.FirstOrDefault();
+            var selected = _replays.FirstOrDefault(replay => replay.FileName == selectFileName) ?? _replays.FirstOrDefault();
 
             if (selected != null)
             {
@@ -294,15 +483,9 @@ namespace TF.Replay.Patchs.Scene
             }
 
             dynCamera.Invoke("Add", _replaysPanel, false);
-            dynMainMenu.Invoke("TweenBGCameraToY", 1);
-
-            GiveUpLoading();
-            SetGuides(self, severalMonths);
-
-            Sounds.ui_startGame.Play();
         }
 
-        private static void GiveUpLoading()
+        private static void StopLoading()
         {
             HideLoading();
             ServiceCollections.SetInputEnabled(true);
@@ -318,7 +501,7 @@ namespace TF.Replay.Patchs.Scene
                 return;
             }
 
-            _lastLaunched = toLaunch.OriginalName;
+            _lastLaunched = toLaunch.FileName;
 
             var currentSong = Monocle.Music.CurrentSong;
             Monocle.Music.Stop();
@@ -334,13 +517,13 @@ namespace TF.Replay.Patchs.Scene
 
                 try
                 {
-                    failure = ServiceCollections.LaunchReplay(toLaunch.OriginalName, currentSong);
+                    failure = ServiceCollections.LaunchReplay(toLaunch.FileName, currentSong);
                 }
                 catch (Exception e)
                 {
-                    ServiceCollections.ResolveLogger().LogError("Could not start {name}: {error}", toLaunch.OriginalName, e);
+                    ServiceCollections.ResolveLogger().LogError("Could not start {name}: {error}", toLaunch.FileName, e);
 
-                    failure = "SEE THE LOG";
+                    failure = "CHECK LOG";
                 }
 
                 HideLoading();

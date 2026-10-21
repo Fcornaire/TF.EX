@@ -900,7 +900,7 @@ namespace TF.EX.Patchs.Scene
         {
             self.BackState = Domain.Models.MenuState.RankedSelect.ToTFModel();
 
-            var panel = new LeaderboardPanel();
+            var panel = new LeaderboardPanel(() => OnLeaderboardFailed(self));
             self.Add(panel);
             self.ToStartSelected = panel;
 
@@ -910,6 +910,18 @@ namespace TF.EX.Patchs.Scene
             Task.Run(() => matchmakingService.RequestLeaderboard(panel.OnLoaded, panel.OnFailed));
 
             DynamicData.For(self).Invoke("TweenBGCameraToY", 1);
+        }
+
+        private static void OnLeaderboardFailed(MainMenu self)
+        {
+            if (self.State.ToDomainModel() != Domain.Models.MenuState.Leaderboard)
+            {
+                return;
+            }
+
+            TowerFall.Sounds.ui_invalid.Play();
+            Notification.Create(self, "Cannot reach the server", 10, 300);
+            self.State = Domain.Models.MenuState.RankedSelect.ToTFModel();
         }
 
         private static void HandleSeriesLobby(MainMenu self, string name)

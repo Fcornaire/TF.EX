@@ -54,6 +54,17 @@ namespace TF.Replay.Domain.Services
 
         public string CurrentFolder => ReplaysFolder;
 
+        private const string FavoritesFolderName = "Favorites";
+
+        private static string FavoritesFolder => Path.Combine(ReplaysRootFolder, FavoritesFolderName);
+
+        public bool IsInFavorites()
+        {
+            return _month == FavoritesFolderName;
+        }
+
+        public void OpenFavorites() => _month = FavoritesFolderName;
+
         private static string MonthOf(DateTime moment) => moment.ToString("yyyy'-'MM");
 
         public string[] GetMonths()
@@ -64,8 +75,9 @@ namespace TF.Replay.Domain.Services
             }
 
             var folders = Directory.EnumerateDirectories(ReplaysRootFolder)
-                .Where(dir => Directory.EnumerateFiles(dir, "*.tow").Any())
+                .Where(HasReplays)
                 .Select(Path.GetFileName)
+                .Where(name => name != FavoritesFolderName)
                 .ToList();
 
             var months = folders.Where(IsMonthFolder).OrderByDescending(name => name)
@@ -77,8 +89,16 @@ namespace TF.Replay.Domain.Services
                 months.Add("");
             }
 
-            return months.ToArray();
+            if (IsInFavorites() || HasReplays(FavoritesFolder))
+            {
+                months.Add(FavoritesFolderName);
+            }
+
+            return [.. months];
         }
+
+        private static bool HasReplays(string folder)
+            => Directory.Exists(folder) && Directory.EnumerateFiles(folder, "*.tow").Any();
 
         private static bool IsMonthFolder(string name)
             => name?.Length == 7 && name[4] == '-'
@@ -86,6 +106,74 @@ namespace TF.Replay.Domain.Services
                && int.TryParse(name.AsSpan(5, 2), out _);
 
         public void SetMonth(string month) => _month = month;
+
+        public bool ToggleFavorite(Models.Replay replay)
+        {
+            var target = IsInFavorites() ? GetHomeFolderOf(replay) : FavoritesFolder;
+
+            try
+            {
+                Directory.CreateDirectory(target);
+                File.Move(Path.Combine(ReplaysFolder, replay.FileName), NextFreePath(target, replay.FileName));
+
+                return true;
+            }
+            catch (Exception e)
+            {
+                _logger?.LogError(e, "Could not move replay {file} to {folder}", replay.FileName, target);
+
+                return false;
+            }
+        }
+
+        public bool DeleteReplay(Models.Replay replay)
+        {
+            try
+            {
+                File.Delete(Path.Combine(ReplaysFolder, replay.FileName));
+
+                return true;
+            }
+            catch (Exception e)
+            {
+                _logger?.LogError(e, "Could not delete replay {file}", replay.FileName);
+
+                return false;
+            }
+        }
+
+        public long GetTotalSize()
+        {
+            if (!Directory.Exists(ReplaysRootFolder))
+            {
+                return 0;
+            }
+
+            return new DirectoryInfo(ReplaysRootFolder)
+                .EnumerateFiles("*.tow", SearchOption.AllDirectories)
+                .Sum(file => file.Length);
+        }
+
+        private static string GetHomeFolderOf(Models.Replay replay)
+        {
+            var recordedAt = RecordedAt(replay.Informations?.Name ?? replay.FileName);
+
+            return recordedAt == DateTime.MinValue ? ReplaysRootFolder : Path.Combine(ReplaysRootFolder, MonthOf(recordedAt));
+        }
+
+        private static string NextFreePath(string folder, string fileName)
+        {
+            var name = Path.GetFileNameWithoutExtension(fileName);
+            var extension = Path.GetExtension(fileName);
+            var candidate = Path.Combine(folder, fileName);
+
+            for (int attempt = 1; File.Exists(candidate); attempt++)
+            {
+                candidate = Path.Combine(folder, $"{name}-{attempt}{extension}");
+            }
+
+            return candidate;
+        }
 
         public ReplayService(Func<IModCollections> modCollections, ILogger logger)
         {
@@ -1237,6 +1325,8 @@ namespace TF.Replay.Domain.Services
                         }
 
                         replay.Informations.Name ??= Path.GetFileName(file);
+                        replay.FileName = Path.GetFileName(file);
+                        replay.FileSize = new FileInfo(file).Length;
                         slots[index] = replay;
                     }
                     finally
