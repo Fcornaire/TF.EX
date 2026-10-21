@@ -2,18 +2,24 @@
 
 ## [Unreleased]
 
-## [0.23.0] - 2026-10-20
+## [0.23.0] - 2026-10-21
 
 ### Ranked
 
-- New RANKED mode in the netplay menu using Glicko-2 algorithm
+- New RANKED mode using Glicko-2 algorithm
+- New LeaderBoard in the ranked menu with the top 100 and your own rank
 - A ranked match is a best of 3 series that starts right away
 - Wider Set players are only matched with other Wider Set players
-- The series result moves your rating
-- Your rating shows as ? until it has settled after a few series
-- Leaving before the first game is a dodge: after two warnings, ranked gets locked for a while
+- Your rating shows as ? until a few series played
+- Leaving before the first game is a dodge: after two warnings, ranked gets locked for a time
 - Leaving once a game has started forfeits the series
-- New LeaderBoard in the ranked menu with the top 100 and your own rank
+
+### New
+
+- [Replay] Favorite a replay in the browser
+- [Replay] Press L+R together in the browser to jump straight to your favorites
+- [Replay] Delete a replay from the browser
+- [Replay] The browser shows the size of each replay, of the current folder and of all your replays
 
 ### Changed
 
@@ -22,6 +28,7 @@
 ### Fixed
 
 - After a netplay error you should now properly leave the lobby instead of staying in it
+- Notifications in a scrolled menu (like replay browser) now stay at the top of the screen instead of scrolling away
 - [InputDisplayer] Inputs should now show at the right place in the instant replay with the Wider Set
 - [State] Bramble arrows should no longer introduce a potential desync when a player had used brambles outside netplay before a match
 - [State] The game should no longer crash at the end of a round where every archer was killed by a prism arrow

@@ -11,7 +11,7 @@ namespace TF.Replay.Domain.Ports
 
         int LastFrame { get; }
 
-        void BeginRecording(int towerId, int mode, int versusMatchLength, IEnumerable<string> variants,IEnumerable<CustomMod> mods);
+        void BeginRecording(int towerId, int mode, int versusMatchLength, IEnumerable<string> variants, IEnumerable<CustomMod> mods);
         void AddRecord(byte[] state, int[] inputs, int frame = -1);
         void RemovePredictedRecords(int frame);
         string Export();
@@ -59,6 +59,14 @@ namespace TF.Replay.Domain.Ports
 
         string[] GetMonths();
         void SetMonth(string month);
+
+        bool IsInFavorites();
+        void OpenFavorites();
+
+        bool ToggleFavorite(Models.Replay replay);
+        bool DeleteReplay(Models.Replay replay);
+
+        long GetTotalSize();
 
         Task<IEnumerable<Models.Replay>> LoadAndGetReplays(Action<int, int> onProgress = null);
         Models.Replay GetReplay();

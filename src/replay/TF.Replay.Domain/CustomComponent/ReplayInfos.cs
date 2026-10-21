@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Monocle;
 using MonoMod.Utils;
+using TF.Replay.Domain.Utils;
 using TowerFall;
 
 namespace TF.Replay.Domain.CustomComponent
@@ -26,9 +27,15 @@ namespace TF.Replay.Domain.CustomComponent
         private ReplaysPanel _panel;
         private bool _isDisabled = false;
         private const float PanelScreenY = 88f;
+        private const float NameOffsetY = 4f;
+        private const float SizeOffsetY = 5f;
+
+        private readonly string _sizeLabel;
 
         public string _name = "";
-        public string OriginalName => _replay.Informations.Name;
+        public string FileName => _replay.FileName;
+        public Models.Replay Replay => _replay;
+        public string DisplayName => _name.ToUpper().Split('.')[0];
 
         public ReplayInfos(MainMenu mainMenu, Vector2 position, Models.Replay replay, Action confirmAction) : base(position)
         {
@@ -41,11 +48,12 @@ namespace TF.Replay.Domain.CustomComponent
 
             this._name = _replay.Informations.Name;
             this._name = _name.Replace("T", " ");
+            _sizeLabel = SizeFormat.Of(_replay.FileSize);
 
             this.confirm = confirmAction;
             image = new Image(TFGame.MenuAtlas["ascension/slabTop"]);
             image.Origin.Y = image.Height / 2f;
-            image.Scale = new Vector2(0.4f, 0.6f);
+            image.Scale = new Vector2(0.4f, 0.7f);
             Add(image);
         }
 
@@ -78,7 +86,10 @@ namespace TF.Replay.Domain.CustomComponent
         {
             base.Render();
 
-            Draw.TextRight(TFGame.Font, _name.ToUpper().Split('.')[0], Position + Vector2.UnitX * 100f, Color.WhiteSmoke);
+            var right = Position + Vector2.UnitX * 100f;
+
+            Draw.TextRight(TFGame.Font, DisplayName, right - Vector2.UnitY * NameOffsetY, Color.WhiteSmoke);
+            Draw.TextRight(TFGame.Font, _sizeLabel, right + Vector2.UnitY * SizeOffsetY, Color.DarkGray);
         }
 
         public override void TweenIn()

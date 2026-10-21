@@ -46,6 +46,7 @@ namespace TF.EX.Domain.CustomComponent
 
         private readonly SineWave arrowWave;
         private readonly DateTime requestDeadline;
+        private readonly Action onFailed;
         private LoadState state = LoadState.Loading;
         private List<LeaderboardEntry> entries = [];
         private List<LeaderboardEntry> around = [];
@@ -53,8 +54,9 @@ namespace TF.EX.Domain.CustomComponent
         private int page;
         private bool isOwnGuideShown;
 
-        public LeaderboardPanel() : base(new Vector2(160f, PanelY))
+        public LeaderboardPanel(Action onFailed) : base(new Vector2(160f, PanelY))
         {
+            this.onFailed = onFailed;
             requestDeadline = DateTime.UtcNow.AddSeconds(RequestTimeoutSeconds);
 
             arrowWave = new SineWave(80);
@@ -78,10 +80,13 @@ namespace TF.EX.Domain.CustomComponent
 
         public void OnFailed()
         {
-            if (state == LoadState.Loading)
+            if (state != LoadState.Loading)
             {
-                state = LoadState.Failed;
+                return;
             }
+
+            state = LoadState.Failed;
+            onFailed?.Invoke();
         }
 
         private int OwnPage()
@@ -108,9 +113,9 @@ namespace TF.EX.Domain.CustomComponent
         {
             base.Update();
 
-            if (state == LoadState.Loading && DateTime.UtcNow >= requestDeadline)
+            if (DateTime.UtcNow >= requestDeadline)
             {
-                state = LoadState.Failed;
+                OnFailed();
             }
 
             ShowOwnGuideIfRanked();

@@ -12,6 +12,11 @@ namespace TF.Replay.Domain.Models
         [Key(1)]
         public List<Record> Record { get; set; } = new List<Record>();
 
+        [IgnoreMember]
+        public string FileName { get; set; }
+
+        [IgnoreMember]
+        public long FileSize { get; set; }
     }
 
     [MessagePackObject]

@@ -94,7 +94,7 @@ of a match, to:
 <TowerFall>/FortRise/Saves/TF.Replay/Replays/yyyy-MM/<timestamp>.tow
 ```
 
-Monthly folders keep the list navigable
+Monthly folders keep the list navigable, favorites live in `<TowerFall>/FortRise/Saves/TF.Replay/Replays/Favorites`
 
 Which modes get recorded is a toggle in the mod's options page (`OPTIONS` → `MOD OPTIONS` → `TF REPLAY`):
 
