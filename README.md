@@ -21,8 +21,8 @@
 
 # About The Project
 
-TF EX is a mod that attempts to bring netplay to TowerFall (EX as in a Fighting game EX move). It uses [FortRise](https://github.com/Terria-K/FortRise) (the supported version is [5.5.0-beta.2
-](https://github.com/FortRise/FortRise/releases/tag/5.5.0-beta.2))+ Rollback netcode as infrastructure.
+TF EX is a mod that attempts to bring netplay to TowerFall (EX as in a Fighting game EX move). It uses [FortRise](https://github.com/Terria-K/FortRise) (the supported version is [5.5.0-beta.4
+](https://github.com/FortRise/FortRise/releases/tag/5.5.0-beta.4))+ Rollback netcode as infrastructure.
 Due to the nature of the project, the mod is also able to record + view previous matches.
 Also, this project is still WIP!
 
@@ -80,7 +80,7 @@ It fairly easy to install this mod:
 
 1. Install [FortRise](https://github.com/Terria-K/FortRise)
    > [!WARNING]  
-   > The last supported version is [5.5.0-beta.2](https://github.com/FortRise/FortRise/releases/tag/5.5.0-beta.2), This mean the mod won't load/work on version 4.X.X and older or even beyond.
+   > The last supported version is [5.5.0-beta.4](https://github.com/FortRise/FortRise/releases/tag/5.5.0-beta.4), This mean the mod won't load/work on version 4.X.X and older or even beyond.
 2. Download the latest TF EX [release](https://github.com/Fcornaire/TF.EX/releases) (`DShad.TF.EX-vX.Y.Z.zip` bundles the four mods; the other zips are the standalone parts)
 3. Create a `Mods` directory in the FortRise folder downloaded
 4. Put the zip in the `Mods` folder as `Mods/DShad.TF.EX.zip` (no extract needed)
@@ -154,12 +154,12 @@ A Last Man Standing game should be running in a GGRS [SyncTestSession](https://g
 As you can guess, this project is still WIP and missing a lot of features:
 
 - [ ] Automatically bump the version (meta + tag)
-- [ ] Refactor (There is a lot of things I want to refactor)
+- [x] Refactor (There is a lot of things I want to refactor)
 - [x] Less restrictive controller
 - [?] Fix bugs
 - [x] Fix desynchronization (At least netplay code wise should be fine)
 - [x] Support for all versus maps
-- [ ] Check Twilight Spire CrackedWall with teams on level 7
+- [x] Check Twilight Spire CrackedWall with teams on level 7
 - [x] Support all items
 - [x] Support 4 players (FFA and 2V2 teams )
 - [x] Integrate the replay viewer in the menu

@@ -15,6 +15,10 @@
 - Leaving once a game has started forfeits the series
 - New LeaderBoard in the ranked menu with the top 100 and your own rank
 
+### Changed
+
+- FortRise 5.5.0-beta.4 is now the minimum supported version (Some linux specific fixes)
+
 ### Fixed
 
 - After a netplay error you should now properly leave the lobby instead of staying in it
