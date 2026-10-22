@@ -2,6 +2,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Monocle;
 using MonoMod.Utils;
+using TF.EX.Common.Extensions;
 using TF.EX.Domain.Extensions;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Models.WebSocket;
@@ -97,6 +98,8 @@ namespace TF.EX.Domain.CustomComponent
             altIndex = own?.ArcherAltIndex ?? 0;
             towerCursor = FirstAvailableTower(series);
             focus = matchmakingService.IsSeriesPicker() && own != null && series?.PickOf(own.Seat) == null ? Focus.Tower : Focus.Face;
+
+            LogInputs(matchmakingService);
         }
 
         private bool IsBusy => DateTime.UtcNow < busyUntil;
@@ -1005,6 +1008,19 @@ namespace TF.EX.Domain.CustomComponent
             var peerId = matchmakingService.GetRoomPeerId();
 
             return matchmakingService.GetOwnLobby().Players.FirstOrDefault(pl => pl.RoomPeerId == peerId);
+        }
+
+        private static void LogInputs(Ports.IMatchmakingService matchmakingService)
+        {
+            var inputService = ServiceCollections.ResolveInputService();
+            var seat = inputService.GetLocalPlayerInputIndex();
+            var isHost = OwnPlayer(matchmakingService)?.IsHost == true;
+            var seatInput = seat >= 0 && seat < TFGame.PlayerInputs.Length ? TFGame.PlayerInputs[seat] : null;
+            var players = string.Join(", ", TFGame.PlayerInputs.Select(input => input?.GetType().Name ?? "-"));
+            var menus = string.Join(", ", MenuInput.MenuInputs.Select(input => input == null ? "-" : $"{input.GetType().Name}@{inputService.GetInputIndex(input)}"));
+
+            ServiceCollections.ResolveLogger().LogDebug<SeriesScreen>(
+                $"seat {seat}{(isHost ? " (host)" : "")}, locked {inputService.IsInputLocked()}, alt2 held {seatInput?.MenuAlt2Check}, players [{players}], menus [{menus}]");
         }
     }
 }

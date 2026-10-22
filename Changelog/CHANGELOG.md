@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.23.1] - 2026-10-23
+
+### Fixed
+
+- Your controller should no longer (i hope) be ignored when picking your archer on the series screen
+
 ## [0.23.0] - 2026-10-21
 
 ### Ranked
