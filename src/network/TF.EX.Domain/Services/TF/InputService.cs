@@ -80,6 +80,7 @@ namespace TF.EX.Domain.Services.TF
 
             if (TFGame.PlayerInputs[localSeat] == localInput)
             {
+                SetLocalMenuInput(localSeat, localInput);
                 return false;
             }
 
@@ -94,6 +95,17 @@ namespace TF.EX.Domain.Services.TF
             }
 
             TFGame.PlayerInputs[localSeat] = localInput;
+            SetLocalMenuInput(localSeat, localInput);
+
+            return true;
+        }
+
+        private static void SetLocalMenuInput(int localSeat, PlayerInput localInput)
+        {
+            if (localSeat >= MenuInput.MenuInputs.Length || MenuInput.MenuInputs[localSeat] == localInput)
+            {
+                return;
+            }
 
             for (int i = 0; i < MenuInput.MenuInputs.Length; i++)
             {
@@ -103,12 +115,7 @@ namespace TF.EX.Domain.Services.TF
                 }
             }
 
-            if (localSeat < MenuInput.MenuInputs.Length)
-            {
-                MenuInput.MenuInputs[localSeat] = localInput;
-            }
-
-            return true;
+            MenuInput.MenuInputs[localSeat] = localInput;
         }
 
         public void EnsureEveryControllerSlot()
@@ -305,7 +312,6 @@ namespace TF.EX.Domain.Services.TF
             localInput ??= TFGame.PlayerInputs.FirstOrDefault(input => input != null);
 
             _context.SetLocalInput(localInput);
-            var localMenuInput = MenuInput.MenuInputs.FirstOrDefault(input => input != null);
 
             for (int i = 0; i < playerCount; i++)
             {
@@ -324,7 +330,7 @@ namespace TF.EX.Domain.Services.TF
 
             if (localSeat >= 0 && localSeat < MenuInput.MenuInputs.Length)
             {
-                MenuInput.MenuInputs[localSeat] = localMenuInput;
+                MenuInput.MenuInputs[localSeat] = localInput;
             }
         }
     }
