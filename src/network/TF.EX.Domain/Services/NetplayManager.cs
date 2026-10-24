@@ -809,7 +809,7 @@ namespace TF.EX.Domain.Services
 
         public bool IsSynchronized()
         {
-            if (GGRSFFI.IsInInit)
+            if (GGRSFFI.IsInInit || !_isInit)
             {
                 return false;
             }

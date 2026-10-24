@@ -44,6 +44,10 @@ namespace TF.EX.Domain.Scenarios
 
         public (int X, int Y, int Width)[] Platforms { get; init; } = [];
 
+        public int FloorY { get; init; } = ScenarioMapWriter.FloorY;
+
+        public int CeilingRows { get; init; } = 2;
+
         public (int X, int Y)[] Spawns { get; init; } = [];
 
         public ScenarioEntity[] Entities { get; init; } = [];

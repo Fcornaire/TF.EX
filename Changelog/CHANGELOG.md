@@ -13,6 +13,7 @@
 - End of match awards are now the same for every player and no longer change while the results are shown
 - Your local stats are no longer counted several times at the end of a netplay match
 - Winning a ranked series 2-1 no longer loses rating
+- A match no longer desyncs from the very start when one player game finishes connecting a little later than the other
 
 ## [0.23.1] - 2026-10-23
 

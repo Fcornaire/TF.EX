@@ -111,5 +111,8 @@ namespace TF.State.Domain.Models.Entity
 
         [Key(40)]
         public ICollection<Hat> Hats { get; set; } = new List<Hat>();
+
+        [Key(41)]
+        public ICollection<Ice> Ices { get; set; }
     }
 }
