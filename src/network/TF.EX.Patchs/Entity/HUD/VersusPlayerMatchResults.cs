@@ -28,6 +28,7 @@ namespace TF.EX.Patchs.Entity.HUD
         [HarmonyPatch(MethodType.Constructor, [typeof(TowerFall.Session), typeof(TowerFall.VersusMatchResults), typeof(int), typeof(Vector2), typeof(Vector2), typeof(List<TowerFall.AwardInfo>)])]
         public static void VersusPlayerMatchResults_ctor(TowerFall.VersusPlayerMatchResults __instance, TowerFall.Session session, TowerFall.VersusMatchResults matchResults, int playerIndex, Vector2 tweenFrom, Vector2 tweenTo, List<TowerFall.AwardInfo> awards)
         {
+            MatchStatsReport.RecordAwards(playerIndex, awards);
 
             var netplayManager = ServiceCollections.ResolveNetplayManager();
             var inputService = ServiceCollections.ResolveInputService();

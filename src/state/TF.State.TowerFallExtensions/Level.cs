@@ -164,7 +164,6 @@ namespace TF.State.TowerFallExtensions
             var rngService = ServiceCollections.ResolveRngService();
             var sfxService = ServiceCollections.ResolveSFXService();
             var sessionService = ServiceCollections.ResolveSessionService();
-            var matchStatsService = ServiceCollections.ResolveMatchStatsService();
 
             gameState.Frame = StateFlags.CurrentFrame;
 
@@ -219,7 +218,7 @@ namespace TF.State.TowerFallExtensions
 
             gameState.Rng = rngService.Get();
 
-            matchStatsService.SaveSnapshot(gameState.Frame, self.Session.MatchStats);
+            gameState.MatchStats = self.Session.MatchStats.Select(stat => stat.ToDomain()).ToArray();
 
             gameState.AddCrackedPlatform(self);
             gameState.AddCrackedWalls(self);
@@ -442,6 +441,9 @@ namespace TF.State.TowerFallExtensions
             hudService.Update(new TF.State.Domain.Models.Entity.HUD.HUD());
 
             var isTrialsState = gameState.Entities.Hud.TrialsControl != null;
+
+            //MatchStats before the results
+            gameState.LoadMatchStats(level);
 
             //VersusRoundResults
             level.Delete<VersusRoundResults>();
@@ -806,11 +808,12 @@ namespace TF.State.TowerFallExtensions
             //Rng
             rngService.LoadState(gameState.Rng);
 
-            ServiceCollections.ResolveMatchStatsService().RestoreSnapshot(gameState.Frame, level.Session.MatchStats);
-
             level.PostLoad(gameState);
 
             TF.State.Domain.ServiceCollections.ResolveAPIManager().LoadStates(gameState.AdditionnalData);
+
+            //MatchStats Again
+            gameState.LoadMatchStats(level);
 
             //Drop pending adds/removes queued by Added()
             dynGameplayLayer = DynamicData.For(level.GetGameplayLayer());
@@ -1337,6 +1340,16 @@ namespace TF.State.TowerFallExtensions
         }
 
         private static readonly System.Random _hatRebuildRandom = new System.Random(0);
+
+        private static void LoadMatchStats(this GameState gameState, Level level)
+        {
+            var matchStats = gameState.MatchStats?.ToArray() ?? [];
+
+            for (int seat = 0; seat < matchStats.Length && seat < level.Session.MatchStats.Length; seat++)
+            {
+                level.Session.MatchStats[seat] = matchStats[seat].ToTF();
+            }
+        }
 
         private static void LoadHats(this GameState gameState, TowerFall.Level level)
         {

@@ -34,6 +34,7 @@ namespace TF.EX.Patchs.Entity.HUD
                     else
                     {
                         replayService.Export();
+                        MatchStatsReport.Save(__instance.Scene as TowerFall.Level);
                     }
 
                     ServiceCollections.ResolveNetplayManager().Reset();
@@ -58,7 +59,9 @@ namespace TF.EX.Patchs.Entity.HUD
                 var matchmakingService = ServiceCollections.ResolveMatchmakingService();
                 var level = __instance.Scene as TowerFall.Level;
 
-                matchmakingService.NotifyMatchEnded(WinnerSeat(level?.Session), SeatScores(level?.Session, matchmakingService.GetOwnLobby().Players.Count));
+                var (stats, tower) = MatchStatsReport.Take();
+
+                matchmakingService.NotifyMatchEnded(WinnerSeat(level?.Session), SeatScores(level?.Session, matchmakingService.GetOwnLobby().Players.Count), stats, tower);
 
                 if (level != null && !matchmakingService.GetOwnLobby().IsEmpty)
                 {

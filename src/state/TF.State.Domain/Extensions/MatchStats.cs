@@ -1,4 +1,6 @@
-﻿using TF.State.Domain.Models;
+﻿using MessagePack;
+using System.Security.Cryptography;
+using TF.State.Domain.Models;
 
 namespace TF.State.Domain.Extensions
 {
@@ -265,6 +267,13 @@ namespace TF.State.Domain.Extensions
 
                 Deaths = matchStats.Deaths.ToDomain()
             };
+        }
+
+        public static int GetAwardsSeed(this TowerFall.MatchStats[] stats)
+        {
+            var bytes = MessagePackSerializer.Serialize(stats.Select(stat => stat.ToDomain()).ToArray());
+
+            return BitConverter.ToInt32(SHA256.HashData(bytes));
         }
     }
 }

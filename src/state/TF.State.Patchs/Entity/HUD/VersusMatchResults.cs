@@ -9,6 +9,17 @@ namespace TF.State.Patchs.Entity.HUD
     [HarmonyPatch(typeof(VersusMatchResults))]
     public class VersusMatchResultsPatch
     {
+        [HarmonyPrefix]
+        [HarmonyPatch(MethodType.Constructor)]
+        [HarmonyPatch([typeof(Session), typeof(VersusRoundResults)])]
+        public static void VersusMatchResults_ctor_Prefix()
+        {
+            if (StateFlags.IsCaptureActive)
+            {
+                ResultsSaveStats.OnlyCountOnce();
+            }
+        }
+
         [HarmonyPostfix]
         [HarmonyPatch(MethodType.Constructor)]
         [HarmonyPatch([typeof(Session), typeof(VersusRoundResults)])]

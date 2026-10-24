@@ -24,7 +24,8 @@ namespace TF.EX.Patchs.Entity
             var currentState = state.ToDomainModel();
             if (currentState == Domain.Models.MenuState.Changelog
                 || currentState == Domain.Models.MenuState.ChangelogHistory
-                || currentState == Domain.Models.MenuState.Leaderboard)
+                || currentState == Domain.Models.MenuState.Leaderboard
+                || currentState == Domain.Models.MenuState.PlayerProfile)
             {
                 Traverse.Create(__instance).Field("targetTexture").SetValue(null);
 

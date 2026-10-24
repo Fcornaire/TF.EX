@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-10-24
+
+### New
+
+- Player profiles: you can now see games, wins, main archers, top awards, best tower, records and monthly stats
+
+### Fixed
+
+- End of match awards are now the same for every player and no longer change while the results are shown
+- Your local stats are no longer counted several times at the end of a netplay match
+- Winning a ranked series 2-1 no longer loses rating
+
 ## [0.23.1] - 2026-10-23
 
 ### Fixed

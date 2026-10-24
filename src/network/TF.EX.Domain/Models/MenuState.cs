@@ -32,5 +32,6 @@
         RankedSelect = 68,
         Leaderboard = 69,
         RankedSearch = 70,
+        PlayerProfile = 71,
     }
 }

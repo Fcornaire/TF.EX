@@ -72,6 +72,9 @@ namespace TF.EX.Domain.Services
         private LeaderboardData cachedLeaderboard;
         private DateTime cachedLeaderboardAt = DateTime.MinValue;
 
+        private Action<PlayerProfile> onPlayerProfile;
+        private int? pendingProfileRank;
+
         private static readonly Microsoft.Xna.Framework.Color EnabledTint = new(205, 245, 205);
         private static readonly Microsoft.Xna.Framework.Color DisabledTint = new(250, 200, 200);
         private static readonly Microsoft.Xna.Framework.Color NeutralTint = Microsoft.Xna.Framework.Color.White;
@@ -385,6 +388,18 @@ namespace TF.EX.Domain.Services
             await Send(message);
         }
 
+        private async Task SendGetPlayerProfile(int? rank)
+        {
+            var getPlayerProfileMessage = new GetPlayerProfileMessage
+            {
+                GetPlayerProfile = new GetPlayerProfile { Rank = rank }
+            };
+
+            var bytes = MessagePackSerializer.Serialize(getPlayerProfileMessage);
+            var message = MessagePackSerializer.ConvertToJson(bytes);
+            await Send(message);
+        }
+
         private async Task SendUpdatePlayer(Models.WebSocket.Player player)
         {
             player.HaveModifiedGameFiles = Utils.GameFilesIntegrity.IsModified;
@@ -422,7 +437,7 @@ namespace TF.EX.Domain.Services
             await Send(message);
         }
 
-        private async Task SendMatchEnded(int winnerSeat, IList<int> scores)
+        private async Task SendMatchEnded(int winnerSeat, IList<int> scores, IList<SeatStats> stats, int? tower)
         {
             var matchEndedMessage = new MatchEndedMessage
             {
@@ -431,7 +446,9 @@ namespace TF.EX.Domain.Services
                     WinnerSeat = winnerSeat,
                     Frame = ExFlags.CurrentFrame,
                     Checksum = LastStateChecksum(),
-                    Scores = scores?.ToList()
+                    Scores = scores?.ToList(),
+                    Stats = stats?.ToList(),
+                    Tower = tower
                 }
             };
 
@@ -622,6 +639,23 @@ namespace TF.EX.Domain.Services
                 var callback = onLeaderboard;
                 onLeaderboard = null;
                 callback?.Invoke(cachedLeaderboard);
+
+                return;
+            }
+
+            if (IsServerMsg(message, "PlayerProfile"))
+            {
+                var bytes = MessagePackSerializer.ConvertFromJson(message);
+                var response = MessagePackSerializer.Deserialize<PlayerProfileMessage>(bytes);
+
+                if (response.PlayerProfile.Rank != pendingProfileRank)
+                {
+                    return;
+                }
+
+                var callback = onPlayerProfile;
+                onPlayerProfile = null;
+                callback?.Invoke(response.PlayerProfile.Profile);
 
                 return;
             }
@@ -2024,6 +2058,26 @@ namespace TF.EX.Domain.Services
             await SendGetLeaderboard();
         }
 
+        public async Task RequestPlayerProfile(int? rank, Action<PlayerProfile> onResult, Action onFail)
+        {
+            pendingProfileRank = rank;
+            onPlayerProfile = onResult == null ? null : profile => RunOnGameThread(() => onResult(profile));
+
+            if (!EnsureConnection())
+            {
+                onPlayerProfile = null;
+
+                if (onFail != null)
+                {
+                    RunOnGameThread(onFail);
+                }
+
+                return;
+            }
+
+            await SendGetPlayerProfile(rank);
+        }
+
         public bool IsSearchingQuickPlay()
         {
             return isQuickPlayQueued;
@@ -2286,7 +2340,7 @@ namespace TF.EX.Domain.Services
             }
         }
 
-        public void NotifyMatchEnded(int winnerSeat, IList<int> scores)
+        public void NotifyMatchEnded(int winnerSeat, IList<int> scores, IList<SeatStats> stats, int? tower)
         {
             if (ownLobby.IsEmpty || isMatchEndReported)
             {
@@ -2295,7 +2349,7 @@ namespace TF.EX.Domain.Services
 
             isMatchEndReported = true;
 
-            Task.Run(async () => await SendMatchEnded(winnerSeat, scores));
+            Task.Run(async () => await SendMatchEnded(winnerSeat, scores, stats, tower));
         }
 
         public async Task SeriesContinueChoice()
