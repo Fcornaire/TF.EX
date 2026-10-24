@@ -72,9 +72,6 @@ namespace TF.EX.Domain.Ports
         void SetSessionInputDelay(int inputDelay);
         void ClearSessionInputDelay();
 
-        string GetPlayer2Name();
-
-        void UpdatePlayer2Name(string name);
         void SetRoomAndServerMode(string roomUrl, bool isHost);
 
         int LocalSeat { get; }

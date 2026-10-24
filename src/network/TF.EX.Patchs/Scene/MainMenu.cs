@@ -138,6 +138,9 @@ namespace TF.EX.Patchs.Scene
                 case Domain.Models.MenuState.Changelog:
                     HandleChangelog(__instance, name);
                     return false;
+                case Domain.Models.MenuState.Tutorial:
+                    HandleTutorial(__instance, name);
+                    return false;
                 case Domain.Models.MenuState.ChangelogHistory:
                     if (name == "Create")
                     {
@@ -218,9 +221,16 @@ namespace TF.EX.Patchs.Scene
         [HarmonyPatch(nameof(MainMenu.State), MethodType.Setter)]
         public static void MainMenu_set_State(MainMenu __instance, ref MainMenu.MenuState value)
         {
-            if (__instance.State == MainMenu.MenuState.PressStart
-                && value == MainMenu.MenuState.Main
-                && Changelog.HasPending)
+            if (__instance.State != MainMenu.MenuState.PressStart || value != MainMenu.MenuState.Main)
+            {
+                return;
+            }
+
+            if (Tutorial.IsPending)
+            {
+                value = Domain.Models.MenuState.Tutorial.ToTFModel();
+            }
+            else if (Changelog.HasPending)
             {
                 value = Domain.Models.MenuState.Changelog.ToTFModel();
             }
@@ -243,6 +253,28 @@ namespace TF.EX.Patchs.Scene
             if (name == "Destroy")
             {
                 Changelog.MarkSeen();
+                self.Add(new Saver(menu: true));
+            }
+        }
+
+        private static void HandleTutorial(MainMenu self, string name)
+        {
+            if (name == "Create")
+            {
+                self.BackState = MainMenu.MenuState.Main;
+
+                var panel = new TutorialPanel(Tutorial.Slides, () => self.State = MainMenu.MenuState.Main);
+                self.Add(panel);
+                self.ToStartSelected = panel;
+
+                self.ButtonGuideA.SetDetails(MenuButtonGuide.ButtonModes.Confirm, "NEXT");
+                self.ButtonGuideB.SetDetails(MenuButtonGuide.ButtonModes.Back, "SKIP");
+                return;
+            }
+
+            if (name == "Destroy")
+            {
+                Tutorial.MarkSeen();
                 self.Add(new Saver(menu: true));
             }
         }
@@ -1056,11 +1088,6 @@ namespace TF.EX.Patchs.Scene
             var roomUrl = $"{NetplayPreferences.Server}/room/{lobby.RoomId}";
 
             netplayManager.SetRoomAndServerMode($"{roomUrl}?peer={localPeerId}", isHost);
-
-            if (!isHost)
-            {
-                netplayManager.UpdatePlayer2Name(lobby.Players.First(pl => pl.IsHost).Name);
-            }
 
             inputService.EnableAllControllers();
             inputService.DisableAllControllerExceptLocal();
@@ -2019,7 +2046,6 @@ namespace TF.EX.Patchs.Scene
             if (isPlayer)
             {
                 netplayManager.SetRoomAndServerMode($"{roomUrl}?peer={matchmakingService.GetRoomPeerId()}", false);
-                netplayManager.UpdatePlayer2Name(newLobby.Players.First(pl => pl.IsHost).Name);
             }
             else
             {

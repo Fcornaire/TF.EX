@@ -101,7 +101,7 @@ namespace TF.EX.Domain.Services
         private NetworkStats _networkStats;
         private IReadOnlyDictionary<int, NetworkStats> _networkStatsPerSeat = new Dictionary<int, NetworkStats>();
         private bool _supportsPerSeatStats = true;
-        private string _player2Name = "PLAYER";
+        private const string UnknownPlayerName = "PLAYER";
         private int? _sessionInputDelay;
         private CancellationTokenSource _cancellationTokenSource;
         private CancellationToken _cancellationToken;
@@ -315,9 +315,13 @@ namespace TF.EX.Domain.Services
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
             var isSpectator = matchmakingService.IsSpectator();
 
+            var opponentNames = _gameContext.GetPlayers()
+                .Where(entry => entry.Item1 != LocalSeat)
+                .Select(entry => entry.Item2.Name);
+
             _logger.LogDebug<NetplayManager>(isSpectator
                 ? "Netplay session etablished as spectator"
-                : $"Netplay session etablished with {_player2Name}");
+                : $"Netplay session etablished with {string.Join(", ", opponentNames)}");
 
             _gameContext.ResetPlayersIndex();
 
@@ -327,12 +331,6 @@ namespace TF.EX.Domain.Services
             }
 
             _archerService.ApplyToGame();
-
-            if (!isSpectator)
-            {
-                _player2Name = _gameContext.GetPlayers()
-                    .FirstOrDefault(entry => entry.Item1 == 1).Item2?.Name ?? _player2Name;
-            }
 
             SpawnFirstRound(roundLogic);
         }
@@ -920,16 +918,6 @@ namespace TF.EX.Domain.Services
             }
         }
 
-        public string GetPlayer2Name()
-        {
-            return _player2Name;
-        }
-
-        public void UpdatePlayer2Name(string player2Name)
-        {
-            _player2Name = player2Name;
-        }
-
         public void SetRoomAndServerMode(string roomUrl, bool isHost)
         {
             GGRSConfig.Netplay.SpectatorConf = null;
@@ -960,9 +948,10 @@ namespace TF.EX.Domain.Services
                 return NetplayPreferences.Name;
             }
 
-            var player = _gameContext.GetPlayers().FirstOrDefault(entry => entry.Item1 == seat).Item2;
+            var player = _gameContext.GetPlayers().FirstOrDefault(entry => entry.Item1 == seat).Item2
+                ?? ServiceCollections.ResolveMatchmakingService().GetOwnLobby().SessionPlayers.FirstOrDefault(entry => entry.Seat == seat);
 
-            return player?.Name ?? _player2Name;
+            return player?.Name ?? UnknownPlayerName;
         }
 
         public void SetLocalSeat(int seat)
@@ -1048,7 +1037,7 @@ namespace TF.EX.Domain.Services
                     Seat = seat,
                     NetplayName = seat == localSeat
                         ? NetplayPreferences.Name
-                        : players.TryGetValue(seat, out var player) ? player.Name : _player2Name,
+                        : players.TryGetValue(seat, out var player) ? player.Name : UnknownPlayerName,
                     Index = index,
                     HasWon = seat < level.Session.MatchStats.Length && level.Session.MatchStats[seat].Won,
                     Score = GetScore(level.Session, seat),

@@ -1,8 +1,13 @@
 using FortRise;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using TF.EX.Core.RoundLogic;
 using TF.EX.Domain;
 using TF.EX.Domain.Models;
+using TF.EX.Domain.Utils;
 using TowerFall;
 
 namespace TF.EX
@@ -14,6 +19,7 @@ namespace TF.EX
 
         public static ISubtextureEntry InternetIcon { get; private set; } = null!;
         public static IVariantEntry RightStickVariant { get; private set; } = null!;
+        private List<TutorialSlide> _tutorialSlides = [];
 
 
         public TFEXModModule(IModContent content, IModuleContext context, ILogger logger) : base(content, context, logger)
@@ -74,6 +80,50 @@ namespace TF.EX
                 seen => settings.LastVersionSeen = seen);
         }
 
+        private void ConfigureTutorial()
+        {
+            var settings = GetSettings<NetplaySettings>();
+
+            if (settings == null)
+            {
+                return;
+            }
+
+            if (!settings.HasSeenTutorial && IsReturningPlayer())
+            {
+                settings.HasSeenTutorial = true;
+            }
+
+            Tutorial.Configure(_tutorialSlides, !settings.HasSeenTutorial, () => settings.HasSeenTutorial = true);
+
+            if (Tutorial.IsPending)
+            {
+                Changelog.MarkSeen();
+            }
+        }
+
+        private static bool IsReturningPlayer()
+        {
+            var savesRoot = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Saves");
+            var replaysRoot = Path.Combine(savesRoot, "TF.Replay", "Replays");
+
+            return File.Exists(Path.Combine(savesRoot, ModName, $"{ModName}.settings.json"))
+                || (Directory.Exists(replaysRoot) && Directory.EnumerateFiles(replaysRoot, "*.tow", SearchOption.AllDirectories).Any());
+        }
+
+        private static TutorialSlide CreateTutorialSlide(IModuleContext context, IModContent content, string image, string textA, string textB, int dir)
+        {
+            var texture = context.Registry.Subtextures.RegisterTexture(content.Root.GetRelativePath($"imgs/tutorial/{image}.png"));
+
+            return new TutorialSlide
+            {
+                TextA = textA,
+                TextB = textB,
+                Dir = dir,
+                Image = () => texture.Subtexture,
+            };
+        }
+
         public void Unload(IModuleContext context)
         {
             if (TFGame.Instance.Scene is Level && ServiceCollections.ResolveNetplayManager().IsServerMode())
@@ -105,6 +155,14 @@ namespace TF.EX
 
             TF.EX.Domain.CustomComponent.MenuIcons.ConfigureOnline(() => InternetIcon.Subtexture);
 
+            _tutorialSlides =
+            [
+                CreateTutorialSlide(context, content, "welcome", "WELCOME TO TOWERFALL EX!", "GO ONLINE FROM THE NETPLAY BUTTON", 1),
+                CreateTutorialSlide(context, content, "name", "PICK YOUR PLAYER NAME IN", "MODS / TF.EX / NETPLAY NAME", -1),
+                CreateTutorialSlide(context, content, "options", "MORE EX OPTIONS IN MODS", "INPUT DELAY, ROLLBACK, SKINS...", 1),
+                CreateTutorialSlide(context, content, "netplayEntry", "ENJOY THE RIDE!", "", -1),
+            ];
+
             var netplayGameMode = context.Registry.GameModes.RegisterVersusGameMode(new NetplayVersusMode());
             TF.EX.Domain.Extensions.VersusModeExtensions.SetNetplayMode(netplayGameMode.Modes);
             TF.EX.Patchs.MatchVariantsPatchs.OwnModName = Meta.Name;
@@ -128,6 +186,7 @@ namespace TF.EX
             {
                 InitializeApis();
                 ConfigureChangelog(content);
+                ConfigureTutorial();
             };
 
             context.Harmony.PatchAll(typeof(Patchs.Engine.TFGamePatch).Assembly);
