@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-10-25
+
+### Changed
+
+- Ranked: your rating now updates after every game of a series instead of once at the end
+- Ranked: input delay now follows a universal rule, up to 2 frames of rollback are accepted for the connection and set automatically before game 1
+
 ## [0.24.0] - 2026-10-24
 
 ### New

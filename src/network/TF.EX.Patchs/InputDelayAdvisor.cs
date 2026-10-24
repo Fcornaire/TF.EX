@@ -18,6 +18,9 @@ namespace TF.EX.Patchs
         private static readonly TimeSpan CursorLinger = TimeSpan.FromSeconds(2);
         private const double FrameMs = 1000.0 / Constants.NETPLAY_FPS;
         private const int RelayRollbackFactor = 2;
+        private const int RankedAcceptedRollbackFrames = 2;
+        private const string HostDelayMsg = "SET BY HOST";
+        private const string RankedDelayMsg = "RANKED AUTO";
 
         private const float LabelY = 7f;
         private const float ProposedY = 16f;
@@ -43,6 +46,7 @@ namespace TF.EX.Patchs
         private static int currentDelay;
         private static int? appliedDelay;
         private static int? hostDelay;
+        private static string hostDelayMsg = HostDelayMsg;
 
         private static bool pressActive;
         private static bool awaitRelease;
@@ -105,15 +109,28 @@ namespace TF.EX.Patchs
 
             var isLobbyMenu = mainMenu.State == MainMenu.MenuState.Rollcall || isSeriesLayout;
 
+            if (lobby.RoomId != roomId)
+            {
+                Reset(netplayManager);
+                roomId = lobby.RoomId;
+            }
+
             if (lobby.IsSeriesLobby && OwnPlayer(matchmakingService, lobby) is Domain.Models.WebSocket.Player own)
             {
                 if (own.IsHost)
                 {
+                    if (lobby.IsRanked)
+                    {
+                        ApplyUniversalRankedDelay(matchmakingService, netplayManager, lobby);
+                    }
+
                     PublishHostDelay(matchmakingService, netplayManager, lobby, own);
                 }
-                else
+
+                if (!own.IsHost || lobby.IsRanked)
                 {
                     hostDelay = isLobbyMenu ? lobby.SeriesInputDelay ?? netplayManager.GetEffectiveInputDelay() : null;
+                    hostDelayMsg = lobby.IsRanked ? RankedDelayMsg : HostDelayMsg;
                     ClearInteraction();
                     return;
                 }
@@ -125,19 +142,18 @@ namespace TF.EX.Patchs
                 return;
             }
 
-            if (lobby.RoomId != roomId)
-            {
-                Reset(netplayManager);
-                roomId = lobby.RoomId;
-            }
-
-            UpdateProposal(matchmakingService, lobby);
+            UpdateProposal(matchmakingService, lobby, NetplayPreferences.AcceptedRollbackFrames);
             currentDelay = appliedDelay ?? NetplayPreferences.InputDelayFrames;
 
             if (mode == AutoAdjustInputDelayMode.Enabled)
             {
                 ClearInteraction();
-                UpdateEnabled(netplayManager);
+
+                if (ApplyStableProposal(netplayManager))
+                {
+                    Sounds.ui_click.Play();
+                }
+
                 return;
             }
 
@@ -162,7 +178,21 @@ namespace TF.EX.Patchs
             }
         }
 
-        private static void UpdateProposal(Domain.Ports.IMatchmakingService matchmakingService, Lobby lobby)
+        private static void ApplyUniversalRankedDelay(Domain.Ports.IMatchmakingService matchmakingService, INetplayManager netplayManager, Lobby lobby)
+        {
+            if (lobby.InGame || appliedDelay != null && HasFirstGameStarted(lobby))
+            {
+                return;
+            }
+
+            UpdateProposal(matchmakingService, lobby, RankedAcceptedRollbackFrames);
+            currentDelay = appliedDelay ?? NetplayPreferences.InputDelayFrames;
+            ApplyStableProposal(netplayManager);
+        }
+
+        private static bool HasFirstGameStarted(Lobby lobby) => lobby.Series is { } series && (series.Games.Count > 0 || series.AwaitingResult);
+
+        private static void UpdateProposal(Domain.Ports.IMatchmakingService matchmakingService, Lobby lobby, int acceptedRollbackFrames)
         {
             var localPeerId = matchmakingService.GetRoomPeerId();
             var measured = lobby.Players
@@ -178,28 +208,30 @@ namespace TF.EX.Patchs
             }
 
             var hasDirectOpponent = measured.Any(opponent => !opponent.IsRelayed);
-            var acceptedMs = NetplayPreferences.AcceptedRollbackFrames * NetplayPreferences.RollbackFrameMs;
+            var acceptedMs = acceptedRollbackFrames * NetplayPreferences.RollbackFrameMs;
             var uncoveredMs = measured.Max(opponent => opponent.Ping.Value / 2.0 - (opponent.IsRelayed && hasDirectOpponent ? RelayRollbackFactor * acceptedMs : acceptedMs));
 
             proposedDelay = Math.Clamp((int)Math.Ceiling(uncoveredMs / FrameMs), MinFrames, MaxFrames);
         }
 
-        private static void UpdateEnabled(INetplayManager netplayManager)
+        private static bool ApplyStableProposal(INetplayManager netplayManager)
         {
             if (proposedDelay is not int proposed || proposed <= currentDelay && proposed >= currentDelay - 1)
             {
                 enabledPendingSince = null;
-                return;
+                return false;
             }
 
             enabledPendingSince ??= DateTime.UtcNow;
 
-            if (appliedDelay == null || DateTime.UtcNow - enabledPendingSince >= EnabledStabilityWindow)
+            if (appliedDelay != null && DateTime.UtcNow - enabledPendingSince < EnabledStabilityWindow)
             {
-                enabledPendingSince = null;
-                Apply(netplayManager, proposed);
-                Sounds.ui_click.Play();
+                return false;
             }
+
+            enabledPendingSince = null;
+            Apply(netplayManager, proposed);
+            return true;
         }
 
         private static void UpdateGesture(INetplayManager netplayManager)
@@ -424,7 +456,7 @@ namespace TF.EX.Patchs
             var centerX = TrackLeft + TrackWidth / 2f;
 
             Draw.OutlineTextCentered(TFGame.Font, $"INPUT DELAY : {Ms(delay)}", new Vector2(centerX, LabelY), Color.White, Color.Black);
-            Draw.OutlineTextCentered(TFGame.Font, "SET BY HOST", new Vector2(centerX, ProposedY), ProposedColor, Color.Black);
+            Draw.OutlineTextCentered(TFGame.Font, hostDelayMsg, new Vector2(centerX, ProposedY), ProposedColor, Color.Black);
         }
 
         private static void RenderTrack()
