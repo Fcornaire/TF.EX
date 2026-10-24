@@ -1,5 +1,6 @@
 ﻿using TF.EX.Domain.Models;
 using TF.EX.Domain.Models.WebSocket;
+using TF.EX.Domain.Models.WebSocket.Client;
 using TF.EX.Domain.Models.WebSocket.Server;
 
 namespace TF.EX.Domain.Ports
@@ -31,6 +32,7 @@ namespace TF.EX.Domain.Ports
         Task EnterQuickPlay(Action<int> onQueued, Action<Lobby> onMatched, Action<string> onFail);
         Task ExitQuickPlay();
         Task RequestLeaderboard(Action<LeaderboardData> onResult, Action onFail);
+        Task RequestPlayerProfile(int? rank, Action<PlayerProfile> onResult, Action onFail);
         Task EnterRanked(Action<Lobby> onMatched, Action onReady, Action<string> onRequeued, Action<string> onFail);
         Task ExitRanked();
         bool IsSearchingQuickPlay();
@@ -67,8 +69,8 @@ namespace TF.EX.Domain.Ports
         void DrainGameThreadActions();
         void ApplyTeamsToMatchSettings();
         void RestoreArchersFromLobbyIfNeeded();
-        void NotifyMatchEnded(int winnerSeat, IList<int> scores);
-        IEnumerable<Models.WebSocket.EndGameStatus> GetEndGameStatus();
+        void NotifyMatchEnded(int winnerSeat, IList<int> scores, IList<SeatStats> stats, int? tower);
+        IEnumerable<EndGameStatus> GetEndGameStatus();
         Task RematchChoice();
         Task ArcherSelectChoice();
         Task SeriesContinueChoice();

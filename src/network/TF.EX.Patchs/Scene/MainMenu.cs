@@ -92,6 +92,8 @@ namespace TF.EX.Patchs.Scene
 
         private static Text noMsg;
 
+        private static int? profileRank;
+
         [HarmonyPrefix]
         [HarmonyPatch("CallStateFunc")]
         public static bool MainMenu_CallStateFunc(MainMenu __instance, string name, MainMenu.MenuState state)
@@ -152,6 +154,12 @@ namespace TF.EX.Patchs.Scene
                     if (name == "Create")
                     {
                         CreateLeaderboard(__instance);
+                    }
+                    return false;
+                case Domain.Models.MenuState.PlayerProfile:
+                    if (name == "Create")
+                    {
+                        CreatePlayerProfile(__instance);
                     }
                     return false;
                 case Domain.Models.MenuState.RankedSearch:
@@ -900,7 +908,8 @@ namespace TF.EX.Patchs.Scene
         {
             self.BackState = Domain.Models.MenuState.RankedSelect.ToTFModel();
 
-            var panel = new LeaderboardPanel(() => OnLeaderboardFailed(self));
+            var rankToSelect = self.OldState.ToDomainModel() == Domain.Models.MenuState.PlayerProfile ? profileRank : null;
+            var panel = new LeaderboardPanel(() => OnLeaderboardFailed(self), rank => OpenPlayerProfile(self, rank), rankToSelect);
             self.Add(panel);
             self.ToStartSelected = panel;
 
@@ -922,6 +931,41 @@ namespace TF.EX.Patchs.Scene
             TowerFall.Sounds.ui_invalid.Play();
             Notification.Create(self, "Cannot reach the server", 10, 300);
             self.State = Domain.Models.MenuState.RankedSelect.ToTFModel();
+        }
+
+        private static void OpenPlayerProfile(MainMenu self, int? rank)
+        {
+            profileRank = rank;
+            self.State = Domain.Models.MenuState.PlayerProfile.ToTFModel();
+        }
+
+        private static void CreatePlayerProfile(MainMenu self)
+        {
+            self.BackState = Domain.Models.MenuState.Leaderboard.ToTFModel();
+
+            var panel = new PlayerProfilePanel(() => OnPlayerProfileFailed(self));
+            self.Add(panel);
+            self.ToStartSelected = panel;
+
+            self.ButtonGuideB.SetDetails(MenuButtonGuide.ButtonModes.Back, "BACK");
+
+            var rank = profileRank;
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+            Task.Run(() => matchmakingService.RequestPlayerProfile(rank, panel.OnLoaded, panel.OnFailed));
+
+            DynamicData.For(self).Invoke("TweenBGCameraToY", 1);
+        }
+
+        private static void OnPlayerProfileFailed(MainMenu self)
+        {
+            if (self.State.ToDomainModel() != Domain.Models.MenuState.PlayerProfile)
+            {
+                return;
+            }
+
+            TowerFall.Sounds.ui_invalid.Play();
+            Notification.Create(self, "Cannot reach the server", 10, 300);
+            self.State = Domain.Models.MenuState.Leaderboard.ToTFModel();
         }
 
         private static void HandleSeriesLobby(MainMenu self, string name)

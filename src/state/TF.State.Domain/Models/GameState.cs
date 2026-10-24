@@ -31,8 +31,8 @@ namespace TF.State.Domain.Models
         [Key(5)]
         public RoundLogic RoundLogic { get; set; } = new RoundLogic();
 
-        // [Key(6)]
-        // public IEnumerable<MatchStats> MatchStats { get; set; } = new List<MatchStats>();
+        [Key(6)]
+        public IEnumerable<MatchStats> MatchStats { get; set; } = new List<MatchStats>();
 
         // [Key(7)]
         // public IEnumerable<SFXState> SFXs { get; set; } = new List<SFXState>();
