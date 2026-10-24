@@ -190,6 +190,7 @@ namespace TF.State.TowerFallExtensions
             gameState.AddBramblesState(self);
             gameState.AddIciclesState(self);
             gameState.AddSnowClumpsState(self);
+            gameState.AddIcesState(self);
             gameState.AddSwitchBlocksState(self);
             gameState.AddSwitchBlockControlState(self);
             gameState.AddShiftBlocksState(self);
@@ -765,6 +766,9 @@ namespace TF.State.TowerFallExtensions
 
             //SnowClumps load
             gameState.LoadSnowClumps(level);
+
+            //Ices load
+            gameState.LoadIces(level);
 
             foreach (var jumpPad in level.GetAll<TowerFall.JumpPad>())
             {
@@ -1581,6 +1585,16 @@ namespace TF.State.TowerFallExtensions
                     gameState.Entities.SnowClumps.Add(state);
                     ServiceCollections.AddEntityToCache(state.ActualDepth, snowClump);
                 }
+            }
+        }
+
+        private static void AddIcesState(this GameState gameState, Level level)
+        {
+            var ices = level.GetAll<TowerFall.Ice>().ToArray();
+
+            if (ices.Length > 0)
+            {
+                gameState.Entities.Ices = ices.Select(ice => ice.GetState()).ToList();
             }
         }
 
@@ -2845,6 +2859,23 @@ namespace TF.State.TowerFallExtensions
                         tagList.Add(cachedSnowClump);
                     }
                 }
+            }
+        }
+
+        private static void LoadIces(this GameState gameState, Level level)
+        {
+            if (gameState.Entities.Ices == null)
+            {
+                return;
+            }
+
+            var liveIces = level.GetAll<TowerFall.Ice>().ToArray();
+
+            foreach (var toLoad in gameState.Entities.Ices)
+            {
+                var ice = liveIces.FirstOrDefault(live => DynamicData.For(live).Get<double>("actualDepth") == toLoad.ActualDepth);
+
+                ice?.LoadState(toLoad);
             }
         }
 

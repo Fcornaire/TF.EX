@@ -12,8 +12,6 @@ namespace TF.EX.Domain.Scenarios
         public const int TileSize = 10;
 
         public const int FloorY = 210;
-        private const int FloorRow = 21;
-        private const int CeilingRows = 2;
 
         public const int SpawnY = FloorY - TileSize;
 
@@ -51,7 +49,7 @@ namespace TF.EX.Domain.Scenarios
 
             for (int row = 0; row < Rows; row++)
             {
-                var solid = row < CeilingRows || row >= FloorRow;
+                var solid = row < scenario.CeilingRows || row >= scenario.FloorY / TileSize;
 
                 grid[row] = new string(solid ? '1' : '0', Columns).ToCharArray();
             }

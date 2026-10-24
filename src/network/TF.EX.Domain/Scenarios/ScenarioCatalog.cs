@@ -10,7 +10,7 @@ namespace TF.EX.Domain.Scenarios
         public static readonly string[] TrackedTypes =
         [
             "Arrow", "Bat", "Brambles", "Chain", "Chest", "CrackedPlatform", "CrackedWall",
-            "CrumbleBlock", "DarkPortalsSequence", "Explosion", "GhostPlatform", "Hat", "Icicle",
+            "CrumbleBlock", "DarkPortalsSequence", "Explosion", "GhostPlatform", "Hat", "Ice", "Icicle",
             "JumpPad", "Lantern", "Lava", "LavaControl", "Layer", "LoopPlatform", "MoonGlassBlock",
             "MovingPlatform", "Orb", "Pickup", "Player", "PlayerCorpse", "PlayerGhost", "Prism",
             "ProximityBlock", "RotatePlatform", "RoundLogic", "SensorBlock", "Session", "ShiftBlock",
@@ -1205,6 +1205,34 @@ namespace TF.EX.Domain.Scenarios
                 Expect = level => AllOf<Arrow>(level).Any()
                     && !AllOf<Player>(level).Any()
                     && !AllOf<PlayerCorpse>(level).Any(),
+            },
+            new Scenario
+            {
+                Name = "ice-lava",
+                Covers = ["Ice", "Lava", "LavaControl", "Player"],
+                Variants = ["ALWAYS LAVA"],
+                Seed = 42,
+                Frames = 600,
+                FloorY = 220,
+                CeilingRows = 1,
+                Spawns = [(130, 210), (190, 210)],
+                Entities = [new ScenarioEntity("Ice", 110, 220, "width=\"100\"")],
+                Expect = level => AllOf<Lava>(level).Any(lava => lava.Side == Lava.LavaSide.Bottom && lava.Y < 229f)
+                    && !AllOf<Ice>(level).Any(ice => ice.Collidable)
+                    && AllOf<Player>(level).Count() == 2,
+            },
+            new Scenario
+            {
+                Name = "superbomb-replay-restore",
+                Covers = ["Explosion", "Arrow", "Player", "PlayerCorpse"],
+                Variants = ["START WITH SUPER BOMB ARROWS", "MAX ARROWS", "SLOW TIME"],
+                UseInstantReplay = true,
+                Rounds = 2,
+                Frames = 800,
+                Spawns = [(60, SpawnY), (240, SpawnY)],
+                Scripts = [Sequence(AimAndFire(0, -1), AimAndFire(1, 0), Wait(3000)), Still],
+                Expect = level => InstantReplayFootage.PlayedThisMatch > 0
+                    && AllOf<Explosion>(level).Count() >= 2,
             }
         ];
 

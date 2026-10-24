@@ -30,5 +30,8 @@ namespace TF.State.Domain.Models.Entity.LevelEntity
 
         [Key(8)]
         public bool BombTrap { get; set; }
+
+        [Key(9)]
+        public int[] SharedCounters { get; set; }
     }
 }
