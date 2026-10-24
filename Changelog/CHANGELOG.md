@@ -6,11 +6,12 @@
 
 ### New
 
-- Player profiles: you can now see games, wins, main archers, top awards, best tower, records and monthly stats
+- Player profiles: you can now see some game stats (wins, main archers, top awards , ...)
+- First launch tutorial: new players get a short EX guide on the main menu
 
 ### Fixed
 
-- End of match awards are now the same for every player and no longer change while the results are shown
+- End of match awards are now the same for every player and should no longer differ
 - Your local stats are no longer counted several times at the end of a netplay match
 - Winning a ranked series 2-1 no longer loses rating
 - A match no longer desyncs from the very start when one player game finishes connecting a little later than the other

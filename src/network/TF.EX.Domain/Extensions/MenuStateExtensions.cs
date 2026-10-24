@@ -41,6 +41,8 @@ namespace TF.EX.Domain.Extensions
                     return (TowerFall.MainMenu.MenuState)70;
                 case MenuState.PlayerProfile:
                     return (TowerFall.MainMenu.MenuState)71;
+                case MenuState.Tutorial:
+                    return (TowerFall.MainMenu.MenuState)72;
                 default:
                     throw new System.NotImplementedException("MenuState not found");
             }
@@ -83,6 +85,8 @@ namespace TF.EX.Domain.Extensions
                     return MenuState.RankedSearch;
                 case (TowerFall.MainMenu.MenuState)71:
                     return MenuState.PlayerProfile;
+                case (TowerFall.MainMenu.MenuState)72:
+                    return MenuState.Tutorial;
                 default:
                     return MenuState.Unknown;
             }
