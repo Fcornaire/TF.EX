@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.26.1] - 2026-10-25
+
+### Fixed
+
+- Player profiles: games played with a custom archer against someone who doesn't have it are now counted for that archer instead of a vanilla one
+
 ## [0.26.0] - 2026-10-25
 
 ### Fixed
