@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [0.26.2] - 2026-10-25
+
+### Fixed
+
+- Spectating: the first player name is now the one from the lobby instead of your own
+- The player tag no longer gives away an archer hiding in the dark (crouching during a dark orb) or an invisible archer
+- Archers are no longer drawn darker than they should be (for example dark orb)
+
 ## [0.26.1] - 2026-10-25
 
 ### Fixed

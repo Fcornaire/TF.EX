@@ -951,7 +951,7 @@ namespace TF.EX.Domain.Services
                 }
             }
 
-            if (seat == _gameContext.GetLocalPlayerIndex())
+            if (IsLocalSeat(seat))
             {
                 return NetplayPreferences.Name;
             }
@@ -960,6 +960,11 @@ namespace TF.EX.Domain.Services
                 ?? ServiceCollections.ResolveMatchmakingService().GetOwnLobby().SessionPlayers.FirstOrDefault(entry => entry.Seat == seat);
 
             return player?.Name ?? UnknownPlayerName;
+        }
+
+        private bool IsLocalSeat(int seat)
+        {
+            return !IsSpectatorMode() && seat == _gameContext.GetLocalPlayerIndex();
         }
 
         public void SetLocalSeat(int seat)
@@ -1030,7 +1035,6 @@ namespace TF.EX.Domain.Services
 
             var level = TFGame.Instance.Scene as Level;
 
-            var localSeat = _gameContext.GetLocalPlayerIndex();
             var players = _gameContext.GetPlayers().ToDictionary(p => p.Item1, p => p.Item2);
 
             foreach ((var seat, var archerAlt) in _archerService.GetArchers().OrderBy(archer => archer.Item1))
@@ -1043,7 +1047,7 @@ namespace TF.EX.Domain.Services
                 archersInfo.Add(new Models.ArcherSeatInfo
                 {
                     Seat = seat,
-                    NetplayName = seat == localSeat
+                    NetplayName = IsLocalSeat(seat)
                         ? NetplayPreferences.Name
                         : players.TryGetValue(seat, out var player) ? player.Name : UnknownPlayerName,
                     Index = index,
