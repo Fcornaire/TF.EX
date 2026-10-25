@@ -225,19 +225,26 @@ namespace TF.EX.Patchs.Engine
             {
                 if (netplayManager.ConsumeAbortToVersusOptions() && __instance.Scene is TowerFall.Level failedLevel)
                 {
-                    TowerFall.Sounds.ui_invalid.Play();
+                    if (matchmakingService.IsInUnfinishedRankedGame())
+                    {
+                        matchmakingService.LeaveRankedGameOnLinkLost(netplayManager.GetFailedConnectionMessage());
+                    }
+                    else
+                    {
+                        TowerFall.Sounds.ui_invalid.Play();
 
-                    matchmakingService.DisconnectFromServer();
-                    matchmakingService.ResetPeer();
-                    matchmakingService.UpdateOwnLobby(new Domain.Models.WebSocket.Lobby());
-                    replayService.Reset();
+                        matchmakingService.DisconnectFromServer();
+                        matchmakingService.ResetPeer();
+                        matchmakingService.UpdateOwnLobby(new Domain.Models.WebSocket.Lobby());
+                        replayService.Reset();
 
-                    var menu = Domain.Extensions.LevelExtensions.GoToNetplayEntryMenu(failedLevel);
+                        var menu = Domain.Extensions.LevelExtensions.GoToNetplayEntryMenu(failedLevel);
 
-                    inputService.EnableAllControllers();
-                    inputService.RebindLocalInput();
+                        inputService.EnableAllControllers();
+                        inputService.RebindLocalInput();
 
-                    Notification.Create(menu, netplayManager.GetFailedConnectionMessage(), 10, 450);
+                        Notification.Create(menu, netplayManager.GetFailedConnectionMessage(), 10, 450);
+                    }
                 }
 
                 TFGame_Update_orig(__instance, gameTime);
@@ -247,6 +254,12 @@ namespace TF.EX.Patchs.Engine
             if (netplayManager.IsDisconnected())
             {
                 InstantReplayFootage.Abort();
+
+                if (netplayManager.HasSessionDisconnected() && matchmakingService.IsInUnfinishedRankedGame())
+                {
+                    matchmakingService.LeaveRankedGameOnLinkLost("CONNECTION LOST");
+                }
+
                 TFGame_Update_orig(__instance, gameTime);
                 return false;
             }

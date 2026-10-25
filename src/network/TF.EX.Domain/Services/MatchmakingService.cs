@@ -419,9 +419,9 @@ namespace TF.EX.Domain.Services
             await Send(message);
         }
 
-        private async Task SendLeaveLobby()
+        private async Task SendLeaveLobby(bool isLinkLost = false)
         {
-            var leaveLobbyMessage = new LeaveLobbyMessage { };
+            var leaveLobbyMessage = new LeaveLobbyMessage { LeaveLobby = new LeaveLobby { IsLinkLost = isLinkLost } };
 
             var bytes = MessagePackSerializer.Serialize(leaveLobbyMessage);
             var message = MessagePackSerializer.ConvertToJson(bytes);
@@ -973,7 +973,7 @@ namespace TF.EX.Domain.Services
 
                 _logger.LogDebug<MatchmakingService>($"Server notice : {notice}");
 
-                RunOnGameThread(() => Notification.Create(TFGame.Instance.Scene, notice, 10, 600));
+                RunOnGameThread(() => Notification.Create(GetNextScene(), notice, 10, 600));
             }
 
             if (IsServerMsg(message, "UpdateRequired"))
@@ -1013,6 +1013,39 @@ namespace TF.EX.Domain.Services
             Engine.Instance.Scene = new MainMenu(state);
             _archerService.Reset();
             level.Session.MatchSettings.LevelSystem.Dispose();
+        }
+
+        public bool IsInUnfinishedRankedGame()
+        {
+            return ownLobby.IsRanked && TFGame.Instance.Scene is Level level && level.Session.GetWinner() == -1;
+        }
+
+        public void LeaveRankedGameOnLinkLost(string message)
+        {
+            abandonedRoomId = ownLobby.RoomId;
+            ResetLobby();
+            ResetPeer();
+            Task.Run(() => SendLeaveLobby(isLinkLost: true));
+
+            ServiceCollections.ResolveReplayService().Export();
+            Sounds.ui_invalid.Play();
+
+            Notification.Create(ExitToRankedMenu((Level)TFGame.Instance.Scene), message, 10, 500);
+        }
+
+        private MainMenu ExitToRankedMenu(Level level)
+        {
+            _netplayManager.Reset();
+            _inputService.ResetPolledInput();
+            _inputService.EnableAllControllers();
+            _inputService.RebindLocalInput();
+
+            return level.GoToNetplayEntryMenu(Models.MenuState.RankedSelect);
+        }
+
+        private static Scene GetNextScene()
+        {
+            return DynamicData.For(TFGame.Instance).Get<Scene>("nextScene") ?? TFGame.Instance.Scene;
         }
 
         private void HandleKickedFromLobby(string reason)
@@ -1145,11 +1178,17 @@ namespace TF.EX.Domain.Services
                 StateApi.Current.SetSeed(lobby.GameData.Seed);
             }
 
-            if (lobby.Players.Count == 1 && TFGame.Instance.Scene is Level)
+            if (lobby.Players.Count == 1 && TFGame.Instance.Scene is Level level)
             {
+                var isRankedGameAborted = lobby.IsRanked && level.Session.GetWinner() == -1;
+
                 Sounds.ui_invalid.Play();
-                Notification.Create(TFGame.Instance.Scene, "All players left...", 10, 500);
-                Task.Run(SendLeaveLobby);
+                if (!isRankedGameAborted)
+                {
+                    Notification.Create(TFGame.Instance.Scene, "All players left...", 10, 500);
+                }
+
+                Task.Run(() => SendLeaveLobby());
                 ServiceCollections.ResolveReplayService().Export();
 
                 abandonedRoomId = lobby.RoomId;
@@ -1160,6 +1199,12 @@ namespace TF.EX.Domain.Services
                 _inputService.EnsureEveryControllerSlot();
 
                 ResetPeer();
+
+                if (isRankedGameAborted)
+                {
+                    ExitToRankedMenu(level);
+                }
+
                 return;
             }
 
@@ -1460,7 +1505,7 @@ namespace TF.EX.Domain.Services
             }
 
             abandonedRoomId = lobby.RoomId;
-            Task.Run(SendLeaveLobby);
+            Task.Run(() => SendLeaveLobby());
             ownLobby = new Lobby();
 
             Sounds.ui_invalid.Play();

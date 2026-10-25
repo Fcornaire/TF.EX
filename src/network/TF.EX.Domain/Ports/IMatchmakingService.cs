@@ -49,6 +49,8 @@ namespace TF.EX.Domain.Ports
         void RequestRollcallReconcile();
         void PublishCustomSkin(int archerIndex, int archerAltIndex);
         Task LeaveLobby(Action onSuccess, Action onFail);
+        bool IsInUnfinishedRankedGame();
+        void LeaveRankedGameOnLinkLost(string message);
         void ResetPeer();
         bool IsLobbyReady();
         bool IsLobbyFull();

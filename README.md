@@ -125,7 +125,7 @@ This project uses:
 
 - [FortRise](https://github.com/Terria-K/FortRise) as the main loader (C#)
 - [ggrs-ffi](https://github.com/Fcornaire/ggrs-ffi) which is a library that allows the [GGRS](https://github.com/gschup/ggrs) API to be called by non-rust projects (Rust)
-- A matchmaking server that manages matchmaking (quickplay, lobbies, private codes) and also runs a signaling endpoint for easier connection (Rust)
+- [tf-ex-matchmaking-server](https://github.com/Fcornaire/tf-ex-matchmaking-server), the matchmaking server that manages matchmaking (quickplay, lobbies, private codes) for easier connection (Rust)
 
 ## Installation
 
