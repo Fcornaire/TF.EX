@@ -428,13 +428,21 @@ namespace TF.EX.Domain.Services
 
                     if (IsDisconnected())
                     {
-                        ServiceCollections.ResolveReplayService().Export();
+                        var matchmakingService = ServiceCollections.ResolveMatchmakingService();
 
-                        //Leave lobby if the game is not over and we are disconnected
-                        if ((TFGame.Instance.Scene as TowerFall.Level).Session.GetWinner() == -1)
+                        if (matchmakingService.IsInUnfinishedRankedGame())
                         {
-                            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
-                            matchmakingService.LeaveLobby(matchmakingService.ResetLobby, matchmakingService.ResetLobby);
+                            matchmakingService.LeaveRankedGameOnLinkLost("CONNECTION LOST");
+                        }
+                        else
+                        {
+                            ServiceCollections.ResolveReplayService().Export();
+
+                            //Leave lobby if the game is not over and we are disconnected
+                            if ((TFGame.Instance.Scene as TowerFall.Level).Session.GetWinner() == -1)
+                            {
+                                matchmakingService.LeaveLobby(matchmakingService.ResetLobby, matchmakingService.ResetLobby);
+                            }
                         }
                     }
                     else if (IsUnfinishedTeamMatch())

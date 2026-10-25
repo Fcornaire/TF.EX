@@ -12,5 +12,7 @@ namespace TF.EX.Domain.Models.WebSocket.Client
     [DataContract]
     public class LeaveLobby
     {
+        [DataMember(Name = "link_lost")]
+        public bool IsLinkLost { get; set; }
     }
 }

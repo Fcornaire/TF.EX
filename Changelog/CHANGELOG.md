@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-10-25
+
+### Fixed
+
+- Ranked: when the connection between you and your opponent drops mid game while you both stay online, it should no longer count as a forfeit
+
 ## [0.25.0] - 2026-10-25
 
 ### Changed
