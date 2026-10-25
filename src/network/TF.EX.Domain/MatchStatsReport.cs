@@ -29,7 +29,7 @@ namespace TF.EX.Domain
                         Seat = archer.Seat,
                         Archer = archer.Index,
                         ArcherAlt = archer.Type,
-                        CustomArcherId = archer.CustomArcherId ?? "",
+                        CustomArcherId = archer.SkinArcherId ?? "",
                         Awards = _awards.TryGetValue(archer.Seat, out var awards) ? awards : [],
                         RawStats = BuildRawStats(matchStats[archer.Seat]),
                     })];
