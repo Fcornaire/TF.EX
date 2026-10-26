@@ -35,20 +35,11 @@ namespace TF.EX.Patchs.Scene
             }
         }
 
-        private const string QUICKPLAY_BANNER_TITLE = "QUICK PLAY";
-        private const string LOBBIES_BANNER_TITLE = "LOBBIES";
-        private const string PRIVATE_BANNER_TITLE = "PRIVATE";
-        private const string PRIVATE_CREATE_BANNER_TITLE = "CREATE";
-        private const string PRIVATE_JOIN_BANNER_TITLE = "JOIN";
-        private const string RANKED_BANNER_TITLE = "RANKED";
-        private const string RANKED_QUEUE_BANNER_TITLE = "QUEUE";
-        private const string LEADERBOARD_BANNER_TITLE = "LEADERBOARD";
-
         private const float BANNER_Y = 185f;
-
         private const float CHANGELOG_X = 310f;
         private const float CHANGELOG_Y = 20f;
-
+        private const float SUPPORT_X = 10f;
+        private const float SUPPORT_Y = 20f;
         private const float NETPLAY_X = 220f;
         private const float NETPLAY_Y = 140f;
         private const float COOP_X = 290f;
@@ -56,20 +47,30 @@ namespace TF.EX.Patchs.Scene
         private const float VANILLA_BOTTOM_ROW_Y = 210f;
         private const float BOTTOM_ROW_SHIFT = 10f;
 
+        private const string QUICKPLAY_BANNER_TITLE = "QUICK PLAY";
         private static readonly string[] QUICKPLAY_BANNER_LINES = { "JUMP INTO A RANDOM MATCH.", "CLOSEST OPPONENTS FIRST." };
+        private const string LOBBIES_BANNER_TITLE = "LOBBIES";
         private static readonly string[] LOBBIES_BANNER_LINES = { "BROWSE PUBLIC LOBBIES", "OR CREATE YOUR OWN." };
+        private const string PRIVATE_BANNER_TITLE = "PRIVATE";
         private static readonly string[] PRIVATE_BANNER_LINES = { "LOCKED LOBBY, JOINABLE", "ONLY WITH A CODE." };
+        private const string PRIVATE_CREATE_BANNER_TITLE = "CREATE";
         private static readonly string[] PRIVATE_CREATE_BANNER_LINES = { "HOST A PRIVATE LOBBY AND", "SHARE ITS CODE WITH FRIENDS." };
+        private const string PRIVATE_JOIN_BANNER_TITLE = "JOIN";
         private static readonly string[] PRIVATE_JOIN_BANNER_LINES = { "ENTER A CODE TO JOIN", "A FRIEND'S PRIVATE LOBBY." };
+        private const string RANKED_BANNER_TITLE = "RANKED";
         private static readonly string[] RANKED_BANNER_LINES = { "1V1 BEST OF 3 SERIES", "CLIMB TO THE TOP!" };
+        private const string RANKED_QUEUE_BANNER_TITLE = "QUEUE";
         private static readonly string[] RANKED_QUEUE_BANNER_LINES = { "FIND AN OPPONENT CLOSE", "TO YOUR RANKING." };
+        private const string LEADERBOARD_BANNER_TITLE = "LEADERBOARD";
         private static readonly string[] LEADERBOARD_BANNER_LINES = { "TOP ARCHERS", "AND YOUR OWN RANK." };
+        private const string SUPPORT_BANNER_TITLE = "SUPPORT EX";
+        private static readonly string[] SUPPORT_BANNER_LINES = { "EX IS FREE! IF YOU ENJOY IT,", "HELP MAINTAIN IT ON PATREON." };
+        private const string SUPPORT_URL = "https://patreon.com/DShadModdingAdventure";
 
-        private static bool hasShowedWarning = false;
+        private static bool displayedWarning = false;
 
 
-
-        private static List<LobbyInfos> lobbies = new List<LobbyInfos>();
+        private static List<LobbyInfos> lobbies = [];
         private static LobbyPanel lobbyPanel = null;
         private static Monocle.Entity spectateEntityButton = null;
         private static Monocle.Entity createEntityButton = null;
@@ -175,7 +176,7 @@ namespace TF.EX.Patchs.Scene
                     }
                     return true;
                 case MenuState.PressStart:
-                    if (!hasShowedWarning)
+                    if (!displayedWarning)
                     {
                         //bool hasUnsafeMod = false;
                         //var context = ServiceCollections.ResolveContext();
@@ -854,22 +855,28 @@ namespace TF.EX.Patchs.Scene
             lobbyList.RightItem = privateMatch;
             privateMatch.LeftItem = lobbyList;
 
+            var support = new CornerButton(new Vector2(SUPPORT_X, SUPPORT_Y), new Vector2(SUPPORT_X - 120f, SUPPORT_Y), "SUPPORT", TFGame.Atlas["versus/teamRevive"], 2f, 0f, () => OpenSupportPage(self));
+
             var banner = BuildVersusSelectBanner();
             banner.Track(() => quickPlay.Selected, QUICKPLAY_BANNER_TITLE, QUICKPLAY_BANNER_LINES);
             banner.Track(() => ranked.Selected, RANKED_BANNER_TITLE, RANKED_BANNER_LINES);
             banner.Track(() => lobbyList.Selected, LOBBIES_BANNER_TITLE, LOBBIES_BANNER_LINES);
             banner.Track(() => privateMatch.Selected, PRIVATE_BANNER_TITLE, PRIVATE_BANNER_LINES);
+            banner.Track(() => support.Selected, SUPPORT_BANNER_TITLE, SUPPORT_BANNER_LINES);
 
-            self.Add(new TowerFall.MenuItem[] { quickPlay, ranked, lobbyList, privateMatch, banner });
+            self.Add(new TowerFall.MenuItem[] { quickPlay, ranked, lobbyList, privateMatch, support, banner });
             self.ToStartSelected = self.OldState.ToDomainModel() == Domain.Models.MenuState.RankedSelect ? ranked : quickPlay;
 
             if (Changelog.Releases.Count > 0)
             {
-                var changelog = new ChangelogButton(new Vector2(CHANGELOG_X, CHANGELOG_Y), new Vector2(CHANGELOG_X + 120f, CHANGELOG_Y), () =>
+                var changelog = new CornerButton(new Vector2(CHANGELOG_X, CHANGELOG_Y), new Vector2(CHANGELOG_X + 120f, CHANGELOG_Y), "CHANGELOG", TFGame.MenuAtlas["awardBanner"], 1f, 1f, () =>
                 {
                     self.State = Domain.Models.MenuState.ChangelogHistory.ToTFModel();
                 });
-                changelog.LinkItems(quickPlay, ranked, lobbyList, privateMatch);
+                support.LinkItems(quickPlay, ranked);
+                changelog.LinkItems(lobbyList, privateMatch);
+                support.RightItem = changelog;
+                changelog.LeftItem = support;
                 self.Add(changelog);
 
                 if (self.OldState.ToDomainModel() == Domain.Models.MenuState.ChangelogHistory)
@@ -877,8 +884,26 @@ namespace TF.EX.Patchs.Scene
                     self.ToStartSelected = changelog;
                 }
             }
+            else
+            {
+                support.LinkItems(quickPlay, ranked, lobbyList, privateMatch);
+            }
 
             DynamicData.For(self).Invoke("TweenBGCameraToY", 1);
+        }
+
+        private static void OpenSupportPage(MainMenu self)
+        {
+            try
+            {
+                UrlService.Open(SUPPORT_URL);
+            }
+            catch (Exception ex)
+            {
+                ServiceCollections.ResolveLogger().LogError<MainMenuPatch>("Failed to open the support page", ex);
+                TowerFall.Sounds.ui_invalid.Play();
+                Notification.Create(self, "PATREON.COM/DSHADMODDINGADVENTURE", 10, 600);
+            }
         }
 
         private static void CreatePrivateSelect(MainMenu self)
