@@ -4,30 +4,38 @@ using TowerFall;
 
 namespace TF.EX.Domain.CustomComponent
 {
-    public class ChangelogButton : TowerFall.MenuItem
+    public class CornerButton : TowerFall.MenuItem
     {
-        private const string Label = "CHANGELOG";
         private const float IconGap = 4f;
 
         private static readonly Color SelectedColor = Calc.HexToColor("FFDC6B");
 
         private readonly Vector2 tweenFrom;
         private readonly Vector2 tweenTo;
+        private readonly string label;
+        private readonly float labelX;
+        private readonly float iconScale;
         private readonly Action onConfirm;
         private readonly Image icon;
         private readonly Wiggler wiggler;
         private readonly SineWave sine;
         private TowerFall.MenuItem[] below = [];
 
-        public ChangelogButton(Vector2 position, Vector2 tweenFrom, Action onConfirm) : base(position)
+        public CornerButton(Vector2 position, Vector2 tweenFrom, string label, Subtexture iconTexture, float iconScale, float justifyX, Action onConfirm) : base(position)
         {
             this.tweenFrom = tweenFrom;
             tweenTo = position;
+            this.label = label;
+            this.iconScale = iconScale;
             this.onConfirm = onConfirm;
 
-            icon = new Image(TFGame.MenuAtlas["awardBanner"]);
+            icon = new Image(iconTexture);
             icon.CenterOrigin();
-            icon.X = -(TFGame.Font.MeasureString(Label).X + IconGap + icon.Width / 2f);
+
+            var iconWidth = icon.Width * iconScale;
+            var left = -justifyX * (iconWidth + IconGap + TFGame.Font.MeasureString(label).X);
+            icon.X = left + iconWidth / 2f;
+            labelX = left + iconWidth + IconGap;
             Add(icon);
 
             wiggler = Wiggler.Create(20, 4f);
@@ -59,7 +67,7 @@ namespace TF.EX.Domain.CustomComponent
             base.Update();
 
             icon.Color = Selected ? SelectedColor : Color.White;
-            icon.Scale = Vector2.One * (1f + wiggler.Value * 0.2f);
+            icon.Scale = Vector2.One * iconScale * (1f + wiggler.Value * 0.2f);
             icon.Y = Selected ? (float)Math.Round(sine.Value * 1.5f) : 0f;
         }
 
@@ -68,7 +76,7 @@ namespace TF.EX.Domain.CustomComponent
             icon.DrawOutline();
             base.Render();
 
-            Draw.OutlineTextJustify(TFGame.Font, Label, Position, Selected ? SelectedColor : Color.White, Color.Black, new Vector2(1f, 0.5f));
+            Draw.OutlineTextJustify(TFGame.Font, label, Position + new Vector2(labelX, 0f), Selected ? SelectedColor : Color.White, Color.Black, new Vector2(0f, 0.5f));
         }
 
         public override void TweenIn()

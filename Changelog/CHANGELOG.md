@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-10-26
+
+### New
+
+- A new SUPPORT button if you want to help maintain EX
+
 ## [0.26.2] - 2026-10-25
 
 ### Fixed
