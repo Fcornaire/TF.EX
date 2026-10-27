@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.27.1] - 2026-10-28
+
+### Fixed
+
+- Brambles destroyed by a bomb explosion no longer survive after a rollback (desync potential)
+
 ## [0.27.0] - 2026-10-26
 
 ### New

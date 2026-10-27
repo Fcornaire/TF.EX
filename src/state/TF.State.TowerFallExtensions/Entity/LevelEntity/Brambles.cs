@@ -43,6 +43,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                 IsCollidable = brambles.Collidable,
                 IsVisible = brambles.Visible,
                 ActiveTween = brambles.GetFirst<Tween>()?.GetState(),
+                IsMarkedForRemoval = brambles.MarkedForRemoval,
             };
         }
 
@@ -59,6 +60,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             dynBrambles.Set("actualDepth", state.ActualDepth);
             dynBrambles.Set("soundPlayed", state.HasSoundPlayed);
             dynBrambles.Set("ID", state.Id);
+            dynBrambles.Set("MarkedForRemoval", state.IsMarkedForRemoval);
 
             Alarm deathAlarm = dynBrambles.Get<Alarm>("deathAlarm");
             deathAlarm.LoadState(state.DeathAlarm);
