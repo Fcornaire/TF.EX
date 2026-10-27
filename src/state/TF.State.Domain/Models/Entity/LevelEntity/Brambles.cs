@@ -35,5 +35,7 @@ namespace TF.State.Domain.Models.Entity.LevelEntity
         public bool IsVisible { get; set; }
         [Key(13)]
         public Tween ActiveTween { get; set; }
+        [Key(14)]
+        public bool IsMarkedForRemoval { get; set; }
     }
 }
