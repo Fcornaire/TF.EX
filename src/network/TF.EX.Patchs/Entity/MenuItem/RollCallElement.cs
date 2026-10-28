@@ -86,9 +86,9 @@ namespace TF.EX.Patchs.Entity.MenuItem
 
                 if (state.State == 1 && elementInput != null && elementInput.MenuBack)
                 {
-                    if (playerIndex == matchmakingService.GetLocalSeat())
+                    if (matchmakingService.IsLocalSeat(playerIndex))
                     {
-                        var player = lobby.Players.FirstOrDefault(pl => pl.RoomPeerId == matchmakingService.GetRoomPeerId());
+                        var player = lobby.Players.FirstOrDefault(pl => pl.Seat == playerIndex && pl.RoomPeerId == matchmakingService.GetRoomPeerId());
                         if (player != null)
                         {
                             player.Ready = false;
@@ -136,7 +136,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
 
             var playerIndex = DynamicData.For(__instance).Get<int>("playerIndex");
 
-            if (playerIndex != matchmakingService.GetLocalSeat() && lobby.Players.Any(pl => pl.Seat == playerIndex))
+            if (!matchmakingService.IsLocalSeat(playerIndex) && lobby.Players.Any(pl => pl.Seat == playerIndex))
             {
                 __result = 0;
                 return false;
@@ -149,7 +149,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
                 return true;
             }
 
-            if (input.MenuConfirm && playerIndex == matchmakingService.GetLocalSeat() && !matchmakingService.IsSpectator())
+            if (input.MenuConfirm && matchmakingService.IsLocalSeat(playerIndex) && !matchmakingService.IsSpectator())
             {
                 var missing = MainMenu.VersusMatchSettings.Variants.MissingVariants(lobby.GameData.Variants);
 
@@ -209,7 +209,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
             {
                 var playerIndex = Traverse.Create(__instance).Field<int>("playerIndex").Value;
 
-                if (playerIndex == ServiceCollections.ResolveMatchmakingService().GetLocalSeat())
+                if (ServiceCollections.ResolveMatchmakingService().IsLocalSeat(playerIndex))
                 {
                     return;
                 }
@@ -248,9 +248,9 @@ namespace TF.EX.Patchs.Entity.MenuItem
                 var dynRollcallElement = DynamicData.For(__instance);
                 var playerIndex = dynRollcallElement.Get<int>("playerIndex");
 
-                if (playerIndex == matchmakingService.GetLocalSeat() && !matchmakingService.IsSpectator())
+                if (matchmakingService.IsLocalSeat(playerIndex) && !matchmakingService.IsSpectator())
                 {
-                    var player = lobby.Players.FirstOrDefault(pl => pl.RoomPeerId == matchmakingService.GetRoomPeerId());
+                    var player = lobby.Players.FirstOrDefault(pl => pl.Seat == playerIndex && pl.RoomPeerId == matchmakingService.GetRoomPeerId());
 
                     if (player != null)
                     {
@@ -301,6 +301,20 @@ namespace TF.EX.Patchs.Entity.MenuItem
 
             int playerIndex = dynRollcallElement.Get<int>("playerIndex");
 
+            if (playerIndex != matchmakingService.GetLocalSeat() && matchmakingService.IsLocalSeat(playerIndex))
+            {
+                var otherInput = dynRollcallElement.Get<TowerFall.PlayerInput>("input");
+                var otherJoined = dynRollcallElement.Get<Monocle.StateMachine>("state").State != 0;
+
+                if (!otherJoined && otherInput != null && otherInput.MenuBack)
+                {
+                    Sounds.ui_clickBack.Play();
+                    Task.Run(() => matchmakingService.RemoveLocalPlayer(playerIndex));
+                }
+
+                return;
+            }
+
             if (playerIndex == matchmakingService.GetLocalSeat())
             {
                 var input = dynRollcallElement.Get<TowerFall.PlayerInput>("input");
@@ -341,16 +355,21 @@ namespace TF.EX.Patchs.Entity.MenuItem
             if (!lobby.IsEmpty && playerIndex >= 0 && playerIndex < TFGame.PlayerInputs.Length)
             {
                 var owned = TFGame.PlayerInputs[playerIndex];
+                var current = dynRollcallElement.Get<TowerFall.PlayerInput>("input");
 
-                if (owned != null && dynRollcallElement.Get<TowerFall.PlayerInput>("input") != owned)
+                if (owned != null && current != owned)
                 {
                     dynRollcallElement.Set("input", owned);
                 }
+                else if (owned == null && current != null && ServiceCollections.ResolveInputService().IsSpareInput(current))
+                {
+                    dynRollcallElement.Set("input", null);
+                }
             }
 
-            if (!matchmakingService.IsSpectator() && playerIndex == matchmakingService.GetLocalSeat())
+            if (!matchmakingService.IsSpectator() && matchmakingService.IsLocalSeat(playerIndex))
             {
-                HandleTeamSelection(__instance, dynRollcallElement, lobby);
+                HandleTeamSelection(__instance, dynRollcallElement, lobby, playerIndex);
             }
             else if (lobby.Players.Any(player => player.Seat == playerIndex))
             {
@@ -465,7 +484,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
             }
         }
 
-        private static void HandleTeamSelection(RollcallElement element, DynamicData dynRollcallElement, Domain.Models.WebSocket.Lobby lobby)
+        private static void HandleTeamSelection(RollcallElement element, DynamicData dynRollcallElement, Domain.Models.WebSocket.Lobby lobby, int playerIndex)
         {
             if (!lobby.IsTeamMode)
             {
@@ -491,7 +510,7 @@ namespace TF.EX.Patchs.Entity.MenuItem
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
             var inputService = ServiceCollections.ResolveInputService();
 
-            var player = lobby.Players.FirstOrDefault(pl => pl.RoomPeerId == matchmakingService.GetRoomPeerId());
+            var player = lobby.Players.FirstOrDefault(pl => pl.Seat == playerIndex && pl.RoomPeerId == matchmakingService.GetRoomPeerId());
 
             if (player == null || player.Team == (int)chosen)
             {

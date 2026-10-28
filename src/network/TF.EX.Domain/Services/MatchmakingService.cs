@@ -61,6 +61,7 @@ namespace TF.EX.Domain.Services
         private int searchingWideCount;
         private bool isSearchWide;
         private bool isQuickPlayQueued;
+        private int? mainSeat;
 
         private Action<Lobby> onRankedMatched;
         private Action onRankedReady;
@@ -81,6 +82,7 @@ namespace TF.EX.Domain.Services
 
         private Dictionary<string, Action> onResult = [];
         private WSAction currentAction = WSAction.None;
+        private Models.WebSocket.Player updatingPlayer;
 
         private readonly INetplayManager _netplayManager;
         private readonly IArcherService _archerService;
@@ -415,6 +417,36 @@ namespace TF.EX.Domain.Services
             };
 
             var bytes = MessagePackSerializer.Serialize(updatePlayerMessage);
+            var message = MessagePackSerializer.ConvertToJson(bytes);
+            await Send(message);
+        }
+
+        private async Task SendAddLocalPlayer(Models.WebSocket.Player player)
+        {
+            var addLocalPlayerMessage = new AddLocalPlayerMessage
+            {
+                AddLocalPlayer = new AddLocalPlayer
+                {
+                    Player = player
+                }
+            };
+
+            var bytes = MessagePackSerializer.Serialize(addLocalPlayerMessage);
+            var message = MessagePackSerializer.ConvertToJson(bytes);
+            await Send(message);
+        }
+
+        private async Task SendRemoveLocalPlayer(int seat)
+        {
+            var removeLocalPlayerMessage = new RemoveLocalPlayerMessage
+            {
+                RemoveLocalPlayer = new RemoveLocalPlayer
+                {
+                    Seat = seat
+                }
+            };
+
+            var bytes = MessagePackSerializer.Serialize(removeLocalPlayerMessage);
             var message = MessagePackSerializer.ConvertToJson(bytes);
             await Send(message);
         }
@@ -906,6 +938,31 @@ namespace TF.EX.Domain.Services
                 }
             }
 
+            if (IsServerMsg(message, "AddLocalPlayerResponse"))
+            {
+                var bytes = MessagePackSerializer.ConvertFromJson(message);
+                var response = MessagePackSerializer.Deserialize<AddLocalPlayerResponseMessage>(bytes).AddLocalPlayerResponse;
+
+                if (!response.Success)
+                {
+                    _logger.LogDebug<MatchmakingService>($"Local player refused : {response.Message}");
+                }
+
+                RunOnGameThread(() => _inputService.HandleAddLocalPlayerResponse(response.Success));
+            }
+
+            if (IsServerMsg(message, "RemoveLocalPlayerResponse"))
+            {
+                var bytes = MessagePackSerializer.ConvertFromJson(message);
+                var response = MessagePackSerializer.Deserialize<RemoveLocalPlayerResponseMessage>(bytes).RemoveLocalPlayerResponse;
+
+                if (!response.Success)
+                {
+                    _logger.LogDebug<MatchmakingService>($"Local player removal refused : {response.Message}");
+                    RunOnGameThread(_inputService.HandleRemoveLocalPlayerRefused);
+                }
+            }
+
             if (IsServerMsg(message, "RematchLobby"))
             {
                 isMatchEndReported = false;
@@ -1178,7 +1235,7 @@ namespace TF.EX.Domain.Services
                 StateApi.Current.SetSeed(lobby.GameData.Seed);
             }
 
-            if (lobby.Players.Count == 1 && TFGame.Instance.Scene is Level level)
+            if (lobby.Players.Select(pl => pl.RoomPeerId).Distinct().Count() == 1 && TFGame.Instance.Scene is Level level)
             {
                 var isRankedGameAborted = lobby.IsRanked && level.Session.GetWinner() == -1;
 
@@ -1528,13 +1585,21 @@ namespace TF.EX.Domain.Services
                 return;
             }
 
-            var ownPlayer = lobby.Players.FirstOrDefault(pl => pl.RoomPeerId == peerId);
-            var previousSelf = previous?.Players?.FirstOrDefault(pl => pl.RoomPeerId == peerId);
-
-            if (ownPlayer == null || ownPlayer.Ready || previousSelf == null || !previousSelf.Ready)
+            foreach (var ownPlayer in lobby.Players.Where(pl => pl.RoomPeerId == peerId))
             {
-                return;
+                var previousSelf = previous?.Players?.FirstOrDefault(pl => pl.RoomPeerId == peerId && pl.Seat == ownPlayer.Seat);
+
+                if (ownPlayer.Ready || previousSelf == null || !previousSelf.Ready)
+                {
+                    continue;
+                }
+
+                UnreadyOwnRollcallElement(mainMenu, ownPlayer);
             }
+        }
+
+        private void UnreadyOwnRollcallElement(MainMenu mainMenu, Models.WebSocket.Player ownPlayer)
+        {
 
             var own = GetRollcallElements(mainMenu).FirstOrDefault(rc => DynamicData.For(rc).Get<int>("playerIndex") == ownPlayer.Seat);
 
@@ -1716,6 +1781,7 @@ namespace TF.EX.Domain.Services
         public void ResetPeer()
         {
             peerId = "";
+            mainSeat = null;
             _skinKnownPeers = new HashSet<string>();
             _skinStreamService.Reset();
         }
@@ -1939,7 +2005,7 @@ namespace TF.EX.Domain.Services
                     await SendLeaveLobby();
                     break;
                 case WSAction.UpdatePlayer:
-                    await SendUpdatePlayer(ownLobby.Players.First(pl => pl.RoomPeerId == peerId));
+                    await SendUpdatePlayer(updatingPlayer ?? ownLobby.Players.First(pl => pl.RoomPeerId == peerId));
                     break;
                 case WSAction.None:
                     break;
@@ -2157,7 +2223,62 @@ namespace TF.EX.Domain.Services
         {
             var self = ownLobby.Players.FirstOrDefault(player => player.RoomPeerId == peerId);
 
-            return self?.Seat ?? 0;
+            if (self == null)
+            {
+                return 0;
+            }
+
+            //The device's first seat stays its main one, whatever order the server lists its other players in
+            if (mainSeat == null || !ownLobby.Players.Any(player => player.Seat == mainSeat && player.RoomPeerId == peerId))
+            {
+                mainSeat = self.Seat;
+            }
+
+            return mainSeat.Value;
+        }
+
+        /// <summary>
+        /// The main seat, or the seat of another player on this device (same RoomPeerId)
+        /// </summary>
+        public bool IsLocalSeat(int seat)
+        {
+            return seat == GetLocalSeat()
+                || !string.IsNullOrEmpty(peerId) && ownLobby.Players.Any(player => player.Seat == seat && player.RoomPeerId == peerId);
+        }
+
+        public IReadOnlyList<int> GetLocalSeats()
+        {
+            if (string.IsNullOrEmpty(peerId))
+            {
+                return [];
+            }
+
+            return [.. ownLobby.Players.Where(player => player.RoomPeerId == peerId).Select(player => player.Seat)];
+        }
+
+        public async Task AddLocalPlayer()
+        {
+            if (!EnsureConnection())
+            {
+                return;
+            }
+
+            await SendAddLocalPlayer(new Models.WebSocket.Player
+            {
+                Name = $"{NetplayPreferences.Name} {GetLocalSeats().Count + 1}",
+                Platform = Utils.Platform.Current,
+                HaveModifiedGameFiles = Utils.GameFilesIntegrity.IsModified,
+            });
+        }
+
+        public async Task RemoveLocalPlayer(int seat)
+        {
+            if (!EnsureConnection())
+            {
+                return;
+            }
+
+            await SendRemoveLocalPlayer(seat);
         }
 
         public string GetRoomPeerId()
@@ -2172,6 +2293,7 @@ namespace TF.EX.Domain.Services
 
         public async Task UpdatePlayer(Models.WebSocket.Player player, Action onSucess, Action onFail)
         {
+            updatingPlayer = player;
             await Update(WSAction.UpdatePlayer, onSucess, onFail);
         }
 
@@ -2246,7 +2368,7 @@ namespace TF.EX.Domain.Services
 
         private bool AreAllPlayersReady()
         {
-            return ownLobby.Players.Count >= 2
+            return ownLobby.Players.Select(pl => pl.RoomPeerId).Distinct().Count() >= 2
                 && ownLobby.Players.All(pl => pl.Ready)
                 && AreTeamsPlayable();
         }

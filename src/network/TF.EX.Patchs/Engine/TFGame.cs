@@ -700,9 +700,12 @@ namespace TF.EX.Patchs.Engine
                     && !netplayManager.IsTestMode()
                     && VersusMatchResultsInputGate.ShouldFeedNeutralInput(level);
 
-                var playerInput = Domain.CustomComponent.LightPauseMenu.IsOpen || shouldFeedNeutralInput
+                var neutral = Domain.CustomComponent.LightPauseMenu.IsOpen || shouldFeedNeutralInput;
+                var playerInput = neutral
                     ? new Domain.Models.Input()
                     : inputService.GetPolledInput();
+
+                inputService.PushLocalPlayersInputs(neutral);
 
                 var status = netplayManager.AdvanceFrame(playerInput);
 

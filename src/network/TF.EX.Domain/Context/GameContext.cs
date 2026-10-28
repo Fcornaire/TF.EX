@@ -9,12 +9,14 @@ namespace TF.EX.Domain.Context
     public interface IGameContext
     {
         void UpdateCurrentInputs(IEnumerable<Input> inputs);
-        void UpdatePolledInput(Input input);
-        Input GetPolledInput();
+        void UpdatePolledInput(int index, Input input);
+        Input GetPolledInput(int index);
+        void ResetPolledInputs();
         Input GetCurrentInput(int characterIndex);
         List<Input> GetCurrentInputs();
 
         int GetLocalPlayerIndex();
+        IReadOnlyList<int> GetLocalPlayerIndexes();
         void SetLocalSeat(int seat);
         TowerFall.PlayerInput GetLocalInput();
         void SetLocalInput(TowerFall.PlayerInput input);
@@ -37,7 +39,8 @@ namespace TF.EX.Domain.Context
         private const int INPUT_LOCK_TIMEOUT_SECONDS = 5;
 
         private readonly AttributeManager<Input> CurrentInputs;
-        private Input PolledInput;
+        //Per local player index (several players can share this device)
+        private readonly Dictionary<int, Input> PolledInputs = new Dictionary<int, Input>();
         //Three threads touch this: game thread,websocket receive thread and the render thread (rollcall)
         private volatile Dictionary<int, Player> ArcherSelections = new Dictionary<int, Player>();
 
@@ -47,7 +50,6 @@ namespace TF.EX.Domain.Context
 
         public GameContext()
         {
-            PolledInput = new Input();
             CurrentInputs = new AttributeManager<Input>(EmptyInput, MAX_PLAYERS);
         }
 
@@ -58,9 +60,14 @@ namespace TF.EX.Domain.Context
             CurrentInputs.Update(inputs);
         }
 
-        public void UpdatePolledInput(Input input)
+        public void UpdatePolledInput(int index, Input input)
         {
-            PolledInput = input;
+            PolledInputs[index] = input;
+        }
+
+        public void ResetPolledInputs()
+        {
+            PolledInputs.Clear();
         }
 
         public Input GetCurrentInput(int characterIndex)
@@ -83,9 +90,9 @@ namespace TF.EX.Domain.Context
             return CurrentInputs[characterIndex];
         }
 
-        public Input GetPolledInput()
+        public Input GetPolledInput(int index)
         {
-            return PolledInput;
+            return PolledInputs.TryGetValue(index, out var input) ? input : EmptyInput();
         }
 
         public List<Input> GetCurrentInputs()
@@ -112,6 +119,41 @@ namespace TF.EX.Domain.Context
             var handle = GGRSFFI.netplay_local_player_handle();
 
             return handle >= 0 ? handle : matchmakingService.GetLocalSeat();
+        }
+
+        /// <summary>
+        /// Every player index played on this device: the local player first, then the other players sharing this device's RoomPeerId
+        /// </summary>
+        public IReadOnlyList<int> GetLocalPlayerIndexes()
+        {
+            var localIndex = GetLocalPlayerIndex();
+
+            if (ServiceCollections.ResolveNetplayManager().IsReplayMode())
+            {
+                return [localIndex];
+            }
+
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+
+            if (TowerFall.TFGame.Instance?.Scene is TowerFall.MainMenu
+                && !matchmakingService.GetOwnLobby().IsEmpty
+                && !matchmakingService.IsSpectator())
+            {
+                return [localIndex, .. matchmakingService.GetLocalSeats().Where(seat => seat != localIndex)];
+            }
+
+            var peerId = matchmakingService.GetRoomPeerId();
+
+            if (string.IsNullOrEmpty(peerId)
+                || matchmakingService.GetOwnLobby().SessionPlayers.Count(player => player.RoomPeerId == peerId) <= 1
+                || !ServiceCollections.ResolveInputService().SupportsLocalPlayers())
+            {
+                return [localIndex];
+            }
+
+            var count = GGRSFFI.netplay_local_player_handle_count();
+
+            return [localIndex, .. Enumerable.Range(0, count).Select(GGRSFFI.netplay_local_player_handle_at).Where(handle => handle >= 0 && handle != localIndex)];
         }
 
         public TowerFall.PlayerInput GetLocalInput()

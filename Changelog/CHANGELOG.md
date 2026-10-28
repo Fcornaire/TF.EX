@@ -1,6 +1,10 @@
-# Changelog
+﻿# Changelog
 
 ## [Unreleased]
+
+### New
+
+- Local players online: in an online lobby, another controller pressing confirm adds a player for it
 
 ## [0.27.1] - 2026-10-28
 
