@@ -9,9 +9,12 @@ namespace TF.EX.Domain.CustomComponent
         private const int MAX_PLAYERS = 4;
         private const int DEFAULT_PLAYERS = 2;
 
-        private int MinPlayers => Math.Max(
+        private int MinPlayers => new[]
+        {
             IsTeamMode ? LobbyVersusModeButton.TEAM_MODE_MIN_PLAYERS : 2,
-            Context.LobbyBuilderContext.IsEditing ? ownLobby.Players.Count : 0);
+            ServiceCollections.ResolveInputService().GetLocalPlayerCount() + 1,
+            Context.LobbyBuilderContext.IsEditing ? ownLobby.Players.Count : 0,
+        }.Max();
 
         private bool IsTeamMode => (TowerFall.Modes)ownLobby.GameData.Mode == TowerFall.Modes.TeamDeathmatch;
 
@@ -69,12 +72,13 @@ namespace TF.EX.Domain.CustomComponent
         private void UpdateSeriesShape()
         {
             var isLocked = Context.LobbyBuilderContext.IsEditing;
+            var canSwitch = !isLocked && LobbyVersusSeriesButton.IsDuelAllowed;
             var isTeams = ownLobby.MaxPlayers == LobbyVersusSeriesButton.TEAM_PLAYERS;
 
-            DrawLeft = !isLocked && isTeams;
-            DrawRight = !isLocked && !isTeams;
+            DrawLeft = canSwitch && isTeams;
+            DrawRight = canSwitch && !isTeams;
 
-            if (isLocked || !base.Selected)
+            if (!canSwitch || !base.Selected)
             {
                 return;
             }

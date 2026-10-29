@@ -17,5 +17,8 @@ namespace TF.EX.Domain.Models.WebSocket.Client
 
         [DataMember(Name = "is_wide")]
         public bool IsWide { get; set; }
+
+        [DataMember(Name = "local_players")]
+        public int LocalPlayers { get; set; } = 1;
     }
 }

@@ -47,7 +47,7 @@ namespace TF.EX.Domain.Ports
         Task UpdateLobbySettings(int maxPlayers, GameData gameData, ICollection<CustomMod> mods);
         bool CanEditLobbySettings();
         void RequestRollcallReconcile();
-        void PublishCustomSkin(int archerIndex, int archerAltIndex);
+        void PublishCustomSkin(Models.WebSocket.Player player);
         Task LeaveLobby(Action onSuccess, Action onFail);
         bool IsInUnfinishedRankedGame();
         void LeaveRankedGameOnLinkLost(string message);
@@ -66,6 +66,8 @@ namespace TF.EX.Domain.Ports
         string GetRoomPeerId();
         string GetRelayUrl();
         int GetLocalSeat();
+        Models.WebSocket.Player GetOwnPlayer();
+        IReadOnlyList<Models.WebSocket.Player> GetLocalPlayers();
         void ReconcileRollcallIfPending();
         void RunOnGameThread(Action action);
         void DrainGameThreadActions();

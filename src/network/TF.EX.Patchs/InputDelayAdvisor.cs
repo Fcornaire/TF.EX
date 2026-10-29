@@ -167,7 +167,7 @@ namespace TF.EX.Patchs
         {
             var localPeerId = matchmakingService.GetRoomPeerId();
 
-            return lobby.Players.FirstOrDefault(player => player.RoomPeerId == localPeerId);
+            return lobby.Players.FirstOrDefault(player => player.RoomPeerId == localPeerId && !player.IsGuest);
         }
 
         private static void PublishHostDelay(Domain.Ports.IMatchmakingService matchmakingService, INetplayManager netplayManager, Lobby lobby, Domain.Models.WebSocket.Player own)

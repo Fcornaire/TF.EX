@@ -4,7 +4,7 @@ using TowerFall;
 
 namespace TF.EX.Domain.CustomComponent
 {
-    public class NetplayMenuButton : MainModeButton
+    public class NetplayMenuButton : RefusableModeButton
     {
         private readonly Image icon;
         private readonly Action onConfirm;

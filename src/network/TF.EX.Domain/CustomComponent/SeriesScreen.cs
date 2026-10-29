@@ -78,6 +78,8 @@ namespace TF.EX.Domain.CustomComponent
         private Lobby resolvedLobby;
         private Dictionary<int, (int Index, int Alt)> resolvedArchers;
         private (string Confirm, string Back) shownGuides;
+        private readonly Dictionary<int, (int Index, int Alt)> guestChoices = [];
+        private readonly Dictionary<int, DateTime> guestBusyUntil = [];
 
         public SeriesScreen(MainMenu menu) : base(-1)
         {
@@ -97,7 +99,7 @@ namespace TF.EX.Domain.CustomComponent
             archerIndex = own?.ArcherIndex ?? 0;
             altIndex = own?.ArcherAltIndex ?? 0;
             towerCursor = FirstAvailableTower(series);
-            focus = matchmakingService.IsSeriesPicker() && own != null && series?.PickOf(own.Seat) == null ? Focus.Tower : Focus.Face;
+            focus = matchmakingService.IsSeriesPicker() && own != null && series.PickOf(GetPickingSeat(matchmakingService, series)) == null ? Focus.Tower : Focus.Face;
 
             LogInputs(matchmakingService);
         }
@@ -170,13 +172,15 @@ namespace TF.EX.Domain.CustomComponent
                 return;
             }
 
+            UpdateGuests(matchmakingService, lobby);
+
             if (own.Ready && (archerIndex != own.ArcherIndex || altIndex != own.ArcherAltIndex))
             {
                 archerIndex = own.ArcherIndex;
                 altIndex = own.ArcherAltIndex;
             }
 
-            if (focus == Focus.Tower && (series.IsFinished || pendingPick.HasValue && series.PickOf(own.Seat) == pendingPick))
+            if (focus == Focus.Tower && (series.IsFinished || pendingPick.HasValue && series.PickOf(GetPickingSeat(matchmakingService, series)) == pendingPick))
             {
                 focus = Focus.Face;
                 pendingPick = null;
@@ -296,7 +300,7 @@ namespace TF.EX.Domain.CustomComponent
                     Sounds.ui_clickBack.Play();
                     focus = Focus.Tower;
                     pendingPick = null;
-                    towerCursor = series.PickOf(own.Seat) ?? series.NextMapId ?? towerCursor;
+                    towerCursor = series.PickOf(GetPickingSeat(matchmakingService, series)) ?? series.NextMapId ?? towerCursor;
                 }
                 else
                 {
@@ -307,25 +311,29 @@ namespace TF.EX.Domain.CustomComponent
 
         private void ChangeArcher(Lobby lobby, Player own, int direction)
         {
+            (archerIndex, altIndex) = NextArcher(lobby, own, (archerIndex, altIndex), direction);
+        }
+
+        private static (int Index, int Alt) NextArcher(Lobby lobby, Player player, (int Index, int Alt) current, int direction)
+        {
             var count = ArcherData.Archers?.Length ?? ArcherDataExtensions.VanillaArcherCount;
-            var candidate = archerIndex < count ? archerIndex : (direction > 0 ? -1 : count);
+            var candidate = current.Index < count ? current.Index : (direction > 0 ? -1 : count);
 
             for (int step = 0; step < count; step++)
             {
                 candidate = ((candidate + direction) % count + count) % count;
 
-                if (!IsSelectable(candidate, lobby, own))
+                if (!IsSelectable(candidate, lobby, player))
                 {
                     continue;
                 }
 
-                archerIndex = candidate;
-                altIndex = ArcherDataExtensions.Exists(candidate, altIndex) ? altIndex : (int)ArcherData.ArcherTypes.Normal;
                 Sounds.ui_move2.Play();
-                return;
+                return (candidate, ArcherDataExtensions.Exists(candidate, current.Alt) ? current.Alt : (int)ArcherData.ArcherTypes.Normal);
             }
 
             Sounds.ui_invalid.Play();
+            return current;
         }
 
         private static bool IsSelectable(int candidate, Lobby lobby, Player own)
@@ -341,47 +349,33 @@ namespace TF.EX.Domain.CustomComponent
 
         private void ToggleAlt()
         {
-            var next = altIndex == (int)ArcherData.ArcherTypes.Normal
+            altIndex = ToggledAlt(archerIndex, altIndex);
+        }
+
+        private static int ToggledAlt(int index, int alt)
+        {
+            var next = alt == (int)ArcherData.ArcherTypes.Normal
                 ? (int)ArcherData.ArcherTypes.Alt
                 : (int)ArcherData.ArcherTypes.Normal;
 
-            if (!ArcherDataExtensions.Exists(archerIndex, next))
+            if (!ArcherDataExtensions.Exists(index, next))
             {
                 Sounds.ui_invalid.Play();
-                return;
+                return alt;
             }
 
-            altIndex = next;
             Sounds.ui_altCostumeShift.Play(CENTER_X);
+            return next;
         }
 
         private void SendOwn(Ports.IMatchmakingService matchmakingService, Player own, bool ready)
         {
-            own.ArcherIndex = archerIndex;
-            own.ArcherAltIndex = altIndex;
-            own.CustomArcherId = ArcherDataExtensions.GetCustomArcherId(archerIndex, altIndex);
-            own.StartsWithoutHat = ArcherDataExtensions.StartsWithoutHat(archerIndex, altIndex);
-            own.CustomVariants = MainMenu.VersusMatchSettings.Variants.CustomVariantTitles();
-            own.UseInstantReplay = NetplayOptions.UseInstantReplay;
-
-            var modCollections = ServiceCollections.ResolveModCollections();
-            own.ArcherMods = ArcherDataExtensions.GetInstalledArcherMods(mod => modCollections?.GetVersion(mod));
-            own.Ready = ready;
-
+            ApplyChoice(own, archerIndex, altIndex, ready);
             busyUntil = DateTime.UtcNow.AddSeconds(3);
-
-            if (ready)
-            {
-                Sounds.ui_click.Play();
-            }
-            else
-            {
-                Sounds.ui_clickBack.Play();
-            }
 
             if (ready && own.HasCustomArcher)
             {
-                matchmakingService.PublishCustomSkin(archerIndex, altIndex);
+                matchmakingService.PublishCustomSkin(own);
             }
 
             _ = matchmakingService.UpdatePlayer(own,
@@ -391,6 +385,93 @@ namespace TF.EX.Domain.CustomComponent
                     busyUntil = DateTime.MinValue;
                     matchmakingService.RunOnGameThread(() => Sounds.ui_invalid.Play());
                 });
+        }
+
+        private void UpdateGuests(Ports.IMatchmakingService matchmakingService, Lobby lobby)
+        {
+            var guestInputs = ServiceCollections.ResolveInputService().GetGuestInputs();
+
+            foreach (var guest in matchmakingService.GetLocalPlayers().Where(player => player.IsGuest))
+            {
+                if (guest.Ready || !guestChoices.ContainsKey(guest.Seat))
+                {
+                    guestChoices[guest.Seat] = (guest.ArcherIndex, guest.ArcherAltIndex);
+                }
+
+                var input = guestInputs.ElementAtOrDefault(guest.LocalIndex - 1);
+                var isBusy = guestBusyUntil.TryGetValue(guest.Seat, out var busy) && DateTime.UtcNow < busy;
+
+                if (input == null || isBusy)
+                {
+                    continue;
+                }
+
+                var choice = guestChoices[guest.Seat];
+
+                if (guest.Ready)
+                {
+                    if (input.MenuBack)
+                    {
+                        SendGuest(matchmakingService, guest, choice, false);
+                    }
+                }
+                else if (input.MenuLeft || input.MenuRight)
+                {
+                    guestChoices[guest.Seat] = NextArcher(lobby, guest, choice, input.MenuRight ? 1 : -1);
+                }
+                else if (input.MenuAlt && TowerFall.GameData.DarkWorldDLC)
+                {
+                    guestChoices[guest.Seat] = (choice.Index, ToggledAlt(choice.Index, choice.Alt));
+                }
+                else if (input.MenuConfirm)
+                {
+                    SendGuest(matchmakingService, guest, choice, true);
+                }
+            }
+        }
+
+        private void SendGuest(Ports.IMatchmakingService matchmakingService, Player guest, (int Index, int Alt) choice, bool ready)
+        {
+            var seat = guest.Seat;
+
+            ApplyChoice(guest, choice.Index, choice.Alt, ready);
+            guestBusyUntil[seat] = DateTime.UtcNow.AddSeconds(3);
+
+            if (ready && guest.HasCustomArcher)
+            {
+                matchmakingService.PublishCustomSkin(guest);
+            }
+
+            _ = matchmakingService.UpdatePlayer(guest,
+                () => guestBusyUntil[seat] = DateTime.MinValue,
+                () =>
+                {
+                    guestBusyUntil[seat] = DateTime.MinValue;
+                    matchmakingService.RunOnGameThread(() => Sounds.ui_invalid.Play());
+                });
+        }
+
+        private static void ApplyChoice(Player player, int index, int alt, bool ready)
+        {
+            player.ArcherIndex = index;
+            player.ArcherAltIndex = alt;
+            player.CustomArcherId = ArcherDataExtensions.GetCustomArcherId(index, alt);
+            player.StartsWithoutHat = ArcherDataExtensions.StartsWithoutHat(index, alt);
+            player.CustomVariants = MainMenu.VersusMatchSettings.Variants.CustomVariantTitles();
+            player.UseInstantReplay = NetplayOptions.UseInstantReplay;
+
+            var modCollections = ServiceCollections.ResolveModCollections();
+            player.ArcherMods = ArcherDataExtensions.GetInstalledArcherMods(mod => modCollections?.GetVersion(mod));
+            player.Ready = ready;
+
+            if (ready)
+            {
+                Sounds.ui_click.Play();
+            }
+            else
+            {
+                Sounds.ui_clickBack.Play();
+            }
         }
 
         private void LeaveLobby(Ports.IMatchmakingService matchmakingService, Models.MenuState? target = null)
@@ -649,16 +730,19 @@ namespace TF.EX.Domain.CustomComponent
             }
 
             var isLocal = player.RoomPeerId == matchmakingService.GetRoomPeerId();
+            var isOwner = isLocal && !player.IsGuest;
 
-            var (index, alt) = isLocal
+            var (index, alt) = isOwner
                 ? (archerIndex, altIndex)
-                : resolved.TryGetValue(seat, out var standIn) ? standIn : (player.ArcherIndex, player.ArcherAltIndex);
+                : isLocal && guestChoices.TryGetValue(seat, out var guestChoice)
+                    ? guestChoice
+                    : resolved.TryGetValue(seat, out var standIn) ? standIn : (player.ArcherIndex, player.ArcherAltIndex);
             var isRankedOver = lobby.IsRanked && series.IsFinished;
             var lastGame = series.Games.LastOrDefault();
             var hasWonLast = lastGame == null || lastGame.WinnerSide == side;
             var archer = ArcherDataExtensions.Exists(index, alt) ? ArcherData.Get(index, (ArcherData.ArcherTypes)alt) : ArcherData.Get(0, ArcherData.ArcherTypes.Normal);
             var face = hasWonLast ? archer.Portraits.Win : archer.Portraits.Lose;
-            var isSelecting = isLocal && !player.Ready && !isRankedOver && (series.IsFinished || focus == Focus.Face);
+            var isSelecting = isLocal && !player.Ready && !isRankedOver && (player.IsGuest || series.IsFinished || focus == Focus.Face);
             var border = hasWonLast ? WinBorder : LoseBorder;
 
             if (isSelecting && isCompact)
@@ -722,7 +806,7 @@ namespace TF.EX.Domain.CustomComponent
 
         private static bool IsPingShown(Ports.IMatchmakingService matchmakingService, Player player, bool isLocal)
         {
-            return matchmakingService.IsSpectator() ? player.IsHost : !isLocal;
+            return matchmakingService.IsSpectator() ? player.IsHost : !isLocal && !player.IsGuest;
         }
 
         private static void DrawPing(Ports.IMatchmakingService matchmakingService, Player player, int side, float x, bool isCompact)
@@ -828,7 +912,7 @@ namespace TF.EX.Domain.CustomComponent
             var isPicker = matchmakingService.IsSeriesPicker();
             var shouldShowCursor = isPicker && focus == Focus.Tower;
             var isCursorPlayed = shouldShowCursor && series.PlayedMapIds.Contains(towerCursor);
-            
+
             var header = !shouldShowCursor
                 ? TowerHeader(matchmakingService, lobby, series, isPicker)
                 : isCursorPlayed ? $"{TowerName(towerCursor)} - ALREADY PLAYED" : TowerName(towerCursor);
@@ -907,7 +991,7 @@ namespace TF.EX.Domain.CustomComponent
 
             var pickerSeats = series.Sides[series.PickerSide.Value].Count;
 
-            return series.PickOf(matchmakingService.GetLocalSeat()).HasValue && series.Picks.Count < pickerSeats ? "TEAMMATE IS PICKING" : "PICK THE NEXT TOWER";
+            return series.PickOf(GetPickingSeat(matchmakingService, series)).HasValue && series.Picks.Count < pickerSeats ? "TEAMMATE IS PICKING" : "PICK THE NEXT TOWER";
         }
 
         private static void DrawFinished(Lobby lobby, Series series)
@@ -1007,7 +1091,14 @@ namespace TF.EX.Domain.CustomComponent
         {
             var peerId = matchmakingService.GetRoomPeerId();
 
-            return matchmakingService.GetOwnLobby().Players.FirstOrDefault(pl => pl.RoomPeerId == peerId);
+            return matchmakingService.GetOwnLobby().Players.FirstOrDefault(pl => pl.RoomPeerId == peerId && !pl.IsGuest);
+        }
+
+        private static int GetPickingSeat(Ports.IMatchmakingService matchmakingService, Series series)
+        {
+            var picking = matchmakingService.GetLocalPlayers().FirstOrDefault(player => series.PickerSide.HasValue && series.GetSideOfSeat(player.Seat) == series.PickerSide);
+
+            return picking?.Seat ?? matchmakingService.GetLocalSeat();
         }
 
         private static void LogInputs(Ports.IMatchmakingService matchmakingService)

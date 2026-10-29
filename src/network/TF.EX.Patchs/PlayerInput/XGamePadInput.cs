@@ -116,8 +116,7 @@ namespace TF.EX.Patchs.PlayerInput
                 return false;
             }
 
-            return inputService.IsInputLocked()
-                || inputService.GetInputIndex(self) != inputService.GetLocalPlayerInputIndex();
+            return inputService.IsInputLocked() || !inputService.IsLocalSeat(inputService.GetInputIndex(self));
         }
 
         [HarmonyPostfix]
@@ -195,9 +194,9 @@ namespace TF.EX.Patchs.PlayerInput
                 return;
             }
 
-            if (seat == inputService.GetLocalPlayerInputIndex() && !netplayManager.IsReplayMode())
+            if (inputService.IsLocalSeat(seat) && !netplayManager.IsReplayMode())
             {
-                inputService.UpdatePolledInput(__result, rightStick);
+                inputService.UpdatePolledInput(seat, __result, rightStick);
             }
 
             if (netplayManager.IsReplayMode() && seat >= 0 && seat == (ReplayApi.Current?.GetTakeoverSeat() ?? -1))
@@ -307,7 +306,7 @@ namespace TF.EX.Patchs.PlayerInput
                     {
                         var index = Traverse.Create(rc).Field("playerIndex").GetValue<int>();
 
-                        return index == inputService.GetLocalPlayerInputIndex();
+                        return index == inputService.GetInputIndex(self);
                     });
 
                     var rollcallState = Traverse.Create(rollcallElement).Field("state").GetValue<StateMachine>();
@@ -372,14 +371,14 @@ namespace TF.EX.Patchs.PlayerInput
                     {
                         var index = Traverse.Create(rc).Field("playerIndex").GetValue<int>();
 
-                        return index == inputService.GetLocalPlayerInputIndex();
+                        return index == inputService.GetInputIndex(self);
                     });
 
                     var rollcallState = Traverse.Create(rollcallElement).Field("state").GetValue<StateMachine>();
 
                     if (rollcallState.State == 0)
                     {
-                        if (actualResult && TF.EX.Patchs.Scene.MainMenuPatch.TryOpenLobbyEditor())
+                        if (actualResult && TF.EX.Patchs.Scene.MainMenuPatch.TryOpenLobbyEditor(inputService.GetInputIndex(self)))
                         {
                             return false;
                         }

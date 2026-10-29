@@ -14,5 +14,8 @@ namespace TF.EX.Domain.Models.WebSocket.Client
     {
         [DataMember(Name = "lobby")]
         public Lobby Lobby { get; set; }
+
+        [DataMember(Name = "local_players")]
+        public int LocalPlayers { get; set; } = 1;
     }
 }

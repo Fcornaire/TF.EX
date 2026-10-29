@@ -7,8 +7,8 @@ namespace TF.EX.Domain.Ports
     {
         ArtifactSkinBundle GetOrBuildArcherBundle(int archerIndex, int archerAltIndex);
 
-        ArtifactSkinBundle GetLastPublished();
-        void MarkPublished(ArtifactSkinBundle bundle);
+        IReadOnlyList<ArtifactSkinBundle> GetPublished();
+        void MarkPublished(int localIndex, ArtifactSkinBundle bundle);
 
         void ReceiveChunk(string fromPeerId, SkinChunk chunk);
 

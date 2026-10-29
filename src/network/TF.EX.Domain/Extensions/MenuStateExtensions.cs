@@ -4,6 +4,23 @@ namespace TF.EX.Domain.Extensions
 {
     public static class MenuStateExtensions
     {
+        private static readonly HashSet<MenuState> NetplayScreens =
+        [
+            MenuState.NetplaySelect,
+            MenuState.QuickPlaySearch,
+            MenuState.RankedSelect,
+            MenuState.RankedSearch,
+            MenuState.Leaderboard,
+            MenuState.PlayerProfile,
+            MenuState.LobbyBrowser,
+            MenuState.LobbyBuilder,
+            MenuState.PrivateSelect,
+            MenuState.PrivateJoinCode,
+            MenuState.Changelog,
+            MenuState.ChangelogHistory,
+            MenuState.Tutorial,
+        ];
+
         public static TowerFall.MainMenu.MenuState ToTFModel(this MenuState menuState)
         {
             if ((int)menuState <= 15)
@@ -11,41 +28,25 @@ namespace TF.EX.Domain.Extensions
                 return (TowerFall.MainMenu.MenuState)menuState;
             }
 
-            switch (menuState)
+            return menuState switch
             {
-                case MenuState.ReplaysBrowser:
-                    return (TowerFall.MainMenu.MenuState)58;
-                case MenuState.LobbyBrowser:
-                    return (TowerFall.MainMenu.MenuState)59;
-                case MenuState.LobbyBuilder:
-                    return (TowerFall.MainMenu.MenuState)60;
-                case MenuState.SeriesLobby:
-                    return (TowerFall.MainMenu.MenuState)61;
-                case MenuState.NetplaySelect:
-                    return (TowerFall.MainMenu.MenuState)62;
-                case MenuState.PrivateSelect:
-                    return (TowerFall.MainMenu.MenuState)63;
-                case MenuState.PrivateJoinCode:
-                    return (TowerFall.MainMenu.MenuState)64;
-                case MenuState.QuickPlaySearch:
-                    return (TowerFall.MainMenu.MenuState)65;
-                case MenuState.Changelog:
-                    return (TowerFall.MainMenu.MenuState)66;
-                case MenuState.ChangelogHistory:
-                    return (TowerFall.MainMenu.MenuState)67;
-                case MenuState.RankedSelect:
-                    return (TowerFall.MainMenu.MenuState)68;
-                case MenuState.Leaderboard:
-                    return (TowerFall.MainMenu.MenuState)69;
-                case MenuState.RankedSearch:
-                    return (TowerFall.MainMenu.MenuState)70;
-                case MenuState.PlayerProfile:
-                    return (TowerFall.MainMenu.MenuState)71;
-                case MenuState.Tutorial:
-                    return (TowerFall.MainMenu.MenuState)72;
-                default:
-                    throw new System.NotImplementedException("MenuState not found");
-            }
+                MenuState.ReplaysBrowser => (TowerFall.MainMenu.MenuState)58,
+                MenuState.LobbyBrowser => (TowerFall.MainMenu.MenuState)59,
+                MenuState.LobbyBuilder => (TowerFall.MainMenu.MenuState)60,
+                MenuState.SeriesLobby => (TowerFall.MainMenu.MenuState)61,
+                MenuState.NetplaySelect => (TowerFall.MainMenu.MenuState)62,
+                MenuState.PrivateSelect => (TowerFall.MainMenu.MenuState)63,
+                MenuState.PrivateJoinCode => (TowerFall.MainMenu.MenuState)64,
+                MenuState.QuickPlaySearch => (TowerFall.MainMenu.MenuState)65,
+                MenuState.Changelog => (TowerFall.MainMenu.MenuState)66,
+                MenuState.ChangelogHistory => (TowerFall.MainMenu.MenuState)67,
+                MenuState.RankedSelect => (TowerFall.MainMenu.MenuState)68,
+                MenuState.Leaderboard => (TowerFall.MainMenu.MenuState)69,
+                MenuState.RankedSearch => (TowerFall.MainMenu.MenuState)70,
+                MenuState.PlayerProfile => (TowerFall.MainMenu.MenuState)71,
+                MenuState.Tutorial => (TowerFall.MainMenu.MenuState)72,
+                _ => throw new System.NotImplementedException("MenuState not found"),
+            };
         }
 
         public static MenuState ToDomainModel(this TowerFall.MainMenu.MenuState menuState)
@@ -55,42 +56,30 @@ namespace TF.EX.Domain.Extensions
                 return (MenuState)menuState;
             }
 
-            switch (menuState)
+            return menuState switch
             {
-                case (TowerFall.MainMenu.MenuState)58:
-                    return MenuState.ReplaysBrowser;
-                case (TowerFall.MainMenu.MenuState)59:
-                    return MenuState.LobbyBrowser;
-                case (TowerFall.MainMenu.MenuState)60:
-                    return MenuState.LobbyBuilder;
-                case (TowerFall.MainMenu.MenuState)61:
-                    return MenuState.SeriesLobby;
-                case (TowerFall.MainMenu.MenuState)62:
-                    return MenuState.NetplaySelect;
-                case (TowerFall.MainMenu.MenuState)63:
-                    return MenuState.PrivateSelect;
-                case (TowerFall.MainMenu.MenuState)64:
-                    return MenuState.PrivateJoinCode;
-                case (TowerFall.MainMenu.MenuState)65:
-                    return MenuState.QuickPlaySearch;
-                case (TowerFall.MainMenu.MenuState)66:
-                    return MenuState.Changelog;
-                case (TowerFall.MainMenu.MenuState)67:
-                    return MenuState.ChangelogHistory;
-                case (TowerFall.MainMenu.MenuState)68:
-                    return MenuState.RankedSelect;
-                case (TowerFall.MainMenu.MenuState)69:
-                    return MenuState.Leaderboard;
-                case (TowerFall.MainMenu.MenuState)70:
-                    return MenuState.RankedSearch;
-                case (TowerFall.MainMenu.MenuState)71:
-                    return MenuState.PlayerProfile;
-                case (TowerFall.MainMenu.MenuState)72:
-                    return MenuState.Tutorial;
-                default:
-                    return MenuState.Unknown;
-            }
+                (TowerFall.MainMenu.MenuState)58 => MenuState.ReplaysBrowser,
+                (TowerFall.MainMenu.MenuState)59 => MenuState.LobbyBrowser,
+                (TowerFall.MainMenu.MenuState)60 => MenuState.LobbyBuilder,
+                (TowerFall.MainMenu.MenuState)61 => MenuState.SeriesLobby,
+                (TowerFall.MainMenu.MenuState)62 => MenuState.NetplaySelect,
+                (TowerFall.MainMenu.MenuState)63 => MenuState.PrivateSelect,
+                (TowerFall.MainMenu.MenuState)64 => MenuState.PrivateJoinCode,
+                (TowerFall.MainMenu.MenuState)65 => MenuState.QuickPlaySearch,
+                (TowerFall.MainMenu.MenuState)66 => MenuState.Changelog,
+                (TowerFall.MainMenu.MenuState)67 => MenuState.ChangelogHistory,
+                (TowerFall.MainMenu.MenuState)68 => MenuState.RankedSelect,
+                (TowerFall.MainMenu.MenuState)69 => MenuState.Leaderboard,
+                (TowerFall.MainMenu.MenuState)70 => MenuState.RankedSearch,
+                (TowerFall.MainMenu.MenuState)71 => MenuState.PlayerProfile,
+                (TowerFall.MainMenu.MenuState)72 => MenuState.Tutorial,
+                _ => MenuState.Unknown,
+            };
         }
 
+        public static bool IsNetplayScreen(this MenuState menuState)
+        {
+            return NetplayScreens.Contains(menuState);
+        }
     }
 }

@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-10-29
+
+### New
+
+- Netplay: up to 3 local players can now play from the same device. On the netplay menu, press START on another controller to join, BACK to leave, or the Alt button to swap P1 controller. Not available in ranked. Thanks to Caleb.Munchinsky for the groundwork
+
 ## [0.27.1] - 2026-10-28
 
 ### Fixed

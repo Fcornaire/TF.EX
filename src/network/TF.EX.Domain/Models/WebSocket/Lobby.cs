@@ -147,7 +147,7 @@ namespace TF.EX.Domain.Models.WebSocket
             return Games.Count(game => game.WinnerSide == side);
         }
 
-        public int? SideOfSeat(int seat)
+        public int? GetSideOfSeat(int seat)
         {
             var side = Sides.FindIndex(seats => seats.Contains(seat));
 
@@ -205,6 +205,11 @@ namespace TF.EX.Domain.Models.WebSocket
 
         public int? InputDelay { get; set; }
 
+        public int LocalIndex { get; set; } = 0;
+
+        [IgnoreMember]
+        public bool IsGuest => LocalIndex > 0;
+
         [IgnoreMember]
         public bool HasCustomArcher => !string.IsNullOrEmpty(CustomArcherId);
 
@@ -227,6 +232,7 @@ namespace TF.EX.Domain.Models.WebSocket
                 HaveModifiedGameFiles = HaveModifiedGameFiles,
                 Platform = Platform,
                 InputDelay = InputDelay,
+                LocalIndex = LocalIndex,
             };
         }
     }

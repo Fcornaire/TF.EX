@@ -171,7 +171,7 @@ namespace TF.EX.Domain.Services
 
             ApplyRelay();
 
-            Task.Run(() => Connect(roundLogic), _cancellationToken);
+            Task.Run(() => Connect(), _cancellationToken);
         }
 
         private void ApplyRelay()
@@ -228,7 +228,23 @@ namespace TF.EX.Domain.Services
             }
         }
 
-        private void Connect(TowerFall.RoundLogic roundLogic)
+        private static int[] GetLocalHandles()
+        {
+            try
+            {
+                var count = GGRSFFI.netplay_local_player_handle_count();
+
+                return [.. Enumerable.Range(0, Math.Max(count, 0))
+                    .Select(GGRSFFI.netplay_local_player_handle_at)
+                    .Where(handle => handle >= 0)];
+            }
+            catch (EntryPointNotFoundException)
+            {
+                return [];
+            }
+        }
+
+        private void Connect()
         {
             try
             {
@@ -250,6 +266,7 @@ namespace TF.EX.Domain.Services
                 }
 
                 _logger.LogDebug<NetplayManager>("Netplay initialization succeeded");
+                _gameContext.SetSessionSeats(GetLocalHandles());
                 _synchronizationTimer = Stopwatch.StartNew();
                 _isInit = true;
             }
