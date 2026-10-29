@@ -58,7 +58,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             builder.WithDepth(entity.Depth);
             builder.WithFromHyper(entity.FromHyper);
 
-            if (entity.StuckTo != null && entity.State == TowerFall.Arrow.ArrowStates.Stuck)
+            if (entity.StuckTo?.Scene != null)
             {
                 var stuckToActualDepth = DynamicData.For(entity.StuckTo).Get<double>("actualDepth");
                 builder.WithStuckToActualDepth(stuckToActualDepth);

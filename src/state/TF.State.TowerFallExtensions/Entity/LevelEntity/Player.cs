@@ -455,7 +455,12 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                         list.Add(wingsGainAction);
                         break;
                     default:
-                        throw new InvalidOperationException("Scheduled action not found");
+                        var playerMethod = typeof(TowerFall.Player).GetMethod(action, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, Type.EmptyTypes);
+                        if (playerMethod != null)
+                        {
+                            list.Add((Action)Delegate.CreateDelegate(typeof(Action), self, playerMethod));
+                        }
+                        break;
                 }
                 ;
             }

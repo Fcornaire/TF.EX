@@ -215,7 +215,7 @@ namespace TF.EX.Domain.Services
                 HeadNormal = assets.HeadNormalId ?? clone.Sprites.HeadNormal,
                 HeadNoHat = assets.HeadNoHatId ?? clone.Sprites.HeadNoHat,
                 HeadCrown = assets.HeadCrownId ?? clone.Sprites.HeadCrown,
-                HeadBack = assets.HeadBackId ?? clone.Sprites.HeadBack,
+                HeadBack = assets.HeadBackId ?? "",
                 Bow = assets.BowId ?? clone.Sprites.Bow,
             };
 
