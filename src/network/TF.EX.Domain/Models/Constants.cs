@@ -14,8 +14,12 @@ namespace TF.EX.Domain.Models
 
         public const int CONNECTION_TIMEOUT_MS = 30000;
 
-        public static readonly IEnumerable<string> NETPLAY_SAFE_MAP = new List<string> //Not all map are supported in netplay right now... //TODO: it actually is, remove this next time
-        {
+        public const int MAX_SEATS = 8;
+
+        public const int MAX_LOCAL_PLAYERS = 3;
+
+        public static readonly IEnumerable<string> NETPLAY_SAFE_MAP =  //Not all map are supported in netplay right now... //TODO: it actually is, remove this next time...One day lol
+        [
             "SACRED GROUND",
             "TWILIGHT SPIRE",
             "BACKFIRE",
@@ -32,7 +36,7 @@ namespace TF.EX.Domain.Models
             "DREADWOOD",
             "DARKFANG",
             "CATACLYSM"
-        };
+        ];
 
         public const string RIGHT_STICK_VARIANT_NAME = "RightStickShot";
         public const string RIGHT_STICK_VARIANT_FULLNAME = "TF.EX/RightStickShot";

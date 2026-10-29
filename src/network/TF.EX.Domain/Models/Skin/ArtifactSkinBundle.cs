@@ -5,6 +5,6 @@
     {
         public string BundleId { get; set; } = "";
         public string CustomArcherId { get; set; } = "";
-        public byte[] Bytes { get; set; } = Array.Empty<byte>();
+        public byte[] Bytes { get; set; } = [];
     }
 }

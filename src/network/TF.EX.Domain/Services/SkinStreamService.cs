@@ -17,7 +17,7 @@ namespace TF.EX.Domain.Services
     internal class SkinStreamService(ILogger logger) : ISkinStreamService
     {
         private readonly Dictionary<(int, int), ArtifactSkinBundle> _localBundles = [];
-        private volatile ArtifactSkinBundle _lastPublished;
+        private readonly ConcurrentDictionary<int, ArtifactSkinBundle> _published = new();
 
         private readonly ConcurrentDictionary<string, PendingAssembly> _incoming = new();
         private readonly ConcurrentDictionary<string, ArcherSkinBundle> _bundles = new();
@@ -53,14 +53,14 @@ namespace TF.EX.Domain.Services
             return bundle;
         }
 
-        public ArtifactSkinBundle GetLastPublished()
+        public IReadOnlyList<ArtifactSkinBundle> GetPublished()
         {
-            return _lastPublished;
+            return [.. _published.Values.Distinct()];
         }
 
-        public void MarkPublished(ArtifactSkinBundle bundle)
+        public void MarkPublished(int localIndex, ArtifactSkinBundle bundle)
         {
-            _lastPublished = bundle;
+            _published[localIndex] = bundle;
         }
 
         public void ReceiveChunk(string fromPeerId, SkinChunk chunk)
@@ -213,7 +213,7 @@ namespace TF.EX.Domain.Services
             _bundles.Clear();
             _completedIds.Clear();
             _localBundles.Clear();
-            _lastPublished = null;
+            _published.Clear();
         }
 
         private ArtifactSkinBundle Build(int archerIndex, int archerAltIndex)

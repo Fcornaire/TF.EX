@@ -18,19 +18,50 @@ namespace TF.EX.Patchs.Entity.LevelEntity
         private const float MINIMUM_DARKNESS_LEVEL = 0.5f;
 
         private static readonly BlendState BlendState = new() { ColorWriteChannels = ColorWriteChannels.None };
+        private static readonly HashSet<string> CheckedHeads = [];
 
         [HarmonyPrefix]
-        [HarmonyPatch(MethodType.Constructor, new Type[] { typeof(int), typeof(Vector2), typeof(Allegiance), typeof(Allegiance), typeof(PlayerInventory), typeof(HatStates), typeof(bool), typeof(bool), typeof(bool) })]
+        [HarmonyPatch(MethodType.Constructor, [typeof(int), typeof(Vector2), typeof(Allegiance), typeof(Allegiance), typeof(PlayerInventory), typeof(HatStates), typeof(bool), typeof(bool), typeof(bool)])]
         public static void Player_Ctor_Prefix(int playerIndex)
         {
             Domain.Models.Skin.SkinSlot.Enter(playerIndex);
         }
 
         [HarmonyFinalizer]
-        [HarmonyPatch(MethodType.Constructor, new Type[] { typeof(int), typeof(Vector2), typeof(Allegiance), typeof(Allegiance), typeof(PlayerInventory), typeof(HatStates), typeof(bool), typeof(bool), typeof(bool) })]
+        [HarmonyPatch(MethodType.Constructor, [typeof(int), typeof(Vector2), typeof(Allegiance), typeof(Allegiance), typeof(PlayerInventory), typeof(HatStates), typeof(bool), typeof(bool), typeof(bool)])]
         public static void Player_Ctor_Finalizer()
         {
             Domain.Models.Skin.SkinSlot.Exit();
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch("InitHead")]
+        public static void Player_InitHead_Prefix(TowerFall.Player __instance)
+        {
+            EnsureTeamHeadTextures(__instance.ArcherData.Sprites[__instance.HatState]);
+        }
+
+        private static void EnsureTeamHeadTextures(string spriteId)
+        {
+            if (!CheckedHeads.Add(spriteId))
+            {
+                return;
+            }
+
+            var xml = TFGame.SpriteData.GetXML(spriteId);
+
+            if (xml == null || !xml.HasChild("Texture") || !TFGame.Atlas.Contains(xml.ChildText("Texture")))
+            {
+                return;
+            }
+
+            foreach (var tag in new[] { "RedTexture", "BlueTexture" })
+            {
+                if (xml.HasChild(tag) && !TFGame.Atlas.Contains(xml.ChildText(tag)))
+                {
+                    TFGame.Atlas[xml.ChildText(tag)] = TFGame.Atlas[xml.ChildText("Texture")];
+                }
+            }
         }
 
         [HarmonyPostfix]

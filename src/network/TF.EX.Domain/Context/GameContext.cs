@@ -1,4 +1,5 @@
-﻿using TF.EX.Domain.Externals;
+﻿using System.Collections.Concurrent;
+using TF.EX.Domain.Externals;
 using TF.EX.Domain.Interop;
 using TF.EX.Domain.Models;
 using TF.EX.Domain.Models.WebSocket;
@@ -9,8 +10,9 @@ namespace TF.EX.Domain.Context
     public interface IGameContext
     {
         void UpdateCurrentInputs(IEnumerable<Input> inputs);
-        void UpdatePolledInput(Input input);
-        Input GetPolledInput();
+        void UpdatePolledInput(int seat, Input input);
+        Input GetPolledInput(int seat);
+        void ResetPolledInputs();
         Input GetCurrentInput(int characterIndex);
         List<Input> GetCurrentInputs();
 
@@ -21,6 +23,11 @@ namespace TF.EX.Domain.Context
         void SetInputLocked(bool locked);
         bool IsInputLocked();
         void ResetPlayersIndex();
+        bool IsLocalSeat(int seat);
+        IReadOnlyList<int> GetSessionSeats();
+        void SetSessionSeats(int[] seats);
+        IReadOnlyList<TowerFall.PlayerInput> GetGuestInputs();
+        void SetGuestInputs(IReadOnlyList<TowerFall.PlayerInput> inputs);
 
         IEnumerable<(int, string)> GetArchers();
         IEnumerable<(int, Player)> GetPlayers();
@@ -37,17 +44,20 @@ namespace TF.EX.Domain.Context
         private const int INPUT_LOCK_TIMEOUT_SECONDS = 5;
 
         private readonly AttributeManager<Input> CurrentInputs;
-        private Input PolledInput;
-        //Three threads touch this: game thread,websocket receive thread and the render thread (rollcall)
-        private volatile Dictionary<int, Player> ArcherSelections = new Dictionary<int, Player>();
+        private readonly Input[] PolledInputs = new Input[Constants.MAX_SEATS];
+
+        private readonly ConcurrentDictionary<int, Player> ArcherSelections = new();
 
         private int _localPlayerIndex = -1;
         private TowerFall.PlayerInput _localInput;
+        private int[] _sessionSeats = [];
+        private IReadOnlyList<TowerFall.PlayerInput> _guestInputs = [];
         private DateTime _inputLockedUntil = DateTime.MinValue;
+        private int[] SessionSeats => Interlocked.CompareExchange(ref _sessionSeats, null, null);
+
 
         public GameContext()
         {
-            PolledInput = new Input();
             CurrentInputs = new AttributeManager<Input>(EmptyInput, MAX_PLAYERS);
         }
 
@@ -58,9 +68,12 @@ namespace TF.EX.Domain.Context
             CurrentInputs.Update(inputs);
         }
 
-        public void UpdatePolledInput(Input input)
+        public void UpdatePolledInput(int seat, Input input)
         {
-            PolledInput = input;
+            if (seat >= 0 && seat < PolledInputs.Length)
+            {
+                PolledInputs[seat] = input;
+            }
         }
 
         public Input GetCurrentInput(int characterIndex)
@@ -83,9 +96,14 @@ namespace TF.EX.Domain.Context
             return CurrentInputs[characterIndex];
         }
 
-        public Input GetPolledInput()
+        public Input GetPolledInput(int seat)
         {
-            return PolledInput;
+            return seat >= 0 && seat < PolledInputs.Length ? PolledInputs[seat] : new Input();
+        }
+
+        public void ResetPolledInputs()
+        {
+            Array.Clear(PolledInputs, 0, PolledInputs.Length);
         }
 
         public List<Input> GetCurrentInputs()
@@ -144,46 +162,86 @@ namespace TF.EX.Domain.Context
             _localPlayerIndex = -1;
         }
 
+        public bool IsLocalSeat(int seat)
+        {
+            if (seat < 0)
+            {
+                return false;
+            }
+
+            var sessionSeats = SessionSeats;
+
+            if (sessionSeats.Length > 1 && TowerFall.TFGame.Instance?.Scene is not TowerFall.MainMenu)
+            {
+                return Array.IndexOf(sessionSeats, seat) >= 0;
+            }
+
+            if (seat == GetLocalPlayerIndex())
+            {
+                return true;
+            }
+
+            if (TowerFall.TFGame.Instance?.Scene is not TowerFall.MainMenu)
+            {
+                return false;
+            }
+
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+
+            return !matchmakingService.IsSpectator() && matchmakingService.GetLocalPlayers().Any(player => player.Seat == seat);
+        }
+
+        public IReadOnlyList<int> GetSessionSeats()
+        {
+            return SessionSeats;
+        }
+
+        public void SetSessionSeats(int[] seats)
+        {
+            Interlocked.Exchange(ref _sessionSeats, seats);
+        }
+
+        public IReadOnlyList<TowerFall.PlayerInput> GetGuestInputs()
+        {
+            return Interlocked.CompareExchange(ref _guestInputs, null, null);
+        }
+
+        public void SetGuestInputs(IReadOnlyList<TowerFall.PlayerInput> inputs)
+        {
+            Interlocked.Exchange(ref _guestInputs, inputs);
+        }
+
         public IEnumerable<(int, string)> GetArchers()
         {
             return ArcherSelections
+                .ToArray()
                 .Select(kvp => (kvp.Key, $"{kvp.Value.ArcherIndex}-{kvp.Value.ArcherAltIndex}"))
                 .ToList();
         }
 
         public void AddArcher(int index, Player player)
         {
-            ArcherSelections = new Dictionary<int, Player>(ArcherSelections) { [index] = player };
+            ArcherSelections[index] = player;
         }
 
         public void ResetArcherSelections()
         {
-            ArcherSelections = new Dictionary<int, Player>();
+            ArcherSelections.Clear();
         }
 
         public void RemoveArcher(int playerIndex)
         {
-            var current = ArcherSelections;
-
-            if (!current.ContainsKey(playerIndex))
-            {
-                return;
-            }
-
-            var next = new Dictionary<int, Player>(current);
-
-            next.Remove(playerIndex);
-
-            ArcherSelections = next;
+            ArcherSelections.TryRemove(playerIndex, out _);
         }
 
         public IEnumerable<(int, Player)> GetPlayers()
         {
-            return ArcherSelections.Select(kvp => (kvp.Key, kvp.Value)).ToList();
+            return ArcherSelections.ToArray().Select(kvp => (kvp.Key, kvp.Value)).ToList();
         }
 
         public void Reset()
         {
+            Interlocked.Exchange(ref _sessionSeats, []);
             ResetPlayersIndex();
             ResetArcherSelections();
 

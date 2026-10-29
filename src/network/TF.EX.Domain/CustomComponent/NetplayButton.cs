@@ -4,7 +4,7 @@ using TowerFall;
 
 namespace TF.EX.Domain.CustomComponent
 {
-    public class NetplayButton : MainModeButton
+    public class NetplayButton : RefusableModeButton
     {
         private const float IconSize = 60f;
 

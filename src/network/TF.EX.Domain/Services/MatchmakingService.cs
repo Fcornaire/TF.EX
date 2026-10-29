@@ -29,6 +29,7 @@ namespace TF.EX.Domain.Services
         private string MATCHMAKING_URL => $"{SERVER_URL}/ws?version={ServiceCollections.ResolveAutoUpdater().GetCurrentVersion()}";
 
         private readonly SemaphoreSlim _sendGate = new(1, 1);
+        private Task _skinBundleSendQueue = Task.CompletedTask;
         private HashSet<string> _skinKnownPeers = [];
 
         private ClientWebSocket _webSocket;
@@ -40,6 +41,7 @@ namespace TF.EX.Domain.Services
         private int previousPlayersCount = 1;
         private readonly HashSet<string> modifiedFilesNotified = [];
         private readonly HashSet<string> platformNotified = [];
+        private Dictionary<string, string> rollcallMembers;
         private bool hasHostStartedMatch = false;
         private DateTime lastStartRequestAt = DateTime.MinValue;
         private static readonly TimeSpan StartRequestCooldown = TimeSpan.FromSeconds(1);
@@ -259,7 +261,8 @@ namespace TF.EX.Domain.Services
             {
                 CreateLobby = new CreateLobby
                 {
-                    Lobby = ownLobby
+                    Lobby = ownLobby,
+                    LocalPlayers = _inputService.GetLocalPlayerCount()
                 }
             };
 
@@ -276,7 +279,8 @@ namespace TF.EX.Domain.Services
                 {
                     RoomId = roomId,
                     Name = NetplayPreferences.Name,
-                    IsPlayer = currentAction == WSAction.JoinLobby
+                    IsPlayer = currentAction == WSAction.JoinLobby,
+                    LocalPlayers = _inputService.GetLocalPlayerCount()
                 }
             };
 
@@ -293,7 +297,8 @@ namespace TF.EX.Domain.Services
                 {
                     Code = pendingJoinCode,
                     Name = NetplayPreferences.Name,
-                    IsPlayer = pendingJoinAsPlayer
+                    IsPlayer = pendingJoinAsPlayer,
+                    LocalPlayers = _inputService.GetLocalPlayerCount()
                 }
             };
 
@@ -334,7 +339,8 @@ namespace TF.EX.Domain.Services
                 EnterQuickPlay = new EnterQuickPlay
                 {
                     Name = NetplayPreferences.Name,
-                    IsWide = isSearchWide
+                    IsWide = isSearchWide,
+                    LocalPlayers = _inputService.GetLocalPlayerCount()
                 }
             };
 
@@ -533,23 +539,28 @@ namespace TF.EX.Domain.Services
             }
         }
 
-        public void PublishCustomSkin(int archerIndex, int archerAltIndex)
+        public void PublishCustomSkin(Models.WebSocket.Player player)
         {
-            if (archerIndex < Extensions.ArcherDataExtensions.VanillaArcherCount || IsSpectator())
+            if (player.ArcherIndex < Extensions.ArcherDataExtensions.VanillaArcherCount || IsSpectator())
             {
                 return;
             }
 
-            var bundle = _skinStreamService.GetOrBuildArcherBundle(archerIndex, archerAltIndex);
+            var bundle = _skinStreamService.GetOrBuildArcherBundle(player.ArcherIndex, player.ArcherAltIndex);
 
             if (bundle == null)
             {
                 return;
             }
 
-            _skinStreamService.MarkPublished(bundle);
+            _skinStreamService.MarkPublished(player.LocalIndex, bundle);
 
-            Task.Run(() => SendSkinBundle(bundle));
+            QueueSkinBundle(bundle);
+        }
+
+        private void QueueSkinBundle(ArtifactSkinBundle bundle)
+        {
+            _skinBundleSendQueue = _skinBundleSendQueue.ContinueWith(_ => SendSkinBundle(bundle), TaskScheduler.Default).Unwrap();
         }
 
         private async Task SendSkinBundle(ArtifactSkinBundle bundle)
@@ -1103,7 +1114,7 @@ namespace TF.EX.Domain.Services
                 && series.IsInProgress
                 && series.PickerSide.HasValue
                 && !IsSpectator()
-                && series.SideOfSeat(GetLocalSeat()) == series.PickerSide;
+                && GetLocalPlayers().Any(player => series.GetSideOfSeat(player.Seat) == series.PickerSide);
         }
 
         public void RestoreArchersFromLobbyIfNeeded()
@@ -1248,7 +1259,7 @@ namespace TF.EX.Domain.Services
             PublishSettingsChanges(lobby, previous);
             UnreadyOwnRollcall(lobby, previous);
 
-            var seatChanged = _inputService.EnsureLocalControllerSeat();
+            var seatChanged = _inputService.EnsureLocalControllerSeats();
             var someoneLeft = lobby.Players.Count < previousPlayersCount;
 
             var scene = TFGame.Instance.Scene;
@@ -1315,11 +1326,9 @@ namespace TF.EX.Domain.Services
                 return;
             }
 
-            var published = _skinStreamService.GetLastPublished();
-
-            if (published != null)
+            foreach (var published in _skinStreamService.GetPublished())
             {
-                Task.Run(() => SendSkinBundle(published));
+                QueueSkinBundle(published);
             }
         }
 
@@ -1528,33 +1537,37 @@ namespace TF.EX.Domain.Services
                 return;
             }
 
-            var ownPlayer = lobby.Players.FirstOrDefault(pl => pl.RoomPeerId == peerId);
-            var previousSelf = previous?.Players?.FirstOrDefault(pl => pl.RoomPeerId == peerId);
+            var rollCalls = GetRollcallElements(mainMenu);
 
-            if (ownPlayer == null || ownPlayer.Ready || previousSelf == null || !previousSelf.Ready)
+            foreach (var ownPlayer in lobby.Players.Where(pl => pl.RoomPeerId == peerId && !pl.Ready))
             {
-                return;
+                var previousSelf = previous?.Players?.FirstOrDefault(pl => pl.RoomPeerId == peerId && pl.LocalIndex == ownPlayer.LocalIndex);
+
+                if (previousSelf == null || !previousSelf.Ready)
+                {
+                    continue;
+                }
+
+                var own = rollCalls.FirstOrDefault(rc => DynamicData.For(rc).Get<int>("playerIndex") == ownPlayer.Seat);
+
+                if (own == null)
+                {
+                    continue;
+                }
+
+                var dynOwn = DynamicData.For(own);
+                var state = dynOwn.Get<Monocle.StateMachine>("state");
+
+                if (state.State != 1)
+                {
+                    continue;
+                }
+
+                _archerService.RemoveArcher(ownPlayer.Seat);
+                dynOwn.Get<ArcherPortrait>("portrait").Leave();
+                TFGame.Players[ownPlayer.Seat] = false;
+                state.State = 0;
             }
-
-            var own = GetRollcallElements(mainMenu).FirstOrDefault(rc => DynamicData.For(rc).Get<int>("playerIndex") == ownPlayer.Seat);
-
-            if (own == null)
-            {
-                return;
-            }
-
-            var dynOwn = DynamicData.For(own);
-            var state = dynOwn.Get<Monocle.StateMachine>("state");
-
-            if (state.State != 1)
-            {
-                return;
-            }
-
-            _archerService.RemoveArcher(ownPlayer.Seat);
-            dynOwn.Get<ArcherPortrait>("portrait").Leave();
-            TFGame.Players[ownPlayer.Seat] = false;
-            state.State = 0;
         }
 
         public void ReconcileRollcallIfPending()
@@ -1576,7 +1589,7 @@ namespace TF.EX.Domain.Services
             var lobby = pendingRollcallLobby;
             pendingRollcallLobby = null;
 
-            _inputService.EnsureLocalControllerSeat();
+            _inputService.EnsureLocalControllerSeats();
             ReconcileRollcall(lobby, rollCalls);
         }
 
@@ -1636,12 +1649,6 @@ namespace TF.EX.Domain.Services
 
                 var dynRollCall = DynamicData.For(rollCall);
                 Monocle.StateMachine state = dynRollCall.Get<Monocle.StateMachine>("state");
-
-                if (previousPlayersCount < lobby.Players.Count)
-                {
-                    previousPlayersCount = lobby.Players.Count;
-                    Notification.Create(TFGame.Instance.Scene, $"{player.Name} joined", 10, 200);
-                }
 
                 if (player.Ready)
                 {
@@ -1706,11 +1713,35 @@ namespace TF.EX.Domain.Services
                 }
             }
 
-            if (previousPlayersCount > lobby.Players.Count)
+            NotifyMembershipChanges(lobby);
+            previousPlayersCount = lobby.Players.Count;
+        }
+
+        private void NotifyMembershipChanges(Lobby lobby)
+        {
+            var members = new Dictionary<string, string>();
+
+            foreach (var player in lobby.Players.Where(player => player.RoomPeerId != peerId && !player.IsGuest))
             {
-                previousPlayersCount = lobby.Players.Count;
-                Notification.Create(TFGame.Instance.Scene, $"Player left", 10, 200);
+                var guests = lobby.Players.Count(guest => guest.RoomPeerId == player.RoomPeerId && guest.IsGuest);
+
+                members[player.RoomPeerId] = guests > 0 ? $"{player.Name} +{guests}" : player.Name;
             }
+
+            if (rollcallMembers != null)
+            {
+                foreach (var joined in members.Where(member => !rollcallMembers.ContainsKey(member.Key)))
+                {
+                    Notification.Create(TFGame.Instance.Scene, $"{joined.Value} joined", 10, 200);
+                }
+
+                foreach (var left in rollcallMembers.Where(member => !members.ContainsKey(member.Key)))
+                {
+                    Notification.Create(TFGame.Instance.Scene, $"{left.Value} left", 10, 200);
+                }
+            }
+
+            rollcallMembers = members;
         }
 
         public void ResetPeer()
@@ -1906,7 +1937,7 @@ namespace TF.EX.Domain.Services
             }
         }
 
-        private async Task Update(WSAction action, Action onSuccess, Action onFail)
+        private async Task Update(WSAction action, Action onSuccess, Action onFail, Models.WebSocket.Player player = null)
         {
             var actionName = action.ToString();
             onResult[$"{actionName}-success"] = onSuccess == null ? null : () => RunOnGameThread(onSuccess);
@@ -1939,7 +1970,7 @@ namespace TF.EX.Domain.Services
                     await SendLeaveLobby();
                     break;
                 case WSAction.UpdatePlayer:
-                    await SendUpdatePlayer(ownLobby.Players.First(pl => pl.RoomPeerId == peerId));
+                    await SendUpdatePlayer(player);
                     break;
                 case WSAction.None:
                     break;
@@ -2155,9 +2186,19 @@ namespace TF.EX.Domain.Services
 
         public int GetLocalSeat()
         {
-            var self = ownLobby.Players.FirstOrDefault(player => player.RoomPeerId == peerId);
+            return GetOwnPlayer()?.Seat ?? 0;
+        }
 
-            return self?.Seat ?? 0;
+        public Models.WebSocket.Player GetOwnPlayer()
+        {
+            return ownLobby.Players.FirstOrDefault(player => player.RoomPeerId == peerId && !player.IsGuest);
+        }
+
+        public IReadOnlyList<Models.WebSocket.Player> GetLocalPlayers()
+        {
+            return [.. ownLobby.Players
+                .Where(player => player.RoomPeerId == peerId)
+                .OrderBy(player => player.LocalIndex)];
         }
 
         public string GetRoomPeerId()
@@ -2172,12 +2213,12 @@ namespace TF.EX.Domain.Services
 
         public async Task UpdatePlayer(Models.WebSocket.Player player, Action onSucess, Action onFail)
         {
-            await Update(WSAction.UpdatePlayer, onSucess, onFail);
+            await Update(WSAction.UpdatePlayer, onSucess, onFail, player);
         }
 
         public void PublishInputDelay()
         {
-            var own = ownLobby.Players.FirstOrDefault(pl => pl.RoomPeerId == peerId);
+            var own = GetOwnPlayer();
 
             if (own == null || !EnsureConnection())
             {
@@ -2246,7 +2287,7 @@ namespace TF.EX.Domain.Services
 
         private bool AreAllPlayersReady()
         {
-            return ownLobby.Players.Count >= 2
+            return ownLobby.Players.Select(pl => pl.RoomPeerId).Distinct().Count() >= 2
                 && ownLobby.Players.All(pl => pl.Ready)
                 && AreTeamsPlayable();
         }
@@ -2338,6 +2379,7 @@ namespace TF.EX.Domain.Services
             pendingRollcallLobby = null;
             modifiedFilesNotified.Clear();
             platformNotified.Clear();
+            rollcallMembers = null;
         }
 
         public bool IsSpectator()

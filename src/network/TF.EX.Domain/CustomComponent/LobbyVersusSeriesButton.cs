@@ -10,6 +10,8 @@ namespace TF.EX.Domain.CustomComponent
         public const int DUEL_PLAYERS = 2;
         public const int TEAM_PLAYERS = 4;
 
+        public static bool IsDuelAllowed => ServiceCollections.ResolveInputService().GetLocalPlayerCount() < DUEL_PLAYERS;
+
         private static readonly int[] Options = { 0, 1, 3, 5, 7 };
 
         private static bool IsLocked => Context.LobbyBuilderContext.IsEditing;
@@ -74,7 +76,7 @@ namespace TF.EX.Domain.CustomComponent
 
             if (lobby.MaxPlayers != TEAM_PLAYERS)
             {
-                lobby.MaxPlayers = DUEL_PLAYERS;
+                lobby.MaxPlayers = IsDuelAllowed ? DUEL_PLAYERS : TEAM_PLAYERS;
             }
 
             lobby.GameData.MapId = -1;

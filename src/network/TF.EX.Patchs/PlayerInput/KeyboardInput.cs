@@ -134,8 +134,7 @@ namespace TF.EX.Patchs.PlayerInput
                 return false;
             }
 
-            return inputService.IsInputLocked()
-                || inputService.GetInputIndex(self) != inputService.GetLocalPlayerInputIndex();
+            return inputService.IsInputLocked() || !inputService.IsLocalSeat(inputService.GetInputIndex(self));
         }
 
         [HarmonyPostfix]
@@ -226,9 +225,9 @@ namespace TF.EX.Patchs.PlayerInput
 
             var seat = inputService.GetInputIndex(__instance);
 
-            if (seat == inputService.GetLocalPlayerInputIndex() && !netplayManager.IsReplayMode())
+            if (inputService.IsLocalSeat(seat) && !netplayManager.IsReplayMode())
             {
-                inputService.UpdatePolledInput(__result);
+                inputService.UpdatePolledInput(seat, __result);
             }
 
             if (netplayManager.IsReplayMode() && seat >= 0 && seat == (ReplayApi.Current?.GetTakeoverSeat() ?? -1))
@@ -270,7 +269,9 @@ namespace TF.EX.Patchs.PlayerInput
                 return actualResult;
             }
 
-            if (inputService.GetInputIndex(self) != inputService.GetLocalPlayerInputIndex())
+            var seat = inputService.GetInputIndex(self);
+
+            if (!inputService.IsLocalSeat(seat))
             {
                 return false;
             }
@@ -294,14 +295,14 @@ namespace TF.EX.Patchs.PlayerInput
 
             var rollcallElement = (TFGame.Instance.Scene as MainMenu).GetAll<RollcallElement>().First(rc =>
             {
-                return DynamicData.For(rc).Get<int>("playerIndex") == inputService.GetLocalPlayerInputIndex();
+                return DynamicData.For(rc).Get<int>("playerIndex") == seat;
             });
 
             var rollcallState = DynamicData.For(rollcallElement).Get<StateMachine>("state");
 
             if (rollcallState.State == 0)
             {
-                if (actualResult && TF.EX.Patchs.Scene.MainMenuPatch.TryOpenLobbyEditor())
+                if (actualResult && TF.EX.Patchs.Scene.MainMenuPatch.TryOpenLobbyEditor(seat))
                 {
                     return false;
                 }
@@ -402,7 +403,7 @@ namespace TF.EX.Patchs.PlayerInput
                         var dyn = DynamicData.For(rc);
                         var index = dyn.Get<int>("playerIndex");
 
-                        return index == inputService.GetLocalPlayerInputIndex();
+                        return index == inputService.GetInputIndex(self);
                     });
 
                     var dynRollcallElement = DynamicData.For(rollcallElement);

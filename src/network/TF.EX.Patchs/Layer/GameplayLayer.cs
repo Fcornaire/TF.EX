@@ -112,8 +112,13 @@ namespace TF.EX.Patchs.Layer
         {
             var line = 0;
             var perSeat = netplayManager.GetNetworkStatsPerSeat();
+            var lobbyPlayers = matchmakingService.GetOwnLobby().Players;
+            var shownSeats = perSeat.Keys
+                .Where(seat => lobbyPlayers.FirstOrDefault(player => player.Seat == seat)?.IsGuest != true)
+                .OrderBy(seat => seat)
+                .ToList();
             var spectatorCount = matchmakingService.IsSpectator() ? 0 : matchmakingService.GetOwnLobby().Spectators.Count;
-            var alpha = UpdatePingAlpha((spectatorCount > 0 ? 1 : 0) + Math.Max(perSeat.Count, 1));
+            var alpha = UpdatePingAlpha((spectatorCount > 0 ? 1 : 0) + Math.Max(shownSeats.Count, 1));
 
             if (spectatorCount > 0)
             {
@@ -128,9 +133,7 @@ namespace TF.EX.Patchs.Layer
                 return;
             }
 
-            var lobbyPlayers = matchmakingService.GetOwnLobby().Players;
-
-            foreach (var seat in perSeat.Keys.OrderBy(seat => seat))
+            foreach (var seat in shownSeats)
             {
                 var latency = perSeat[seat].ping;
                 var seated = lobbyPlayers.FirstOrDefault(player => player.Seat == seat);

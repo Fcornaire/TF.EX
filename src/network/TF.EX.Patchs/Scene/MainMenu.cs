@@ -84,8 +84,9 @@ namespace TF.EX.Patchs.Scene
         private static LobbyVersusPlayerCountButton lobbyVersusPlayerCountButton = null;
         private static LobbyVersusSeriesButton lobbyVersusSeriesButton = null;
         private static SeriesScreen seriesScreen = null;
+        private static bool wasOnNetplayScreen;
         private static LobbyVarianText lobbyVarianText = null;
-        private static List<VariantItem> variants = new List<VariantItem>();
+        private static List<VariantItem> variants = [];
         private static float variantsMaxY;
 
         private static DateTime nextServerPull = DateTime.UtcNow;
@@ -298,6 +299,7 @@ namespace TF.EX.Patchs.Scene
         [HarmonyPatch("CreateMain")]
         public static void MainMenu_CreateMain(MainMenu __instance)
         {
+            ServiceCollections.ResolveInputService().ClearGuestInputs();
             WiderSetMenu.IsNetplayRequested = false;
 
             AddNetplayButtonToMenu(__instance);
@@ -365,7 +367,7 @@ namespace TF.EX.Patchs.Scene
 
                     var isShown = matchmakingService.IsSpectator()
                         ? seated.IsHost
-                        : seat != localSeat && seated.RoomPeerId != localPeerId;
+                        : seat != localSeat && seated.RoomPeerId != localPeerId && !seated.IsGuest;
 
                     if (!isShown)
                     {
@@ -476,11 +478,12 @@ namespace TF.EX.Patchs.Scene
             return ownElement != null && DynamicData.For(ownElement).Get<Monocle.StateMachine>("state").State == 0;
         }
 
-        public static bool TryOpenLobbyEditor()
+        public static bool TryOpenLobbyEditor(int seat)
         {
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
 
             if (Domain.Context.LobbyBuilderContext.IsEditing
+                || seat != matchmakingService.GetLocalSeat()
                 || !matchmakingService.CanEditLobbySettings()
                 || TFGame.Instance.Scene is not MainMenu menu
                 || menu.State != MainMenu.MenuState.Rollcall)
@@ -528,12 +531,48 @@ namespace TF.EX.Patchs.Scene
 
             if (matchmakingService.GetOwnLobby().IsEmpty)
             {
-                inputService.ObserveLocalDevice();
+                var state = __instance.State.ToDomainModel();
+                var isNetplayEntry = state == Domain.Models.MenuState.NetplaySelect;
+
+                if (!state.IsNetplayScreen())
+                {
+                    if (wasOnNetplayScreen)
+                    {
+                        MenuInput.UpdateInputs();
+                        wasOnNetplayScreen = false;
+                    }
+
+                    inputService.ObserveLocalDevice(shouldCheckStartAndBack: true);
+                }
+                else
+                {
+                    wasOnNetplayScreen = true;
+
+                    inputService.KeepOnlyLocalInputInMenus();
+
+                    if (LocalPlayersPanel.CanJoin(__instance))
+                    {
+                        LocalPlayersPanel.UpdateGuests(inputService);
+                    }
+
+                    if (!inputService.HasUsableLocalInput())
+                    {
+                        inputService.ObserveLocalDevice(shouldCheckStartAndBack: !isNetplayEntry);
+                    }
+
+                    inputService.KeepOnlyLocalInputInMenus();
+                    LocalPlayersPanel.Ensure(__instance);
+                }
             }
             else
             {
                 matchmakingService.ReconcileRollcallIfPending();
                 matchmakingService.ShowPendingSpectatorNoticeIfAny();
+
+                if (__instance.State.ToDomainModel() == Domain.Models.MenuState.SeriesLobby && inputService.GetLocalPlayerCount() > 1)
+                {
+                    inputService.KeepOnlyLocalInputInMenus();
+                }
             }
 
             InputDelayAdvisor.Update(__instance);
@@ -753,7 +792,10 @@ namespace TF.EX.Patchs.Scene
                         WiderSetMenu.IsNetplayRequested = true;
                         self.State = WiderSetMenu.SelectionState ?? Domain.Models.MenuState.NetplaySelect.ToTFModel();
                     });
-                });
+                })
+                {
+                    RefusalCheck = Engine.TFGamePatch.GetNetplayEntryRefusal
+                };
 
                 var compactCoOp = new CompactCoOpButton(new Vector2(COOP_X, COOP_Y), new Vector2(480f, COOP_Y));
 
@@ -829,7 +871,8 @@ namespace TF.EX.Patchs.Scene
                 self.State = Domain.Models.MenuState.RankedSelect.ToTFModel();
             })
             {
-                TitleScale = 1f
+                TitleScale = 1f,
+                RefusalCheck = () => ServiceCollections.ResolveInputService().GetLocalPlayerCount() > 1 ? "RANKED IS ONE PLAYER PER DEVICE" : null
             };
 
             var lobbyList = new NetplayMenuButton(new Vector2(195f, 90f), new Vector2(195f, -80f), "LOBBIES", "BROWSE GAMES", TFGame.MenuAtlas["browseWorkshopButton"], () =>
@@ -1910,6 +1953,15 @@ namespace TF.EX.Patchs.Scene
                             return;
                         }
 
+                        var localPlayers = ServiceCollections.ResolveInputService().GetLocalPlayerCount();
+
+                        if (newLobby.MaxPlayers - newLobby.Players.Count < localPlayers)
+                        {
+                            Notification.Create(self, $"NOT ENOUGH SEATS FOR {localPlayers} PLAYERS");
+                            TowerFall.Sounds.ui_invalid.Play();
+                            return;
+                        }
+
                         if (string.IsNullOrEmpty(newLobby.RoomId))
                         {
                             logger.LogError<MainMenuPatch>("Lobby to join is null?");
@@ -2085,7 +2137,7 @@ namespace TF.EX.Patchs.Scene
 
             if (isPlayer)
             {
-                var ownPlayer = newLobby.Players.FirstOrDefault(pl => pl.RoomPeerId == matchmakingService.GetRoomPeerId());
+                var ownPlayer = newLobby.Players.FirstOrDefault(pl => pl.RoomPeerId == matchmakingService.GetRoomPeerId() && !pl.IsGuest);
 
                 if (ownPlayer != null)
                 {

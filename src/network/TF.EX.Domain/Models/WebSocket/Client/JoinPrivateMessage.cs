@@ -20,5 +20,8 @@ namespace TF.EX.Domain.Models.WebSocket.Client
 
         [DataMember(Name = "is_player")]
         public bool IsPlayer { get; set; }
+
+        [DataMember(Name = "local_players")]
+        public int LocalPlayers { get; set; } = 1;
     }
 }

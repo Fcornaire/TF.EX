@@ -181,6 +181,11 @@ namespace TF.EX.Patchs.Engine
                 HandleMenuAction(__instance, autoUpdater, inputService);
             }
 
+            if (__instance.Scene is Level && !matchmakingService.GetOwnLobby().IsEmpty && inputService.GetLocalPlayerCount() > 1)
+            {
+                inputService.KeepOnlyLocalInputInMenus();
+            }
+
             ManageTimeStep(__instance);
 
             if (!handleFrameByFrame(netplayManager))
@@ -468,8 +473,18 @@ namespace TF.EX.Patchs.Engine
                 _updaterDialog?.RemoveSelf();
                 _updaterDialog = null;
                 inputService.EnableAllControllers();
-                Sounds.ui_invalid.Play();
-                Notification.Create(instance.Scene, autoUpdater.GetFailureReason() ?? "Update failed! Online play requires the latest version", 10, 500);
+                var reason = autoUpdater.GetFailureReason() ?? "Update failed! Online play requires the latest version";
+
+                if (instance.Scene is TowerFall.MainMenu failedMenu)
+                {
+                    RefusableModeButton.Refuse(failedMenu, reason);
+                }
+                else
+                {
+                    Sounds.ui_invalid.Play();
+                    Notification.Create(instance.Scene, reason, 10, 500);
+                }
+
                 return;
             }
 
@@ -500,16 +515,38 @@ namespace TF.EX.Patchs.Engine
             }
         }
 
-        public static void RequestNetplayEntry(TowerFall.MainMenu menu, Action enter)
+        public static string GetNetplayEntryRefusal()
         {
             if (!TowerFall.GameData.DarkWorldDLC)
             {
                 ServiceCollections.ResolveLogger().LogWarning("Dark World DLC not detected");
-                Sounds.ui_invalid.Play();
-                Notification.Create(menu, "ONLINE PLAY REQUIRES THE DARK WORLD DLC", 10, 500);
-                return;
+                return "ONLINE PLAY REQUIRES THE DARK WORLD DLC";
             }
 
+            var autoUpdater = ServiceCollections.ResolveAutoUpdater();
+
+            return autoUpdater.IsStatusFresh() ? GetVersionRefusal(autoUpdater) : null;
+        }
+
+        private static string GetVersionRefusal(IAutoUpdater autoUpdater)
+        {
+            if (!NetplayPreferences.IsOfficialServer || autoUpdater.GetStatus() == UpdateStatus.UpToDate)
+            {
+                return null;
+            }
+
+            if (autoUpdater.GetStatus() == UpdateStatus.UpdateAvailable)
+            {
+                return NetplayPreferences.AutoUpdate && !_updateFlowStarted
+                    ? null
+                    : $"Online play requires version {autoUpdater.GetLatestVersion()} (current version : {autoUpdater.GetCurrentVersion()})";
+            }
+
+            return "Could not verify TF.EX version, check your connection and retry";
+        }
+
+        public static void RequestNetplayEntry(TowerFall.MainMenu menu, Action enter)
+        {
             var autoUpdater = ServiceCollections.ResolveAutoUpdater();
             var inputService = ServiceCollections.ResolveInputService();
 
@@ -587,23 +624,17 @@ namespace TF.EX.Patchs.Engine
                 return;
             }
 
-            if (NetplayPreferences.IsOfficialServer && autoUpdater.GetStatus() == UpdateStatus.UpdateAvailable)
-            {
-                if (NetplayPreferences.AutoUpdate && !_updateFlowStarted)
-                {
-                    StartUpdate(menu, autoUpdater, inputService);
-                    return;
-                }
+            var refusal = GetVersionRefusal(autoUpdater);
 
-                Sounds.ui_invalid.Play();
-                Notification.Create(menu, $"Online play requires version {autoUpdater.GetLatestVersion()} (current version : {autoUpdater.GetCurrentVersion()})", 10, 400);
+            if (refusal != null)
+            {
+                RefusableModeButton.Refuse(menu, refusal);
                 return;
             }
 
-            if (NetplayPreferences.IsOfficialServer && autoUpdater.GetStatus() != UpdateStatus.UpToDate)
+            if (NetplayPreferences.IsOfficialServer && autoUpdater.GetStatus() == UpdateStatus.UpdateAvailable)
             {
-                Sounds.ui_invalid.Play();
-                Notification.Create(menu, "Could not verify TF.EX version, check your connection and retry", 10, 400);
+                StartUpdate(menu, autoUpdater, inputService);
                 return;
             }
 
@@ -700,9 +731,16 @@ namespace TF.EX.Patchs.Engine
                     && !netplayManager.IsTestMode()
                     && VersusMatchResultsInputGate.ShouldFeedNeutralInput(level);
 
-                var playerInput = Domain.CustomComponent.LightPauseMenu.IsOpen || shouldFeedNeutralInput
+                var isNeutralInput = Domain.CustomComponent.LightPauseMenu.IsOpen || shouldFeedNeutralInput;
+
+                var playerInput = isNeutralInput
                     ? new Domain.Models.Input()
                     : inputService.GetPolledInput();
+
+                if (!isNeutralInput)
+                {
+                    inputService.PushExtraLocalInputs();
+                }
 
                 var status = netplayManager.AdvanceFrame(playerInput);
 
