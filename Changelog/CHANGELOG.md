@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Netplay: TEAM REVIVE now works in online team matches (fallen teammates could never be revived)
+
 ## [0.29.0] - 2026-11-01
 
 ### New

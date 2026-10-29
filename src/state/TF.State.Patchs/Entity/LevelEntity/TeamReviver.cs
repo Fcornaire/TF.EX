@@ -110,9 +110,9 @@ namespace TF.State.Patchs.Entity.LevelEntity
             self.Corpse.Reviving = false;
             self.Corpse.Revived = false;
 
-            if (self.Level.Session.MatchSettings.Mode == Modes.TeamDeathmatch)
+            if (self.Level.Session.MatchSettings.TeamMode && self.Level.Session.RoundLogic.TeamCheckForRoundOver(out _))
             {
-                (self.Level.Session.RoundLogic as TeamDeathmatchRoundLogic).CheckForWin();
+                self.Level.Session.CurrentLevel.Ending = true;
             }
         }
 
