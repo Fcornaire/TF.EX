@@ -844,7 +844,7 @@ namespace TF.EX.Domain.Services
 
         public bool IsDisconnected()
         {
-            if (GGRSFFI.IsInInit || IsTestMode())
+            if (GGRSFFI.IsInInit || IsTestMode() || (_pendingSessionRoundLogic != null && !_isInit))
             {
                 return false;
             }

@@ -8,6 +8,11 @@
 
 - Netplay: up to 3 local players can now play from the same device. On the netplay menu, press START on another controller to join, BACK to leave, or the Alt button to swap P1 controller. Not available in ranked. Thanks to Caleb.Munchinsky for the groundwork
 
+### Fixed
+
+- [State] Linux: the game should no longer crash after a rollback in rounds where archers start with a shield
+- [State] Moonstone: an arrow that fell out of a vanishing block no longer desyncs when the block comes back
+
 ## [0.27.1] - 2026-10-28
 
 ### Fixed

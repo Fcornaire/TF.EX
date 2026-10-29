@@ -119,6 +119,10 @@ On disk, replays are stored in `FortRise/Saves/TF.Replay/Replays` and GIF export
 - [WiderSetMod](https://github.com/Terria-K/WiderSetMod) is fully supported: wide players match together in wide netplay lobbies.
 - Mods that change gameplay (custom variants...) are hidden in netplay unless the mod integrates with [TF.State](src/state/README.md) so its state can be tracked by the rollback. If you author such a mod, that README explains how.
 
+# Self-hosting
+
+You can run your own matchmaking server, for a LAN for example: see [SELF-HOSTING.md](SELF-HOSTING.md).
+
 # Develop
 
 This project uses:
