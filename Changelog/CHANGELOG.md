@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.28.1] - 2026-10-30
+
+### Fixed
+
+- Direct matches should handle better packet loss on an unstable connection. Before, a single lost packet could hold back every input behind it
+
 ## [0.28.0] - 2026-10-29
 
 ### New
