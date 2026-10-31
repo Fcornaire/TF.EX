@@ -1,8 +1,8 @@
 ﻿using HarmonyLib;
 using MonoMod.Utils;
-using TF.State.Domain;
 using TF.State.Domain.Context;
 using TF.State.TowerFallExtensions.Entity.LevelEntity;
+using TF.State.TowerFallExtensions.Scene;
 
 namespace TF.State.Patchs.Entity.LevelEntity
 {
@@ -24,6 +24,8 @@ namespace TF.State.Patchs.Entity.LevelEntity
             {
                 return;
             }
+
+            RefreshCannotHitArrow(__instance);
 
             float fallCounter = IcicleOwnedState.GetFallCounter(__instance);
             if (fallCounter <= IcicleOwnedState.NotShaking)
@@ -137,6 +139,17 @@ namespace TF.State.Patchs.Entity.LevelEntity
             }
 
             return false;
+        }
+
+        private static void RefreshCannotHitArrow(TowerFall.Icicle icicle)
+        {
+            var dyn = DynamicData.For(icicle);
+            var arrow = dyn.Get<TowerFall.Arrow>("cannotHitArrow");
+
+            if (arrow != null && !icicle.Level.GetAll<TowerFall.Arrow>().Contains(arrow))
+            {
+                dyn.Set("cannotHitArrow", null);
+            }
         }
 
         private static void StartFalling(TowerFall.Icicle icicle, int ownerIndex)

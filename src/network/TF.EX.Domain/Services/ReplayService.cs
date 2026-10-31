@@ -37,6 +37,7 @@ namespace TF.EX.Domain.Services
         private int _primingFrame;
         private Level _drivenLevel;
         private Level _outgoingLevel;
+        private int? _matchSeed;
 
         private const int NoResync = -1;
         private const int MaxConsecutiveHolds = 10;
@@ -55,6 +56,8 @@ namespace TF.EX.Domain.Services
         public void Initialize(Models.WebSocket.GameData gameData = null, ICollection<Models.WebSocket.CustomMod> mods = null)
         {
             var mode = gameData?.Mode ?? (int)TowerFall.MainMenu.VersusMatchSettings.Mode;
+
+            _matchSeed = gameData == null ? null : StateApi.Current.GetSeed();
 
             foreach (var mod in mods ?? new List<Models.WebSocket.CustomMod>())
             {
@@ -120,7 +123,7 @@ namespace TF.EX.Domain.Services
         public string Export()
         {
             ReplayApi.Current.SetLocalSeat(_netplayManager.LocalSeat);
-            ReplayApi.Current.SetSeed(StateApi.Current.GetSeed());
+            ReplayApi.Current.SetSeed(_matchSeed ?? StateApi.Current.GetSeed());
             ReplayApi.Current.SetPlayerCount(_netplayManager.GetNumPlayers());
 
             var archers = _netplayManager.GetArchersInfo();
@@ -155,6 +158,7 @@ namespace TF.EX.Domain.Services
             _lastDivergenceLogFrame = 0;
             _playbackPrimed = false;
             _primingFrame = 0;
+            _matchSeed = null;
             ReplayApi.Current.ResetRecording();
         }
 

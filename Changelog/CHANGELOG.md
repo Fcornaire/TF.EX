@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [0.28.2] - 2026-11-01
+
+### Fixed
+
+- [State] An icicle set off by a bolt arrow should no longer desync after a rollback
+- Fixed an issue where replays would get the wrong seed
+- [State] Return as Ghosts should no longer raise a false desync warning
+
 ## [0.28.1] - 2026-10-30
 
 ### Fixed
