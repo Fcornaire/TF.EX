@@ -50,6 +50,14 @@ jobs:
           out-file-path: "src/network/TF.EX.Core/Unmanaged/linux-x64"
           fileName: "libggrs_ffi.so"
 
+      - name: Download ggrs-ffi lib (macOS)
+        uses: robinraju/release-downloader@v1.11
+        with:
+          repository: "Fcornaire/ggrs-ffi"
+          latest: true
+          out-file-path: "src/network/TF.EX.Core/Unmanaged/osx-x64"
+          fileName: "libggrs_ffi.dylib"
+
       - name: Build the mods
         run: |
           set -euo pipefail
