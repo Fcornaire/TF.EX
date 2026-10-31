@@ -57,7 +57,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
 
             bool hasCannotHitArrow = false;
             double cannotHitArrowActualDepth = 0;
-            if (cannotHitArrow != null)
+            if (cannotHitArrow != null && entity.Level.GetAll<TowerFall.Arrow>().Contains(cannotHitArrow))
             {
                 hasCannotHitArrow = true;
                 cannotHitArrowActualDepth = DynamicData.For(cannotHitArrow).Get<double>("actualDepth");

@@ -2,7 +2,6 @@ using Monocle;
 using MonoMod.Utils;
 using TF.State.Domain.Extensions;
 using TF.State.Domain.Models.Entity.LevelEntity.Player;
-using TF.State.TowerFallExtensions.Entity;
 
 namespace TF.State.TowerFallExtensions.Entity.LevelEntity
 {
@@ -13,6 +12,9 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             var dynPlayerGhost = DynamicData.For(entity);
             var lastDir = dynPlayerGhost.Get<float?>("lastDir");
             var despawnCorpse = dynPlayerGhost.Get<TowerFall.PlayerCorpse>("despawnCorpse");
+            var sprite = dynPlayerGhost.Get<Sprite<string>>("sprite").GetState();
+
+            sprite.Scale = sprite.Scale with { X = Math.Abs(sprite.Scale.X) };
 
             return new PlayerGhost
             {
@@ -35,7 +37,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                 Health = entity.Health,
                 IsCollidable = entity.Collidable,
                 Seek = entity.Seek,
-                Sprite = dynPlayerGhost.Get<Sprite<string>>("sprite").GetState(),
+                Sprite = sprite,
                 DespawnCorpseActualDepth = despawnCorpse != null
                     ? DynamicData.For(despawnCorpse).Get<double>("actualDepth")
                     : -1.0,

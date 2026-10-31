@@ -927,8 +927,8 @@ namespace TF.EX.Domain.Services
                     {
                         if (_netplayManager.IsInit())
                         {
-                            _netplayManager.Reset();
                             ServiceCollections.ResolveReplayService().Export();
+                            _netplayManager.Reset();
                         }
 
                         _inputService.EnableAllControllers();
@@ -1015,8 +1015,8 @@ namespace TF.EX.Domain.Services
 
             if (_netplayManager.IsInit())
             {
-                _netplayManager.Reset();
                 ServiceCollections.ResolveReplayService().Export();
+                _netplayManager.Reset();
             }
 
             _inputService.EnableAllControllers();
