@@ -8,6 +8,10 @@ namespace TF.EX.Domain.CustomComponent
 {
     public class LobbyInfos : MenuItem
     {
+        private const float NAME_RIGHT_X = 100f;
+        private const float NAME_LEFT_MARGIN = 4f;
+        private const float BASE_HORIZONTAL_SCALE_X = 0.4f;
+
         private readonly Color selectedColor = Calc.HexToColor("FFDA9B");
 
         private static readonly Color liveTint = Calc.HexToColor("B49B3C");
@@ -31,6 +35,8 @@ namespace TF.EX.Domain.CustomComponent
 
         private string _name = "LOBBY";
 
+        private readonly float _nameRightX;
+
         public LobbyInfos(MainMenu mainMenu, Vector2 position, Models.WebSocket.Lobby lobby, Action confirmAction) : base(position)
         {
             var dynSelf = DynamicData.For(this);
@@ -39,12 +45,13 @@ namespace TF.EX.Domain.CustomComponent
             tweenFrom = Position + Vector2.UnitX * -100f;
             selected = tweenTo + new Vector2(15f, 0f);
             this.Lobby = lobby;
-            _name = lobby.Name;
+            _name = lobby.BrowserName.ToUpper().Split('.')[0];
+            _nameRightX = Math.Max(NAME_RIGHT_X, TFGame.Font.MeasureString(_name).X + NAME_LEFT_MARGIN);
 
             this.confirm = confirmAction;
             image = new Image(TFGame.MenuAtlas["ascension/slabTop"]);
             image.Origin.Y = image.Height / 2f;
-            image.Scale = new Vector2(0.4f, 0.6f);
+            image.Scale = new Vector2(BASE_HORIZONTAL_SCALE_X * _nameRightX / NAME_RIGHT_X, 0.6f);
             image.Color = BaseColor();
             Add(image);
         }
@@ -100,7 +107,7 @@ namespace TF.EX.Domain.CustomComponent
         {
             base.Render();
 
-            Draw.TextRight(TFGame.Font, _name.ToUpper().Split('.')[0], Position + Vector2.UnitX * 100f, Color.WhiteSmoke);
+            Draw.TextRight(TFGame.Font, _name, Position + Vector2.UnitX * _nameRightX, Color.WhiteSmoke);
         }
 
         public override void TweenIn()
