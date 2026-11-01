@@ -110,9 +110,10 @@ namespace TF.State.Patchs.Entity.LevelEntity
             self.Corpse.Reviving = false;
             self.Corpse.Revived = false;
 
-            if (self.Level.Session.MatchSettings.Mode == Modes.TeamDeathmatch)
+            // TeamDeathmatchRoundLogic.CheckForWin, for any team round logic (netplay runs its own round logic)
+            if (self.Level.Session.MatchSettings.TeamMode && self.Level.Session.RoundLogic.TeamCheckForRoundOver(out _))
             {
-                (self.Level.Session.RoundLogic as TeamDeathmatchRoundLogic).CheckForWin();
+                self.Level.Session.CurrentLevel.Ending = true;
             }
         }
 
