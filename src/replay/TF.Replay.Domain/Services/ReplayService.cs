@@ -373,6 +373,11 @@ namespace TF.Replay.Domain.Services
             }
         }
 
+        public void SetCustomMode(string customMode)
+        {
+            if (_replay != null) _replay.Informations.CustomMode = customMode ?? "";
+        }
+
         public void SetSeed(int seed)
         {
             if (_replay != null) _replay.Informations.Seed = seed;

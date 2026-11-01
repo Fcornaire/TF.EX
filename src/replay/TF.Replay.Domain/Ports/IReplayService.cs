@@ -27,6 +27,7 @@ namespace TF.Replay.Domain.Ports
         void SetTrialsTime(long ticks);
         void SetArchers(IEnumerable<ArcherInfo> archers);
         void SetTeams(int[] teams);
+        void SetCustomMode(string customMode);
 
         Task<PlaybackStartResult> LoadAndStart(string replayFilename);
 
