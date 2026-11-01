@@ -153,6 +153,11 @@ namespace TF.EX.Patchs.Entity.MenuItem
             {
                 var missing = MainMenu.VersusMatchSettings.Variants.MissingVariants(lobby.GameData.Variants);
 
+                if (TF.EX.Domain.Interop.NetplayVersusModes.MissingMode(lobby) is string missingMode)
+                {
+                    missing.Insert(0, missingMode);
+                }
+
                 if (missing.Count > 0)
                 {
                     var extra = missing.Count > 1 ? $" +{missing.Count - 1} MORE" : "";

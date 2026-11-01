@@ -24,12 +24,14 @@ namespace TF.EX.Domain.Interop
         void SetArcherSkinIds(string[] skinArcherIds);
         void SetArcherStartsWithoutHat(bool?[] startsWithoutHat);
         void SetArcherTeams(int[] teams);
+        void SetCustomMode(string customMode);
 
         bool IsPlayback { get; }
         int PlaybackFrame { get; }
         int RecordCount { get; }
 
         int GetLoadedReplayMode();
+        string GetLoadedReplayCustomMode();
         string[] GetLoadedArcherNames();
         int ConsumeNextRecordFrame();
         int[] GetInputsAtFrame(int frame);

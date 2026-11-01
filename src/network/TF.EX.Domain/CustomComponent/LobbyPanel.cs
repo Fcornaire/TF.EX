@@ -114,7 +114,7 @@ namespace TF.EX.Domain.CustomComponent
             RemoveComponents();
 
             UpdateMapIcon(lobby.GameData.MapId);
-            UpdateMode(lobby.GameData.Mode);
+            UpdateMode(lobby.GameData.Mode, lobby.GameData.CustomMode);
             UpdateTitle(lobby.GameData.MapId);
 
             var (canJoin, reason) = (lobby.CanJoin, lobby.CanNotJoinReason);
@@ -211,12 +211,20 @@ namespace TF.EX.Domain.CustomComponent
             Add(_title);
         }
 
-        private void UpdateMode(int mode)
+        private void UpdateMode(int mode, string customMode)
         {
             var modeEnum = (TowerFall.Modes)mode;
+            var custom = Interop.NetplayVersusModes.Resolve(customMode)?.VersusGameMode;
 
             switch (modeEnum)
             {
+                case var _ when !string.IsNullOrEmpty(customMode):
+                    // A mod's mode, named by its id when this player doesn't have it
+                    _mode = new OutlineText(TFGame.Font, (custom?.Name ?? customMode).ToUpperInvariant());
+                    _mode.Color = custom?.NameColor ?? Color.Red;
+                    _mode.OutlineColor = Color.Transparent;
+                    Add(_mode);
+                    break;
                 case Modes.LastManStanding:
                     _mode = new OutlineText(TowerFall.TFGame.Font, "LAST MAN STANDING");
                     _mode.Color = QuestDifficultySelect.LegendaryColor;

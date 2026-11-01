@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Monocle;
+using TF.EX.Domain.Interop;
 using TowerFall;
 
 namespace TF.EX.Domain.CustomComponent
@@ -15,15 +16,20 @@ namespace TF.EX.Domain.CustomComponent
             TowerFall.Modes.TeamDeathmatch,
         };
 
-        private TowerFall.Modes[] AvailableModes => ownLobby.IsSeriesLobby
-            ? new[] { ownLobby.MaxPlayers == LobbyVersusSeriesButton.TEAM_PLAYERS ? TowerFall.Modes.TeamDeathmatch : TowerFall.Modes.LastManStanding }
-            : Modes;
+        // A mod mode plays as the built-in mode it is closest to (GameData.Mode) and is named by GameData.CustomMode
+        private (TowerFall.Modes Mode, string CustomMode)[] AvailableModes => ownLobby.IsSeriesLobby
+            ? new[] { (ownLobby.MaxPlayers == LobbyVersusSeriesButton.TEAM_PLAYERS ? TowerFall.Modes.TeamDeathmatch : TowerFall.Modes.LastManStanding, "") }
+            : Modes.Select(mode => (mode, ""))
+                .Concat(NetplayVersusModes.Ids.Select(NetplayVersusModes.Resolve).Where(entry => entry != null)
+                    .Select(entry => (entry.VersusGameMode.IsTeamMode ? TowerFall.Modes.TeamDeathmatch : TowerFall.Modes.LastManStanding, entry.Name)))
+                .ToArray();
 
         public LobbyVersusModeButton(Vector2 position, Vector2 tweenFrom) : base(position, tweenFrom, 200, 30)
         {
             if (IndexOfCurrentMode() < 0)
             {
                 ownLobby.GameData.Mode = (int)Modes[0];
+                ownLobby.GameData.CustomMode = "";
             }
 
             UpdateSides();
@@ -38,7 +44,8 @@ namespace TF.EX.Domain.CustomComponent
 
             if (index < 0)
             {
-                ownLobby.GameData.Mode = (int)modes[0];
+                ownLobby.GameData.Mode = (int)modes[0].Mode;
+                ownLobby.GameData.CustomMode = modes[0].CustomMode;
                 UpdateSides();
                 return;
             }
@@ -58,14 +65,19 @@ namespace TF.EX.Domain.CustomComponent
             }
         }
 
-        private void SelectMode(TowerFall.Modes mode)
+        private void SelectMode((TowerFall.Modes Mode, string CustomMode) option)
         {
+            var mode = option.Mode;
+
             Sounds.ui_move2.Play();
             ownLobby.GameData.Mode = (int)mode;
+            ownLobby.GameData.CustomMode = option.CustomMode;
 
-            if (mode == TowerFall.Modes.TeamDeathmatch && ownLobby.MaxPlayers < TEAM_MODE_MIN_PLAYERS)
+            var teamMin = NetplayVersusModes.TeamModeMinPlayers(ownLobby, TEAM_MODE_MIN_PLAYERS);
+
+            if (mode == TowerFall.Modes.TeamDeathmatch && ownLobby.MaxPlayers < teamMin)
             {
-                ownLobby.MaxPlayers = TEAM_MODE_MIN_PLAYERS;
+                ownLobby.MaxPlayers = teamMin;
             }
 
             base.OnConfirm();
@@ -74,7 +86,7 @@ namespace TF.EX.Domain.CustomComponent
 
         private int IndexOfCurrentMode()
         {
-            return Array.IndexOf(AvailableModes, (TowerFall.Modes)ownLobby.GameData.Mode);
+            return Array.IndexOf(AvailableModes, ((TowerFall.Modes)ownLobby.GameData.Mode, ownLobby.GameData.CustomMode));
         }
 
         private void UpdateSides()
@@ -90,10 +102,11 @@ namespace TF.EX.Domain.CustomComponent
             base.Render();
 
             var mode = (TowerFall.Modes)ownLobby.GameData.Mode;
+            var customMode = NetplayVersusModes.Resolve(ownLobby.GameData.CustomMode)?.VersusGameMode;
 
-            Draw.OutlineTextureCentered(VersusModeButton.GetModeIcon(mode), Position + new Vector2(0f, -20f), Color.White, new Vector2(1f + iconWiggler.Value * 0.1f, 1f - iconWiggler.Value * 0.1f));
+            Draw.OutlineTextureCentered(customMode?.Icon.Subtexture ?? VersusModeButton.GetModeIcon(mode), Position + new Vector2(0f, -20f), Color.White, new Vector2(1f + iconWiggler.Value * 0.1f, 1f - iconWiggler.Value * 0.1f));
             Draw.OutlineTextCentered(TFGame.Font, "GAME MODE:", Position + new Vector2(0f, -5f), base.DrawColor, 1f);
-            Draw.OutlineTextCentered(TFGame.Font, VersusModeButton.GetModeName(mode), Position + new Vector2(0f, 4f), base.DrawColor, 2f);
+            Draw.OutlineTextCentered(TFGame.Font, customMode?.Name.ToUpperInvariant() ?? VersusModeButton.GetModeName(mode), Position + new Vector2(0f, 4f), base.DrawColor, 2f);
         }
     }
 }
