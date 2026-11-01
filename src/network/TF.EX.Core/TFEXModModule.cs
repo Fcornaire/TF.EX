@@ -1,5 +1,6 @@
 using FortRise;
 using Microsoft.Extensions.Logging;
+using MonoMod.ModInterop;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -162,6 +163,8 @@ namespace TF.EX
                 CreateTutorialSlide(context, content, "options", "MORE EX OPTIONS IN MODS", "INPUT DELAY, ROLLBACK, SKINS...", 1),
                 CreateTutorialSlide(context, content, "netplayEntry", "ENJOY THE RIDE!", "", -1),
             ];
+
+            typeof(TF.EX.API.ModExports).ModInterop();
 
             var netplayGameMode = context.Registry.GameModes.RegisterVersusGameMode(new NetplayVersusMode());
             TF.EX.Domain.Extensions.VersusModeExtensions.SetNetplayMode(netplayGameMode.Modes);

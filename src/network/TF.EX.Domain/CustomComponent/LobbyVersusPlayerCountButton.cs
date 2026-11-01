@@ -11,7 +11,7 @@ namespace TF.EX.Domain.CustomComponent
 
         private int MinPlayers => new[]
         {
-            IsTeamMode ? LobbyVersusModeButton.TEAM_MODE_MIN_PLAYERS : 2,
+            IsTeamMode ? Interop.NetplayVersusModes.TeamModeMinPlayers(ownLobby, LobbyVersusModeButton.TEAM_MODE_MIN_PLAYERS) : 2,
             ServiceCollections.ResolveInputService().GetLocalPlayerCount() + 1,
             Context.LobbyBuilderContext.IsEditing ? ownLobby.Players.Count : 0,
         }.Max();

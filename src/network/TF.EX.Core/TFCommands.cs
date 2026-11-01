@@ -427,7 +427,9 @@ namespace TF.EX.Core
                 case "LMS": return TowerFall.Modes.LastManStanding;
                 case "HH": return TowerFall.Modes.HeadHunters;
                 case "TDM": return TowerFall.Modes.TeamDeathmatch;
-                default: return TowerFall.Modes.LastManStanding;
+                // a mod's versus mode by its FortRise id ("ModName/ModeName"), as registered
+                // ("_" for a space: the command's arguments are split on spaces, "MoveOrDie/Move_or_Die")
+                default: return FortRise.GameModeRegistry.RegistryVersusGameModes.TryGetValue(arg.Replace('_', ' '), out var entry) ? entry.Modes : TowerFall.Modes.LastManStanding;
             }
         }
 
@@ -530,9 +532,15 @@ namespace TF.EX.Core
                 TFGame.Players[i] = playerCount > 0 ? i < playerCount : TFGame.PlayerInputs[i] != null;
             }
 
-            MatchSettings matchSettings = MainMenu.VersusMatchSettings ?? MatchSettings.GetDefaultVersus();
-            matchSettings.LevelSystem = GameData.VersusTowers[map].GetLevelSystem();
-            matchSettings.Mode = mode;
+            // (the menu's versus settings: a mode's level system can read them, TowerBall's own levels)
+            MatchSettings matchSettings = MainMenu.VersusMatchSettings ??= MatchSettings.GetDefaultVersus();
+            matchSettings.Mode = mode;   // (first: a mod's mode can bring its own levels, from the tower's level system)
+            if (FortRise.GameModeRegistry.ModesToVersusGameMode.TryGetValue(mode, out var modEntry))
+            {   // a mod's mode, as FortRise's GAME MODE button sets it (VersusModeExtensions.ApplyNetplayMode for the Netplay mode)
+                matchSettings.IsCustom = true;
+                MonoMod.Utils.DynamicData.For(matchSettings).Set("CustomVersusModeName", modEntry.Name);
+            }
+            matchSettings.LevelSystem = new TowerMapData(GameData.VersusTowers[map]).GetLevelSystem();   // (as the map screen asks it)
 
             MainMenu.CurrentMatchSettings = matchSettings;
 
@@ -548,7 +556,10 @@ namespace TF.EX.Core
             WarnOnUnknownVariants(matchSettings.Variants, variants);
             matchSettings.Variants.ApplyVariants(variants);
 
-            TF.EX.Domain.Interop.StateApi.Current.GenerateVersusLevels(matchSettings, map, startLevel);
+            if (modEntry == null)   // (a mod's mode: its levels from the tower's level system, the mode's own when it brings one)
+            {
+                TF.EX.Domain.Interop.StateApi.Current.GenerateVersusLevels(matchSettings, map, startLevel);
+            }
             TF.EX.Domain.Interop.StateApi.Current.SetVersusLevels(matchSettings, levelPaths);
 
             var session = new Session(matchSettings);

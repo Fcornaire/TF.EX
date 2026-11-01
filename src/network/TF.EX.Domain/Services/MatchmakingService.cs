@@ -1177,6 +1177,7 @@ namespace TF.EX.Domain.Services
                 lobby.MaxPlayers = previous.MaxPlayers;
                 lobby.GameData.MapId = previous.GameData.MapId;
                 lobby.GameData.Mode = previous.GameData.Mode;
+                lobby.GameData.CustomMode = previous.GameData.CustomMode;
                 lobby.GameData.MatchLength = previous.GameData.MatchLength;
                 lobby.GameData.Variants = previous.GameData.Variants;
                 lobby.GameData.BestOf = previous.GameData.BestOf;
@@ -1419,6 +1420,7 @@ namespace TF.EX.Domain.Services
                 || lobby.MaxPlayers != previous.MaxPlayers
                 || lobby.GameData.MatchLength != previous.GameData.MatchLength
                 || lobby.GameData.Mode != previous.GameData.Mode
+                || lobby.GameData.CustomMode != previous.GameData.CustomMode
                 || lobby.GameData.BestOf != previous.GameData.BestOf;
 
             if (!anyChange)
@@ -1470,9 +1472,9 @@ namespace TF.EX.Domain.Services
                 LobbyUpdateFeed.Push($"{(MatchSettings.MatchLengths)lobby.GameData.MatchLength} MATCH".ToUpperInvariant(), null, NeutralTint);
             }
 
-            if (lobby.GameData.Mode != previous.GameData.Mode)
+            if (lobby.GameData.Mode != previous.GameData.Mode || lobby.GameData.CustomMode != previous.GameData.CustomMode)
             {
-                LobbyUpdateFeed.Push(ModeName(lobby.GameData.Mode), null, NeutralTint);
+                LobbyUpdateFeed.Push(Interop.NetplayVersusModes.Resolve(lobby.GameData.CustomMode)?.VersusGameMode.Name.ToUpperInvariant() ?? ModeName(lobby.GameData.Mode), null, NeutralTint);
             }
 
             if (lobby.GameData.BestOf != previous.GameData.BestOf)
@@ -1507,6 +1509,11 @@ namespace TF.EX.Domain.Services
             }
 
             var missing = variants.MissingVariants(lobby.GameData.Variants);
+
+            if (Interop.NetplayVersusModes.MissingMode(lobby) is string missingMode)
+            {
+                missing.Insert(0, missingMode);
+            }
 
             if (missing.Count == 0)
             {

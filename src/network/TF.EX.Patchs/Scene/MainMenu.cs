@@ -1934,6 +1934,13 @@ namespace TF.EX.Patchs.Scene
                         }
                     }
 
+                    if (newLobby.CanJoin && Domain.Interop.NetplayVersusModes.MissingMode(newLobby) is string missingMode)
+                    {
+                        logger.LogError<MainMenuPatch>("Can't join lobby because of its mod game mode");
+                        newLobby.CanNotJoinReason = $"NEEDS {missingMode}";
+                        newLobby.CanJoin = false;
+                    }
+
                     Action onClick = () =>
                     {
                         if (newLobby.InGame || newLobby.IsSeriesInProgress)
@@ -2056,9 +2063,14 @@ namespace TF.EX.Patchs.Scene
             var owners = MainMenu.VersusMatchSettings.Variants.CustomVariants
                 .Where(custom => custom.Key.Contains('/') && custom.Value != null && enabledTitles.Contains(custom.Value.Title))
                 .Select(custom => custom.Key.Substring(0, custom.Key.IndexOf('/')))
-                .Distinct();
+                .ToList();
 
-            foreach (var owner in owners)
+            if (Domain.Interop.NetplayVersusModes.Owner(lobby.GameData.CustomMode) is string modeOwner)
+            {
+                owners.Add(modeOwner);
+            }
+
+            foreach (var owner in owners.Distinct())
             {
                 lobby.Mods.Add(new Domain.Models.WebSocket.CustomMod
                 {

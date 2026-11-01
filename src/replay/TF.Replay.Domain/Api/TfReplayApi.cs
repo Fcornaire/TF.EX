@@ -154,6 +154,8 @@ namespace TF.Replay.Domain.Api
 
         public void SetArcherTeams(int[] teams) => _replayService.SetTeams(teams);
 
+        public void SetCustomMode(string customMode) => _replayService.SetCustomMode(customMode);
+
         private void FlushArchers() => _replayService.SetArchers(_archers);
 
         public bool IsRecording => _replayService.IsRecording;
@@ -162,6 +164,8 @@ namespace TF.Replay.Domain.Api
         public int RecordCount => _replayService.RecordCount;
 
         public int GetLoadedReplayMode() => _replayService.GetReplay()?.Informations?.Mode ?? -1;
+
+        public string GetLoadedReplayCustomMode() => _replayService.GetReplay()?.Informations?.CustomMode ?? "";
 
         public string[] GetLoadedArcherNames() => _replayService.ArcherNamesBySeat();
 

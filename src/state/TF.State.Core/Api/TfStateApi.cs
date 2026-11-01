@@ -252,7 +252,7 @@ namespace TF.State.Core.Api
 
         public void SetSpawnHatRules(bool?[] startsWithoutHat) => SpawnHatRules.Set(startsWithoutHat);
 
-        public void RegisterStateEvents(string modName, string key, Func<byte[]> onSaveState, Action<byte[]> onLoadState) => ServiceCollections.ResolveAPIManager().RegisterStateEvents(modName, key, onSaveState, onLoadState);
+        public void RegisterStateEvents(string modName, string key, Func<byte[]> onSaveState, Action<byte[]> onLoadState) => ServiceCollections.ResolveAPIManager().RegisterStateEvents(modName, key, onSaveState, onLoadState, isVariant: true);
 
         public void UnregisterStateEvents(string modName, string key) => ServiceCollections.ResolveAPIManager().UnregisterStateEvents(modName, key);
 

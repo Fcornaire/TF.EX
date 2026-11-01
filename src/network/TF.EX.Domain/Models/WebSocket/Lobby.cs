@@ -105,6 +105,7 @@ namespace TF.EX.Domain.Models.WebSocket
         public ICollection<string> Variants { get; set; } = [];
         public int Seed { get; set; } = 0;
         public int BestOf { get; set; } = 0;
+        public string CustomMode { get; set; } = "";
     }
 
     [MessagePackObject(keyAsPropertyName: true)]

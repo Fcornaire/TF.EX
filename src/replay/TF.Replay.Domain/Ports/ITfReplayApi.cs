@@ -29,6 +29,7 @@ namespace TF.Replay.Domain.Ports
         void SetArcherStartsWithoutHat(bool?[] startsWithoutHat);
 
         void SetArcherTeams(int[] teams);
+        void SetCustomMode(string customMode);
 
         bool IsRecording { get; }
         bool IsPlayback { get; }
@@ -38,6 +39,7 @@ namespace TF.Replay.Domain.Ports
         int ConsumeNextRecordFrame();
 
         int GetLoadedReplayMode();
+        string GetLoadedReplayCustomMode();
         string[] GetLoadedArcherNames();
 
         int[] GetInputsAtFrame(int frame);

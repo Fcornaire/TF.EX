@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework;
 using Monocle;
 using TF.EX.Domain;
 using TF.EX.Domain.Context;
+using TF.EX.Domain.Interop;
 using TF.EX.Domain.Ports;
 using TF.EX.Domain.Ports.TF;
 using TowerFall;
@@ -16,7 +17,7 @@ namespace TF.EX.Core.RoundLogic
         public Color NameColor => Color.Yellow;
         public ISubtextureEntry Icon => TFEXModModule.InternetIcon;
 
-        public bool IsTeamMode => ResolveMode() == TowerFall.Modes.TeamDeathmatch;
+        public bool IsTeamMode => NetplayVersusModes.Selected()?.VersusGameMode.IsTeamMode ?? ResolveMode() == TowerFall.Modes.TeamDeathmatch;
 
         private static string ReplayDisplayName()
         {
@@ -50,16 +51,19 @@ namespace TF.EX.Core.RoundLogic
 
         public TowerFall.RoundLogic OnCreateRoundLogic(Session session)
         {
-            return new NetplayRoundLogic(session);
+            var selected = NetplayVersusModes.Selected();
+
+            return NetplayVersusModes.HasOwnRoundLogic(selected) ? selected.VersusGameMode.OnCreateRoundLogic(session) : new NetplayRoundLogic(session);
         }
 
         public void OnStartGame(Session session)
         {
+            NetplayVersusModes.Selected()?.VersusGameMode.OnStartGame(session);
         }
 
         public int GetMinimumPlayers(MatchSettings matchSettings)
         {
-            return 0;
+            return NetplayVersusModes.Selected()?.VersusGameMode.GetMinimumPlayers(matchSettings) ?? 0;
         }
     }
 
@@ -67,8 +71,6 @@ namespace TF.EX.Core.RoundLogic
     {
         private readonly INetplayManager netplayManager;
         private readonly IInputService inputInputService;
-        private readonly IReplayService replayService;
-        private readonly IMatchmakingService matchmakingService;
         private readonly ILogger logger;
         private TowerFall.Modes mode;
 
@@ -83,8 +85,6 @@ namespace TF.EX.Core.RoundLogic
             roundEndCounter = new RoundEndCounter(session);
             netplayManager = ServiceCollections.ResolveNetplayManager();
             inputInputService = ServiceCollections.ResolveInputService();
-            replayService = ServiceCollections.ResolveReplayService();
-            matchmakingService = ServiceCollections.ResolveMatchmakingService();
             logger = ServiceCollections.ResolveLogger();
             mode = NetplayVersusMode.ResolveMode();
         }
@@ -93,38 +93,7 @@ namespace TF.EX.Core.RoundLogic
         {
             base.OnLevelLoadFinish();
 
-            if (netplayManager.IsReplayMode())
-            {
-                if (base.Session.RoundIndex > 0)
-                {
-                    SpawnRoundPlayers();
-                }
-
-                return;
-            }
-            if (netplayManager.HasSessionDisconnected())
-            {
-                return;
-            }
-
-            if (!netplayManager.IsInit())
-            {
-                logger.LogInformation("Configuring and initializing current netplay session");
-                netplayManager.Init(this);
-
-                var lobby = matchmakingService.GetOwnLobby();
-                replayService.Initialize(lobby.GameData, lobby.Mods);
-                if (lobby.IsReportEnabled)
-                {
-                    MatchReport.Begin(netplayManager.IsServerMode() ? lobby.SessionPlayers : null);
-                }
-
-                TowerFall.TFGame.ConsoleEnabled = false;
-            }
-            else
-            {
-                SpawnRoundPlayers();
-            }
+            NetplayVersusModes.OnLevelLoadFinish(this, SpawnRoundPlayers);
         }
 
         public void SpawnRoundPlayers()
