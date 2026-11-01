@@ -46,6 +46,7 @@ namespace TF.EX.Domain.CustomComponent
         private const float PING_Y = 75f;
         private const float PING_GAP = 6f;
         private const float PING_ICON_GAP = 3f;
+        private const string FORFEIT_LABEL = "FORFEIT";
 
         private static readonly Color WinBorder = Calc.HexToColor("FFE23F");
         private static readonly Color LoseBorder = Calc.HexToColor("896B61");
@@ -80,6 +81,7 @@ namespace TF.EX.Domain.CustomComponent
         private (string Confirm, string Back) shownGuides;
         private readonly Dictionary<int, (int Index, int Alt)> guestChoices = [];
         private readonly Dictionary<int, DateTime> guestBusyUntil = [];
+        private ConfirmDialog leaveDialog;
 
         public SeriesScreen(MainMenu menu) : base(-1)
         {
@@ -113,6 +115,12 @@ namespace TF.EX.Domain.CustomComponent
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
             var lobby = matchmakingService.GetOwnLobby();
             var series = lobby.Series;
+
+            if (leaveDialog != null)
+            {
+                UpdateLeaveDialog(matchmakingService, lobby);
+                return;
+            }
 
             if (lobby.IsEmpty || isLeaving || isStarting)
             {
@@ -233,15 +241,17 @@ namespace TF.EX.Domain.CustomComponent
             }
             else if (MenuInput.Back)
             {
-                LeaveLobby(matchmakingService);
+                RequestLeave(matchmakingService);
             }
         }
 
         private void UpdateRankedFinished(Ports.IMatchmakingService matchmakingService)
         {
-            SetGuides("QUEUE AGAIN", "LEAVE");
+            var isSpectator = matchmakingService.IsSpectator();
 
-            if (MenuInput.Confirm)
+            SetGuides(isSpectator ? null : "QUEUE AGAIN", "LEAVE");
+
+            if (MenuInput.Confirm && !isSpectator)
             {
                 LeaveLobby(matchmakingService, Models.MenuState.RankedSearch);
             }
@@ -304,7 +314,7 @@ namespace TF.EX.Domain.CustomComponent
                 }
                 else
                 {
-                    LeaveLobby(matchmakingService);
+                    RequestLeave(matchmakingService);
                 }
             }
         }
@@ -479,11 +489,12 @@ namespace TF.EX.Domain.CustomComponent
             isLeaving = true;
 
             var lobby = matchmakingService.GetOwnLobby();
-            var back = target ?? (lobby.IsRanked
-                ? Models.MenuState.RankedSelect
+            var isRankedPlayer = lobby.IsRanked && !matchmakingService.IsSpectator();
+            var back = isRankedPlayer
+                ? target ?? Models.MenuState.RankedSelect
                 : lobby.IsPrivate
                     ? Models.MenuState.NetplaySelect
-                    : Models.MenuState.LobbyBrowser);
+                    : Models.MenuState.LobbyBrowser;
 
             if (back == Models.MenuState.RankedSearch)
             {
@@ -502,6 +513,51 @@ namespace TF.EX.Domain.CustomComponent
             matchmakingService.ResetPeer();
             matchmakingService.ResetLobby();
             menu.State = back.ToTFModel();
+        }
+
+        private void RequestLeave(Ports.IMatchmakingService matchmakingService)
+        {
+            var lobby = matchmakingService.GetOwnLobby();
+
+            if (!lobby.IsRanked)
+            {
+                LeaveLobby(matchmakingService);
+                return;
+            }
+
+            var label = LeaveLabel(lobby, lobby.Series);
+            var detail = label == FORFEIT_LABEL ? "YOU LOSE THE SERIES" : "LEAVING IS PENALIZED";
+
+            Sounds.ui_click.Play();
+
+            leaveDialog = new ConfirmDialog($"{label}?", detail, label);
+            menu.Add(leaveDialog);
+        }
+
+        private void UpdateLeaveDialog(Ports.IMatchmakingService matchmakingService, Lobby lobby)
+        {
+            if (lobby.Series?.IsInProgress != true || matchmakingService.IsLobbyReady())
+            {
+                CloseLeaveDialog();
+                return;
+            }
+
+            if (leaveDialog.IsCancelled)
+            {
+                Sounds.ui_clickBack.Play();
+                CloseLeaveDialog();
+            }
+            else if (leaveDialog.IsConfirmed)
+            {
+                CloseLeaveDialog();
+                LeaveLobby(matchmakingService);
+            }
+        }
+
+        private void CloseLeaveDialog()
+        {
+            leaveDialog?.Close();
+            leaveDialog = null;
         }
 
         private void StartNextGame(Ports.IMatchmakingService matchmakingService, Lobby lobby)
@@ -564,7 +620,7 @@ namespace TF.EX.Domain.CustomComponent
 
         private static string LeaveLabel(Lobby lobby, Series series)
         {
-            return lobby.IsRanked && (series.Games.Count > 0 || series.AwaitingResult) ? "FORFEIT" : "LEAVE";
+            return lobby.IsRanked && (series.Games.Count > 0 || series.AwaitingResult) ? FORFEIT_LABEL : "LEAVE";
         }
 
         private void SetGuides(string confirm, string back)
@@ -609,6 +665,7 @@ namespace TF.EX.Domain.CustomComponent
         public override void Removed()
         {
             base.Removed();
+            CloseLeaveDialog();
 
             menu.ButtonGuideA.Position = new Vector2(GUIDE_RIGHT_X, GUIDE_Y);
             menu.ButtonGuideB.Position = new Vector2(GUIDE_RIGHT_X, VANILLA_BACK_GUIDE_Y);

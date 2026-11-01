@@ -1028,7 +1028,7 @@ namespace TF.EX.Domain.Services
 
         public bool IsInUnfinishedRankedGame()
         {
-            return ownLobby.IsRanked && TFGame.Instance.Scene is Level level && level.Session.GetWinner() == -1;
+            return ownLobby.IsRanked && !IsSpectator() && TFGame.Instance.Scene is Level level && level.Session.GetWinner() == -1;
         }
 
         public void LeaveRankedGameOnLinkLost(string message)
@@ -1061,7 +1061,7 @@ namespace TF.EX.Domain.Services
 
         private void HandleKickedFromLobby(string reason)
         {
-            var wasRanked = ownLobby.IsRanked;
+            var wasRanked = ownLobby.IsRanked && !IsSpectator();
             abandonedRoomId = ownLobby.RoomId;
             ResetLobby();
             ResetPeer();
@@ -1191,7 +1191,9 @@ namespace TF.EX.Domain.Services
 
             if (lobby.Players.Count == 1 && TFGame.Instance.Scene is Level level)
             {
-                var isRankedGameAborted = lobby.IsRanked && level.Session.GetWinner() == -1;
+                var isRankedGameAborted = lobby.IsRanked
+                    && !lobby.Spectators.Any(spectator => spectator.RoomPeerId == peerId)
+                    && level.Session.GetWinner() == -1;
 
                 Sounds.ui_invalid.Play();
                 if (!isRankedGameAborted)
@@ -1384,7 +1386,9 @@ namespace TF.EX.Domain.Services
 
             Sounds.ui_invalid.Play();
 
-            var text = lobby.IsRanked && lobby.Series.AbortReason == Models.WebSocket.Series.OpponentLeft
+            var text = lobby.IsRanked
+                && lobby.Series.AbortReason == Models.WebSocket.Series.OpponentLeft
+                && !lobby.Spectators.Any(spectator => spectator.RoomPeerId == peerId)
                 ? "YOUR OPPONENT LEFT"
                 : $"SERIES ABORTED: {lobby.Series.AbortReason ?? "UNKNOWN"}";
 

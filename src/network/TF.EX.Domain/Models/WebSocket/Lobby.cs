@@ -56,6 +56,22 @@ namespace TF.EX.Domain.Models.WebSocket
         public bool IsRanked => KindValue == LobbyKind.Ranked;
 
         [IgnoreMember]
+        public string BrowserName
+        {
+            get
+            {
+                var host = Players.FirstOrDefault(player => player.IsHost)?.Name;
+
+                return KindValue switch
+                {
+                    LobbyKind.QuickPlay => $"quickplay_{host}",
+                    LobbyKind.Ranked => $"ranked_{host}",
+                    _ => Name,
+                };
+            }
+        }
+
+        [IgnoreMember]
         public bool IsEmpty => Players.Count == 0;
 
         [IgnoreMember]

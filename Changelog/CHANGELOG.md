@@ -2,7 +2,15 @@
 
 ## [Unreleased]
 
-## [0.28.2] - 2026-11-01
+## [0.29.0] - 2026-11-01
+
+### New
+
+- Ranked matches can now be spectated from the lobby browser
+
+### Changed
+
+- Ranked: leaving or forfeiting now asks for confirmation
 
 ### Fixed
 

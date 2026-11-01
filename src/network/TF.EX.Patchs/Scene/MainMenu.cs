@@ -2149,7 +2149,7 @@ namespace TF.EX.Patchs.Scene
 
             StateApi.Current.SetSeed(newLobby.GameData.Seed);
 
-            if (newLobby.IsQuickPlay)
+            if (newLobby.IsQuickPlay || newLobby.IsRanked)
             {
                 MainMenu.VersusMatchSettings.Variants.ApplyNetplayVariantRules();
             }
