@@ -229,6 +229,7 @@ namespace TF.State.TowerFallExtensions
             gameState.AddBGMushrooms(self);
 
             gameState.AdditionnalData = TF.State.Domain.ServiceCollections.ResolveAPIManager().GetStates(self.Session.MatchSettings.Variants);
+            gameState.AddModEntitiesState(self);
 
             return gameState;
         }
@@ -808,6 +809,8 @@ namespace TF.State.TowerFallExtensions
                     gameChain.LoadState(toLoad);
                 }
             }
+
+            gameState.LoadModEntitiesState(level);
 
             //Rng
             rngService.LoadState(gameState.Rng);
