@@ -373,6 +373,11 @@ namespace TF.Replay.Domain.Services
             }
         }
 
+        public void SetGameMode(string gameMode)
+        {
+            if (_replay != null) _replay.Informations.GameMode = gameMode ?? "";
+        }
+
         public void SetSeed(int seed)
         {
             if (_replay != null) _replay.Informations.Seed = seed;

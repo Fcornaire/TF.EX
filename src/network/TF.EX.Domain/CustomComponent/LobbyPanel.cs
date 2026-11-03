@@ -211,11 +211,11 @@ namespace TF.EX.Domain.CustomComponent
             Add(_title);
         }
 
-        private void UpdateMode(int mode)
+        private void UpdateMode(string id)
         {
-            var modeEnum = (TowerFall.Modes)mode;
+            var mode = Interop.NetplayGameModes.Resolve(id);
 
-            switch (modeEnum)
+            switch (mode?.IsBuiltIn == true ? mode.BaseMode : (Modes)(-1))
             {
                 case Modes.LastManStanding:
                     _mode = new OutlineText(TowerFall.TFGame.Font, "LAST MAN STANDING");
@@ -236,8 +236,8 @@ namespace TF.EX.Domain.CustomComponent
                     Add(_mode);
                     break;
                 default:
-                    _mode = new OutlineText(TFGame.Font, "LAST MAN STANDING ?");
-                    _mode.Color = QuestDifficultySelect.LegendaryColor;
+                    _mode = new OutlineText(TFGame.Font, (mode?.Name ?? id ?? "?").ToUpperInvariant());
+                    _mode.Color = mode == null ? Color.Red : QuestDifficultySelect.LegendaryColor;
                     _mode.OutlineColor = Color.Transparent;
                     Add(_mode);
                     break;

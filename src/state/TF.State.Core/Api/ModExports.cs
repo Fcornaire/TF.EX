@@ -32,6 +32,25 @@ namespace TF.State.Core.Api
         }
 
         /// <summary>
+        /// Register custom SaveState/LoadState events for a mod's entities (the ones <c>owns</c> accepts).
+        ///
+        /// <para>On a load, each saved entity is found again by its depth; <c>create</c> makes it again when it is gone
+        /// (null when TF.State already remakes it, like an arrow).</para>
+        /// </summary>
+        public static void RegisterEntityStateEvents(Mod module, string name, Func<Monocle.Entity, bool> owns, Func<Monocle.Entity, byte[]> OnGetState, Action<Monocle.Entity, byte[]> OnLoadState, Func<Monocle.Entity> create)
+        {
+            ServiceCollections.ResolveAPIManager().RegisterEntityStateEvents(module.Meta.Name, name, owns, OnGetState, OnLoadState, create);
+        }
+
+        /// <summary>
+        /// Take a mod's entities out of the rollback state.
+        /// </summary>
+        public static void UnregisterEntityStateEvents(Mod module, string name)
+        {
+            ServiceCollections.ResolveAPIManager().UnregisterEntityStateEvents(module.Meta.Name, name);
+        }
+
+        /// <summary>
         /// True while the rollback system is replaying frames it has already run once.
         ///
         /// <para>Untracked cosmetics must not advance during a replay: their Update would run several times

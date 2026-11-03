@@ -11,12 +11,10 @@ namespace TF.EX.Domain.CustomComponent
 
         private int MinPlayers => new[]
         {
-            IsTeamMode ? LobbyVersusModeButton.TEAM_MODE_MIN_PLAYERS : 2,
+            Interop.NetplayGameModes.Resolve(ownLobby.GameData.Mode)?.MinimumPlayers ?? 2,
             ServiceCollections.ResolveInputService().GetLocalPlayerCount() + 1,
             Context.LobbyBuilderContext.IsEditing ? ownLobby.Players.Count : 0,
         }.Max();
-
-        private bool IsTeamMode => (TowerFall.Modes)ownLobby.GameData.Mode == TowerFall.Modes.TeamDeathmatch;
 
         public LobbyVersusPlayerCountButton(Vector2 position, Vector2 tweenFrom) : base(position, tweenFrom, 168, 34)
         {

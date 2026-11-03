@@ -77,7 +77,7 @@ namespace TF.EX.Domain.CustomComponent
         public int GetGoalScore()
         {
             int num;
-            switch ((TowerFall.Modes)ownLobby.GameData.Mode)
+            switch (Interop.NetplayGameModes.Resolve(ownLobby.GameData.Mode)?.BaseMode ?? Modes.LastManStanding)
             {
                 case Modes.LastManStanding:
                     num = PlayerGoals(5, 4, 3);

@@ -80,7 +80,7 @@ namespace TF.EX.Domain.CustomComponent
             }
 
             lobby.GameData.MapId = -1;
-            lobby.GameData.Mode = (int)(lobby.MaxPlayers == TEAM_PLAYERS ? TowerFall.Modes.TeamDeathmatch : TowerFall.Modes.LastManStanding);
+            lobby.GameData.Mode = lobby.MaxPlayers == TEAM_PLAYERS ? Interop.NetplayGameModes.TeamDeathmatch : Interop.NetplayGameModes.LastManStanding;
 
             MainMenu.VersusMatchSettings?.Variants.TournamentRules();
         }

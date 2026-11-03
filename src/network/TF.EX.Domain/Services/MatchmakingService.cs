@@ -1485,15 +1485,9 @@ namespace TF.EX.Domain.Services
             }
         }
 
-        private static string ModeName(int mode)
+        private static string ModeName(string id)
         {
-            return (TowerFall.Modes)mode switch
-            {
-                TowerFall.Modes.LastManStanding => "LAST MAN STANDING",
-                TowerFall.Modes.HeadHunters => "HEADHUNTERS",
-                TowerFall.Modes.TeamDeathmatch => "TEAM DEATHMATCH",
-                _ => ((TowerFall.Modes)mode).ToString().ToUpperInvariant(),
-            };
+            return (Interop.NetplayGameModes.Resolve(id)?.Name ?? id ?? "").ToUpperInvariant();
         }
 
         private bool KickSpectatorIfMissingVariants(Lobby lobby)
@@ -1511,6 +1505,11 @@ namespace TF.EX.Domain.Services
             }
 
             var missing = variants.MissingVariants(lobby.GameData.Variants);
+
+            if (Interop.NetplayGameModes.MissingMode(lobby) is string missingMode)
+            {
+                missing.Insert(0, missingMode);
+            }
 
             if (missing.Count == 0)
             {

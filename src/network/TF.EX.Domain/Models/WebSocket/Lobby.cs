@@ -78,7 +78,7 @@ namespace TF.EX.Domain.Models.WebSocket
         public int? SeriesInputDelay => IsSeriesLobby ? Players.FirstOrDefault(player => player.IsHost)?.InputDelay : null;
 
         [IgnoreMember]
-        public bool IsTeamMode => !IsEmpty && (TowerFall.Modes)GameData.Mode == TowerFall.Modes.TeamDeathmatch;
+        public bool IsTeamMode => !IsEmpty && (Interop.NetplayGameModes.Resolve(GameData.Mode)?.IsTeamMode ?? false);
 
         [IgnoreMember]
         public bool CanJoin { get; set; } = true;
@@ -116,7 +116,7 @@ namespace TF.EX.Domain.Models.WebSocket
     public class GameData
     {
         public int MapId { get; set; } = -1;
-        public int Mode { get; set; } = (int)TowerFall.Modes.LastManStanding;
+        public string Mode { get; set; } = Interop.NetplayGameModes.LastManStanding;
         public int MatchLength { get; set; } = (int)MatchSettings.MatchLengths.Standard;
         public ICollection<string> Variants { get; set; } = [];
         public int Seed { get; set; } = 0;

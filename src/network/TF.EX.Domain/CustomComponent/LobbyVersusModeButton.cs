@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Monocle;
+using TF.EX.Domain.Interop;
 using TowerFall;
 
 namespace TF.EX.Domain.CustomComponent
@@ -8,22 +9,15 @@ namespace TF.EX.Domain.CustomComponent
     {
         public const int TEAM_MODE_MIN_PLAYERS = 3;
 
-        private static readonly TowerFall.Modes[] Modes =
-        {
-            TowerFall.Modes.LastManStanding,
-            TowerFall.Modes.HeadHunters,
-            TowerFall.Modes.TeamDeathmatch,
-        };
-
-        private TowerFall.Modes[] AvailableModes => ownLobby.IsSeriesLobby
-            ? new[] { ownLobby.MaxPlayers == LobbyVersusSeriesButton.TEAM_PLAYERS ? TowerFall.Modes.TeamDeathmatch : TowerFall.Modes.LastManStanding }
-            : Modes;
+        private string[] AvailableModes => ownLobby.IsSeriesLobby
+            ? new[] { ownLobby.MaxPlayers == LobbyVersusSeriesButton.TEAM_PLAYERS ? NetplayGameModes.TeamDeathmatch : NetplayGameModes.LastManStanding }
+            : NetplayGameModes.All.Select(mode => mode.Id).ToArray();
 
         public LobbyVersusModeButton(Vector2 position, Vector2 tweenFrom) : base(position, tweenFrom, 200, 30)
         {
             if (IndexOfCurrentMode() < 0)
             {
-                ownLobby.GameData.Mode = (int)Modes[0];
+                ownLobby.GameData.Mode = AvailableModes[0];
             }
 
             UpdateSides();
@@ -38,7 +32,7 @@ namespace TF.EX.Domain.CustomComponent
 
             if (index < 0)
             {
-                ownLobby.GameData.Mode = (int)modes[0];
+                ownLobby.GameData.Mode = modes[0];
                 UpdateSides();
                 return;
             }
@@ -58,14 +52,16 @@ namespace TF.EX.Domain.CustomComponent
             }
         }
 
-        private void SelectMode(TowerFall.Modes mode)
+        private void SelectMode(string id)
         {
             Sounds.ui_move2.Play();
-            ownLobby.GameData.Mode = (int)mode;
+            ownLobby.GameData.Mode = id;
 
-            if (mode == TowerFall.Modes.TeamDeathmatch && ownLobby.MaxPlayers < TEAM_MODE_MIN_PLAYERS)
+            var minimumPlayers = NetplayGameModes.Resolve(id)?.MinimumPlayers ?? 2;
+
+            if (ownLobby.MaxPlayers < minimumPlayers)
             {
-                ownLobby.MaxPlayers = TEAM_MODE_MIN_PLAYERS;
+                ownLobby.MaxPlayers = minimumPlayers;
             }
 
             base.OnConfirm();
@@ -74,7 +70,7 @@ namespace TF.EX.Domain.CustomComponent
 
         private int IndexOfCurrentMode()
         {
-            return Array.IndexOf(AvailableModes, (TowerFall.Modes)ownLobby.GameData.Mode);
+            return Array.IndexOf(AvailableModes, ownLobby.GameData.Mode);
         }
 
         private void UpdateSides()
@@ -89,11 +85,11 @@ namespace TF.EX.Domain.CustomComponent
         {
             base.Render();
 
-            var mode = (TowerFall.Modes)ownLobby.GameData.Mode;
+            var mode = NetplayGameModes.Resolve(ownLobby.GameData.Mode) ?? NetplayGameModes.Resolve(NetplayGameModes.LastManStanding);
 
-            Draw.OutlineTextureCentered(VersusModeButton.GetModeIcon(mode), Position + new Vector2(0f, -20f), Color.White, new Vector2(1f + iconWiggler.Value * 0.1f, 1f - iconWiggler.Value * 0.1f));
+            Draw.OutlineTextureCentered(mode.Icon, Position + new Vector2(0f, -20f), Color.White, new Vector2(1f + iconWiggler.Value * 0.1f, 1f - iconWiggler.Value * 0.1f));
             Draw.OutlineTextCentered(TFGame.Font, "GAME MODE:", Position + new Vector2(0f, -5f), base.DrawColor, 1f);
-            Draw.OutlineTextCentered(TFGame.Font, VersusModeButton.GetModeName(mode), Position + new Vector2(0f, 4f), base.DrawColor, 2f);
+            Draw.OutlineTextCentered(TFGame.Font, mode.Name.ToUpperInvariant(), Position + new Vector2(0f, 4f), base.DrawColor, 2f);
         }
     }
 }

@@ -77,6 +77,9 @@ namespace TF.Replay.Domain.Models
         [Key(17)]
         public int TickRate { get; set; }
 
+        [Key(18)]
+        public string GameMode { get; set; } = "";
+
         [IgnoreMember]
         public string StateSchemaOrLegacy => string.IsNullOrEmpty(StateSchema) ? ReplayInfo.LegacyStateSchema : StateSchema;
 
