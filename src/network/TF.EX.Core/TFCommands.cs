@@ -85,7 +85,10 @@ namespace TF.EX.Core
         {
             args = CollapseVariantBlock(args);
 
-            var mode = args.Length > 0 ? ParseMode(args[0]) : TowerFall.Modes.LastManStanding;
+            var gameMode = args.Length > 0 ? NetplayGameModes.Resolve(args[0].Replace('_', ' ')) : null;
+            NetplayGameModes.SetTestMode(gameMode?.IsBuiltIn == false ? gameMode.Id : null);
+
+            var mode = gameMode?.IsBuiltIn == false ? VersusModeExtensions.NetplayMode : args.Length > 0 ? ParseMode(args[0]) : TowerFall.Modes.LastManStanding;
             var map = ParseMap(args, 2);
             var startLevel = ParseStartLevel(args, 1, map);
             var seed = args.Length > 3 ? int.Parse(args[3]) : 42;
@@ -533,6 +536,11 @@ namespace TF.EX.Core
             MatchSettings matchSettings = MainMenu.VersusMatchSettings ?? MatchSettings.GetDefaultVersus();
             matchSettings.LevelSystem = GameData.VersusTowers[map].GetLevelSystem();
             matchSettings.Mode = mode;
+
+            if (mode.IsNetplay())
+            {
+                matchSettings.ApplyNetplayMode();
+            }
 
             MainMenu.CurrentMatchSettings = matchSettings;
 
