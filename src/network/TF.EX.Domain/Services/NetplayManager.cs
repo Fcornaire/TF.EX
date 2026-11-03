@@ -360,6 +360,11 @@ namespace TF.EX.Domain.Services
                 return;
             }
 
+            if (Interop.NetplayGameModes.TrySpawnRoundPlayers(roundLogic, withVersusStart: true))
+            {
+                return;
+            }
+
             var dynRoundLogic = DynamicData.For(roundLogic);
 
             roundLogic.Session.CurrentLevel.Add(new VersusStart(roundLogic.Session));

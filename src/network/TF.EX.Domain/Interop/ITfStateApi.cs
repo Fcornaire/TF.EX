@@ -7,6 +7,7 @@ namespace TF.EX.Domain.Interop
 
         bool IsStateAvailable();
         bool HasStateEvents(string id);
+        void RegisterStateEvents(string modName, string key, Func<byte[]> onSaveState, Action<byte[]> onLoadState);
         byte[] GetGameStateBytes();
         byte[] GetGameStateBytesForRecording();
         bool LoadGameStateBytes(byte[] state);

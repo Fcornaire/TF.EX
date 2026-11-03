@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### New
+
+- Netplay: mods can add their own game modes to the online lobbies, next to Last Man Standing, Headhunters and Team Deathmatch (`RegisterGameMode`, `RegisterGameModeStateEvents` in the EX API). A lobby's game mode is now a string id ("LastManStanding", or a mod's "ModName/GameMode"), and a player without the mode's mod, or with another version, can't join it
+- [State] Mods can put their own entities in the rollback state (`RegisterEntityStateEvents`)
+
 ## [0.29.0] - 2026-11-01
 
 ### New

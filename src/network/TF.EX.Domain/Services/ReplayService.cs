@@ -55,7 +55,7 @@ namespace TF.EX.Domain.Services
 
         public void Initialize(Models.WebSocket.GameData gameData = null, ICollection<Models.WebSocket.CustomMod> mods = null)
         {
-            var mode = gameData?.Mode ?? (int)TowerFall.MainMenu.VersusMatchSettings.Mode;
+            var mode = (int?)Interop.NetplayGameModes.Resolve(gameData?.Mode)?.BaseMode ?? (int)TowerFall.MainMenu.VersusMatchSettings.Mode;
 
             _matchSeed = gameData == null ? null : StateApi.Current.GetSeed();
 
@@ -69,6 +69,7 @@ namespace TF.EX.Domain.Services
                 mode,
                 gameData?.MatchLength ?? 2,
                 EffectiveVariants());
+            ReplayApi.Current.SetGameMode(gameData?.Mode ?? "");
         }
 
         private static string[] EffectiveVariants()
@@ -501,6 +502,10 @@ namespace TF.EX.Domain.Services
             {
                 spawner.SpawnRoundPlayersOnly();
 
+                level.UpdateEntityLists();
+            }
+            else if (Interop.NetplayGameModes.TrySpawnRoundPlayers(level?.Session?.RoundLogic, withVersusStart: false))
+            {
                 level.UpdateEntityLists();
             }
             else
