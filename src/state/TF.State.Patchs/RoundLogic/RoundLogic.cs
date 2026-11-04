@@ -104,8 +104,6 @@ namespace TF.State.Patchs.RoundLogic
             return false;
         }
 
-        // The screen's centre: 160, or 210 on a wide map (WiderSet sets WrapMath.AddWidth to 420 and makes the game's own
-        // SpawnPlayersFFA / SpawnPlayersTeams compare against 210 there), so these replacements spawn as the game does
         private static float ScreenCenterX => TowerFall.WrapMath.AddWidth.X / 2f;
 
         [HarmonyPrefix]
