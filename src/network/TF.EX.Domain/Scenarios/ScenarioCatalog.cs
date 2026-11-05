@@ -1233,6 +1233,19 @@ namespace TF.EX.Domain.Scenarios
                 Scripts = [Sequence(AimAndFire(0, -1), AimAndFire(1, 0), Wait(3000)), Still],
                 Expect = level => InstantReplayFootage.PlayedThisMatch > 0
                     && AllOf<Explosion>(level).Count() >= 2,
+            },
+            new Scenario
+            {
+                Name = "dying-exploded-arrow",
+                Covers = ["Player", "Arrow", "Explosion"],
+                Variants = ["START WITH BOMB ARROWS", "ANTI GRAVITY ARROWS"],
+                Frames = 600,
+                CheckDistance = 7,
+                Spawns = [(50, SpawnY), (253, SpawnY)],
+                Scripts = [Sequence(AimAndFire(1, 0), Wait(600)), Still],
+                Expect = level => AllOf<Player>(level).Any(p => p.PlayerIndex == 1 && p.State == Player.PlayerStates.Dying)
+                    && !AllOf<Arrow>(level).Any()
+                    && AllOf<Explosion>(level).Any(),
             }
         ];
 

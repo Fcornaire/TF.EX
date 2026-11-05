@@ -185,5 +185,8 @@ namespace TF.State.Domain.Models.Entity.LevelEntity.Player
 
         [Key(59)]
         public float InvisOpacity { get; set; }
+
+        [Key(60)]
+        public Arrows.Arrow RemovedDeathArrow { get; set; }
     }
 }

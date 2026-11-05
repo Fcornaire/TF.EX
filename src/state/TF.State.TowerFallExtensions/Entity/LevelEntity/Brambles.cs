@@ -21,7 +21,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
 
             TowerFall.Solid Riding = dynBrambles.Get<TowerFall.Solid>("riding");
             double ridingActualDepth = -1;
-            if (Riding != null)
+            if (Riding?.Scene != null)
             {
                 var dynRiding = DynamicData.For(Riding);
                 ridingActualDepth = dynRiding.Get<double>("actualDepth");

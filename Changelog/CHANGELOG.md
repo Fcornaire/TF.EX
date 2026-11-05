@@ -2,8 +2,11 @@
 
 ## [Unreleased]
 
+## [0.29.1] - 2026-11-05
+
 ### Fixed
 
+- [State] Fixed a crash when a bomb arrow exploded on the same frame it hit an archer
 - Netplay: TEAM REVIVE now works in online team matches (fallen teammates could never be revived)
 
 ## [0.29.0] - 2026-11-01

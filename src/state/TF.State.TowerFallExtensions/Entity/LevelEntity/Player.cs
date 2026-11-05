@@ -5,6 +5,7 @@ using System.Reflection;
 using TF.State.Domain.Extensions;
 using TF.State.Domain.Models;
 using TF.State.Domain.Models.Entity.LevelEntity;
+using TF.State.Domain.Models.Entity.LevelEntity.Arrows;
 using TF.State.Domain.Models.Entity.LevelEntity.Player;
 using TF.State.TowerFallExtensions.ComponentExtensions;
 using TF.State.TowerFallExtensions.CompositeComponent;
@@ -34,13 +35,14 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             var actualDepth = dynPlayer.Get<double>("actualDepth");
             var deathArrow = dynPlayer.Get<TowerFall.Arrow>("deathArrow");
             var deathArrowActualDepth = deathArrow != null ? DynamicData.For(deathArrow).Get<double>("actualDepth") : -1;
+            var removedDeathArrow = deathArrow != null && deathArrow.Scene == null ? deathArrow.GetState() : null;
 
             var shield = dynPlayer.Get<TowerFall.PlayerShield>("shield");
             var wings = dynPlayer.Get<TowerFall.PlayerWings>("wings");
 
             double lastPlaformDepth = -1;
             var lastPlatform = dynPlayer.Get<TowerFall.Platform>("lastPlatform");
-            
+
             // Only capture the depth if the platform is still live in the level
             if (lastPlatform != null && entity.Level.GetAll<TowerFall.Platform>().Contains(lastPlatform))
             {
@@ -75,6 +77,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                 MarkedForRemoval = entity.MarkedForRemoval,
                 ActualDepth = actualDepth,
                 DeathArrowDepth = deathArrowActualDepth,
+                RemovedDeathArrow = removedDeathArrow,
                 IsCollidable = entity.Collidable,
                 IsDead = entity.Dead,
                 Position = entity.Position.ToModel(),
@@ -353,11 +356,15 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                 : null);
         }
 
-        public static void LoadDeathArrow(this TowerFall.Player self, double deathArrowActualDepth)
+        public static void LoadDeathArrow(this TowerFall.Player self, double deathArrowActualDepth, Arrow removedDeathArrow)
         {
             var dynPlayer = DynamicData.For(self);
 
-            if (deathArrowActualDepth != -1)
+            if (removedDeathArrow != null)
+            {
+                dynPlayer.Set("deathArrow", self.Level.RecreateRemovedArrow(removedDeathArrow));
+            }
+            else if (deathArrowActualDepth != -1)
             {
                 dynPlayer.Set("deathArrow", self.GetTFArrowByDepth(deathArrowActualDepth));
             }
