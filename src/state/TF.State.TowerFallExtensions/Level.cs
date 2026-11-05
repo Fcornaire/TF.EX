@@ -634,10 +634,7 @@ namespace TF.State.TowerFallExtensions
 
                 foreach (TF.State.Domain.Models.Entity.LevelEntity.Arrows.Arrow toLoad in gameState.Entities.Arrows.ToArray())
                 {
-                    var owner = level.GetPlayerOrCorpse(toLoad.PlayerIndex);
-                    var arrow = owner != null
-                        ? TowerFall.Arrow.Create(toLoad.ArrowType.ToTFModel(), owner, toLoad.Position.ToTFVector(), toLoad.Direction)
-                        : CreateOwnerlessArrow(level, toLoad);
+                    var arrow = CreateArrow(level, toLoad);
 
                     arrow.LoadState(toLoad);
 
@@ -896,6 +893,28 @@ namespace TF.State.TowerFallExtensions
             level[GameTags.Player]?.Sort(CompareDepth);
         }
 
+        public static TowerFall.Arrow RecreateRemovedArrow(this Level level, TF.State.Domain.Models.Entity.LevelEntity.Arrows.Arrow toLoad)
+        {
+            var arrow = CreateArrow(level, toLoad);
+            arrow.LoadState(toLoad);
+            arrow.Removed();
+
+            var dynArrow = DynamicData.For(arrow);
+            dynArrow.Set("MarkedForRemoval", false);
+            dynArrow.Set("Scene", null);
+
+            return arrow;
+        }
+
+        private static TowerFall.Arrow CreateArrow(Level level, TF.State.Domain.Models.Entity.LevelEntity.Arrows.Arrow toLoad)
+        {
+            var owner = level.GetPlayerOrCorpse(toLoad.PlayerIndex);
+
+            return owner != null
+                ? TowerFall.Arrow.Create(toLoad.ArrowType.ToTFModel(), owner, toLoad.Position.ToTFVector(), toLoad.Direction)
+                : CreateOwnerlessArrow(level, toLoad);
+        }
+
         private static TowerFall.Arrow CreateOwnerlessArrow(Level level, TF.State.Domain.Models.Entity.LevelEntity.Arrows.Arrow toLoad)
         {
             var arrow = TowerFall.Arrow.Create(toLoad.ArrowType.ToTFModel(), level.Tiles, toLoad.Position.ToTFVector(), toLoad.Direction, overridePlayerIndex: toLoad.PlayerIndex);
@@ -928,7 +947,7 @@ namespace TF.State.TowerFallExtensions
             {
                 var gamePlayer = self.GetPlayer(toLoad.Index);
 
-                gamePlayer.LoadDeathArrow(toLoad.DeathArrowDepth);
+                gamePlayer.LoadDeathArrow(toLoad.DeathArrowDepth, toLoad.RemovedDeathArrow);
                 gamePlayer.LoadLastCaught(toLoad.LastCaughtArrowDepth);
                 gamePlayer.LoadLastPlatform(toLoad.LastPlatformDepth);
             }
