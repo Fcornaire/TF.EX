@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- [State] Linux and macOS: Flight level 07 no longer has an extra treasure chest that the Windows version doesn't have, removing a desync with Windows players
+
 ## [0.29.1] - 2026-11-05
 
 ### Fixed
