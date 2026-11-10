@@ -188,5 +188,8 @@ namespace TF.State.Domain.Models.Entity.LevelEntity.Player
 
         [Key(60)]
         public Arrows.Arrow RemovedDeathArrow { get; set; }
+
+        [Key(61)]
+        public float AimDirection { get; set; }
     }
 }

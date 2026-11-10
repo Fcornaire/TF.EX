@@ -10,7 +10,7 @@ namespace TF.EX.Domain.Scenarios
         public static readonly string[] TrackedTypes =
         [
             "Arrow", "Bat", "Brambles", "Chain", "Chest", "CrackedPlatform", "CrackedWall",
-            "CrumbleBlock", "DarkPortalsSequence", "Explosion", "GhostPlatform", "Hat", "Ice", "Icicle",
+            "CrumbleBlock", "DarkPortalsSequence", "Explosion", "GhostPlatform", "Hat", "HeavyPhysicsObject", "Ice", "Icicle",
             "JumpPad", "Lantern", "Lava", "LavaControl", "Layer", "LoopPlatform", "MoonGlassBlock",
             "MovingPlatform", "Orb", "Pickup", "Player", "PlayerCorpse", "PlayerGhost", "Prism",
             "ProximityBlock", "RotatePlatform", "RoundLogic", "SensorBlock", "Session", "ShiftBlock",
@@ -1246,6 +1246,29 @@ namespace TF.EX.Domain.Scenarios
                 Expect = level => AllOf<Player>(level).Any(p => p.PlayerIndex == 1 && p.State == Player.PlayerStates.Dying)
                     && !AllOf<Arrow>(level).Any()
                     && AllOf<Explosion>(level).Any(),
+            },
+            new Scenario
+            {
+                Name = "ghost-halo-switchblock",
+                Covers = ["SwitchBlock", "SwitchBlockControl", "PlayerGhost", "HeavyPhysicsObject", "Player", "PlayerCorpse", "Arrow"],
+                Variants = ["RETURN AS GHOSTS", "MAX ARROWS"],
+                Frames = 660,
+                PlayerCount = 3,
+                CheckDistance = 7,
+                Platforms = [(250, 180, 10), (250, 190, 10), (250, 200, 10)],
+                Spawns = [(20, SpawnY), (100, SpawnY), (300, SpawnY)],
+                Entities = [new ScenarioEntity("BlueSwitchBlock", 200, 160, "width=\"50\" height=\"40\"")],
+                Scripts =
+                [
+                    Sequence(AimAndFire(1, 0), Wait(100), Walk(1, 95), Wait(52), AimAndFire(1, 0), Wait(600)),
+                    Sequence(Wait(60), Drift(1, 1, 160), Drift(0, -1, 4), Wait(600)),
+                    Still,
+                ],
+                Expect = level => AllOf<SwitchBlockControl>(level).Any(c =>
+                        DynamicData.For(c).Get<Monocle.Counter>("timer").Value >= 298f)
+                    && AllOf<SwitchBlock>(level).Any(b => DynamicData.For(b).Get<bool>("on")
+                        && AllOf<HeavyPhysicsObject>(level).Any(h =>
+                            h.X > b.X && h.X < b.X + b.Width && h.Y > b.Y && h.Y < b.Y + b.Height)),
             }
         ];
 
