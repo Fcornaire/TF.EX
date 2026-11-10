@@ -25,7 +25,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             bool hasCannotHit = false;
             bool cannotHitIsGhost = false;
             int cannotHitPlayerIndex = -1;
-            if (entity.CannotHit is TowerFall.Player player)
+            if (entity.CannotHit is TowerFall.Player player && !player.Dead)
             {
                 hasCannotHit = true;
                 cannotHitPlayerIndex = player.PlayerIndex;
@@ -75,7 +75,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                     ? entity.Level[Monocle.GameTags.PlayerGhost]
                         .OfType<TowerFall.PlayerGhost>()
                         .FirstOrDefault(ghost => ghost.PlayerIndex == toLoad.CannotHitPlayerIndex)
-                    : entity.Level.GetPlayerOrCorpse(toLoad.CannotHitPlayerIndex);
+                    : entity.Level.GetPlayer(toLoad.CannotHitPlayerIndex);
             }
 
             var sine = dynOrb.Get<SineWave>("sine");

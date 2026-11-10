@@ -106,14 +106,6 @@ namespace TF.State.Patchs.Entity.LevelEntity
         public static bool CataclysmMeat_Update() => !CosmeticFreeze.ShouldFreeze;
     }
 
-    [HarmonyPatch(typeof(TowerFall.HeavyPhysicsObject))]
-    internal class HeavyPhysicsObjectPatch
-    {
-        [HarmonyPrefix]
-        [HarmonyPatch("Update")]
-        public static bool HeavyPhysicsObject_Update() => !CosmeticFreeze.ShouldFreeze;
-    }
-
     [HarmonyPatch(typeof(TowerFall.LevelEntity))]
     internal class ShockCirclePatch
     {

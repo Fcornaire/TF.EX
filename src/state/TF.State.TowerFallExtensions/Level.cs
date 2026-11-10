@@ -67,13 +67,13 @@ namespace TF.State.TowerFallExtensions
         }
 
         //TODO: remove and use Scene extension instead
-        public static void DeleteAll<T>(this Level level) where T : Monocle.Entity
+        public static void DeleteAll<T>(this Level level, Func<T, bool> where = null) where T : Monocle.Entity
         {
             foreach (var layer in level.Layers.Values)
             {
-                DynamicData.For(layer).Get<List<Monocle.Entity>>("toAdd")?.RemoveAll(entity => entity is T);
+                DynamicData.For(layer).Get<List<Monocle.Entity>>("toAdd")?.RemoveAll(entity => entity is T typed && (where == null || where(typed)));
 
-                var entities = layer.Entities.Where(entity => entity is T).ToList();
+                var entities = layer.Entities.Where(entity => entity is T typed && (where == null || where(typed))).ToList();
 
                 foreach (var entity in entities)
                 {
@@ -191,6 +191,7 @@ namespace TF.State.TowerFallExtensions
             gameState.AddIciclesState(self);
             gameState.AddSnowClumpsState(self);
             gameState.AddIcesState(self);
+            gameState.AddHeavyPhysicsObjectsState(self);
             gameState.AddSwitchBlocksState(self);
             gameState.AddSwitchBlockControlState(self);
             gameState.AddShiftBlocksState(self);
@@ -766,6 +767,8 @@ namespace TF.State.TowerFallExtensions
 
             //Ices load
             gameState.LoadIces(level);
+
+            gameState.LoadHeavyPhysicsObjects(level);
 
             foreach (var jumpPad in level.GetAll<TowerFall.JumpPad>())
             {
@@ -1614,6 +1617,23 @@ namespace TF.State.TowerFallExtensions
             if (ices.Length > 0)
             {
                 gameState.Entities.Ices = ices.Select(ice => ice.GetState()).ToList();
+            }
+        }
+
+        private static void AddHeavyPhysicsObjectsState(this GameState gameState, Level level)
+        {
+            foreach (TowerFall.HeavyPhysicsObject halo in level.GetAll<TowerFall.HeavyPhysicsObject>().Where(halo => halo.IsTracked()).ToArray())
+            {
+                var state = halo.GetState();
+                gameState.Entities.HeavyPhysicsObjects.Add(state);
+                ServiceCollections.AddEntityToCache(state.ActualDepth, halo);
+            }
+
+            foreach (TowerFall.HeavyPhysicsObject halo in level.GetAllToBeSpawned<TowerFall.HeavyPhysicsObject>().Where(halo => halo.IsTracked()).ToArray())
+            {
+                var state = halo.GetState();
+                state.Pending = true;
+                gameState.Entities.HeavyPhysicsObjects.Add(state);
             }
         }
 
@@ -2895,6 +2915,48 @@ namespace TF.State.TowerFallExtensions
                 var ice = liveIces.FirstOrDefault(live => DynamicData.For(live).Get<double>("actualDepth") == toLoad.ActualDepth);
 
                 ice?.LoadState(toLoad);
+            }
+        }
+
+
+        private static void LoadHeavyPhysicsObjects(this GameState gameState, Level level)
+        {
+            level.DeleteAll<TowerFall.HeavyPhysicsObject>(halo => halo.IsTracked());
+
+            var ambientRandom = Monocle.Calc.Random;
+            Monocle.Calc.Random = new();
+
+            try
+            {
+                foreach (var toLoad in gameState.Entities.HeavyPhysicsObjects ?? [])
+                {
+                    var halo = toLoad.Pending ? null : ServiceCollections.GetCachedEntity<TowerFall.HeavyPhysicsObject>(toLoad.ActualDepth);
+
+                    halo ??= new TowerFall.HeavyPhysicsObject(toLoad.Position.ToTFVector(), TFGame.Atlas[HeavyPhysicsObjectExtensions.HaloTexture], Sounds.sfx_endropHalo);
+
+                    halo.LoadState(toLoad);
+
+                    if (toLoad.Pending)
+                    {
+                        DynamicData.For(level.GetGameplayLayer()).Get<List<Monocle.Entity>>("toAdd")?.Add(halo);
+                        continue;
+                    }
+
+                    level.GetGameplayLayer().Entities.Insert(0, halo);
+
+                    foreach (var tag in halo.Tags)
+                    {
+                        var tagList = level[tag];
+                        if (!tagList.Contains(halo))
+                        {
+                            tagList.Add(halo);
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                Monocle.Calc.Random = ambientRandom;
             }
         }
 

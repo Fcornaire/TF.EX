@@ -107,6 +107,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
                 DodgeStallCounter = dynPlayer.Get<Counter>("dodgeStallCounter").Value,
                 DodgeCooldown = dynPlayer.Get<bool>("dodgeCooldown"),
                 Aiming = entity.Aiming,
+                AimDirection = entity.AimDirection,
                 IsAimingRight = dynPlayer.Get<bool>("isAimingRight"),
                 SlipperyControl = dynPlayer.Get<float>("slipperyControl"),
                 CanVarJump = dynPlayer.Get<bool>("canVarJump"),
@@ -178,6 +179,7 @@ namespace TF.State.TowerFallExtensions.Entity.LevelEntity
             entity.Position = toLoad.Position.ToTFVector();
             dynPlayer.Set("counter", toLoad.PositionCounter.ToTFVector());
             dynPlayer.Set("Facing", (TowerFall.Facing)toLoad.Facing);
+            dynPlayer.Set("AimDirection", toLoad.AimDirection);
             dynPlayer.Set("wallStickMax", toLoad.WallStickMax);
             entity.Arrows.ToLoad(toLoad.ArrowsInventory);
             dynPlayer.Set("autoMove", toLoad.AutoMove);
