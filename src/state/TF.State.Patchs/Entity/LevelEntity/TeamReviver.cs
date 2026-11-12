@@ -1,7 +1,6 @@
 ﻿using HarmonyLib;
 using Monocle;
 using MonoMod.Utils;
-using TF.State.Domain;
 using TF.State.Domain.Context;
 using TF.State.TowerFallExtensions.Entity;
 using TowerFall;
@@ -18,6 +17,8 @@ namespace TF.State.Patchs.Entity.LevelEntity
         private const float PLAY_SFX = 21f;
         private const float UNFREEZE = 36f;
 
+        private static bool _isTicking;
+
         [HarmonyPostfix]
         [HarmonyPatch(MethodType.Constructor, [typeof(PlayerCorpse), typeof(TeamReviver.Modes)])]
         public static void TeamReviver_ctor(TeamReviver __instance)
@@ -25,11 +26,18 @@ namespace TF.State.Patchs.Entity.LevelEntity
             DynamicData.For(__instance).Set(SEQUENCE_COUNTER, -1f);
         }
 
+        [HarmonyPrefix]
+        [HarmonyPatch("ReviveUpdate")]
+        public static bool TeamReviver_ReviveUpdate_Prefix()
+        {
+            return _isTicking;
+        }
+
         [HarmonyPostfix]
         [HarmonyPatch("ReviveUpdate")]
         public static void TeamReviver_ReviveUpdate_Postfix(TeamReviver __instance)
         {
-            if (!StateFlags.IsCaptureActive)
+            if (!_isTicking || !StateFlags.IsCaptureActive)
             {
                 return;
             }
@@ -79,6 +87,26 @@ namespace TF.State.Patchs.Entity.LevelEntity
             {
                 __instance.Level.GetPlayer(__instance.Corpse.PlayerIndex)?.Unfreeze();
                 __instance.RemoveSelf();
+            }
+        }
+
+        internal static void TickRevivers(Level level)
+        {
+            _isTicking = true;
+
+            try
+            {
+                foreach (TeamReviver reviver in level[Monocle.GameTags.TeamReviver])
+                {
+                    if (reviver.Active)
+                    {
+                        reviver.ReviveUpdate();
+                    }
+                }
+            }
+            finally
+            {
+                _isTicking = false;
             }
         }
 

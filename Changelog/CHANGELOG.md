@@ -14,6 +14,7 @@
 - [State] An icicle or an orb set off by an archer who dies right after should no longer desync after a rollback
 - [State] The arrow dropped by an archer killed while aiming should no longer go in the wrong direction after a rollback
 - [State] A switch block next to a dying ghost should no longer introduce a desynch
+- [State] Reviving an archer with TEAM REVIVE should no longer desync Steam and non Steam players
 
 ## [0.29.1] - 2026-11-05
 
