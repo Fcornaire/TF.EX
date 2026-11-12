@@ -134,9 +134,9 @@ namespace TF.EX.Domain.CustomComponent
                 return;
             }
 
-            if (lobby.InGame || lobby.IsSeriesInProgress)
+            if (lobby.IsSpectateOnly)
             {
-                liveIndicator = new OutlineText(TFGame.Font, lobby.InGame ? "LIVE, SPECTATE ONLY" : "SERIES LIVE, SPECTATE ONLY")
+                liveIndicator = new OutlineText(TFGame.Font, lobby.InGame ? "LIVE, SPECTATE ONLY" : lobby.IsSeriesInProgress ? "SERIES LIVE, SPECTATE ONLY" : "FULL, SPECTATE ONLY")
                 {
                     Scale = Vector2.One * 1.3f,
                     Color = Color.Yellow,

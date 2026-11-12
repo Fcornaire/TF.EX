@@ -43,13 +43,16 @@ namespace TF.EX.Patchs.PlayerInput
             Sounds.ui_clickBack.Play();
 
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+            var destination = matchmakingService.GetOwnLobby().IsPrivate
+                ? TF.EX.Domain.Models.MenuState.PrivateSelect
+                : TF.EX.Domain.Models.MenuState.LobbyBrowser;
 
             Task.Run(async () =>
             {
                 await matchmakingService.LeaveLobby(() => { }, () => { });
             });
 
-            (TFGame.Instance.Scene as MainMenu).State = TF.EX.Domain.Models.MenuState.LobbyBrowser.ToTFModel();
+            (TFGame.Instance.Scene as MainMenu).State = destination.ToTFModel();
             matchmakingService.ResetPeer();
 
             return false;

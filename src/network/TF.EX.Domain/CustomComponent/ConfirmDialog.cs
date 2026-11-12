@@ -137,7 +137,7 @@ namespace TF.EX.Domain.CustomComponent
         private bool IsPressed(RawMenuButton button)
         {
             return _originalInputs == null
-                ? RawMenuInput.Pressed(button)
+                ? RawMenuInput.IsButtonPressed(button)
                 : _originalInputs.Any(input => input != null && IsPressed(input, button));
         }
 

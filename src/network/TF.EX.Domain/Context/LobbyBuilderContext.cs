@@ -6,6 +6,8 @@ namespace TF.EX.Domain.Context
     {
         public static bool IsPrivate;
 
+        public static bool IsSpectatorHost;
+
         public static bool IsEditing { get; private set; }
 
         private static int snapshotMaxPlayers;

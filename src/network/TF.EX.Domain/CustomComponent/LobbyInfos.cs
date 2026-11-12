@@ -100,7 +100,7 @@ namespace TF.EX.Domain.CustomComponent
 
         private Color BaseColor()
         {
-            return Lobby?.InGame == true || Lobby?.IsSeriesInProgress == true ? liveTint : Color.White;
+            return Lobby?.IsSpectateOnly == true ? liveTint : Color.White;
         }
 
         public override void Render()
