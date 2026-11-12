@@ -83,6 +83,7 @@ namespace TF.EX.Patchs.Scene
         private static LobbyVersusMapButton lobbyVersusMapButton = null;
         private static LobbyVersusPlayerCountButton lobbyVersusPlayerCountButton = null;
         private static LobbyVersusSeriesButton lobbyVersusSeriesButton = null;
+        private static LobbyHostRoleButton lobbyHostRoleButton = null;
         private static SeriesScreen seriesScreen = null;
         private static bool wasOnNetplayScreen;
         private static LobbyVarianText lobbyVarianText = null;
@@ -446,7 +447,7 @@ namespace TF.EX.Patchs.Scene
                 editLobbyGuideEntity = null;
             }
 
-            if (name != "Create" || !ServiceCollections.ResolveMatchmakingService().CanEditLobbySettings())
+            if (name != "Create")
             {
                 return;
             }
@@ -586,6 +587,7 @@ namespace TF.EX.Patchs.Scene
             {
                 if (MenuInput.Start)
                 {
+                    Domain.Context.LobbyBuilderContext.IsPrivate = false;
                     __instance.State = TF.EX.Domain.Models.MenuState.LobbyBuilder.ToTFModel();
                     return;
                 }
@@ -705,6 +707,7 @@ namespace TF.EX.Patchs.Scene
                     lobby.Name = NetplayPreferences.Name;
                     lobby.RoomId = roomId;
                     lobby.Kind = (Domain.Context.LobbyBuilderContext.IsPrivate ? LobbyKind.Private : LobbyKind.Standard).ToString();
+                    lobby.IsSpectatorHosted = Domain.Context.LobbyBuilderContext.IsPrivate && Domain.Context.LobbyBuilderContext.IsSpectatorHost;
                     lobby.Players.Add(new Domain.Models.WebSocket.Player
                     {
                         Name = NetplayPreferences.Name,
@@ -729,7 +732,16 @@ namespace TF.EX.Patchs.Scene
                         Sounds.ui_click.Play();
                         __instance.State = MainMenu.MenuState.Rollcall;
                         __instance.BackState = Domain.Models.MenuState.NetplaySelect.ToTFModel();
-                        netplayManager.SetRoomAndServerMode($"{roomUrl}?peer={matchmakingService.GetRoomPeerId()}", true);
+                        var roomPeerUrl = $"{roomUrl}?peer={matchmakingService.GetRoomPeerId()}";
+
+                        if (matchmakingService.IsSpectator())
+                        {
+                            netplayManager.SetSpectatorMode(roomPeerUrl, null);
+                        }
+                        else
+                        {
+                            netplayManager.SetRoomAndServerMode(roomPeerUrl, true);
+                        }
 
                         StateApi.Current.SetSeed(matchmakingService.GetOwnLobby().GameData.Seed);
 
@@ -952,6 +964,14 @@ namespace TF.EX.Patchs.Scene
         private static void CreatePrivateSelect(MainMenu self)
         {
             self.BackState = Domain.Models.MenuState.NetplaySelect.ToTFModel();
+
+            if (self.OldState == MainMenu.MenuState.Rollcall)
+            {
+                var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+                matchmakingService.ResetLobby();
+                matchmakingService.ResetPeer();
+                ServiceCollections.ResolveInputService().EnableAllControllers();
+            }
 
             var create = new NetplayMenuButton(new Vector2(100f, 90f), new Vector2(-160f, 120f), "CREATE", "HOST A LOBBY", TFGame.MenuAtlas["editorQuill"], () =>
             {
@@ -1512,6 +1532,12 @@ namespace TF.EX.Patchs.Scene
                     lobbyVersusSeriesButton = null;
                 }
 
+                if (lobbyHostRoleButton != null)
+                {
+                    lobbyHostRoleButton.RemoveSelf();
+                    lobbyHostRoleButton = null;
+                }
+
                 if (lobbyVarianText != null)
                 {
                     lobbyVarianText.RemoveSelf();
@@ -1568,15 +1594,24 @@ namespace TF.EX.Patchs.Scene
             lobbyVersusSeriesButton = new LobbyVersusSeriesButton(new Vector2(160f, 250f), new Vector2(420f, 165f));
             self.Add(lobbyVersusSeriesButton);
 
-            lobbyVarianText = new LobbyVarianText(new Vector2(160f, 280f), new Vector2(-120f, 165f));
+            var shouldAddRoleButton = Domain.Context.LobbyBuilderContext.IsPrivate && !Domain.Context.LobbyBuilderContext.IsEditing;
+            var roleRowGap = shouldAddRoleButton ? 30f : 0f;
+
+            if (shouldAddRoleButton)
+            {
+                lobbyHostRoleButton = new LobbyHostRoleButton(new Vector2(160f, 280f), new Vector2(420f, 195f));
+                self.Add(lobbyHostRoleButton);
+            }
+
+            lobbyVarianText = new LobbyVarianText(new Vector2(160f, 280f + roleRowGap), new Vector2(-120f, 165f));
             self.Add(lobbyVarianText);
 
             foreach (var variant in variants)
             {
-                variant.Position.Y += 260;
+                variant.Position.Y += 260 + roleRowGap;
             }
 
-            self.MaxUICameraY = variantsMaxY + 290;
+            self.MaxUICameraY = variantsMaxY + 290 + roleRowGap;
 
             var dynMainMenu = DynamicData.For(self);
             dynMainMenu.Invoke("TweenBGCameraToY", 3);
@@ -1589,11 +1624,20 @@ namespace TF.EX.Patchs.Scene
             lobbyVersusCoinButton.UpItem = lobbyVersusPlayerCountButton;
             lobbyVersusCoinButton.DownItem = lobbyVersusSeriesButton;
             lobbyVersusSeriesButton.UpItem = lobbyVersusCoinButton;
-            lobbyVersusSeriesButton.DownItem = variants[0];
-            variants[0].UpItem = lobbyVersusSeriesButton;
-            variants[1].UpItem = lobbyVersusSeriesButton;
-            variants[2].UpItem = lobbyVersusSeriesButton;
-            variants[3].UpItem = lobbyVersusSeriesButton;
+            TowerFall.MenuItem aboveVariants = lobbyVersusSeriesButton;
+
+            if (shouldAddRoleButton)
+            {
+                lobbyVersusSeriesButton.DownItem = lobbyHostRoleButton;
+                lobbyHostRoleButton.UpItem = lobbyVersusSeriesButton;
+                aboveVariants = lobbyHostRoleButton;
+            }
+
+            aboveVariants.DownItem = variants[0];
+            variants[0].UpItem = aboveVariants;
+            variants[1].UpItem = aboveVariants;
+            variants[2].UpItem = aboveVariants;
+            variants[3].UpItem = aboveVariants;
 
             self.Add(variants);
 
@@ -1761,7 +1805,7 @@ namespace TF.EX.Patchs.Scene
                 }
             }
 
-            return false;
+            return ServiceCollections.ResolveMatchmakingService().IsSpectator() && RawMenuInput.IsButtonPressed(RawMenuButton.Alt2);
         }
 
         private static void CopyPrivateCodeToClipboard(MainMenu self, Domain.Ports.IMatchmakingService matchmakingService)
@@ -1874,7 +1918,7 @@ namespace TF.EX.Patchs.Scene
                 noMsg = null;
             }
 
-            if (lobbies.Count == 0 && reslobbies.Count() > 0 || lobbies.Count != reslobbies.Count())
+            if (lobbies.Count == 0 && reslobbies.Any() || lobbies.Count != reslobbies.Count())
             {
                 var dynMainMenu = DynamicData.For(self);
                 var dynCamera = DynamicData.For(self.UILayer);
@@ -1934,11 +1978,15 @@ namespace TF.EX.Patchs.Scene
                         }
                     }
 
+                    LobbyInfos infos = null;
+
                     Action onClick = () =>
                     {
-                        if (newLobby.InGame || newLobby.IsSeriesInProgress)
+                        var current = infos.Lobby;
+
+                        if (current.IsSpectateOnly)
                         {
-                            Notification.Create(self, newLobby.InGame ? "MATCH IN PROGRESS, SPECTATE ONLY" : "SERIES IN PROGRESS, SPECTATE ONLY");
+                            Notification.Create(self, current.InGame ? "MATCH IN PROGRESS, SPECTATE ONLY" : current.IsSeriesInProgress ? "SERIES IN PROGRESS, SPECTATE ONLY" : "LOBBY FULL, SPECTATE ONLY");
                             TowerFall.Sounds.ui_invalid.Play();
                             return;
                         }
@@ -1955,7 +2003,7 @@ namespace TF.EX.Patchs.Scene
 
                         var localPlayers = ServiceCollections.ResolveInputService().GetLocalPlayerCount();
 
-                        if (newLobby.MaxPlayers - newLobby.Players.Count < localPlayers)
+                        if (current.MaxPlayers - current.Players.Count < localPlayers)
                         {
                             Notification.Create(self, $"NOT ENOUGH SEATS FOR {localPlayers} PLAYERS");
                             TowerFall.Sounds.ui_invalid.Play();
@@ -1975,22 +2023,22 @@ namespace TF.EX.Patchs.Scene
                         matchmakingService.JoinLobby(newLobby.RoomId, true, () => OnJoinSuccess(self, newLobby, true), () => OnFailedToJoinLobby(self));
                     };
 
-                    var but = new LobbyInfos(self, new Vector2(5.0f, maxY), newLobby, onClick, lobbyPanel);
+                    infos = new LobbyInfos(self, new Vector2(5.0f, maxY), newLobby, onClick, lobbyPanel);
 
-                    lobbies.Add(but);
+                    lobbies.Add(infos);
                     if (i != 0)
                     {
-                        lobbies[i - 1].DownItem = but;
-                        but.UpItem = lobbies[i - 1];
+                        lobbies[i - 1].DownItem = infos;
+                        infos.UpItem = lobbies[i - 1];
                     }
 
                     if (i == 0)
                     {
-                        dynMainMenu.Set("ToStartSelected", but);
-                        but.Selected = true;
+                        dynMainMenu.Set("ToStartSelected", infos);
+                        infos.Selected = true;
                     }
 
-                    dynCamera.Invoke("Add", but, false);
+                    dynCamera.Invoke("Add", infos, false);
 
                     maxY += 35.0f;
                 }
@@ -2122,13 +2170,13 @@ namespace TF.EX.Patchs.Scene
 
             if (isPlayer)
             {
-                netplayManager.SetRoomAndServerMode($"{roomUrl}?peer={matchmakingService.GetRoomPeerId()}", false);
+                netplayManager.SetRoomAndServerMode($"{roomUrl}?peer={matchmakingService.GetRoomPeerId()}", newLobby.Players.Any(pl => pl.IsHost && pl.RoomPeerId == matchmakingService.GetRoomPeerId()));
             }
             else
             {
                 netplayManager.SetSpectatorMode(
                     $"{roomUrl}?peer={matchmakingService.GetRoomPeerId()}",
-                    newLobby.Players.First(pl => pl.IsHost).RoomPeerId);
+                    newLobby.Players.FirstOrDefault(pl => pl.IsHost)?.RoomPeerId);
             }
 
             matchmakingService.UpdateOwnLobby(newLobby);

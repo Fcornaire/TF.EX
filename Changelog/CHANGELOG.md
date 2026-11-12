@@ -2,7 +2,12 @@
 
 ## [Unreleased]
 
-## [0.29.2] - 2026-11-12
+## [0.30.0] - 2026-11-12
+
+### New
+
+- Private lobbies can now be created as a spectator
+- Full lobbies now show in the lobby browser (they can be spectated)
 
 ### Fixed
 

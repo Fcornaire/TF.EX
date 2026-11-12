@@ -1180,6 +1180,11 @@ namespace TF.EX.Domain.Services
             GGRSConfig.Netplay.Spectators = new List<string>();
             GGRSConfig.Netplay.LocalPeerId = ServiceCollections.ResolveMatchmakingService().GetRoomPeerId();
 
+            if (GGRSConfig.Netplay.ServerConf != null)
+            {
+                GGRSConfig.Netplay.ServerConf.IsHost = players.Any(player => player.IsHost && player.RoomPeerId == GGRSConfig.Netplay.LocalPeerId);
+            }
+
             foreach (var player in players.OrderBy(player => player.Seat))
             {
                 var peerId = player.RoomPeerId;

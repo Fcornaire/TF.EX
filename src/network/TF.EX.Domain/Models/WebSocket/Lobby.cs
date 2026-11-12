@@ -31,6 +31,7 @@ namespace TF.EX.Domain.Models.WebSocket
         public ICollection<string[]> RelayedPairs { get; set; } = [];
         public bool IsCheckingConnections { get; set; } = false;
         public bool IsReportEnabled { get; set; } = false;
+        public bool IsSpectatorHosted { get; set; } = false;
         public ICollection<Player> MatchPlayers { get; set; } = [];
         public List<RankedSeat> RankedSeats { get; set; } = [];
 
@@ -42,6 +43,12 @@ namespace TF.EX.Domain.Models.WebSocket
 
         [IgnoreMember]
         public bool IsSeriesInProgress => Series?.IsInProgress == true;
+
+        [IgnoreMember]
+        public bool IsFull => Players.Count >= MaxPlayers;
+
+        [IgnoreMember]
+        public bool IsSpectateOnly => InGame || IsSeriesInProgress || IsFull;
 
         [IgnoreMember]
         public ICollection<Player> SessionPlayers => MatchPlayers.Count > 0 ? MatchPlayers : Players;
@@ -72,7 +79,10 @@ namespace TF.EX.Domain.Models.WebSocket
         }
 
         [IgnoreMember]
-        public bool IsEmpty => Players.Count == 0;
+        public bool IsEmpty => Players.Count == 0 && Spectators.Count == 0;
+
+        [IgnoreMember]
+        public bool IsAwaitingPlayers => IsSpectatorHosted && Players.Count == 0 && Spectators.Count > 0;
 
         [IgnoreMember]
         public int? SeriesInputDelay => IsSeriesLobby ? Players.FirstOrDefault(player => player.IsHost)?.InputDelay : null;

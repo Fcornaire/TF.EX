@@ -44,7 +44,7 @@ namespace TF.EX.Domain.CustomComponent
                 return;
             }
 
-            if (level.Ending || level.Session.GetWinner() != -1 || !Pressed(RawMenuButton.Start))
+            if (level.Ending || level.Session.GetWinner() != -1 || !IsButtonPressed(RawMenuButton.Start))
             {
                 return;
             }
@@ -120,20 +120,20 @@ namespace TF.EX.Domain.CustomComponent
                 return;
             }
 
-            if (Pressed(RawMenuButton.Up) || Pressed(RawMenuButton.Down))
+            if (IsButtonPressed(RawMenuButton.Up) || IsButtonPressed(RawMenuButton.Down))
             {
                 selectedIndex = 1 - selectedIndex;
                 Sounds.ui_move1.Play();
                 return;
             }
 
-            if (Pressed(RawMenuButton.Start) || Pressed(RawMenuButton.Back))
+            if (IsButtonPressed(RawMenuButton.Start) || IsButtonPressed(RawMenuButton.Back))
             {
                 Close();
                 return;
             }
 
-            if (Pressed(RawMenuButton.Confirm))
+            if (IsButtonPressed(RawMenuButton.Confirm))
             {
                 if (selectedIndex == 0)
                 {

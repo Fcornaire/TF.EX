@@ -690,7 +690,7 @@ namespace TF.EX.Domain.Services
                     {
                         _logger.LogDebug<MatchmakingService>("Lobby created!");
                         ownLobby = response.CreateLobbyResponse.Lobby;
-                        peerId = ownLobby.Players.First(pl => pl.IsHost).RoomPeerId.ToString();
+                        peerId = (ownLobby.Players.FirstOrDefault(pl => pl.IsHost) ?? ownLobby.Spectators.First()).RoomPeerId.ToString();
                         onResult["CreateLobby-success"]?.Invoke();
                     }
                     else
@@ -1222,9 +1222,14 @@ namespace TF.EX.Domain.Services
             }
 
             //Leave if host left
-            if (!lobby.Players.Any(pl => pl.IsHost))
+            if (!lobby.Players.Any(pl => pl.IsHost) && !(lobby.IsAwaitingPlayers && TFGame.Instance.Scene is MainMenu))
             {
                 abandonedRoomId = lobby.RoomId;
+
+                if (lobby.IsSpectatorHosted)
+                {
+                    Task.Run(() => SendLeaveLobby());
+                }
 
                 if (TFGame.Instance.Scene is MainMenu)
                 {
@@ -1235,7 +1240,7 @@ namespace TF.EX.Domain.Services
                 if (TFGame.Instance.Scene is Level)
                 {
                     Sounds.ui_invalid.Play();
-                    Notification.Create(TFGame.Instance.Scene, "Host left the game...");
+                    Notification.Create(TFGame.Instance.Scene, lobby.IsSpectatorHosted ? "All players left..." : "Host left the game...");
                     ServiceCollections.ResolveReplayService().Export();
                     ownLobby = new Lobby();
                 }
@@ -1283,7 +1288,7 @@ namespace TF.EX.Domain.Services
             if (isSpectatorInLobby && !_netplayManager.IsSpectatorMode())
             {
                 var roomUrl = $"{SERVER_URL}/room/{lobby.RoomId}?peer={peerId}";
-                var hostPeerId = lobby.Players.First(pl => pl.IsHost).RoomPeerId;
+                var hostPeerId = lobby.Players.FirstOrDefault(pl => pl.IsHost)?.RoomPeerId;
 
                 _netplayManager.SetSpectatorMode(roomUrl, hostPeerId);
             }
@@ -1526,7 +1531,7 @@ namespace TF.EX.Domain.Services
 
             if (TFGame.Instance.Scene is MainMenu mainMenu)
             {
-                mainMenu.State = Domain.Models.MenuState.LobbyBrowser.ToTFModel();
+                mainMenu.State = (lobby.IsPrivate ? Domain.Models.MenuState.PrivateSelect : Domain.Models.MenuState.LobbyBrowser).ToTFModel();
             }
 
             ResetPeer();
