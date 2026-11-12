@@ -1269,6 +1269,25 @@ namespace TF.EX.Domain.Scenarios
                     && AllOf<SwitchBlock>(level).Any(b => DynamicData.For(b).Get<bool>("on")
                         && AllOf<HeavyPhysicsObject>(level).Any(h =>
                             h.X > b.X && h.X < b.X + b.Width && h.Y > b.Y && h.Y < b.Y + b.Height)),
+            },
+            new Scenario
+            {
+                Name = "reviver-order",
+                Covers = ["TeamReviver", "PlayerCorpse"],
+                Mode = Modes.TeamDeathmatch,
+                Variants = ["TEAM REVIVE"],
+                PlayerCount = 4,
+                Frames = 900,
+                Spawns = [(140, SpawnY), (60, SpawnY), (188, SpawnY), (300, SpawnY)],
+                Scripts =
+                [
+                    Still,
+                    Sequence(AimAndFire(1, 0), Wait(600)),
+                    Still,
+                    Still,
+                ],
+                Expect = level => AllOf<TeamReviver>(level).Any(r =>
+                    !r.Finished && r.Corpse?.Scene != null && r.Position != r.Corpse.BottomCenter),
             }
         ];
 
