@@ -262,6 +262,7 @@ namespace TF.EX.Domain
 
             var live = StateApi.Current.CaptureGameState();
             var liveInputs = inputService.GetCurrentInputs().ToArray();
+            var livePlayerInputs = SavePlayerInputs(level);
             var liveFrameCounter = level.FrameCounter;
             var liveDeltaTime = Engine.DeltaTime;
             var liveTimeMult = Engine.TimeMult;
@@ -318,6 +319,7 @@ namespace TF.EX.Domain
                 SetEngineDeltaTime?.Invoke(liveDeltaTime);
                 SetEngineTimeMult?.Invoke(liveTimeMult);
                 Restore(netplayManager, live);
+                RestorePlayerInputs(level, livePlayerInputs);
                 ClearParticles(level);
                 Audio.ClearLists();
                 inputService.UpdateCurrent(liveInputs);
@@ -450,6 +452,29 @@ namespace TF.EX.Domain
             level.ParticlesBG?.Clear();
             level.Particles?.Clear();
             level.ParticlesFG?.Clear();
+        }
+
+        private static Dictionary<int, InputState> SavePlayerInputs(Level level)
+        {
+            var inputs = new Dictionary<int, InputState>();
+
+            foreach (var player in level.Players.OfType<Player>())
+            {
+                inputs[player.PlayerIndex] = DynamicData.For(player).Get<InputState>("input");
+            }
+
+            return inputs;
+        }
+
+        private static void RestorePlayerInputs(Level level, Dictionary<int, InputState> inputs)
+        {
+            foreach (var player in level.Players.OfType<Player>())
+            {
+                if (inputs.TryGetValue(player.PlayerIndex, out var input))
+                {
+                    DynamicData.For(player).Set("input", input);
+                }
+            }
         }
 
         private static Action<T> StaticSetter<T>(string property)
