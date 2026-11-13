@@ -86,6 +86,12 @@ It fairly easy to install this mod:
 4. Put the zip in the `Mods` folder as `Mods/DShad.TF.EX.zip` (no extract needed)
 5. Launch `FortRise.exe` in FortRise folder directly, it will launch and patch Towerfall directly
 
+> [!NOTE]
+> **macOS:** the FortRise folder is inside the app bundle, so the zip goes in
+> `FortRise.app/Contents/MacOS/Mods/DShad.TF.EX.zip`. Launch `FortRise.app`;
+> the first time it asks where TowerFall is, pick
+> `~/Library/Application Support/Steam/steamapps/common/TowerFall/TowerFall.app`.
+
 After that first install the mod keeps itself up to date: when you enter NETPLAY it checks for a new version.
 Online play always requires the latest version.
 
