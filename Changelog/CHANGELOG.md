@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.30.1] - 2026-11-13
+
+### Fixed
+
+- Minor instant replay fix (Save/Restore proper inputs)
+
 ## [0.30.0] - 2026-11-12
 
 ### New
