@@ -167,6 +167,7 @@ namespace TF.EX.Patchs.Engine
 
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
             matchmakingService.DrainGameThreadActions();
+            matchmakingService.UpdateNoContestOfferClock();
             matchmakingService.StartOrStopPingMeasurementIfNeeded(__instance.Scene is TowerFall.MainMenu && !netplayManager.IsInit());
 
             netplayManager.PublishCaptureFlag();

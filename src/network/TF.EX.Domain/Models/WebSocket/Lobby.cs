@@ -113,6 +113,15 @@ namespace TF.EX.Domain.Models.WebSocket
         public int Rating { get; set; }
         public bool Provisional { get; set; }
         public int? Delta { get; set; }
+        public FavoriteArcher FavoriteArcher { get; set; }
+    }
+
+    [MessagePackObject(keyAsPropertyName: true)]
+    public class FavoriteArcher
+    {
+        public int Archer { get; set; }
+        public int ArcherAlt { get; set; }
+        public string CustomArcherId { get; set; } = "";
     }
 
     public class EndGameStatus
@@ -140,6 +149,7 @@ namespace TF.EX.Domain.Models.WebSocket
         public const string Finished = "Finished";
         public const string Aborted = "Aborted";
         public const string OpponentLeft = "OPPONENT LEFT";
+        public const string AgreedNoContest = "NO CONTEST AGREED";
 
         public int BestOf { get; set; } = 0;
         public List<List<int>> Sides { get; set; } = [];

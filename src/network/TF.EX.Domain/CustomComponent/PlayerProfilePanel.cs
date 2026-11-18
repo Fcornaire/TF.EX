@@ -453,17 +453,12 @@ namespace TF.EX.Domain.CustomComponent
 
         private static int ResolveArcherIndex(ArcherPlays plays)
         {
-            var isCustom = !string.IsNullOrEmpty(plays.CustomArcherId);
-            var index = isCustom ? ArcherDataExtensions.ResolveCustomArcher(plays.CustomArcherId) : plays.Archer;
-
-            return (!isCustom && index >= ArcherDataExtensions.VanillaArcherCount) || !ArcherDataExtensions.Exists(index, plays.ArcherAlt) ? -1 : index;
+            return ArcherDataExtensions.ResolvePlayedArcherIndex(plays.Archer, plays.ArcherAlt, plays.CustomArcherId);
         }
 
         private static ArcherData ResolveArcher(ArcherPlays plays)
         {
-            var index = ResolveArcherIndex(plays);
-
-            return index < 0 ? null : ArcherData.Get(index, (ArcherData.ArcherTypes)plays.ArcherAlt);
+            return ArcherDataExtensions.ResolvePlayedArcher(plays.Archer, plays.ArcherAlt, plays.CustomArcherId);
         }
 
         private static AwardInfo GetAwardAt(int id)

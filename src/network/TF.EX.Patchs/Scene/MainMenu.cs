@@ -85,6 +85,7 @@ namespace TF.EX.Patchs.Scene
         private static LobbyVersusSeriesButton lobbyVersusSeriesButton = null;
         private static LobbyHostRoleButton lobbyHostRoleButton = null;
         private static SeriesScreen seriesScreen = null;
+        private static RankedMatchCard rankedCard;
         private static bool wasOnNetplayScreen;
         private static LobbyVarianText lobbyVarianText = null;
         private static List<VariantItem> variants = [];
@@ -574,6 +575,11 @@ namespace TF.EX.Patchs.Scene
                 {
                     inputService.KeepOnlyLocalInputInMenus();
                 }
+            }
+
+            if (__instance.State.ToDomainModel() == Domain.Models.MenuState.RankedSearch)
+            {
+                matchmakingService.ReportRankedPingIfDue();
             }
 
             InputDelayAdvisor.Update(__instance);
@@ -1186,6 +1192,12 @@ namespace TF.EX.Patchs.Scene
             MainMenu.VersusMatchSettings.MatchLength = (MatchSettings.MatchLengths)lobby.GameData.MatchLength;
         }
 
+        private static void CloseRankedCard()
+        {
+            rankedCard?.Close();
+            rankedCard = null;
+        }
+
         private static void HandleRankedSearch(MainMenu self, string name)
         {
             var matchmakingService = ServiceCollections.ResolveMatchmakingService();
@@ -1193,6 +1205,7 @@ namespace TF.EX.Patchs.Scene
             if (name == "Destroy")
             {
                 self.RemoveLoader();
+                CloseRankedCard();
 
                 if (self.State.ToDomainModel() == Domain.Models.MenuState.SeriesLobby)
                 {
@@ -1225,6 +1238,7 @@ namespace TF.EX.Patchs.Scene
 
             Task.Run(() => matchmakingService.EnterRanked(
                 lobby => OnRankedMatched(self, lobby),
+                (seconds, isDeclineFree) => OnRankedConfirm(self, seconds, isDeclineFree),
                 () => OnRankedReady(self),
                 message => OnRankedRequeued(self, message),
                 message =>
@@ -1258,13 +1272,52 @@ namespace TF.EX.Patchs.Scene
                 return;
             }
 
-            Sounds.ui_click.Play();
-
             self.BackState = self.State;
             self.ButtonGuideB.Clear();
-            self.AddLoader("OPPONENT FOUND, CHECKING CONNECTION...");
+
+            Sounds.ui_clickSpecial.Play();
+            CloseRankedCard();
+            rankedCard = CreateRankedCard(self);
+            self.Add(rankedCard);
 
             PrepareMatchmadeLobby(lobby);
+        }
+
+        private static RankedMatchCard CreateRankedCard(MainMenu self)
+        {
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+
+            return new RankedMatchCard(matchmakingService,
+                () => Task.Run(matchmakingService.AcceptRankedMatch),
+                () => DeclineRankedMatch(self));
+        }
+
+        private static void OnRankedConfirm(MainMenu self, int seconds, bool isDeclineFree)
+        {
+            if (self.State.ToDomainModel() != Domain.Models.MenuState.RankedSearch)
+            {
+                return;
+            }
+
+            self.RemoveLoader();
+
+            if (rankedCard == null)
+            {
+                rankedCard = CreateRankedCard(self);
+                self.Add(rankedCard);
+            }
+
+            rankedCard.Open(seconds, isDeclineFree);
+        }
+
+        private static void DeclineRankedMatch(MainMenu self)
+        {
+            CloseRankedCard();
+
+            if (self.State.ToDomainModel() == Domain.Models.MenuState.RankedSearch)
+            {
+                self.State = Domain.Models.MenuState.RankedSelect.ToTFModel();
+            }
         }
 
         private static void OnRankedReady(MainMenu self)
@@ -1274,6 +1327,7 @@ namespace TF.EX.Patchs.Scene
                 return;
             }
 
+            CloseRankedCard();
             self.RemoveLoader();
             Sounds.ui_click.Play();
             self.State = Domain.Models.MenuState.SeriesLobby.ToTFModel();
@@ -1286,6 +1340,7 @@ namespace TF.EX.Patchs.Scene
                 return;
             }
 
+            CloseRankedCard();
             ServiceCollections.ResolveInputService().EnableAllControllers();
 
             TowerFall.Sounds.ui_invalid.Play();

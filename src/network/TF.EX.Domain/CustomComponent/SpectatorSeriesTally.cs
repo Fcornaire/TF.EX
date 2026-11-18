@@ -48,10 +48,9 @@ namespace TF.EX.Domain.CustomComponent
                 return;
             }
 
-            var offset = ServiceCollections.ResolveWiderSetModApi()?.UIXOffset ?? 0f;
             var text = $"BEST OF {series.BestOf}   {NameOf(0, series, lobby)} {series.Wins(0)} - {series.Wins(1)} {NameOf(1, series, lobby)}   GAME {series.Games.Count + 1}";
 
-            Draw.OutlineTextJustify(TFGame.Font, text, new Vector2(CENTER_X - offset, TOP), Gold, Color.Black, Centered);
+            Draw.OutlineTextJustify(TFGame.Font, text, new Vector2(CENTER_X, TOP), Gold, Color.Black, Centered);
         }
 
         private static string NameOf(int side, Series series, Lobby lobby)

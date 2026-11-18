@@ -23,6 +23,8 @@ namespace TF.EX.Domain.CustomComponent
 
         private const float RowHeight = 16f;
 
+        private const float ScreenCenterX = 160f;
+
         private static readonly List<Notification> _lives = new List<Notification>();
 
         private static readonly Queue<string> _deferred = new Queue<string>();
@@ -41,7 +43,7 @@ namespace TF.EX.Domain.CustomComponent
             description = text.ToUpper();
             length = (int)Math.Ceiling(TFGame.Font.MeasureString(description).X / 10.0) + 1;
 
-            restingX = Math.Max(0f, CenterX(layer) - length * 10f / 2f);
+            restingX = Math.Max(0f, ScreenCenterX - length * 10f / 2f);
 
             baseY = 10;
 
@@ -171,13 +173,6 @@ namespace TF.EX.Domain.CustomComponent
         }
 
         public static void ClearDeferred() => _deferred.Clear();
-
-        private static float CenterX(int layerIndex)
-        {
-            var widerSet = layerIndex == 4 ? ServiceCollections.ResolveWiderSetModApi() : null;
-
-            return 160f + (widerSet?.UIXOffset ?? 0f);
-        }
 
         private static void RemoveSameText(Scene scene, int layerIndex, string text)
         {

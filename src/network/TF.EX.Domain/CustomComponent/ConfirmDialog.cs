@@ -23,9 +23,8 @@ namespace TF.EX.Domain.CustomComponent
         private static readonly Color DetailColor = Calc.HexToColor("FFDA9B");
 
         private readonly string _title;
-        private readonly string _detail;
+        private string _detail;
         private readonly string[] _options;
-        private readonly float _centerX;
         private readonly PlayerInput[] _originalInputs;
         private readonly PlayerInput[] _blockedInputs;
         private readonly Wiggler _selectionWiggler;
@@ -33,29 +32,33 @@ namespace TF.EX.Domain.CustomComponent
         private int _optionIndex;
         private bool _isFlashOn;
 
-        public ConfirmDialog(string title, string detail, string confirmLabel) : this(title, detail, confirmLabel, 0, ScreenCenterX)
+        public ConfirmDialog(string title, string detail, string confirmLabel) : this(title, detail, confirmLabel, 0)
         {
             _originalInputs = MenuInput.MenuInputs;
             _blockedInputs = new PlayerInput[_originalInputs.Length];
             MenuInput.MenuInputs = _blockedInputs;
         }
 
-        private ConfirmDialog(string title, string detail, string confirmLabel, int layer, float centerX) : base(layer)
+        public ConfirmDialog(string title, string detail, string confirmLabel, PlayerInput[] inputs) : this(title, detail, confirmLabel, 0)
+        {
+            _originalInputs = inputs;
+        }
+
+        private ConfirmDialog(string title, string detail, string confirmLabel, int layer) : base(layer)
         {
             _title = title;
             _detail = detail;
             _options = [CancelLabel, confirmLabel];
-            _centerX = centerX;
             Depth = -10000;
 
             Add(_selectionWiggler = Wiggler.Create(20, 4f));
         }
 
+        public void SetDetail(string detail) => _detail = detail;
+
         public static ConfirmDialog OpenOverLevelLayer(string title, string detail, string confirmLabel)
         {
-            var centerX = ScreenCenterX + (ServiceCollections.ResolveWiderSetModApi()?.UIXOffset ?? 0f);
-
-            return new ConfirmDialog(title, detail, confirmLabel, LevelPauseLayer, centerX);
+            return new ConfirmDialog(title, detail, confirmLabel, LevelPauseLayer);
         }
 
         private bool IsConfirmSelected => _optionIndex == 1;
@@ -112,22 +115,22 @@ namespace TF.EX.Domain.CustomComponent
 
         public override void Render()
         {
-            Draw.Rect(0f, 0f, _centerX * 2f, 240f, Color.Black * 0.5f);
-            MenuPanel.DrawPanel(_centerX - PanelWidth / 2f, ScreenCenterY - PanelHeight / 2f, PanelWidth, PanelHeight);
+            Draw.Rect(-ScreenCenterX, 0f, ScreenCenterX * 4f, 240f, Color.Black * 0.5f);
+            MenuPanel.DrawPanel(ScreenCenterX - PanelWidth / 2f, ScreenCenterY - PanelHeight / 2f, PanelWidth, PanelHeight);
 
             base.Render();
 
-            var titleAt = new Vector2(_centerX, ScreenCenterY - PanelHeight / 2f - TitleOffsetY);
+            var titleAt = new Vector2(ScreenCenterX, ScreenCenterY - PanelHeight / 2f - TitleOffsetY);
 
             Draw.TextureCentered(TFGame.MenuAtlas["questResults/arrow"], titleAt + new Vector2(0f, -2f), Color.White);
             Draw.OutlineTextCentered(TFGame.Font, _title, titleAt, Color.White, 2f);
 
-            Draw.TextCentered(TFGame.Font, _detail, new Vector2(_centerX, ScreenCenterY + DetailOffsetY), DetailColor);
+            Draw.TextCentered(TFGame.Font, _detail, new Vector2(ScreenCenterX, ScreenCenterY + DetailOffsetY), DetailColor);
 
             for (int i = 0; i < _options.Length; i++)
             {
                 var isSelected = i == _optionIndex;
-                var at = new Vector2(_centerX + (isSelected ? _selectionWiggler.Value * 3f : 0f), ScreenCenterY + FirstOptionOffsetY + i * OptionSpacing);
+                var at = new Vector2(ScreenCenterX + (isSelected ? _selectionWiggler.Value * 3f : 0f), ScreenCenterY + FirstOptionOffsetY + i * OptionSpacing);
                 var color = !isSelected ? NoSelection : _isFlashOn ? SelectionB : SelectionA;
 
                 Draw.TextCentered(TFGame.Font, isSelected ? "> " + _options[i] : _options[i], at, color);
