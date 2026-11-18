@@ -6,6 +6,8 @@ namespace TF.EX.Domain.Extensions
     {
         public static MainMenu GoToNetplayEntryMenu(this Level level, Models.MenuState state = Models.MenuState.NetplaySelect)
         {
+            InstantReplayFootage.Cancel();
+
             Sounds.ui_clickBack.Play();
 
             var menu = new MainMenu(state.ToTFModel());

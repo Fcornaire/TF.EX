@@ -73,6 +73,21 @@ namespace TF.EX.Domain.Extensions
             }
         }
 
+        public static int ResolvePlayedArcherIndex(int archer, int archerAlt, string customArcherId)
+        {
+            var isCustom = !string.IsNullOrEmpty(customArcherId);
+            var index = isCustom ? ResolveCustomArcher(customArcherId) : archer;
+
+            return (!isCustom && index >= VanillaArcherCount) || !Exists(index, archerAlt) ? -1 : index;
+        }
+
+        public static ArcherData ResolvePlayedArcher(int archer, int archerAlt, string customArcherId)
+        {
+            var index = ResolvePlayedArcherIndex(archer, archerAlt, customArcherId);
+
+            return index < 0 ? null : ArcherData.Get(index, (ArcherData.ArcherTypes)archerAlt);
+        }
+
         public static List<string> GetInstalledArcherMods(Func<string, string> versionLookup)
         {
             try

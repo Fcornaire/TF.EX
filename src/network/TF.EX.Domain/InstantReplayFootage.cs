@@ -129,6 +129,16 @@ namespace TF.EX.Domain
             _heldMusic.Clear();
         }
 
+        public static void Cancel()
+        {
+            if (IsPaused)
+            {
+                StateApi.Current.StopInstantReplay();
+            }
+
+            ResetMatch();
+        }
+
         public static void HoldResults(Level level)
         {
             if (!_isHolding || level != _level)

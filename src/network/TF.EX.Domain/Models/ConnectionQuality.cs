@@ -11,7 +11,7 @@ namespace TF.EX.Domain.Models
 
     public static class ConnectionQualities
     {
-        private const int MIN_GRADED_SAMPLES = 12;
+        public const int MIN_GRADED_SAMPLES = 12;
 
         public static ConnectionQuality GetQuality(PingStats stats)
         {
@@ -30,7 +30,7 @@ namespace TF.EX.Domain.Models
             return GetWorst(latency, GetWorst(GetQualityByGrade(ToActualDelayInFrames(stats.spike), 1, 3), GetQualityByGrade(stats.loss_percent, 5, 15)));
         }
 
-        public static ConnectionQuality GetQualityByLatency(int rttMs) => GetQualityByGrade(ToActualDelayInFrames(rttMs), 2, 4);
+        public static ConnectionQuality GetQualityByLatency(int rttMs) => GetQualityByGrade(ToActualDelayInFrames(rttMs), 2, 4.5);
 
         public static Color ToColor(this ConnectionQuality quality)
         {

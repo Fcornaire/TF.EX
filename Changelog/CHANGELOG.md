@@ -2,10 +2,21 @@
 
 ## [Unreleased]
 
-## [0.30.1] - 2026-11-13
+## [0.31.0] - 2026-11-18
+
+### New
+
+- Ranked: a match card now shows your opponent (favorite archer, rating, ping) before the series
+- Ranked: declining the match card or letting it run out counts as a dodge, unless the connection is bad (red)
+- Ranked: each player can offer a 'no contest' once per series from the pause menu, if the opponent accepts the series ends unrated
+
+### Changed
+
+- The netplay pause menu can now be opened during the end of a round
 
 ### Fixed
 
+- WiderSet: some custom components where not centered properly
 - Minor instant replay fix (Save/Restore proper inputs)
 
 ## [0.30.0] - 2026-11-12

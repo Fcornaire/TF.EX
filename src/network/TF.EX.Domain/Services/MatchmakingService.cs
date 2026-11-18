@@ -65,9 +65,19 @@ namespace TF.EX.Domain.Services
         private bool isQuickPlayQueued;
 
         private Action<Lobby> onRankedMatched;
+        private Action<int, bool> onRankedConfirm;
         private Action onRankedReady;
         private Action<string> onRankedRequeued;
         private Action<string> onRankedFailed;
+        private volatile bool isRankedMatchPending;
+        private DateTime nextRankedPingReportAt = DateTime.MinValue;
+        private static readonly TimeSpan RankedPingReportInterval = TimeSpan.FromSeconds(1);
+        private const string AgreedNoContestNotice = "NO CONTEST AGREED, SERIES NOT RATED";
+        private string noContestRoomId = string.Empty;
+        private bool hasOfferedNoContest;
+        private readonly System.Diagnostics.Stopwatch noContestOfferClock = new();
+        private int noContestOfferSeconds;
+        private int noContestOfferGames;
 
         private static readonly TimeSpan LeaderboardCacheDuration = TimeSpan.FromSeconds(60);
         private Action<LeaderboardData> onLeaderboard;
@@ -381,6 +391,47 @@ namespace TF.EX.Domain.Services
             var exitRankedMessage = new ExitRankedMessage { };
 
             var bytes = MessagePackSerializer.Serialize(exitRankedMessage);
+            var message = MessagePackSerializer.ConvertToJson(bytes);
+            await Send(message);
+        }
+
+        private async Task SendRankedAccept()
+        {
+            var rankedAcceptMessage = new RankedAcceptMessage { };
+
+            var bytes = MessagePackSerializer.Serialize(rankedAcceptMessage);
+            var message = MessagePackSerializer.ConvertToJson(bytes);
+            await Send(message);
+        }
+
+        private async Task SendRankedNoContestOffer()
+        {
+            var bytes = MessagePackSerializer.Serialize(new RankedNoContestOfferMessage());
+            var message = MessagePackSerializer.ConvertToJson(bytes);
+            await Send(message);
+        }
+
+        private async Task SendRankedNoContestAccept()
+        {
+            var bytes = MessagePackSerializer.Serialize(new RankedNoContestAcceptMessage());
+            var message = MessagePackSerializer.ConvertToJson(bytes);
+            await Send(message);
+        }
+
+        private async Task SendRankedPingReport(PingStats stats)
+        {
+            var rankedPingReportMessage = new RankedPingReportMessage
+            {
+                RankedPingReport = new RankedPingReport
+                {
+                    Rtt = stats.rtt,
+                    Spike = stats.spike,
+                    LossPercent = stats.loss_percent,
+                    Samples = stats.samples
+                }
+            };
+
+            var bytes = MessagePackSerializer.Serialize(rankedPingReportMessage);
             var message = MessagePackSerializer.ConvertToJson(bytes);
             await Send(message);
         }
@@ -810,14 +861,53 @@ namespace TF.EX.Domain.Services
 
                 UpdateOwnLobby(response.RankedMatchFound.Lobby);
 
+                isRankedMatchPending = true;
+                nextRankedPingReportAt = DateTime.MinValue;
                 onRankedMatched?.Invoke(GetOwnLobby());
+
+                return;
+            }
+
+            if (IsServerMsg(message, "RankedConfirm"))
+            {
+                if (!isRankedMatchPending)
+                {
+                    return;
+                }
+
+                var bytes = MessagePackSerializer.ConvertFromJson(message);
+                var confirm = MessagePackSerializer.Deserialize<RankedConfirmMessage>(bytes).RankedConfirm;
+                _logger.LogDebug<MatchmakingService>($"Ranked match card, is decline free : {confirm.IsDeclineFree}");
+                onRankedConfirm?.Invoke(confirm.Seconds, confirm.IsDeclineFree);
 
                 return;
             }
 
             if (IsServerMsg(message, "RankedReady"))
             {
+                isRankedMatchPending = false;
                 onRankedReady?.Invoke();
+
+                return;
+            }
+
+            if (IsServerMsg(message, "RankedNoContestOffered"))
+            {
+                var bytes = MessagePackSerializer.ConvertFromJson(message);
+                var offer = MessagePackSerializer.Deserialize<RankedNoContestOfferedMessage>(bytes).RankedNoContestOffered;
+                _logger.LogDebug<MatchmakingService>($"Ranked no contest offered by the opponent, {offer.Seconds} s");
+
+                RunOnGameThread(() =>
+                {
+                    SyncNoContestRoom();
+                    noContestOfferSeconds = offer.Seconds;
+                    noContestOfferClock.Restart();
+                    noContestOfferGames = ownLobby.Series?.Games.Count ?? 0;
+
+                    StateApi.Current.SetSfxCapture(false);
+                    Sounds.ui_clickSpecial.Play();
+                    ExFlags.Push();
+                });
 
                 return;
             }
@@ -831,6 +921,7 @@ namespace TF.EX.Domain.Services
 
                 if (status.Queued && !string.IsNullOrEmpty(status.Message))
                 {
+                    isRankedMatchPending = false;
                     RunOnGameThread(() =>
                     {
                         ResetLobby();
@@ -840,6 +931,7 @@ namespace TF.EX.Domain.Services
                 }
                 else if (!status.Queued && !string.IsNullOrEmpty(status.Message))
                 {
+                    isRankedMatchPending = false;
                     _logger.LogDebug<MatchmakingService>($"Ranked refused : {status.Message}");
                     onRankedFailed?.Invoke(status.Message);
                 }
@@ -1084,9 +1176,11 @@ namespace TF.EX.Domain.Services
             onQuickPlayFailed = null;
             isQuickPlayQueued = false;
             onRankedMatched = null;
+            onRankedConfirm = null;
             onRankedReady = null;
             onRankedRequeued = null;
             onRankedFailed = null;
+            isRankedMatchPending = false;
             currentAction = WSAction.None;
 
             if (Version.TryParse(version, out var required))
@@ -1169,6 +1263,11 @@ namespace TF.EX.Domain.Services
                 return;
             }
 
+            if (LeaveNoContestAgreedInGame(lobby, previous))
+            {
+                return;
+            }
+
             NormaliseSeats(lobby.Players);
             NormaliseSeats(lobby.MatchPlayers);
 
@@ -1182,7 +1281,12 @@ namespace TF.EX.Domain.Services
                 lobby.GameData.BestOf = previous.GameData.BestOf;
             }
 
-            Sounds.ui_clickSpecialAsc.Play();
+            var isRankedPending = TFGame.Instance.Scene is MainMenu menu && menu.State.ToDomainModel() == Models.MenuState.RankedSearch;
+
+            if (!isRankedPending)
+            {
+                Sounds.ui_clickSpecialAsc.Play();
+            }
 
             if (lobby.GameData.Seed != StateApi.Current.GetSeed())
             {
@@ -1317,6 +1421,38 @@ namespace TF.EX.Domain.Services
             UpdateOwnLobby(lobby);
         }
 
+        private bool IsNoContestAgreed(Lobby lobby, Lobby previous)
+        {
+            return lobby.IsRanked
+                && lobby.Series?.AbortReason == Models.WebSocket.Series.AgreedNoContest
+                && previous?.RoomId == lobby.RoomId
+                && previous.Series?.IsAborted != true
+                && !lobby.Spectators.Any(spectator => spectator.RoomPeerId == peerId);
+        }
+
+        private bool LeaveNoContestAgreedInGame(Lobby lobby, Lobby previous)
+        {
+            if (!IsNoContestAgreed(lobby, previous))
+            {
+                return false;
+            }
+
+            if (TFGame.Instance.Scene is not Level level)
+            {
+                return false;
+            }
+
+            abandonedRoomId = lobby.RoomId;
+            ResetLobby();
+            ResetPeer();
+            Task.Run(() => SendLeaveLobby());
+
+            ServiceCollections.ResolveReplayService().Export();
+            Notification.Create(ExitToRankedMenu(level), AgreedNoContestNotice, 10, 500);
+
+            return true;
+        }
+
         private void ResendSkinToNewMembers(Lobby lobby)
         {
             var members = lobby.Players.Concat(lobby.Spectators)
@@ -1391,11 +1527,13 @@ namespace TF.EX.Domain.Services
 
             Sounds.ui_invalid.Play();
 
-            var text = lobby.IsRanked
-                && lobby.Series.AbortReason == Models.WebSocket.Series.OpponentLeft
-                && !lobby.Spectators.Any(spectator => spectator.RoomPeerId == peerId)
-                ? "YOUR OPPONENT LEFT"
-                : $"SERIES ABORTED: {lobby.Series.AbortReason ?? "UNKNOWN"}";
+            var text = lobby.Series.AbortReason == Models.WebSocket.Series.AgreedNoContest
+                ? AgreedNoContestNotice
+                : lobby.IsRanked
+                    && lobby.Series.AbortReason == Models.WebSocket.Series.OpponentLeft
+                    && !lobby.Spectators.Any(spectator => spectator.RoomPeerId == peerId)
+                    ? "YOUR OPPONENT LEFT"
+                    : $"SERIES ABORTED: {lobby.Series.AbortReason ?? "UNKNOWN"}";
 
             Notification.Create(TFGame.Instance.Scene, text, 12, 500);
         }
@@ -2084,12 +2222,14 @@ namespace TF.EX.Domain.Services
             }
         }
 
-        public async Task EnterRanked(Action<Lobby> onMatched, Action onReady, Action<string> onRequeued, Action<string> onFail)
+        public async Task EnterRanked(Action<Lobby> onMatched, Action<int, bool> onConfirm, Action onReady, Action<string> onRequeued, Action<string> onFail)
         {
             onRankedMatched = onMatched == null ? null : lobby => RunOnGameThread(() => onMatched(lobby));
+            onRankedConfirm = onConfirm == null ? null : (seconds, isDeclineFree) => RunOnGameThread(() => onConfirm(seconds, isDeclineFree));
             onRankedReady = onReady == null ? null : () => RunOnGameThread(onReady);
             onRankedRequeued = onRequeued == null ? null : message => RunOnGameThread(() => onRequeued(message));
             onRankedFailed = onFail == null ? null : message => RunOnGameThread(() => onFail(message));
+            isRankedMatchPending = false;
             searchingStandardCount = 0;
             searchingWideCount = 0;
 
@@ -2105,9 +2245,11 @@ namespace TF.EX.Domain.Services
         public async Task ExitRanked()
         {
             onRankedMatched = null;
+            onRankedConfirm = null;
             onRankedReady = null;
             onRankedRequeued = null;
             onRankedFailed = null;
+            isRankedMatchPending = false;
             searchingStandardCount = 0;
             searchingWideCount = 0;
 
@@ -2115,6 +2257,117 @@ namespace TF.EX.Domain.Services
             {
                 await SendExitRanked();
             }
+        }
+
+        public async Task AcceptRankedMatch()
+        {
+            if (IsConnectedToServer())
+            {
+                await SendRankedAccept();
+            }
+        }
+
+        public RankedNoContestChoice GetRankedNoContestChoice()
+        {
+            var series = ownLobby.Series;
+
+            if (!ownLobby.IsRanked || IsSpectator() || series == null || !series.IsInProgress)
+            {
+                return RankedNoContestChoice.None;
+            }
+
+            SyncNoContestRoom();
+
+            if (IsNoContestOfferOpen(series))
+            {
+                return RankedNoContestChoice.Accept;
+            }
+
+            return hasOfferedNoContest ? RankedNoContestChoice.Offered : RankedNoContestChoice.Offer;
+        }
+
+        public int GetRankedNoContestSecondsLeft()
+        {
+            return Math.Max(0, (int)Math.Ceiling(noContestOfferSeconds - noContestOfferClock.Elapsed.TotalSeconds));
+        }
+
+        public void UpdateNoContestOfferClock()
+        {
+            if (InstantReplayFootage.IsPaused)
+            {
+                noContestOfferClock.Stop();
+            }
+            else
+            {
+                noContestOfferClock.Start();
+            }
+        }
+
+        public bool TryOfferRankedNoContest()
+        {
+            if (GetRankedNoContestChoice() != RankedNoContestChoice.Offer || !IsConnectedToServer())
+            {
+                return false;
+            }
+
+            hasOfferedNoContest = true;
+            Task.Run(SendRankedNoContestOffer);
+
+            return true;
+        }
+
+        public void AcceptRankedNoContest()
+        {
+            if (GetRankedNoContestChoice() != RankedNoContestChoice.Accept || !IsConnectedToServer())
+            {
+                return;
+            }
+
+            noContestOfferSeconds = 0;
+            Task.Run(SendRankedNoContestAccept);
+        }
+
+        private void SyncNoContestRoom()
+        {
+            if (noContestRoomId == ownLobby.RoomId)
+            {
+                return;
+            }
+
+            noContestRoomId = ownLobby.RoomId;
+            hasOfferedNoContest = false;
+            noContestOfferSeconds = 0;
+        }
+
+        private bool IsNoContestOfferOpen(Models.WebSocket.Series series)
+        {
+            return noContestOfferClock.Elapsed.TotalSeconds < noContestOfferSeconds && series.Games.Count == noContestOfferGames;
+        }
+
+        public void ReportRankedPingIfDue()
+        {
+            if (!isRankedMatchPending || DateTime.UtcNow < nextRankedPingReportAt || !IsConnectedToServer())
+            {
+                return;
+            }
+
+            var localPeerId = GetRoomPeerId();
+            var opponent = GetOwnLobby().Players.FirstOrDefault(player => player.RoomPeerId != localPeerId);
+
+            if (opponent == null)
+            {
+                return;
+            }
+
+            RefreshPingStats(opponent);
+
+            if (!measuredPingStats.TryGetValue(opponent.RoomPeerId, out var stats) || stats.samples < ConnectionQualities.MIN_GRADED_SAMPLES)
+            {
+                return;
+            }
+
+            nextRankedPingReportAt = DateTime.UtcNow + RankedPingReportInterval;
+            Task.Run(() => SendRankedPingReport(stats));
         }
 
         public async Task RequestLeaderboard(Action<LeaderboardData> onResult, Action onFail)

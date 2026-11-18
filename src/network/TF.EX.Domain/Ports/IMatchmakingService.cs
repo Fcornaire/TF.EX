@@ -33,8 +33,15 @@ namespace TF.EX.Domain.Ports
         Task ExitQuickPlay();
         Task RequestLeaderboard(Action<LeaderboardData> onResult, Action onFail);
         Task RequestPlayerProfile(int? rank, Action<PlayerProfile> onResult, Action onFail);
-        Task EnterRanked(Action<Lobby> onMatched, Action onReady, Action<string> onRequeued, Action<string> onFail);
+        Task EnterRanked(Action<Lobby> onMatched, Action<int, bool> onConfirm, Action onReady, Action<string> onRequeued, Action<string> onFail);
         Task ExitRanked();
+        Task AcceptRankedMatch();
+        void ReportRankedPingIfDue();
+        RankedNoContestChoice GetRankedNoContestChoice();
+        int GetRankedNoContestSecondsLeft();
+        void UpdateNoContestOfferClock();
+        bool TryOfferRankedNoContest();
+        void AcceptRankedNoContest();
         bool IsSearchingQuickPlay();
         int GetSearchingCount();
         int GetStandardSearchingCount();

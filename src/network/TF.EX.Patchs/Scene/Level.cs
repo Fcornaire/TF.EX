@@ -121,6 +121,7 @@ namespace TF.EX.Patchs.Scene
 
             ClearWaitingNotificationOnceSynchronized(__instance, netplayManager);
             HandleSpectatorsSeriesTally(__instance);
+            HandleRankedNoContestBanner(__instance);
 
             netplayManager.SetIsRollbackFrame(false); //Mark the end of the First RBF
 
@@ -197,6 +198,18 @@ namespace TF.EX.Patchs.Scene
             }
 
             Domain.CustomComponent.SpectatorSeriesTally.Create(level);
+        }
+
+        private static void HandleRankedNoContestBanner(Level level)
+        {
+            var matchmakingService = ServiceCollections.ResolveMatchmakingService();
+
+            if (!matchmakingService.GetOwnLobby().IsRanked || matchmakingService.IsSpectator())
+            {
+                return;
+            }
+
+            Domain.CustomComponent.RankedNoContestBanner.Create(level);
         }
 
         private static void ClearWaitingNotificationOnceSynchronized(Level level, Domain.Ports.INetplayManager netplayManager)
