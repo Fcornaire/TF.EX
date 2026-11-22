@@ -76,7 +76,7 @@ namespace TF.State.Patchs.RoundLogic
                     continue;
                 }
 
-                if (num2 == 0 && num == 2 && xMLPositions[0].X != 160f)
+                if (num2 == 0 && num == 2 && xMLPositions[0].X != ScreenCenterX)
                 {
                     Vector2 vector = TowerFall.WrapMath.Opposite(xMLPositions[0]);
                     if (xMLPositions.Contains(vector))
@@ -104,6 +104,8 @@ namespace TF.State.Patchs.RoundLogic
             return false;
         }
 
+        private static float ScreenCenterX => TowerFall.WrapMath.AddWidth.X / 2f;
+
         [HarmonyPrefix]
         [HarmonyPatch("SpawnPlayersTeams")]
         public static bool RoundLogic_SpawnPlayersTeams(TowerFall.RoundLogic __instance)
@@ -120,7 +122,7 @@ namespace TF.State.Patchs.RoundLogic
 
             foreach (var spawn in teamSpawns)
             {
-                if (spawn.X <= 160f)
+                if (spawn.X <= ScreenCenterX)
                 {
                     teamSpawnsA.Add(spawn);
                 }
@@ -139,8 +141,8 @@ namespace TF.State.Patchs.RoundLogic
                 var used = new List<Vector2>(teamSpawnsA);
                 used.AddRange(teamSpawnsB);
 
-                TopUpSpawns(teamSpawnsA, neededA, playerSpawns.Where(spawn => spawn.X <= 160f), playerSpawns, used);
-                TopUpSpawns(teamSpawnsB, neededB, playerSpawns.Where(spawn => spawn.X > 160f), playerSpawns, used);
+                TopUpSpawns(teamSpawnsA, neededA, playerSpawns.Where(spawn => spawn.X <= ScreenCenterX), playerSpawns, used);
+                TopUpSpawns(teamSpawnsB, neededB, playerSpawns.Where(spawn => spawn.X > ScreenCenterX), playerSpawns, used);
             }
 
             var isActive = TF.State.Domain.Context.ScenarioLevels.IsActive;
