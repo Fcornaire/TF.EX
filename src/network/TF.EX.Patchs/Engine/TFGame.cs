@@ -46,6 +46,7 @@ namespace TF.EX.Patchs.Engine
         internal static bool IsRunningUnsynchronizedUpdate;
 
         private static readonly MethodInfo _mInputUpdate = AccessTools.Method(typeof(MInput), "Update"); //Minput Update is an internal static method...
+        private static readonly Action<float> SetEngineLastTimeMult = AccessTools.PropertySetter(typeof(Monocle.Engine), nameof(Monocle.Engine.LastTimeMult)).CreateDelegate<Action<float>>();
 
         private static bool frameByFrame { get; set; } = false;
 
@@ -817,6 +818,7 @@ namespace TF.EX.Patchs.Engine
                         DynamicData.For(TFGame.Instance.Scene).Set("FrameCounter", (float)GGRSFFI.netplay_current_frame());
 
                         _mInputUpdate.Invoke(null, null);
+                        SetEngineLastTimeMult(Monocle.Engine.TimeMult);
                         level.Update();
                         break;
                 }

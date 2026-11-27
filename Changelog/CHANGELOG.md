@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.31.1] - 2026-11-28
+
+### Fixed
+
+- Fixed a desync that involve Engine time
+
 ## [0.31.0] - 2026-11-18
 
 ### New
